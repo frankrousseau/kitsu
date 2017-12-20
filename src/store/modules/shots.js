@@ -8,6 +8,7 @@ import {
   sortValidationColumns,
   sortByName
 } from '../../lib/sorting'
+
 import {
   LOAD_SHOTS_START,
   LOAD_SHOTS_ERROR,
@@ -50,8 +51,21 @@ import {
   SET_SHOT_SEARCH,
   CREATE_TASKS_END,
 
+  UPDATE_ENTITY_TASKS,
+  CLEAR_SELECTED_TASKS,
+
   RESET_ALL
 } from '../mutation-types'
+
+const helpers = {
+  getTask (taskId) {
+    const getTask = tasksStore.getters.getTask(
+      tasksStore.state,
+      tasksStore.getters
+    )
+    return getTask(taskId)
+  }
+}
 
 const state = {
   shots: [],
@@ -284,6 +298,7 @@ const mutations = {
     shots = sortShots(shots)
     shots = shots.map((shot) => {
       shot.validations = {}
+      shot.selectedCells = {}
       shot.tasks.forEach((task) => {
         shot.validations[task.task_type_name] = task
         validationColumns[task.task_type_name] = {
@@ -355,6 +370,9 @@ const mutations = {
     if (shot) {
       Object.assign(shot, newShot)
     } else {
+      newShot.validations = {}
+      newShot.selectedCells = {}
+
       state.shots.push(newShot)
       state.shots = sortShots(state.shots)
       state.shotMap[newShot.id] = newShot
@@ -499,6 +517,27 @@ const mutations = {
           state.shots.splice(shotIndex, 1)
           state.shots.splice(shotIndex, 0, shot)
         }
+      }
+    })
+  },
+
+  [CLEAR_SELECTED_TASKS] (state) {
+    state.shots.forEach((shot) => {
+      if (Object.keys(shot.selectedCells).length > 0) {
+        shot.selectedCells = {}
+      }
+    })
+  },
+
+  [UPDATE_ENTITY_TASKS] (state, taskIds) {
+    taskIds.forEach((taskId) => {
+      const task = helpers.getTask(taskId)
+      console.log(task)
+      console.log(state.shotMap)
+      const shot = state.shotMap[task.entity.id]
+      console.log(shot)
+      if (shot) {
+        shot.validations = {...shot.validations}
       }
     })
   },

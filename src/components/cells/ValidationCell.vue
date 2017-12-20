@@ -1,136 +1,98 @@
-<template>
+<template functional>
 <td
-  ref="cell"
+  :id="props.id"
   :class="{
     validation: true,
-    selected: selected
+    selected: props.selected
   }"
   :style="{
-    'border-left': '2px solid ' + column.color,
+    'border-left': '2px solid ' + props.column.color,
   }"
-  @click="select"
+  @click="listeners.click"
 >
+
   <div class="wrapper">
-    <validation-tag
-      :task="task"
-      v-if="task"
+
+    <!-- validation tag-->
+    <router-link
+      :to="{
+        name: 'task',
+        params: {task_id: props.task.id}
+      }"
+      class="tag dynamic"
+      :style="{
+        background: props.backgroundColor,
+        color: props.textColor,
+      }"
+      v-if="props.task"
     >
-    </validation-tag>
-    <people-avatar
-      class="person-avatar"
-      key="task.id + '-' + personId"
-      :person="personMap[personId]"
-      :size="20"
-      :font-size="10"
-      v-if="nbSelectedTasks > 0"
-      v-for="personId in assignees"
-    >
-    </people-avatar>
+      {{ props.task.task_status_short_name }}
+    </router-link>
+
+    <!-- person avatar-->
+    <div class="avatar-list" v-if="props.task && props.showAssignees">
+      <span
+        :key="props.task.id + '_' + person.id"
+        class="avatar has-text-centered"
+        :style="{background: person.color}"
+        v-for="person in props.task.assigneesInfo"
+      >
+        {{ person.initials }}
+      </span>
+    </div>
+
   </div>
 </td>
 </template>
 
 <script>
-import { mapGetters, mapActions } from 'vuex'
-import ValidationTag from '../widgets/ValidationTag'
-import PeopleAvatar from '../widgets/PeopleAvatar'
-
 export default {
   name: 'validation-cell',
-
-  data () {
-    return {
-      selected: false
-    }
-  },
-
-  components: {
-    ValidationTag,
-    PeopleAvatar
-  },
-
-  props: [
-    'column',
-    'entity'
-  ],
-
-  computed: {
-    ...mapGetters([
-      'selectedTasks',
-      'selectedValidations',
-      'nbSelectedTasks',
-      'personMap'
-    ]),
-
-    task () {
-      return this.entity.validations[this.column.name]
+  props: {
+    id: {
+      default: '',
+      type: String
     },
-
-    assignees () {
-      if (this.task) {
-        return this.task.assignees
-      } else {
-        return []
-      }
-    }
-  },
-
-  methods: {
-    ...mapActions([
-    ]),
-
-    select () {
-      if (this.$refs.cell &&
-          this.$refs.cell.className.indexOf('selected') < 0) {
-        this.selected = true
-        this.$emit('select', {
-          entity: this.entity,
-          column: this.column,
-          task: this.task
-        })
-      } else {
-        this.selected = false
-        this.$emit('unselect', {
-          entity: this.entity,
-          column: this.column,
-          task: this.task
-        })
-      }
-    }
-
-    /*
-      isSelected () {
-      let isSelected = false
-      if (this.task) {
-        isSelected = this.task !== undefined &&
-                     this.selectedTasks[this.task.id] !== undefined
-      } else {
-        const commentId = this.comment.id
-        const entityId = this.entity.id
-        const validationKey = `${commentId}-${entityId}`
-        isSelected = this.selectedValidations[validationKey] !== undefined
-      }
-      return isSelected
-    }
-    */
-  },
-
-  watch: {
-    nbSelectedTasks () {
-      if (this.nbSelectedTasks === 0) this.selected = false
+    column: {
+      default: () => {},
+      type: Object
+    },
+    task: {
+      default: () => {},
+      type: Object
+    },
+    backgroundColor: {
+      default: 'grey',
+      type: String
+    },
+    textColor: {
+      default: 'white',
+      type: String
+    },
+    selected: {
+      default: false,
+      type: Boolean
+    },
+    showAssignees: {
+      default: false,
+      type: Boolean
     }
   }
 }
 </script>
 
 <style scoped>
-.validation {
-  cursor: pointer;
-}
-
 .wrapper {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+}
+
+td.validation {
+  min-width: 120px;
+  max-width: 120px;
+  width: 120px;
+  cursor: pointer;
+  vertical-align: top;
 }
 
 td.validation:hover {
@@ -142,7 +104,46 @@ td.selected.validation:hover {
   background: #D1C4E9;
 }
 
-.person-avatar {
+.tag {
+  flex: 1;
+  text-transform: uppercase;
+  cursor: default;
+  margin-bottom: 3px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.tag.dynamic:hover {
+  cursor: pointer;
+  transform: scale(1.15);
+  transition: all 0.1s ease-in-out
+}
+
+.avatar-list {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.avatar img {
+  max-height: 100%;
+}
+
+.avatar {
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-left: 3px;
+  margin-bottom: 3px;
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+  text-align: center;
+}
+
+.avatar span {
+  flex: 1;
 }
 </style>

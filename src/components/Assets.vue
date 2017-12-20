@@ -250,9 +250,11 @@ export default {
       productionId
     )
 
-    this.loadAssets((err) => {
-      if (!err) this.handleModalsDisplay()
-    })
+    if (this.assets.length === 0) {
+      this.loadAssets((err) => {
+        if (!err) this.handleModalsDisplay()
+      })
+    }
   },
 
   methods: {

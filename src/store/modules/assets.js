@@ -36,8 +36,21 @@ import {
   SET_ASSET_SEARCH,
   CREATE_TASKS_END,
 
+  UPDATE_ENTITY_TASKS,
+  CLEAR_SELECTED_TASKS,
+
   RESET_ALL
 } from '../mutation-types'
+
+const helpers = {
+  getTask (taskId) {
+    const getTask = tasksStore.getters.getTask(
+      tasksStore.state,
+      tasksStore.getters
+    )
+    return getTask(taskId)
+  }
+}
 
 const state = {
   assets: [],
@@ -230,6 +243,7 @@ const mutations = {
     assets = sortAssets(assets)
     assets = assets.map((asset) => {
       asset.validations = {}
+      asset.selectedCells = {}
       asset.tasks.forEach((task) => {
         asset.validations[task.task_type_name] = task
         validationColumns[task.task_type_name] = {
@@ -299,15 +313,16 @@ const mutations = {
       Object.assign(asset, newAsset)
     } else {
       newAsset.validations = {}
+      newAsset.selectedCells = {}
       state.assets.push(newAsset)
       state.assets = sortAssets(state.assets)
+      state.assetMap[newAsset.id] = newAsset
     }
     state.editAsset = {
       isLoading: false,
       isError: false
     }
     state.assetIndex = buildAssetIndex(state.assets)
-    state.assetMap[newAsset.id] = asset
   },
 
   [DELETE_ASSET_START] (state) {
@@ -434,6 +449,24 @@ const mutations = {
             }
           }
         }
+      }
+    })
+  },
+
+  [CLEAR_SELECTED_TASKS] (state) {
+    state.assets.forEach((asset) => {
+      if (Object.keys(asset.selectedCells).length > 0) {
+        asset.selectedCells = {}
+      }
+    })
+  },
+
+  [UPDATE_ENTITY_TASKS] (state, taskIds) {
+    taskIds.forEach((taskId) => {
+      const task = helpers.getTask(taskId)
+      const asset = state.assetMap[task.entity_id]
+      if (asset) {
+        asset.validations = {...asset.validations}
       }
     })
   },

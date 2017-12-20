@@ -97,11 +97,15 @@
             {{ entry.description }}
           </td>
           <validation-cell
-            :key="column.name + '-' + entry.id"
+            :key="column.id + '_' + entry.id"
+            :id="column.id + '_' + entry.id"
             :column="column"
-            :entity="entry"
-            @select="onTaskSelected"
-            @unselect="onTaskUnselected"
+            :task="entry.validations[column.name]"
+            :background-color="validationBackgroundColor(entry.validations[column.name])"
+            :text-color="validationTextColor(entry.validations[column.name])"
+            :selected="entry.selectedCells[column.id + '_' + entry.id] ? true : false"
+            :show-assignees="isSelectionActive"
+            @click="(event) => {validationCellClicked(event)}"
             v-for="column in validationColumns"
           >
           </validation-cell>
@@ -152,6 +156,7 @@ import ButtonLink from '../widgets/ButtonLink'
 import ButtonHrefLink from '../widgets/ButtonHrefLink'
 import PageTitle from '../widgets/PageTitle'
 import TableInfo from '../widgets/TableInfo'
+import colors from '../../lib/colors'
 
 export default {
   name: 'shot-list',
@@ -161,9 +166,7 @@ export default {
     'isError',
     'validationColumns'
   ],
-  data () {
-    return {}
-  },
+
   components: {
     ButtonLink,
     ButtonHrefLink,
@@ -172,37 +175,93 @@ export default {
     TableInfo,
     ValidationCell
   },
+
   computed: {
     ...mapGetters([
       'currentProduction',
       'isCurrentUserManager',
-      'shotSearchText'
+      'shotSearchText',
+      'selectedTasks',
+      'selectedValidations',
+      'nbSelectedValidations',
+      'nbSelectedTasks',
+      'shotMap',
+      'taskTypeMap'
     ]),
+
     isEmptyList () {
       return this.entries &&
              this.entries.length === 0 &&
              !this.isLoading &&
              !this.isError &&
              (!this.shotSearchText || this.shotSearchText.length === 0)
+    },
+
+    isSelectionActive () {
+      return this.nbSelectedTasks !== 0 || this.nbSelectedValidations !== 0
     }
   },
 
   methods: {
     ...mapActions([
     ]),
+
+    validationCellClicked (event) {
+      console.log(event)
+      let cellId = event.target.id
+      if (!cellId || cellId.length === 0) cellId = event.target.parentNode.id
+      if (!cellId || cellId.length === 0) {
+        cellId = event.target.parentNode.parentNode.id
+      }
+
+      let columnId = cellId.split('_')[0]
+      let shotId = cellId.split('_')[1]
+      const shot = this.shotMap[shotId]
+      const taskType = this.taskTypeMap[columnId]
+      let task = shot.validations[taskType.name]
+      const validationInfo = {
+        entity: shot,
+        column: taskType,
+        task: task
+      }
+
+      if (this.isTaskSelected(task, columnId, shotId)) {
+        this.onTaskUnselected(validationInfo)
+      } else {
+        this.onTaskSelected(validationInfo)
+      }
+    },
+
+    isTaskSelected (task, columnId, shotId) {
+      let isSelected = false
+      if (task) {
+        isSelected = task !== undefined &&
+                     this.selectedTasks[task.id] !== undefined
+      } else {
+        const validationKey = `${columnId}_${shotId}`
+        isSelected = this.selectedValidations[validationKey] !== undefined
+      }
+      return isSelected
+    },
+
     onHeaderScroll (event, position) {
       this.$refs.tableWrapper.scrollLeft = position.scrollLeft
     },
+
     onTaskSelected (task) {
       this.$store.commit('ADD_SELECTED_TASK', task)
     },
+
     onTaskUnselected (task) {
       this.$store.commit('REMOVE_SELECTED_TASK', task)
     },
+
     onBodyScroll (event, position) {
       this.$refs.headerWrapper.style.left = `-${position.scrollLeft}px`
-    }
+    },
 
+    validationBackgroundColor: colors.validationBackgroundColor,
+    validationTextColor: colors.validationTextColor
   }
 }
 </script>
@@ -261,9 +320,9 @@ th.actions {
 }
 
 .validation {
-  min-width: 150px;
-  max-width: 150px;
-  width: 150px;
+  min-width: 120px;
+  max-width: 120px;
+  width: 120px;
   margin-right: 1em;
 }
 

@@ -26,6 +26,8 @@ import {
   ASSIGN_TASKS,
   UNASSIGN_TASKS,
 
+  UPDATE_ENTITY_TASKS,
+
   SET_PREVIEW,
 
   RESET_ALL
@@ -86,6 +88,7 @@ const getters = {
   }),
 
   selectedTasks: state => state.selectedTasks,
+  selectedValidations: state => state.selectedValidations,
   nbSelectedTasks: state => state.nbSelectedTasks,
   nbSelectedValidations: state => state.nbSelectedValidations
 }
@@ -159,6 +162,12 @@ const actions = {
       }
       tasksApi.createTask(data, (err, tasks) => {
         commit(CREATE_TASKS_END, tasks)
+        tasks.forEach((task) => {
+          commit(REMOVE_SELECTED_TASK, validationInfo)
+          task.assigneesInfo = []
+          validationInfo.task = task
+          commit(ADD_SELECTED_TASK, validationInfo)
+        })
         next(err, tasks[0])
       })
     }, callback)
@@ -210,8 +219,12 @@ const actions = {
 
   assignSelectedTasks ({ commit, state }, { personId, callback }) {
     const selectedTaskIds = Object.keys(state.selectedTasks)
+
     tasksApi.assignTasks(personId, selectedTaskIds, (err) => {
-      if (!err) commit(ASSIGN_TASKS, { selectedTaskIds, personId })
+      if (!err) {
+        commit(ASSIGN_TASKS, { selectedTaskIds, personId })
+        commit(UPDATE_ENTITY_TASKS, selectedTaskIds)
+      }
       if (callback) callback(err)
     })
   },
@@ -219,7 +232,10 @@ const actions = {
   unassignSelectedTasks ({ commit, state }, { personId, callback }) {
     const selectedTaskIds = Object.keys(state.selectedTasks)
     tasksApi.unassignTasks(selectedTaskIds, (err) => {
-      if (!err) commit(UNASSIGN_TASKS, selectedTaskIds)
+      if (!err) {
+        commit(UNASSIGN_TASKS, selectedTaskIds)
+        commit(UPDATE_ENTITY_TASKS, selectedTaskIds)
+      }
       if (callback) callback(err)
     })
   }
@@ -262,6 +278,7 @@ const mutations = {
           id: shot.id,
           preview_file_id: shot.preview_file_id
         }
+
         state.taskMap[task.id] = task
       })
     })
@@ -379,29 +396,39 @@ const mutations = {
   },
 
   [ADD_SELECTED_TASK] (state, validationInfo) {
+    const taskTypeId = validationInfo.column.id
+    const entityId = validationInfo.entity.id
+    const validationKey = `${taskTypeId}_${entityId}`
+
     if (validationInfo.task) {
       state.selectedTasks[validationInfo.task.id] = validationInfo.task
       state.nbSelectedTasks = Object.keys(state.selectedTasks).length
     } else {
-      const taskTypeId = validationInfo.column.id
-      const entityId = validationInfo.entity.id
-      const validationKey = `${entityId}-${taskTypeId}`
       state.selectedValidations[validationKey] = validationInfo
       state.nbSelectedValidations = Object.keys(state.selectedValidations).length
     }
+
+    const newSelection = {...validationInfo.entity.selectedCells}
+    newSelection[validationKey] = true
+    validationInfo.entity.selectedCells = newSelection
   },
 
   [REMOVE_SELECTED_TASK] (state, validationInfo) {
+    const taskTypeId = validationInfo.column.id
+    const entityId = validationInfo.entity.id
+    const validationKey = `${taskTypeId}_${entityId}`
+
     if (validationInfo.task) {
       delete state.selectedTasks[validationInfo.task.id]
       state.nbSelectedTasks = Object.keys(state.selectedTasks).length
     } else {
-      const taskTypeId = validationInfo.column.id
-      const entityId = validationInfo.entity.id
-      const validationKey = `${entityId}-${taskTypeId}`
       delete state.selectedValidations[validationKey]
       state.nbSelectedValidations = Object.keys(state.selectedValidations).length
     }
+
+    const newSelection = {...validationInfo.entity.selectedCells}
+    delete newSelection[validationKey]
+    validationInfo.entity.selectedCells = newSelection
   },
 
   [CLEAR_SELECTED_TASKS] (state, task) {
@@ -411,11 +438,13 @@ const mutations = {
     state.nbSelectedValidations = 0
   },
 
-  [ASSIGN_TASKS] (state, { selectedTaskIds, personId }) {
+  [ASSIGN_TASKS] (state, {selectedTaskIds, personId}) {
     selectedTaskIds.forEach((taskId) => {
       const task = state.taskMap[taskId]
-      if (!task.assignees.find((assigneeId) => assigneeId === personId)) {
+      if (task && !task.assignees.find((assigneeId) => assigneeId === personId)) {
         task.assignees.push(personId)
+        task.assigneesInfo.push(helpers.getPerson(personId))
+        task.assigneesInfo = [...task.assigneesInfo]
       }
     })
   },
