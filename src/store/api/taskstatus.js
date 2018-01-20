@@ -1,7 +1,7 @@
 import client from './client'
 
 const sanitizeTaskStatus = (taskStatus) => {
-   return {
+  return {
     name: taskStatus.name,
     short_name: taskStatus.short_name,
     is_reviewable: Boolean(taskStatus.is_reviewable === 'true'),
