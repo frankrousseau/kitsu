@@ -83,7 +83,6 @@
         <button
           :class="{
             'button': true,
-            'button': true,
             'is-primary': true,
             'is-loading': isLoading
           }"
@@ -265,5 +264,9 @@ export default {
 
 .is-dragging {
   background-color: $purple;
+}
+
+.button.is-primary {
+  border-radius: 2em;
 }
 </style>

@@ -275,7 +275,7 @@ export default {
   },
 
   playlists: {
-    add_shots: 'Select shots',
+    add_shots: 'Add shots',
     add_sequence: 'Add whole sequence',
     available_build: 'Available builds',
     build_daily: 'Daily pending',

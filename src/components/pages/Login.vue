@@ -8,7 +8,7 @@
             {{ $t("login.title") }}
           </h1>
         </div>
-        <div class="field mt2">
+        <div class="field mt1">
           <p class="control has-icon">
             <input
               class="input is-medium email"
@@ -123,7 +123,7 @@ export default {
 <style lang="scss" scoped>
 .box h1.title {
   color: #6a6a6a;
-  font-weight: 500;
+  font-weight: 300;
   font-size: 1.8em;
 }
 
@@ -137,15 +137,30 @@ export default {
 }
 
 .input {
-  height: 2.4em;
+  height: 3em;
+  padding: 1.5em;
+  border-radius: 4px;
+}
+
+.input::placeholder {
+  color: #999;
 }
 
 .input:focus {
   border: 1px solid $green;
 }
 
+.icon {
+  padding: 0.25em;
+}
+
 img {
   margin-bottom: 2em;
+}
+
+.main-button {
+  font-size: 1.4em;
+  border-radius: 5px;
 }
 
 @media (min-width: 500px) {

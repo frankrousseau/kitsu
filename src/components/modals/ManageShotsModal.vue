@@ -464,10 +464,6 @@ input::placeholder {
   color: #BBB;
 }
 
-.title {
-  margin-bottom: 0em;
-}
-
 .explaination {
   margin-bottom: 1em;
 }

@@ -322,7 +322,7 @@ body {
 
   .main-button {
     background: #00B242;
-    border-bottom: 3px solid #008732;
+    // border-bottom: 3px solid #008732;
   }
 
   .add-comment .select select {
@@ -333,16 +333,19 @@ body {
     color: #DDD;
   }
 
-  .table-body .table tr:nth-child(odd) {
-    color: $white-grey;
-    background: #46494F;
+  .table-header tr:hover {
+    background: transparent;
   }
 
   .table-header,
-  .table-header tr:hover,
-  .table-body .table tr:nth-child(even) {
+  .table-body .table tr:nth-child(odd) {
     color: $white-grey;
     background: #36393F;
+  }
+
+  .table-body .table tr:nth-child(even) {
+    color: $white-grey;
+    background: #46494F;
   }
 
   .table-header th {
@@ -397,8 +400,9 @@ body {
     z-index: 1;
   }
 
-  .splitted-table tbody:first-child tr:first-child {
-    border-top: 1px solid #25282E;
+  .splitted-table tbody tr:first-child {
+    border-top: 0;
+    background: transparent;
   }
 
   .splitted-table .empty-line {
@@ -515,7 +519,7 @@ ul {
 }
 
 .hero {
-  background-color: #CFCFCF;
+  background-color: #F3F3F3;
 }
 
 .avatar {
@@ -626,12 +630,32 @@ a:hover {
   flex: 1;
 }
 
+ label.label {
+  color: $grey;
+  text-transform: uppercase;
+  font-size: 0.8em;
+  margin-left: 2px;
+}
+
+span.select {
+}
+
+texarea,
+input.input {
+  padding: 1em;
+  height: 3em;
+}
+
 .select select:hover,
 .select select:active,
 .select select:focus,
 input.input:focus {
   border-color: #00B242;
   outline: none;
+}
+
+.button {
+  border-radius: 2em;
 }
 
 .button:focus {
@@ -701,7 +725,6 @@ input.input:focus {
   background: #00B242;
   color: #fff;
   border: 0;
-  border-bottom: 3px solid #008732;
   transition: all 0.15s ease;
   width: 100%;
   display: block;
@@ -711,10 +734,26 @@ input.input:focus {
 .main-button:hover {
   background: #67BE4B;
   color: #fff;
-  border-bottom: 3px solid #119843;
 }
 
 .main-button:focus { outline: 0; }
+
+.modal-content {
+  .box {
+    border-radius: 1em;
+    padding: 1.5em 1.5em 1.5em 1.5em;
+
+    h1.title {
+      font-weight: 300;
+      font-size: 2em;
+      border: 0;
+    }
+
+    .button {
+      border-radius: 2em;
+    }
+  }
+}
 
 .hero .box {
   margin-top: 30%;
@@ -767,7 +806,7 @@ input.input:focus {
 }
 
 input.search-input:focus {
-  border-color: #8F91EB;
+  border-color: $green;
 }
 
 .filters-area {}
@@ -838,20 +877,24 @@ input.search-input:focus {
   margin-bottom: 0;
   flex-wrap: wrap;
   position: relative;
-}
 
-.table-header th.actions {
-  width: 100%;
-}
+  thead th {
+    border-width: 0 0 1px;
+  }
 
-.table-header .header-icon {
-  width: 15px;
-  cursor: pointer;
-  opacity: 0;
-}
+  th.actions {
+    width: 100%;
+  }
 
-.table-header th:hover .header-icon {
-  opacity: 100;
+  th:hover .header-icon {
+    opacity: 100;
+  }
+
+  .header-icon {
+    width: 15px;
+    cursor: pointer;
+    opacity: 0;
+  }
 }
 
 .table-body {
@@ -890,7 +933,7 @@ input.search-input:focus {
   padding-left: 0.3em;
 }
 
-.splitted-table tr {
+.splitted-table tbody tr {
   border-right: 1px solid #CCC;
   border-left: 1px solid #CCC;
 }
@@ -910,8 +953,10 @@ input.search-input:focus {
   z-index: 1;
 }
 
-.splitted-table tbody:first-child tr:first-child {
-  border-top: 1px solid #CCC;
+.splitted-table tbody tr:first-child {
+  border: 0;
+  color: #999;
+  text-transform: uppercase;
 }
 
 .splitted-table tbody:last-child .empty-line:last-child {
