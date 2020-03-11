@@ -125,7 +125,7 @@
       </div>
 
       <div class="playlist-column column" v-else>
-        <playlist-player
+        <!--playlist-player
           ref="playlist-player"
           :playlist="currentPlaylist"
           :shots="currentShots"
@@ -140,16 +140,16 @@
           @order-change="onOrderChange"
           @annotationchanged="onAnnotationChanged"
           @for-client-changed="onForClientChanged"
-        />
+        /-->
 
         <div
-          v-if="isCurrentUserManager && isAddingShot"
+          v-if="isCurrentUserManager && isAddingEntity"
         >
           <div class="addition-header">
             <div class="flexrow">
               <page-subtitle
                 class="flexrow-item"
-                :text="$t('playlists.add_shots')"
+                :text=currentPlaylist ? "$t('playlists.add_shots')"
               />
               <span class="filler"></span>
               <button
