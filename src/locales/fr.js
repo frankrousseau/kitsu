@@ -293,7 +293,7 @@ export default {
       for_client: 'A partager avec'
     },
     actions: {
-      rename: 'Renommer la playlist',
+      edit: 'Modifier la playlist',
       delete: 'Supprimer la playlist',
       fullscreen: 'Plein écran',
       download: 'Télécharger…',

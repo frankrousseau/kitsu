@@ -18,7 +18,7 @@
 <script>
 /*
  * To play several videos, to avoid blinking effects, it's required to use
- * two video players. When switching from a shot to another, we hide and show
+ * two video players. When switching from a entity to another, we hide and show
  * players so the blink does not occur.
  */
 import { mapGetters } from 'vuex'
@@ -31,7 +31,7 @@ export default {
   },
 
   props: {
-    shots: {
+    entities: {
       type: Array,
       default: () => []
     },
@@ -99,21 +99,21 @@ export default {
     },
 
     getNextIndex (index) {
-      let i = index + 1 >= this.shots.length ? 0 : index + 1
-      // While we don't come back to initial shot and we have video previews
-      while (i !== index && this.shots[i].preview_file_extension !== 'mp4') {
+      let i = index + 1 >= this.entities.length ? 0 : index + 1
+      // While we don't come back to initial entity and we have video previews
+      while (i !== index && this.entities[i].preview_file_extension !== 'mp4') {
         i++
-        if (i >= this.shots.length) i = 0
+        if (i >= this.entities.length) i = 0
       }
       return i
     },
 
     getPreviousIndex (index) {
-      let i = index - 1 >= 0 ? index - 1 : this.shots.length - 1
-      // While we don't come back to initial shot and we have video previews
-      while (i !== index && this.shots[i].preview_file_extension !== 'mp4') {
+      let i = index - 1 >= 0 ? index - 1 : this.entities.length - 1
+      // While we don't come back to initial entity and we have video previews
+      while (i !== index && this.entities[i].preview_file_extension !== 'mp4') {
         i--
-        if (i < 0) i = this.shots.length
+        if (i < 0) i = this.entities.length
       }
       return i
     },
@@ -144,25 +144,26 @@ export default {
       }
     },
 
-    loadPreviousShot () {
-      this.loadShot(this.getPreviousIndex(this.currentIndex))
-      this.$emit('shot-change', this.currentIndex)
+    loadPreviousEntity () {
+      this.loadEntity(this.getPreviousIndex(this.currentIndex))
+      this.$emit('entity-change', this.currentIndex)
     },
 
-    loadNextShot () {
-      this.loadShot(this.getNextIndex(this.currentIndex))
-      this.$emit('shot-change', this.currentIndex)
+    loadNextEntity () {
+      this.loadEntity(this.getNextIndex(this.currentIndex))
+      this.$emit('entity-change', this.currentIndex)
     },
 
-    reloadCurrentShot () {
-      this.loadShot(this.currentIndex)
+    reloadCurrentEntity () {
+      this.loadEntity(this.currentIndex)
     },
 
-    loadShot (index = 0) {
-      if (index < this.shots.length) {
+    loadEntity (index = 0) {
+      console.log('rawPlayer.loadEntity', index)
+      if (index < this.entities.length) {
         const nextIndex = this.getNextIndex(index)
-        const shot = this.shots[index]
-        const nextShot = this.shots[nextIndex]
+        const entity = this.entities[index]
+        const nextEntity = this.entities[nextIndex]
 
         this.currentIndex = index
         this.currentPlayer = this.player1
@@ -176,8 +177,10 @@ export default {
           this.updateMaxDuration
         )
 
-        this.currentPlayer.src = this.getMoviePath(shot.preview_file_id)
-        this.nextPlayer.src = this.getMoviePath(nextShot.preview_file_id)
+        console.log('rawPlayer.loadEntity', entity)
+        console.log('rawPlayer.loadEntity', this.getMoviePath(entity.preview_file_id))
+        this.currentPlayer.src = this.getMoviePath(entity.preview_file_id)
+        this.nextPlayer.src = this.getMoviePath(nextEntity.preview_file_id)
         this.currentPlayer.style.display = 'block'
         this.nextPlayer.style.display = 'none'
         this.resetHeight()
@@ -185,7 +188,7 @@ export default {
         this.currentPlayer.removeEventListener('timeupdate', this.updateTime)
         this.currentPlayer.addEventListener('timeupdate', this.updateTime)
 
-        this.$emit('shot-change', this.currentIndex)
+        this.$emit('entity-change', this.currentIndex)
       }
     },
 
@@ -195,11 +198,11 @@ export default {
     },
 
     play () {
-      let shot = this.shots[this.currentIndex]
-      if (shot) {
-        if (!shot.preview_file_id) this.loadNextShot()
-        shot = this.shots[this.currentIndex]
-        if (shot.preview_file_id) {
+      let entity = this.entities[this.currentIndex]
+      if (entity) {
+        if (!entity.preview_file_id) this.loadNextEntitn()
+        entity = this.entities[this.currentIndex]
+        if (entity.preview_file_id) {
           if (this.currentPlayer) this.currentPlayer.play()
           this.isPlaying = true
         }
@@ -213,7 +216,7 @@ export default {
       } else {
         const nextIndex = this.getNextIndex(this.currentIndex)
         this.currentIndex = nextIndex
-        this.$emit('shot-change', this.currentIndex)
+        this.$emit('entity-change', this.currentIndex)
 
         this.currentPlayer.style.display = 'none'
         this.nextPlayer.style.display = 'block'
@@ -245,11 +248,11 @@ export default {
 
     switchPlayers () {
       const nextIndex = this.getNextIndex(this.currentIndex)
-      const nextShot = this.shots[nextIndex]
+      const nextEntity = this.entities[nextIndex]
       this.tmpPlayer = this.currentPlayer
       this.currentPlayer = this.nextPlayer
       this.nextPlayer = this.tmpPlayer
-      this.nextPlayer.src = this.getMoviePath(nextShot.preview_file_id)
+      this.nextPlayer.src = this.getMoviePath(nextEntity.preview_file_id)
       this.resetHeight()
 
       this.currentPlayer.removeEventListener('timeupdate', this.updateTime)
@@ -288,14 +291,14 @@ export default {
   },
 
   watch: {
-    shots () {
-      if (this.shots.length > 0) {
-        this.loadShot(0)
+    entities () {
+      if (this.entities.length > 0) {
+        this.loadEntity(0)
         this.pause()
         this.setCurrentTime(0)
 
-        const shot = this.shots[this.currentIndex]
-        if (shot && !shot.preview_file_id) this.loadNextShot()
+        const entity = this.entities[this.currentIndex]
+        if (entity && !entity.preview_file_id) this.loadNextEntity()
       }
       setTimeout(this.resetHeight, 300)
     }

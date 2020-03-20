@@ -331,6 +331,7 @@ export default {
   },
 
   playlists: {
+    add_assets: 'Add assets',
     add_selection: 'Add selection',
     add_shots: 'Add shots',
     add_sequence: 'Add whole sequence',
@@ -370,14 +371,15 @@ export default {
     remove: 'remove',
     fields: {
       name: 'Name',
+      for_entity: 'Select entity to display:',
       for_client: 'To be shared with'
     },
     actions: {
-      rename: 'Rename playlist',
+      edit: 'Edit playlist',
       delete: 'Delete playlist',
       fullscreen: 'Fullscreen',
       download: 'Download…',
-      shotlist: 'Show/Hide shot list',
+      entity_list: 'Show/Hide entity list',
       comments: 'Show/Hide comments',
       annotation: 'Annotation',
       annotation_delete: 'Delete annotation',
