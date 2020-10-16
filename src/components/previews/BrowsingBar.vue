@@ -13,7 +13,7 @@
     :title="$t('playlists.actions.files_position')"
     v-if="!light"
   >
-    {{ currentIndex }} / {{ preview.previews.length }}
+    {{ currentIndex }} / {{ previews.length }}
   </span>
 
   <button-simple
@@ -54,9 +54,9 @@ export default {
   },
 
   props: {
-    preview: {
-      type: Object,
-      default: () => {}
+    previews: {
+      type: Array,
+      default: () => []
     },
     currentIndex: {
       type: Number,

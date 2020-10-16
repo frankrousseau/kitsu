@@ -91,7 +91,7 @@
                 <preview-player
                   :entity-preview-files="taskEntityPreviews"
                   :last-preview-files="lastFiveMoviePreviews"
-                  :preview="currentPreview"
+                  :previews="currentPreview.previews"
                   :task-type-map="taskTypeMap"
                   :light="!isWide"
                   :read-only="!isCurrentUserManager"
@@ -552,24 +552,18 @@ export default {
         this.errors.task = false
         this.loadTaskComments({
           taskId: this.task.id,
-          entityId: this.task.entity_id,
-          callback: (err) => {
-            if (err) {
-              console.error(err)
-              this.errors.task = true
-            } else {
-              this.loadTaskSubscribed({
-                taskId: this.task.id,
-                callback: (err, subscribed) => {
-                  if (err) console.error(err)
-                  this.loading.task = false
-                  this.reset()
-                  this.isSubscribed = subscribed
-                }
-              })
-            }
-          }
+          entityId: this.task.entity_id
         })
+          .then(() => this.loadTaskSubscribed({ taskId: this.task.id }))
+          .then(subscribed => {
+            this.loading.task = false
+            this.reset()
+            this.isSubscribed = subscribed
+          })
+          .catch(err => {
+            console.error(err)
+            this.errors.task = true
+          })
       }
     },
 
@@ -757,8 +751,7 @@ export default {
       this.setPreview({
         taskId: this.task.id,
         entityId: this.task.entity.id,
-        previewId: this.currentPreviewId,
-        callback: () => {}
+        previewId: this.currentPreviewId
       })
     },
 
@@ -829,17 +822,17 @@ export default {
 
       this.deleteTaskComment({
         taskId: this.task.id,
-        commentId,
-        callback: (err) => {
-          this.loading.deleteComment = false
-          if (err) {
-            this.errors.deleteComment = true
-          } else {
-            this.reset()
-            this.modals.deleteComment = false
-          }
-        }
+        commentId
       })
+        .then(() => {
+          this.reset()
+          this.modals.deleteComment = false
+        })
+        .catch((err) => {
+          console.error(err)
+          this.loading.deleteComment = false
+          this.errors.deleteComment = true
+        })
     },
 
     confirmEditTaskComment (comment) {
@@ -847,16 +840,17 @@ export default {
       this.errors.editComment = false
       this.editTaskComment({
         taskId: this.task.id,
-        comment,
-        callback: (err) => {
-          this.loading.editComment = false
-          if (err) {
-            this.errors.editComment = true
-          } else {
-            this.modals.editComment = false
-          }
-        }
+        comment
       })
+        .then(() => {
+          this.loading.editComment = false
+          this.modals.editComment = false
+        })
+        .catch((err) => {
+          console.error(err)
+          this.loading.editComment = false
+          this.errors.editComment = true
+        })
     },
 
     getCurrentTaskComments () {

@@ -168,7 +168,7 @@
               v-if="isPreviews"
             >
               <preview-player
-                :previews="currentPreview"
+                :previews="currentPreview.previews"
                 :task-type-map="taskTypeMap"
                 :entity-preview-files="taskEntityPreviews"
                 :read-only="isCurrentUserArtist"

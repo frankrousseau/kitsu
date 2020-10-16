@@ -162,17 +162,8 @@ export default {
     },
 
     pictureOriginalPath () {
-      const previewId = this.currentPreview.id
+      const previewId = this.preview.id
       return `/api/pictures/originals/preview-files/${previewId}.png`
-    },
-
-    currentPreview () {
-      if (this.preview.previews.length > 0 &&
-          this.currentIndex - 1 < this.preview.previews.length) {
-        return this.preview.previews[this.currentIndex - 1]
-      } else {
-        return this.preview
-      }
     },
 
     isGif () {
@@ -435,8 +426,8 @@ export default {
 
       const annotations = [{ ...annotation }]
       const preview = {
-        id: this.currentPreview.id,
-        task_id: this.currentPreview.task_id,
+        id: this.preview.id,
+        task_id: this.preview.task_id,
         annotations: annotations
       }
       if (!this.readOnly) {
@@ -587,25 +578,25 @@ export default {
 
     setPicturePath () {
       if (this.isGif) {
-        const previewId = this.currentPreview.id
+        const previewId = this.preview.id
         this.pictureGifPath = `/api/pictures/originals/preview-files/${previewId}.gif`
       } else {
-        const previewId = this.currentPreview.id
+        const previewId = this.preview.id
         this.picturePath = `/api/pictures/previews/preview-files/${previewId}.png`
       }
       this.setPictureDlPath()
     },
 
     setPictureDlPath () {
-      const previewId = this.currentPreview.id
+      const previewId = this.preview.id
       this.pictureDlPath = `/api/pictures/originals/preview-files/${previewId}/download`
     },
 
     reloadAnnotations () {
       this.annotations = []
-      if (this.currentPreview.annotations) {
+      if (this.preview.annotations) {
         const annotations = []
-        this.currentPreview.annotations.forEach(a => annotations.push({ ...a }))
+        this.preview.annotations.forEach(a => annotations.push({ ...a }))
         this.annotations = annotations.sort((a, b) => {
           return a.time < b.time
         }) || []

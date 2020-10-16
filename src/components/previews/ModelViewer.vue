@@ -46,6 +46,10 @@ export default {
     readOnly: {
       default: false,
       type: Boolean
+    },
+    empty: {
+      default: false,
+      type: Boolean
     }
   },
 
@@ -70,23 +74,29 @@ export default {
 
   mounted () {
     setTimeout(() => {
-      this.scene = prepareScene(this.element)
-      this.loadObject()
+      if (!this.empty) {
+        this.scene = prepareScene(this.element)
+        this.loadObject()
+      }
     }, 100)
   },
 
   watch: {
     previewUrl () {
-      clearScene(this.scene)
-      this.loadObject()
+      if (!this.empty) {
+        clearScene(this.scene)
+        this.loadObject()
+      }
     },
 
     light () {
       clearScene(this.scene)
       this.element.innerHTML = ''
       setTimeout(() => {
-        this.scene = prepareScene(this.element)
-        loadObject(this.scene, this.previewUrl)
+        if (!this.empty) {
+          this.scene = prepareScene(this.element)
+          loadObject(this.scene, this.previewUrl)
+        }
       }, 100)
     }
   }

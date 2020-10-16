@@ -692,10 +692,10 @@ const mutations = {
         preview.previews = comment.previews.map((p) => {
           return {
             id: p.id,
-            annotations: p.annotations
+            annotations: p.annotations,
+            extension: p.extension
           }
         })
-
         previews.push(preview)
         return previews
       } else {

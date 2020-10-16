@@ -18,7 +18,7 @@
       @time-update="updateTime"
       @play-ended="pause"
       @annotation-changed="(payload) => $emit('annotationchanged', payload)"
-      v-if="isMovie"
+      v-show="isMovie"
     />
 
     <picture-viewer
@@ -28,20 +28,21 @@
       :full-screen="fullScreen"
       ref="preview-picture"
       @annotation-changed="(payload) => $emit('annotationchanged', payload)"
-      v-else-if="isPicture"
+      v-show="isPicture"
     />
 
     <model-viewer
       class="model-viewer"
       :preview-url="originalPath"
       :light="light"
-      v-else-if="is3DModel"
+      :empty="!is3DModel"
+      v-show="is3DModel"
     />
 
     <pdf
       class="pdf-viewer"
       :src="originalPath"
-      v-else-if="isPdf"
+      v-if="isPdf"
     />
 
     <a
@@ -58,8 +59,6 @@
   </div>
 
   <div class="button-bar" ref="button-bar">
-  {{ currentIndex }}
-  {{ currentPreview }}
     <div class="buttons flexrow pull-bottom">
       <div class="left flexrow" v-if="isMovie">
         <button-simple
@@ -267,7 +266,7 @@
 
         <browsing-bar
           :current-index="currentIndex"
-          :preview="currentPreview"
+          :previews="previews"
           :read-only="readOnly"
           :light="light"
           :full-screen="fullScreen"
@@ -305,8 +304,8 @@
 </template>
 
 <script>
-import { mapGetters } from 'vuex'
 import pdf from 'vue-pdf'
+import { mapGetters } from 'vuex'
 import { formatFrame, formatTime } from '@/lib/video'
 
 import { annotationMixin } from '@/components/mixins/annotation_mixin'
@@ -344,9 +343,9 @@ export default {
   },
 
   props: {
-    preview: {
-      type: Object,
-      default: () => {}
+    previews: {
+      type: Array,
+      default: () => []
     },
     entityPreviewFiles: {
       type: Object,
@@ -485,6 +484,7 @@ export default {
     },
 
     videoPlayer () {
+      console.log(this.$refs)
       return this.$refs['video-player']
     },
 
@@ -539,19 +539,13 @@ export default {
     },
 
     currentPreview () {
-      return this.preview
-      /*
-      if (this.currentIndex === 1) {
-        return this.preview
-      } else if (this.preview &&
-          this.preview.previews &&
-          this.preview.previews.length > 0 &&
-          this.currentIndex - 1 < this.preview.previews.length) {
-        return this.preview.previews[this.currentIndex - 1]
+      if (this.previews &&
+          this.previews.length > 0 &&
+          this.currentIndex - 1 < this.previews.length) {
+        return this.previews[this.currentIndex - 1]
       } else {
-        return this.preview
+        return {}
       }
-      */
     }
   },
 
@@ -800,12 +794,12 @@ export default {
       if (this.currentIndex > 1) {
         this.currentIndex--
       } else {
-        this.currentIndex = this.preview.previews.length
+        this.currentIndex = this.previews.length
       }
     },
 
     onNextClicked () {
-      if (this.currentIndex < this.preview.previews.length) {
+      if (this.currentIndex < this.previews.length) {
         this.currentIndex++
       } else {
         this.currentIndex = 1
@@ -819,7 +813,7 @@ export default {
     },
 
     displayLast () {
-      this.currentIndex = this.preview.previews.length
+      this.currentIndex = this.previews.length
     },
 
     configureVideo () {
@@ -832,37 +826,29 @@ export default {
         return false
       })
       */
-      setTimeout(() => {
-        this.container.addEventListener('keydown', this.onKeyDown, false)
-        window.addEventListener('resize', this.onWindowResize)
-      }, 0)
+      this.container.addEventListener('keydown', this.onKeyDown, false)
+      window.addEventListener('resize', this.onWindowResize)
     }
   },
 
   watch: {
     preview () {
-      this.$nextTick(() => {
-        if (this.videoPlayer) {
-          this.configureVideo()
-          this.maxDuration = '00:00.000'
-          this.isDrawing = false
-          this.pause()
-          if (this.isComparing) {
-            this.isComparing = false
-          }
-          this.setDefaultComparisonTaskType()
-        }
-      })
+      if (this.videoPlayer) {
+        this.configureVideo()
+        this.maxDuration = '00:00.000'
+        this.isDrawing = false
+        this.pause()
+        if (this.isComparing) this.isComparing = false
+        this.setDefaultComparisonTaskType()
+      }
     },
 
     previewToCompareId () {
       if (this.isComparing) {
         this.pause()
         const currentTime = this.videoPlayer.currentTime
-        this.$nextTick(() => {
-          const comparisonVideo = document.getElementById('comparison-movie')
-          if (comparisonVideo) comparisonVideo.currentTime = currentTime
-        })
+        const comparisonVideo = document.getElementById('comparison-movie')
+        if (comparisonVideo) comparisonVideo.currentTime = currentTime
       }
     },
 
