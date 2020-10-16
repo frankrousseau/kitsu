@@ -31,193 +31,20 @@
     </div>
     <spinner v-if="isLoading"/>
   </div>
-
-  <div class="buttons flexrow pull-bottom" ref="button-bar">
-    <div class="left flexrow">
-      <button-simple
-        class="flexrow-item"
-        :title="$t('playlists.actions.files_previous')"
-        icon="left"
-        @click="onPreviousClicked"
-      />
-
-      <span
-        class="flexrow-item bar-element"
-        :title="$t('playlists.actions.files_position')"
-      >
-        {{ currentIndex }} / {{ preview.previews.length }}
-      </span>
-
-      <button-simple
-        class="button flexrow-item"
-        icon="right"
-        :title="$t('playlists.actions.files_next')"
-        @click="onNextClicked"
-      />
-
-      <button-simple
-        class="flexrow-item"
-        @click="onAddPreviewClicked"
-        :title="$t('playlists.actions.files_add')"
-        icon="plus"
-        v-if="!readOnly && preview.extension !== 'gif'"
-      />
-
-      <button-simple
-        class="flexrow-item"
-        :title="$t('playlists.actions.files_delete')"
-        icon="delete"
-        @click="onRemovePreviewClicked"
-        v-if="currentIndex > 1 && (!light || fullScreen) && !readOnly"
-      />
-    </div>
-
-    <div class="right flexrow">
-      <div class="flexrow flexrow-item" v-if="fullScreen">
-        <span
-          :class="{
-            'previous-preview-file': true,
-            'current-preview-file': previewFile.revision === preview.revision
-          }"
-          :key="`last-preview-${previewFile.id}`"
-          @click="changeCurrentPreview(previewFile)"
-          v-for="previewFile in lastPreviewFiles"
-        >
-          {{ previewFile.revision }}
-        </span>
-      </div>
-
-      <button-simple
-        class="playlist-button flexrow-item"
-        icon="undo"
-        :title="$t('playlists.actions.annotation_undo')"
-        @click="undoLastAction"
-        v-if="fullScreen && !readOnly"
-      />
-
-      <button-simple
-        class="playlist-button flexrow-item"
-        icon="redo"
-        :title="$t('playlists.actions.annotation_redo')"
-        @click="redoLastAction"
-        v-if="fullScreen && !readOnly"
-      />
-
-      <button-simple
-        class="flexrow-item"
-        icon="remove"
-        :title="$t('playlists.actions.annotation_delete')"
-        @click="onDeleteClicked"
-        v-if="fullScreen && !readOnly"
-      />
-
-      <transition name="slide">
-        <div
-          class="annotation-tools"
-          v-show="isTyping"
-        >
-          <color-picker
-            :isOpen="isShowingPalette"
-            :color="this.textColor"
-            :palette="this.palette"
-            @TogglePalette="onPickColor"
-            @change="onChangeTextColor"
-          />
-        </div>
-      </transition>
-
-      <button-simple
-        class="flexrow-item"
-        icon="type"
-        :active="isTyping"
-        :title="$t('playlists.actions.annotation_text')"
-        @click="onTypeClicked"
-        v-if="!readOnly && fullScreen"
-      />
-
-      <transition name="slide">
-        <div
-          class="annotation-tools"
-          v-show="isDrawing"
-        >
-          <pencil-picker
-            :isOpen="isShowingPencilPalette"
-            :pencil="pencil"
-            :sizes="this.pencilPalette"
-            @toggle-palette="onPickPencil"
-            @change="onChangePencil"
-          />
-
-          <color-picker
-            :isOpen="isShowingPalette"
-            :color="this.color"
-            :palette="this.palette"
-            @TogglePalette="onPickColor"
-            @change="onChangeColor"
-          />
-        </div>
-      </transition>
-
-      <button-simple
-        class="flexrow-item"
-        icon="pencil"
-        :active="isDrawing"
-        :title="$t('playlists.actions.annotation_draw')"
-        @click="onPencilAnnotateClicked"
-        v-if="fullScreen && !readOnly"
-      />
-
-      <a
-        class="button flexrow-item"
-        :href="pictureOriginalPath"
-        :title="$t('playlists.actions.see_original_file')"
-        target="blank"
-        v-if="!readOnly"
-      >
-        <arrow-up-right-icon class="icon is-small" />
-      </a>
-      <a
-        class="button flexrow-item"
-        :title="$t('playlists.actions.download_file')"
-        :href="pictureDlPath"
-      >
-        <download-icon class="icon is-small" />
-      </a>
-
-      <button-simple
-        class="flexrow-item"
-        :title="$t('playlists.actions.fullscreen')"
-        icon="maximize"
-        @click="onFullscreenClicked"
-      />
-    </div>
-  </div>
 </div>
 </template>
 
 <script>
 import { fabric } from 'fabric'
-import {
-  ArrowUpRightIcon,
-  DownloadIcon
-} from 'vue-feather-icons'
 import { fullScreenMixin } from '@/components/mixins/fullscreen'
 import { annotationMixin } from '@/components/mixins/annotation_mixin'
 import { domMixin } from '@/components/mixins/dom'
-import ButtonSimple from '../widgets/ButtonSimple'
-import ColorPicker from '../widgets/ColorPicker'
-import PencilPicker from '../widgets/PencilPicker'
-import Spinner from '../widgets/Spinner'
+import Spinner from '@/components/widgets/Spinner'
 
 export default {
   name: 'picture-viewer',
 
   components: {
-    ArrowUpRightIcon,
-    ButtonSimple,
-    ColorPicker,
-    DownloadIcon,
-    PencilPicker,
     Spinner
   },
   mixins: [annotationMixin, domMixin, fullScreenMixin],
@@ -242,6 +69,10 @@ export default {
     big: {
       type: Boolean,
       default: false
+    },
+    fullScreen: {
+      type: Boolean,
+      default: false
     }
   },
 
@@ -253,7 +84,6 @@ export default {
       color: '#ff3860',
       textColor: '#ff3860',
       fabricCanvas: null,
-      fullScreen: false,
       isLoading: true,
       isDrawing: false,
       isTyping: false,
@@ -358,7 +188,6 @@ export default {
 
   methods: {
     exitHandler () {
-      if (!this.isFullScreen() && this.fullScreen) this.fullScreen = false
     },
 
     isWide () {
@@ -419,9 +248,9 @@ export default {
 
     getDefaultHeight () {
       if (this.fullScreen) {
-        return screen.height
+        return screen.height - 30
       } else {
-        return screen.width > 1300 && (!this.light || this.big) ? 500 : 200
+        return screen.width > 1300 && (!this.light || this.big) ? 470 : 170
       }
     },
 
@@ -462,14 +291,6 @@ export default {
       return { width, height }
     },
 
-    onAddPreviewClicked () {
-      this.$emit('add-preview')
-    },
-
-    onRemovePreviewClicked () {
-      this.$emit('remove-extra-preview', this.currentPreview)
-    },
-
     onFullscreenClicked () {
       /** @lends fabric.IText.prototype */
       // fix for : IText not editable when canvas is in a fullscreen
@@ -494,34 +315,6 @@ export default {
         })
         this.setFullScreen()
       }
-    },
-
-    exitFullScreen () {
-      if (document.exitFullscreen) {
-        document.exitFullscreen()
-      } else if (document.mozCancelFullScreen) {
-        document.mozCancelFullScreen()
-      } else if (document.webkitCancelFullScreen) {
-        document.webkitCancelFullScreen()
-      } else if (document.msExitFullscreen) {
-        document.msExitFullscreen()
-      }
-      this.container.setAttribute('data-fullscreen', !!false)
-      this.fullScreen = false
-    },
-
-    setFullScreen () {
-      if (this.container.requestFullscreen) {
-        this.container.requestFullscreen()
-      } else if (this.container.mozRequestFullScreen) {
-        this.container.mozRequestFullScreen()
-      } else if (this.container.webkitRequestFullScreen) {
-        this.container.webkitRequestFullScreen()
-      } else if (this.container.msRequestFullscreen) {
-        this.container.msRequestFullscreen()
-      }
-      this.container.setAttribute('data-fullscreen', !!true)
-      this.fullScreen = true
     },
 
     onDeleteClicked () {
@@ -747,32 +540,6 @@ export default {
       }
     },
 
-    onPreviousClicked () {
-      if (this.currentIndex > 1) {
-        this.currentIndex--
-      } else {
-        this.currentIndex = this.preview.previews.length
-      }
-    },
-
-    onNextClicked () {
-      if (this.currentIndex < this.preview.previews.length) {
-        this.currentIndex++
-      } else {
-        this.currentIndex = 1
-      }
-    },
-
-    displayFirst () {
-      if (this.currentIndex > 1) {
-        this.currentIndex = 1
-      }
-    },
-
-    displayLast () {
-      this.currentIndex = this.preview.previews.length
-    },
-
     reset () {
       this.mountPicture()
       this.clearCanvas()
@@ -970,6 +737,7 @@ export default {
   display: flex;
   flex-direction: column;
   align-content: flex-end;
+  border-radius: 5px;
   height: 100%;
 }
 
@@ -980,6 +748,7 @@ export default {
 
 .picture-wrapper {
   flex: 1;
+  border-radius: 5px;
   position: relative;
   display: flex;
   background: black;
@@ -987,7 +756,6 @@ export default {
   justify-content: center;
   text-align: center;
   width: 100%;
-
   z-index: 300;
 }
 

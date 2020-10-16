@@ -86,57 +86,23 @@
           <div class="preview">
             <div class="preview-picture">
               <div
-                v-if="isMoviePreview"
+                v-if="taskPreviews && taskPreviews.length > 0"
               >
-                <video-player
-                  :preview="currentPreview"
+                <preview-player
                   :entity-preview-files="taskEntityPreviews"
                   :last-preview-files="lastFiveMoviePreviews"
+                  :preview="currentPreview"
                   :task-type-map="taskTypeMap"
                   :light="!isWide"
                   :read-only="!isCurrentUserManager"
                   @annotationchanged="onAnnotationChanged"
                   @change-current-preview="changeCurrentPreview"
+                  @add-preview="onAddExtraPreview"
+                  @remove-extra-preview="onRemoveExtraPreview"
                   ref="preview-movie"
                 />
               </div>
 
-              <div
-                class="preview-standard-file"
-                v-else-if="isStandardPreview"
-              >
-                <a
-                  class="button"
-                  ref="preview-file"
-                  :href="currentPreviewDlPath"
-                >
-                  <download-icon class="icon" />
-                  <span class="text">
-                    {{ $t('tasks.download_pdf_file', {extension}) }}
-                  </span>
-                </a>
-              </div>
-
-              <model-viewer
-                class="model-viewer"
-                :preview-url="currentPreviewPath"
-                :preview-dl-path="currentPreviewDlPath"
-                :light="!isWide"
-                v-else-if="is3DModelPreview"
-              />
-
-              <picture-viewer
-                :preview="currentPreview"
-                :last-preview-files="lastFivePicturePreviews"
-                :light="!isWide"
-                :read-only="!isCurrentUserManager"
-                @annotation-changed="onAnnotationChanged"
-                @add-preview="onAddExtraPreview"
-                @remove-extra-preview="onRemoveExtraPreview"
-                @change-current-preview="changeCurrentPreview"
-                ref="preview-picture"
-                v-else-if="isPicturePreview"
-              />
               <div
                 class="no-preview"
                 v-if="!taskPreviews || taskPreviews.length === 0"
@@ -145,7 +111,6 @@
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
@@ -265,9 +230,6 @@
 <script>
 import { mapGetters, mapActions } from 'vuex'
 import {
-  DownloadIcon
-} from 'vue-feather-icons'
-import {
   getTaskEntityPath,
   getTaskPath
 } from '../../lib/path'
@@ -281,13 +243,11 @@ import ButtonSimple from '../widgets/ButtonSimple'
 import Comment from '../widgets/Comment'
 import DeleteModal from '../modals/DeleteModal'
 import EditCommentModal from '../modals/EditCommentModal'
-import ModelViewer from '../previews/ModelViewer'
-import PictureViewer from '../previews/PictureViewer'
 import Spinner from '../widgets/Spinner'
 import SubscribeButton from '../widgets/SubscribeButton'
 import TaskTypeName from '../widgets/TaskTypeName'
 import ValidationTag from '../widgets/ValidationTag'
-import VideoPlayer from '../previews/VideoPlayer'
+import PreviewPlayer from '../previews/PreviewPlayer'
 
 export default {
   name: 'task-info',
@@ -296,16 +256,13 @@ export default {
     AddPreviewModal,
     ButtonSimple,
     Comment,
-    DownloadIcon,
     DeleteModal,
     EditCommentModal,
-    ModelViewer,
-    PictureViewer,
+    PreviewPlayer,
     Spinner,
     SubscribeButton,
     TaskTypeName,
-    ValidationTag,
-    VideoPlayer
+    ValidationTag
   },
 
   props: {

@@ -1806,6 +1806,15 @@ th.validation-cell {
   }
 }
 
+.separator {
+  margin: .5rem;
+  &:before {
+    content: '';
+    border-left: 1px solid $dark-grey-lightest;
+    height: .5rem;
+  }
+}
+
 @media screen and (max-width: 1000px) {
   .button .icon.is-small {
     margin-right: 0;

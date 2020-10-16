@@ -1,40 +1,19 @@
 <template>
-<div ref="container">
-  <div
-    ref="model-viewer"
-    id="model-viewer"
-    :class="{
-      light: light && !readOnly
-    }"
-  >
-  </div>
-  <div class="viewer-actions flexrow">
-    <span v-if="isLoading">{{ $t('main.loading') }}</span>
-    <span class="filler"></span>
-    <a
-      :href="previewDlPath"
-      class="button flexrow-item"
-      v-if="!readOnly"
-    >
-      <download-icon class="icon" />
-    </a>
-    <button
-      class="button flexrow-item"
-      @click="goFullScreen">
-      <maximize-icon class="icon" />
-    </button>
-  </div>
+<div
+  ref="model-viewer"
+  id="model-viewer"
+  :class="{
+    light: light && !readOnly
+  }"
+>
 </div>
 </template>
 
 <script>
 import {
-  DownloadIcon,
-  MaximizeIcon
 } from 'vue-feather-icons'
 import {
   clearScene,
-  goFullScreen,
   loadObject,
   prepareScene
 } from '../../../node_modules/js-3d-model-viewer/src/index'
@@ -43,8 +22,6 @@ export default {
   name: 'model-viewer',
 
   components: {
-    DownloadIcon,
-    MaximizeIcon
   },
 
   data () {
@@ -83,10 +60,6 @@ export default {
   },
 
   methods: {
-    goFullScreen () {
-      goFullScreen(this.element)
-    },
-
     loadObject () {
       this.isLoading = true
       loadObject(this.scene, this.previewUrl, null, () => {
@@ -123,14 +96,11 @@ export default {
 <style lang="scss" scoped>
 #model-viewer {
   height: 500px;
+  width: 100%;
+  background: black;
 }
 
 #model-viewer.light {
   height: 200px;
-}
-
-.viewer-actions {
-  padding: 0.2em 0;
-  text-align: left;
 }
 </style>
