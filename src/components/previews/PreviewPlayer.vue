@@ -26,20 +26,19 @@
       @duration-changed="changeMaxDuration"
       @time-update="updateTime"
       @play-ended="pause"
-      @annotation-changed="(payload) => $emit('annotationchanged', payload)"
       v-show="isMovie"
     />
 
     <picture-viewer
       ref="picture-player"
       :preview="currentPreview"
+      :default-height="defaultHeight"
       :big="big"
       :light="light"
       :read-only="readOnly"
       :full-screen="fullScreen"
       :is-drawing="isDrawing"
       :is-typing="isTyping"
-      @annotation-changed="(payload) => $emit('annotationchanged', payload)"
       v-show="isPicture"
     />
 
@@ -325,6 +324,7 @@
 
 <script>
 import pdf from 'vue-pdf'
+import { fabric } from 'fabric'
 import { mapGetters } from 'vuex'
 import { formatFrame, formatTime } from '@/lib/video'
 
@@ -395,6 +395,7 @@ export default {
 
   data () {
     return {
+      annotations: [],
       currentIndex: 1,
       fullScreen: false,
       color: '#ff3860',
@@ -578,7 +579,19 @@ export default {
       } else {
         return {}
       }
+    },
+
+    defaultHeight () {
+      if (this.isFullScreen()) {
+        return screen.height + 60
+      } else {
+        const bigHeight = screen.height > 900 ? 470 : 300
+        return screen.width > 1300 && (
+          !this.light || this.big
+        ) ? bigHeight : 170
+      }
     }
+
   },
 
   methods: {
@@ -641,6 +654,7 @@ export default {
       this.container.setAttribute('data-fullscreen', !!false)
       this.isComparing = false
       this.fullScreen = false
+      this.fixCanvasSize()
     },
 
     setFullScreen () {
@@ -655,8 +669,8 @@ export default {
       }
       this.container.setAttribute('data-fullscreen', !!true)
       this.fullScreen = true
-      console.log(this.fullScreen)
       this.$refs['button-bar'].focus()
+      this.fixCanvasSize()
     },
 
     onDeleteClicked () {
@@ -707,16 +721,11 @@ export default {
 
     onFullscreenClicked () {
       if (this.isFullScreen()) {
-        if (this.isMovie) this.videoPlayer.removeTypeArea()
-        if (this.isPicture) this.picturePlayer.removeTypeArea()
+        this.removeTypeArea()
         this.exitFullScreen()
       } else {
-        if (this.isMovie) this.videoPlayer.addTypeArea()
-        if (this.isPicture) this.picturePlayer.addTypeArea()
+        this.addTypeArea()
         this.setFullScreen()
-        setTimeout(() => {
-          if (this.isPicture) this.picturePlayer.setupFabricCanvas()
-        }, 1000)
       }
     },
 
@@ -738,6 +747,117 @@ export default {
       }
     },
 
+    /*
+    saveAnnotations () {
+      const currentTime = roundToFrame(this.video.currentTime, this.fps) || 0
+      const annotation = this.getAnnotation(currentTime)
+      const annotations = this.getNewAnnotations(currentTime, annotation)
+      if (!this.readOnly) {
+        this.$emit('annotation-changed', {
+          preview: this.preview,
+          annotations: annotations
+        })
+      }
+    },
+
+    loadAnnotation (annotation) {
+      if (!annotation) {
+        console.error('Annotations are malformed and cannot be loaded.')
+        return
+      }
+      let currentTime = annotation.time || 0
+      currentTime = roundToFrame(currentTime, this.fps)
+      this.video.pause()
+
+      if (!this.fabricCanvas) this.setupFabricCanvas()
+      this.resetCanvasSize()
+
+      this.video.currentTime = currentTime
+      this.fabricCanvas.isDrawingMode = false
+      // this.isDrawing = false
+
+      this.clearCanvas()
+
+      let scaleMultiplierX = 1
+      let scaleMultiplierY = 1
+      if (annotation.width) {
+        scaleMultiplierX = this.fabricCanvas.width / annotation.width
+        scaleMultiplierY = this.fabricCanvas.width / annotation.width
+      }
+      if (annotation.height) {
+        scaleMultiplierY = this.fabricCanvas.height / annotation.height
+      }
+
+      annotation.drawing.objects.forEach((obj) => {
+        const base = {
+          left: obj.left * scaleMultiplierX,
+          top: obj.top * scaleMultiplierY,
+          fill: 'transparent',
+          stroke: obj.stroke,
+          strokeWidth: obj.strokeWidth,
+          radius: obj.radius * scaleMultiplierX,
+          width: obj.width,
+          height: obj.height,
+          scaleX: obj.scaleX * scaleMultiplierX,
+          scaleY: obj.scaleY * scaleMultiplierY
+        }
+        if (obj.type === 'path') {
+          let strokeMultiplier = 1
+          if (obj.canvasWidth) {
+            strokeMultiplier = annotation.width / this.fabricCanvas.width
+          }
+          const path = new fabric.Path(
+            obj.path,
+            {
+              ...base,
+              strokeWidth: obj.strokeWidth * strokeMultiplier,
+              canvasWidth: obj.canvasWidth
+            }
+          )
+          path.setControlsVisibility({
+            mt: false,
+            mb: false,
+            ml: false,
+            mr: false,
+            bl: false,
+            br: false,
+            tl: false,
+            tr: false,
+            mtr: false
+          })
+          this.fabricCanvas.add(path)
+        } else if ((obj.type === 'i-text') || (obj.type === 'text')) {
+          const text = new fabric.Text(
+            obj.text,
+            {
+              ...base,
+              fill: obj.fill,
+              left: obj.left * scaleMultiplierX,
+              top: obj.top * scaleMultiplierY,
+              fontFamily: obj.fontFamily,
+              fontSize: obj.fontSize,
+              width: obj.width * scaleMultiplierX
+            }
+          )
+          this.fabricCanvas.add(text)
+        }
+      })
+    },
+
+    reloadAnnotations () {
+      this.annotations = []
+      if (this.preview.annotations) {
+        const annotations = []
+        this.preview.annotations.forEach(a => annotations.push({ ...a }))
+        this.annotations = annotations.sort((a, b) => {
+          return a.time < b.time
+        }) || []
+      } else {
+        this.annotations = []
+      }
+      return this.annotations
+    },
+
     onWindowResize (callback) {
       const now = (new Date().getTime())
       this.lastCall = this.lastCall || 0
@@ -746,6 +866,7 @@ export default {
         if (callback && typeof callback === 'function') callback()
       }
     },
+    */
 
     onKeyDown (event) {
       if (!['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
@@ -852,9 +973,7 @@ export default {
     },
 
     displayFirst () {
-      if (this.currentIndex > 1) {
-        this.currentIndex = 1
-      }
+      if (this.currentIndex > 1) this.currentIndex = 1
     },
 
     displayLast () {
@@ -886,6 +1005,79 @@ export default {
       if (!document.webkitIsFullScreen && !document.mozFullScreen && document.msFullscreenElement === null) {
         this.fullScreen = false
       }
+    },
+
+    setupFabricCanvas () {
+      const dimensions = this.getDimensions()
+      const width = dimensions.width
+      const height = dimensions.height
+      const fabricCanvas = new fabric.Canvas('annotation-canvas', {
+        fireRightClick: true
+      })
+
+      this.container.style.height = this.getDefaultHeight() + 'px'
+      fabricCanvas.setDimensions({
+        width: width,
+        height: height
+      })
+
+      fabricCanvas.freeDrawingBrush.color = this.color
+      fabricCanvas.freeDrawingBrush.width = 4
+
+      fabricCanvas.off('object:added', this.stackAddAction)
+      fabricCanvas.on('object:added', this.stackAddAction)
+      fabricCanvas.off('object:moved', this.saveAnnotations)
+      fabricCanvas.on('object:moved', this.saveAnnotations)
+      fabricCanvas.on('mouse:up', () => {
+        this.$refs.loupe.style.display = 'none'
+        this.$options.loupe = false
+        if (this.isDrawing) {
+          this.clearUndoneStack()
+          this.saveAnnotations()
+        }
+      })
+      fabricCanvas.on('mouse:move', this.onCanvasMouseMoved)
+      fabricCanvas.on('mouse:down', this.onCanvasClicked)
+      this.fabricCanvas = fabricCanvas
+    },
+
+    fixCanvasSize () {
+      const width = 0
+      const height = 0
+      if (this.fabricCanvas) {
+        this.fabricCanvas.setDimensions({ width, height })
+        const containerWidth = this.container.offsetWidth
+        const margin = Math.round((containerWidth - width) / 2)
+        if (this.canvasWrapper) {
+          this.canvasWrapper.style.left = margin + 'px'
+          this.canvasWrapper.style.width = width + 'px'
+          this.canvasWrapper.style.height = height + 'px'
+          setTimeout(() => {
+            this.fabricCanvas.calcOffset()
+            this.fabricCanvas.setDimensions({ width, height })
+          }, 10)
+        }
+      }
+    },
+
+    onChangeColor (newValue) {
+      this.color = newValue
+      this.fabricCanvas.freeDrawingBrush.color = this.color
+      this.isShowingPalette = false
+    },
+
+    reloadAnnotations () {
+      this.annotations = []
+      if (this.preview.annotations) {
+        const annotations = []
+        this.preview.annotations.forEach(a => annotations.push({ ...a }))
+        this.annotations = annotations.sort((a, b) => {
+          return a.time < b.time
+        }) || []
+      } else {
+        this.annotations = []
+      }
+      return this.annotations
     }
   },
 
@@ -919,6 +1111,20 @@ export default {
 
     light () {
       this.onWindowResize()
+    },
+
+    isDrawing () {
+      if (this.fabricCanvas) this.fabricCanvas.isDrawingMode = this.isDrawing
+    },
+
+    isTyping () {
+      const clickarea =
+        this.canvasWrapper.getElementsByClassName('upper-canvas')[0]
+      if (this.isTyping && clickarea) {
+        clickarea.addEventListener('dblclick', this.addText)
+      } else {
+        clickarea.removeEventListener('dblclick', this.addText)
+      }
     }
   }
 }
@@ -1085,6 +1291,13 @@ export default {
   background: $dark-grey-stronger;
   border-top-left-radius: 5px;
   border-top-right-radius: 5px;
+}
+
+.canvas-wrapper {
+  width: 100%;
+  position: absolute;
+  left: 0;
+  z-index: 300;
 }
 
 .preview-player {

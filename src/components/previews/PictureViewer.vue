@@ -1,32 +1,40 @@
 <template>
 <div ref="container" class="picture-player">
   <div ref="picture-wrapper" class="picture-wrapper" oncontextmenu="return false;">
-    <div ref="canvas-wrapper" class="canvas-wrapper">
-      <div
-        ref="loupe"
-        class="loupe"
-        :style="{
-          background: 'url(' + pictureDlPath + ')'
-        }"
-      >
-      </div>
+    <div
+      ref="loupe"
+      class="loupe"
+      :style="{
+        background: 'url(' + pictureDlPath + ')'
+      }"
+    >
     </div>
     <div v-show="!isLoading" ref="picture-subwrapper">
       <div v-show="isGif">
         <img ref="picture-gif" :src="pictureGifPath" />
       </div>
       <div v-show="!isGif">
-        <img id="picture-big" ref="picture-big" :src="pictureDlPath" v-show="fullScreen" />
-        <img id="picture" ref="picture" :src="picturePath" v-show="!fullScreen" />
+        <img
+          ref="picture-big"
+          id="picture-big"
+          :src="pictureDlPath"
+          v-show="fullScreen"
+        />
+        <img
+          ref="picture"
+          id="picture"
+          :src="picturePath"
+          v-show="!fullScreen"
+        />
       </div>
     </div>
-    <spinner v-if="isLoading"/> </div> </div>
+    <spinner v-if="isLoading"/>
+  </div>
+</div>
 </template>
 
 <script>
-import { fabric } from 'fabric'
 import { fullScreenMixin } from '@/components/mixins/fullscreen'
-import { annotationMixin } from '@/components/mixins/annotation_mixin'
 import { domMixin } from '@/components/mixins/dom'
 import Spinner from '@/components/widgets/Spinner'
 
@@ -36,18 +44,18 @@ export default {
   components: {
     Spinner
   },
-  mixins: [annotationMixin, domMixin, fullScreenMixin],
+  mixins: [domMixin, fullScreenMixin],
 
   props: {
     preview: {
       type: Object,
       default: () => {}
     },
-    light: {
-      type: Boolean,
-      default: false
+    defaultHeight: {
+      type: Number,
+      default: 0
     },
-    readOnly: {
+    light: {
       type: Boolean,
       default: false
     },
@@ -62,30 +70,12 @@ export default {
     fullScreen: {
       type: Boolean,
       default: false
-    },
-    isDrawing: {
-      type: Boolean,
-      default: false
-    },
-    isTyping: {
-      type: Boolean,
-      default: false
     }
   },
 
   data () {
     return {
-      annotations:
-        this.preview.annotations ? [...this.preview.annotations] : [],
-      currentIndex: 1,
-      color: '#ff3860',
-      textColor: '#ff3860',
-      fabricCanvas: null,
       isLoading: true,
-      isShowingPalette: false,
-      palette: ['#ff3860', '#008732', '#5E60BA', '#f57f17'],
-      pencil: 'big',
-      pencilPalette: ['big', 'medium', 'small'],
       picturePath: '',
       pictureDlPath: '',
       pictureGifPath: ''
@@ -93,47 +83,26 @@ export default {
   },
 
   mounted () {
-    this.container.style.height = this.getDefaultHeight() + 'px'
+    this.container.style.height = this.defaultHeight + 'px'
     this.isLoading = true
     if (this.picture.complete) {
       this.isLoading = false
       this.onWindowResize()
     }
-    this.picture.addEventListener('load', () => {
-      this.isLoading = false
-      this.resetPicture()
-    })
-    this.pictureBig.addEventListener('load', () => {
-      this.isLoading = false
-      this.resetPicture()
-    })
-    this.pictureGif.addEventListener('load', () => {
-      this.isLoading = false
-      this.resetPicture()
-    })
-    window.addEventListener('keydown', this.onKeyDown)
+    this.picture.addEventListener('load', this.endLoading())
+    this.pictureBig.addEventListener('load', this.endLoading())
+    this.pictureGif.addEventListener('load', this.endLoading())
     window.addEventListener('resize', this.onWindowResize)
-    const events = [
-      'webkitfullscreenchange',
-      'mozfullscreenchange',
-      'fullscreenchange',
-      'msfullscreenchange'
-    ]
-    events.forEach(eventName => window.addEventListener(eventName, this.exitHandler))
     this.setPicturePath()
+  },
+
+  beforeDestroy () {
+    window.removeEventListener('resize', this.onWindowResize)
   },
 
   computed: {
     container () {
       return this.$refs.container
-    },
-
-    canvasWrapper () {
-      return this.$refs['canvas-wrapper']
-    },
-
-    canvas () {
-      return this.$refs.canvas
     },
 
     picture () {
@@ -166,81 +135,20 @@ export default {
     }
   },
 
-  beforeDestroy () {
-    this.clearCanvas()
-    window.removeEventListener('keydown', this.onKeyDown)
-    window.removeEventListener('resize', this.onWindowResize)
-  },
-
   methods: {
-    exitHandler () {
+    endLoading () {
+      this.isLoading = false
+      this.resetPicture()
     },
 
-    isWide () {
-      const dimensions = this.getDimensions()
-      return dimensions.width > 800
-    },
-
-    mountPicture () {
-      this.container.style.height = this.getDefaultHeight() + 'px'
+    resetPicture () {
+      const heightValue = this.defaultHeight + 'px'
+      this.container.style.height = heightValue
       if (this.pictureWrapper) {
-        this.pictureWrapper.style.height = this.getDefaultHeight() + 'px'
+        this.pictureWrapper.style.height = heightValue
       }
       if (this.pictureSubWrapper) {
-        this.pictureSubWrapper.style['max-height'] =
-          this.getDefaultHeight() + 'px'
-      }
-      if (!this.fabricCanvas) {
-        this.setupFabricCanvas()
-      }
-      this.loadAnnotation(0)
-      this.$nextTick(this.fixCanvasSize)
-    },
-
-    setupFabricCanvas () {
-      const dimensions = this.getDimensions()
-      const width = dimensions.width
-      const height = dimensions.height
-      const fabricCanvas = new fabric.Canvas('annotation-canvas', {
-        fireRightClick: true
-      })
-
-      this.container.style.height = this.getDefaultHeight() + 'px'
-      console.log('set fabric canvas', dimensions)
-      fabricCanvas.setDimensions({
-        width: width,
-        height: height
-      })
-
-      fabricCanvas.freeDrawingBrush.color = this.color
-      fabricCanvas.freeDrawingBrush.width = 4
-
-      fabricCanvas.off('object:added', this.stackAddAction)
-      fabricCanvas.on('object:added', this.stackAddAction)
-      fabricCanvas.off('object:moved', this.saveAnnotations)
-      fabricCanvas.on('object:moved', this.saveAnnotations)
-      fabricCanvas.on('mouse:up', () => {
-        this.$refs.loupe.style.display = 'none'
-        this.$options.loupe = false
-        if (this.isDrawing) {
-          this.clearUndoneStack()
-          this.saveAnnotations()
-        }
-      })
-      fabricCanvas.on('mouse:move', this.onCanvasMouseMoved)
-      fabricCanvas.on('mouse:down', this.onCanvasClicked)
-
-      this.fabricCanvas = fabricCanvas
-    },
-
-    getDefaultHeight () {
-      if (this.isFullScreen()) {
-        return screen.height + 60
-      } else {
-        const bigHeight = screen.height > 900 ? 470 : 300
-        return screen.width > 1300 && (
-          !this.light || this.big
-        ) ? bigHeight : 170
+        this.pictureSubWrapper.style['max-height'] = heightValue
       }
     },
 
@@ -263,47 +171,13 @@ export default {
 
     getDimensions () {
       let ratio = 1
-      if (!this.fullScreen && this.picture.naturalWidth && !this.isGif) {
-        ratio = this.picture.naturalHeight / this.picture.naturalWidth
-      } else if (
-        this.fullScreen && this.pictureBig.naturalWidth && !this.isGif
-      ) {
-        ratio = this.pictureBig.naturalHeight / this.pictureBig.naturalWidth
-      } else if (this.pictureGif.naturalWidth && this.isGif) {
-        ratio = this.pictureGif.naturalHeight / this.pictureGif.naturalWidth
-      }
-      let width = this.container.offsetWidth - 1
+      const dimensions = this.getNaturalDimensions()
+      if (dimensions.width > 0) ratio = dimensions.height / dimensions.width
+      let width = this.container.offsetWidth
       let height = Math.floor(width * ratio)
-      if (height > this.getDefaultHeight()) {
-        height = this.getDefaultHeight()
-      }
+      if (height > this.defaultHeight) height = this.defaultHeight
       width = Math.floor(height / ratio)
       return { width, height }
-    },
-
-    onDeleteClicked () {
-      this.deleteSelection()
-    },
-
-    onPickColor () {
-      if (this.isShowingPalette) {
-        this.isShowingPalette = false
-      } else {
-        this.isShowingPalette = true
-      }
-    },
-
-    onChangeColor (newValue) {
-      this.color = newValue
-      this.fabricCanvas.freeDrawingBrush.color = this.color
-      this.isShowingPalette = false
-    },
-
-    resetPicture () {
-      this.mountPicture()
-      this.reloadAnnotations()
-      this.resetUndoStacks()
-      this.fixCanvasSize()
     },
 
     onWindowResize () {
@@ -311,183 +185,14 @@ export default {
       this.lastCall = this.lastCall || 0
       if (now - this.lastCall > 600) {
         this.lastCall = now
-        this.clearCanvas()
         this.$nextTick(() => {
-          this.mountPicture()
-          this.reloadAnnotations()
-          this.$nextTick(this.fixCanvasSize)
+          this.resetPicture()
+          this.$nextTick(this.fixSize)
         })
       }
     },
 
-    onKeyDown (event) {
-      if (!['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
-        if (event.keyCode === 46 && this.fabricCanvas) {
-          this.deleteSelection()
-        } else if (event.ctrlKey && event.altKey && event.keyCode === 68) {
-          this.onAnnotateClicked()
-        } else if (event.ctrlKey && event.keyCode === 90) {
-          this.undoLastAction()
-        } else if (event.altKey && event.keyCode === 82) {
-          this.redoLastAction()
-        }
-      }
-    },
-
-    saveAnnotations () {
-      // Annotation are aimed to be used mainly by videos. That's why
-      // annotations are stored in a list.
-      let annotation = { ...this.getAnnotation(0) }
-
-      this.fabricCanvas.getObjects().forEach((obj) => {
-        if (obj.type === 'path' || obj.type === 'text' || obj.type === 'i-text') {
-          if (!obj.canvasWidth) obj.canvasWidth = this.fabricCanvas.width
-          obj.setControlsVisibility({
-            mt: false,
-            mb: false,
-            ml: false,
-            mr: false,
-            bl: false,
-            br: false,
-            tl: false,
-            tr: false,
-            mtr: false
-          })
-          obj.hasControls = false
-        }
-      })
-
-      if (annotation) {
-        annotation.drawing = this.fabricCanvas.toJSON(['canvasWidth'])
-        annotation.width = this.fabricCanvas.width
-        annotation.height = this.fabricCanvas.height
-      } else {
-        annotation = {
-          time: 0,
-          width: this.fabricCanvas.width,
-          height: this.fabricCanvas.height,
-          drawing: this.fabricCanvas.toJSON(['canvasWidth'])
-        }
-      }
-      this.annotations = []
-      this.annotations = [annotation]
-
-      const annotations = [{ ...annotation }]
-      const preview = {
-        id: this.preview.id,
-        task_id: this.preview.task_id,
-        annotations: annotations
-      }
-      if (!this.readOnly) {
-        this.$emit('annotation-changed', {
-          preview: preview,
-          annotations: annotations
-        })
-      }
-    },
-
-    getAnnotation (time) {
-      return [...this.annotations][time]
-    },
-
-    loadAnnotation (time) {
-      const annotation = this.getAnnotation(time)
-      this.clearCanvas()
-
-      if (annotation) {
-        const dimensions = this.getDimensions()
-        let scaleMultiplierX = 1
-        let scaleMultiplierY = 1
-
-        if (annotation.width) {
-          scaleMultiplierX = dimensions.width / annotation.width
-          scaleMultiplierY = dimensions.width / annotation.width
-        }
-        if (annotation.height) {
-          scaleMultiplierY = dimensions.height / annotation.height
-        }
-        if (!annotation.drawing.objects) {
-          annotation.drawing.objects = []
-        }
-        annotation.drawing.objects.forEach((obj) => {
-          const base = {
-            left: obj.left * scaleMultiplierX,
-            top: obj.top * scaleMultiplierY,
-            fill: 'transparent',
-            stroke: obj.stroke,
-            strokeWidth: obj.strokeWidth,
-            radius: obj.radius * scaleMultiplierX,
-            width: obj.width,
-            height: obj.height,
-            scaleX: obj.scaleX * scaleMultiplierX,
-            scaleY: obj.scaleY * scaleMultiplierY
-          }
-          if (obj.type === 'path') {
-            let strokeMultiplier = 1
-            if (obj.canvasWidth) {
-              strokeMultiplier = annotation.width / dimensions.width
-            }
-            const path = new fabric.Path(
-              obj.path,
-              {
-                ...base,
-                strokeWidth: obj.strokeWidth * strokeMultiplier,
-                canvasWidth: obj.canvasWidth
-              }
-            )
-            path.setControlsVisibility({
-              mt: false,
-              mb: false,
-              ml: false,
-              mr: false,
-              bl: false,
-              br: false,
-              tl: false,
-              tr: false,
-              mtr: false
-            })
-            this.fabricCanvas.add(path)
-            this.$options.doneActionStack.pop()
-          } else if ((obj.type === 'i-text') || (obj.type === 'text')) {
-            const text = new fabric.Text(
-              obj.text,
-              {
-                ...base,
-                fill: obj.fill,
-                left: obj.left * scaleMultiplierX,
-                top: obj.top * scaleMultiplierY,
-                fontFamily: obj.fontFamily,
-                fontSize: obj.fontSize,
-                backgroundColor: 'white',
-                padding: 50
-              }
-            )
-            text.setControlsVisibility({
-              mt: false,
-              mb: false,
-              ml: false,
-              mr: false,
-              bl: false,
-              br: false,
-              tl: false,
-              tr: false,
-              mtr: false
-            })
-            this.fabricCanvas.add(text)
-          }
-        })
-      }
-    },
-
-    reset () {
-      this.mountPicture()
-      this.clearCanvas()
-      this.annotations = []
-      this.reloadAnnotations()
-      if (this.fabricCanvas) this.fabricCanvas.isDrawingMode = false
-    },
-
-    fixCanvasSize () {
+    fixSize () {
       const dimensions = this.getDimensions()
       const width = dimensions.width
       const height = dimensions.height
@@ -503,27 +208,6 @@ export default {
       this.pictureBig.height = height
       this.pictureGif.width = width
       this.pictureGif.height = height
-
-      if (this.fabricCanvas) {
-        console.log('fix', width, height)
-        this.fabricCanvas.setDimensions({ width, height })
-        const containerWidth = this.container.offsetWidth
-        const margin = Math.round((containerWidth - width) / 2)
-        if (this.canvasWrapper) {
-          console.log('yeah', width, height)
-          this.canvasWrapper.style.left = margin + 'px'
-          this.canvasWrapper.style.width = width + 'px'
-          this.canvasWrapper.style.height = height + 'px'
-          setTimeout(() => {
-            this.fabricCanvas.calcOffset()
-            this.fabricCanvas.setDimensions({ width, height })
-          }, 10)
-        }
-      }
-    },
-
-    changeCurrentPreview (previewFile) {
-      this.$emit('change-current-preview', previewFile)
     },
 
     setPicturePath () {
@@ -540,20 +224,6 @@ export default {
     setPictureDlPath () {
       const previewId = this.preview.id
       this.pictureDlPath = `/api/pictures/originals/preview-files/${previewId}/download`
-    },
-
-    reloadAnnotations () {
-      this.annotations = []
-      if (this.preview.annotations) {
-        const annotations = []
-        this.preview.annotations.forEach(a => annotations.push({ ...a }))
-        this.annotations = annotations.sort((a, b) => {
-          return a.time < b.time
-        }) || []
-      } else {
-        this.annotations = []
-      }
-      return this.annotations
     },
 
     onCanvasMouseMoved (event) {
@@ -616,35 +286,6 @@ export default {
       }
     },
 
-    currentIndex () {
-      this.isLoading = true
-      if (this.fullScreen) {
-        this.setPictureDlPath()
-        if (this.pictureBig.complete) {
-          this.resetPicture()
-        }
-      } else {
-        this.setPicturePath()
-        if (this.picture.complete) {
-          this.resetPicture()
-        }
-      }
-    },
-
-    isDrawing () {
-      if (this.fabricCanvas) this.fabricCanvas.isDrawingMode = this.isDrawing
-    },
-
-    isTyping () {
-      const clickarea =
-        this.canvasWrapper.getElementsByClassName('upper-canvas')[0]
-      if (this.isTyping && clickarea) {
-        clickarea.addEventListener('dblclick', this.addText)
-      } else {
-        clickarea.removeEventListener('dblclick', this.addText)
-      }
-    },
-
     light () {
       this.onWindowResize()
     },
@@ -655,7 +296,6 @@ export default {
         this.setPictureDlPath()
         if (this.pictureBig.complete) this.isLoading = false
       } else {
-        if (this.fabricCanvas) this.fabricCanvas.isDrawingMode = false
         this.setPicturePath()
       }
     }
@@ -764,13 +404,6 @@ export default {
 .buttons .button.active,
 .buttons .button:hover {
   color: #43B581;
-}
-
-.canvas-wrapper {
-  width: 100%;
-  position: absolute;
-  left: 0;
-  z-index: 300;
 }
 
 .annotation-tools {

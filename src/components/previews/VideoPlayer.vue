@@ -53,7 +53,6 @@
 
 <script>
 import { mapGetters } from 'vuex'
-import { fabric } from 'fabric'
 
 import { formatFrame, formatTime, roundToFrame } from '../../lib/video'
 import AnnotationBar from '../pages/playlists/AnnotationBar'
@@ -113,17 +112,12 @@ export default {
   data () {
     return {
       annotations: [],
-      palette: ['#ff3860', '#008732', '#5E60BA', '#f57f17'],
-      pencilPalette: ['big', 'medium', 'small'],
-      color: '#ff3860',
-      pencil: 'big',
       currentTime: '00:00.000',
       currentTimeRaw: 0,
-      fabricCanvas: null,
       isLoading: false,
       maxDuration: '00:00.000',
       taskTypeId:
-        this.entityPreviewFIles ? Object.keys(this.entityPreviewFiles)[0] : null,
+        this.entityPreviewFiles ? Object.keys(this.entityPreviewFiles)[0] : null,
       textColor: '#ff3860',
       videoDuration: 0
     }
@@ -131,10 +125,8 @@ export default {
 
   mounted () {
     if (!this.container) return
-    this.reloadAnnotations()
-    this.container.style.height = this.getDefaultHeight() + 'px'
+    this.container.style.height = this.defaultHeight + 'px'
     this.isLoading = true
-    this.setupFabricCanvas()
     this.isMuted = false
     this.isRepeating = false
     setTimeout(() => {
@@ -153,7 +145,7 @@ export default {
         })
 
         this.video.addEventListener('error', () => {
-          this.$refs.movie.style.height = (this.getDefaultHeight() - 90) + 'px'
+          this.$refs.movie.style.height = this.defaultHeight + 'px'
           this.isLoading = false
         })
 
@@ -164,7 +156,6 @@ export default {
   },
 
   beforeDestroy () {
-    this.clearCanvas()
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('resize', this.onWindowResize)
   },
@@ -176,14 +167,6 @@ export default {
 
     currentFrame () {
       return formatFrame(this.currentTimeRaw, this.fps)
-    },
-
-    canvasWrapper () {
-      return this.$refs['canvas-wrapper']
-    },
-
-    canvas () {
-      return this.$refs['annotation-canvas']
     },
 
     container () {
@@ -244,56 +227,6 @@ export default {
 
     videoWrapper () {
       return this.$refs['video-wrapper']
-    },
-
-    taskTypeOptions () {
-      if (!this.entityPreviewFiles) return []
-      const taskTypeIds = Object.keys(this.entityPreviewFiles)
-      return taskTypeIds
-        .filter((taskTypeId) => {
-          if (this.entityPreviewFiles[taskTypeId].length > 1) {
-            return true
-          } else if (this.entityPreviewFiles[taskTypeId].length === 1) {
-            return (
-              this.entityPreviewFiles[taskTypeId][0].id !== this.preview.id
-            )
-          } else {
-            return false
-          }
-        })
-        .map((taskTypeId) => {
-          const taskType = this.taskTypeMap[taskTypeId]
-          if (taskType) {
-            return {
-              label: taskType.name,
-              value: taskType.id
-            }
-          } else {
-            return {
-              label: '',
-              value: ''
-            }
-          }
-        })
-    },
-
-    previewFileOptions () {
-      let previewFiles = this.entityPreviewFiles[this.taskTypeId]
-      if (previewFiles) {
-        previewFiles = previewFiles.filter(p => p.id !== this.preview.id)
-        if (previewFiles && previewFiles.length > 0) {
-          return previewFiles.map((previewFile) => {
-            return {
-              label: `v${previewFile.revision}`,
-              value: previewFile.id
-            }
-          })
-        } else {
-          return []
-        }
-      } else {
-        return []
-      }
     }
   },
 
@@ -301,14 +234,6 @@ export default {
     formatFrame,
 
     formatTime,
-
-    getDefaultHeight () {
-      if (this.fullScreen) {
-        return screen.height + 60
-      } else {
-        return screen.width > 1000 && (!this.light || this.big) ? 470 : 170
-      }
-    },
 
     getDimensions () {
       const ratio = this.video.videoHeight / this.video.videoWidth
@@ -350,7 +275,6 @@ export default {
       this.video.addEventListener('timeupdate', this.updateProgressBar)
       this.video.onended = this.onVideoEnd
       if (this.video.currentTime === 0) {
-        this.clearCanvas()
         this.mountVideo()
       }
     },
@@ -369,13 +293,13 @@ export default {
 
         if (height > 0) {
           if (!this.isComparing) {
-            this.container.style.height = this.getDefaultHeight() + 'px'
+            this.container.style.height = this.defaultHeight + 'px'
             this.video.style.width = width + 'px'
             this.video.style.height = height + 'px'
             this.videoWrapper.style.width = width + 'px'
             this.videoWrapper.style.height = height + 'px'
           } else {
-            this.container.style.height = this.getDefaultHeight() + 'px'
+            this.container.style.height = this.defaultHeight + 'px'
             this.video.style.width = (width / 2) + 'px'
             this.video.style.height = (height / 2) + 'px'
             const comparisonVideo = document.getElementById('comparison-movie')
@@ -387,7 +311,6 @@ export default {
             this.videoWrapper.style.height = height + 'px'
           }
         }
-        this.resetCanvas()
       }
     },
 
@@ -429,8 +352,6 @@ export default {
       } else {
         this.setCurrentTime(newTime)
       }
-      const annotation = this.getAnnotation(this.video.currentTime)
-      if (annotation) this.loadAnnotation(annotation)
     },
 
     goNextFrame () {
@@ -440,8 +361,6 @@ export default {
       } else {
         this.setCurrentTime(newTime)
       }
-      const annotation = this.getAnnotation(this.video.currentTime)
-      if (annotation) this.loadAnnotation(annotation)
     },
 
     onDeleteClicked () {
@@ -508,27 +427,8 @@ export default {
         this.lastCall = now
         this.$nextTick(() => {
           this.mountVideo()
-          this.reloadAnnotations()
-          const annotation = this.getAnnotation(this.video.currentTime)
-          this.$nextTick(() => {
-            if (annotation) this.loadAnnotation(annotation)
-          })
           if (callback && typeof callback === 'function') callback()
         })
-      }
-    },
-
-    onKeyDown (event) {
-      if (!['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
-        if (event.keyCode === 46 && this.fabricCanvas) {
-          this.deleteSelection()
-        } else if (event.ctrlKey && event.altKey && event.keyCode === 68) {
-          this.onAnnotateClicked()
-        } else if (event.ctrlKey && event.keyCode === 90) {
-          this.undoLastAction()
-        } else if (event.altKey && event.keyCode === 82) {
-          this.redoLastAction()
-        }
       }
     },
 
@@ -537,116 +437,6 @@ export default {
       return this.annotations.find(
         (annotation) => annotation.time === time
       )
-    },
-
-    saveAnnotations () {
-      const currentTime = roundToFrame(this.video.currentTime, this.fps) || 0
-      const annotation = this.getAnnotation(currentTime)
-      const annotations = this.getNewAnnotations(currentTime, annotation)
-      if (!this.readOnly) {
-        this.$emit('annotation-changed', {
-          preview: this.preview,
-          annotations: annotations
-        })
-      }
-    },
-
-    loadAnnotation (annotation) {
-      if (!annotation) {
-        console.error('Annotations are malformed and cannot be loaded.')
-        return
-      }
-      let currentTime = annotation.time || 0
-      currentTime = roundToFrame(currentTime, this.fps)
-      this.video.pause()
-
-      if (!this.fabricCanvas) this.setupFabricCanvas()
-      this.resetCanvasSize()
-
-      this.video.currentTime = currentTime
-      this.fabricCanvas.isDrawingMode = false
-      // this.isDrawing = false
-
-      this.clearCanvas()
-
-      let scaleMultiplierX = 1
-      let scaleMultiplierY = 1
-      if (annotation.width) {
-        scaleMultiplierX = this.fabricCanvas.width / annotation.width
-        scaleMultiplierY = this.fabricCanvas.width / annotation.width
-      }
-      if (annotation.height) {
-        scaleMultiplierY = this.fabricCanvas.height / annotation.height
-      }
-
-      annotation.drawing.objects.forEach((obj) => {
-        const base = {
-          left: obj.left * scaleMultiplierX,
-          top: obj.top * scaleMultiplierY,
-          fill: 'transparent',
-          stroke: obj.stroke,
-          strokeWidth: obj.strokeWidth,
-          radius: obj.radius * scaleMultiplierX,
-          width: obj.width,
-          height: obj.height,
-          scaleX: obj.scaleX * scaleMultiplierX,
-          scaleY: obj.scaleY * scaleMultiplierY
-        }
-        if (obj.type === 'path') {
-          let strokeMultiplier = 1
-          if (obj.canvasWidth) {
-            strokeMultiplier = annotation.width / this.fabricCanvas.width
-          }
-          const path = new fabric.Path(
-            obj.path,
-            {
-              ...base,
-              strokeWidth: obj.strokeWidth * strokeMultiplier,
-              canvasWidth: obj.canvasWidth
-            }
-          )
-          path.setControlsVisibility({
-            mt: false,
-            mb: false,
-            ml: false,
-            mr: false,
-            bl: false,
-            br: false,
-            tl: false,
-            tr: false,
-            mtr: false
-          })
-          this.fabricCanvas.add(path)
-        } else if ((obj.type === 'i-text') || (obj.type === 'text')) {
-          const text = new fabric.Text(
-            obj.text,
-            {
-              ...base,
-              fill: obj.fill,
-              left: obj.left * scaleMultiplierX,
-              top: obj.top * scaleMultiplierY,
-              fontFamily: obj.fontFamily,
-              fontSize: obj.fontSize,
-              width: obj.width * scaleMultiplierX
-            }
-          )
-          this.fabricCanvas.add(text)
-        }
-      })
-    },
-
-    reloadAnnotations () {
-      this.annotations = []
-      if (this.preview.annotations) {
-        const annotations = []
-        this.preview.annotations.forEach(a => annotations.push({ ...a }))
-        this.annotations = annotations.sort((a, b) => {
-          return a.time < b.time
-        }) || []
-      } else {
-        this.annotations = []
-      }
-      return this.annotations
     },
 
     getAnnotationStyles (annotation, index) {
@@ -672,15 +462,7 @@ export default {
       }
     },
 
-    resetCanvas () {
-      if (!this.fabricCanvas) this.setupFabricCanvas()
-      this.resetCanvasSize()
-      this.fabricCanvas.renderAll()
-      this.clearCanvas()
-      const annotation = this.getAnnotation(this.video.currentTime)
-      if (annotation) this.loadAnnotation(annotation)
-    },
-
+    /*
     resetCanvasSize () {
       if (this.$refs.movie) {
         const width = this.$refs.movie.offsetWidth
@@ -688,6 +470,7 @@ export default {
         this.fabricCanvas.setDimensions({ width, height })
       }
     },
+    */
 
     changeCurrentPreview (previewFile) {
       this.$emit('change-current-preview', previewFile)
@@ -727,7 +510,6 @@ export default {
   watch: {
     preview () {
       this.maxDuration = '00:00.000'
-      this.reloadAnnotations()
       if (this.isComparing) {
         this.mountVideo()
       }
@@ -756,28 +538,9 @@ export default {
       if (this.isComparing) {
         this.mountVideo()
       } else {
-        if (this.fabricCanvas) this.fabricCanvas.isDrawingMode = false
         this.$nextTick(() => {
           this.mountVideo()
-          this.$nextTick(() => {
-            const annotation = this.getAnnotation(this.video.currentTime)
-            if (annotation) this.loadAnnotation(annotation)
-          })
         })
-      }
-    },
-
-    isDrawing () {
-      if (this.fabricCanvas) this.fabricCanvas.isDrawingMode = this.isDrawing
-    },
-
-    isTyping () {
-      const clickarea =
-        this.canvasWrapper.getElementsByClassName('upper-canvas')[0]
-      if (this.isTyping) {
-        clickarea.addEventListener('dblclick', this.addText)
-      } else {
-        clickarea.removeEventListener('dblclick', this.addText)
       }
     },
 
