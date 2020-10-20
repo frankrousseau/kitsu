@@ -471,9 +471,7 @@ const actions = {
     const addPreview = (form) => {
       return tasksApi
         .addExtraPreview(previewId, taskId, commentId)
-        .then((preview) => {
-          return tasksApi.uploadPreview(preview.id, form)
-        })
+        .then(preview => tasksApi.uploadPreview(preview.id, form))
         .then((preview) => {
           const comment = getters.getTaskComment(taskId, commentId)
           preview.extension = 'png'
@@ -486,7 +484,7 @@ const actions = {
           return Promise.resolve(preview)
         })
     }
-    state.previewForms.reduce((accumulatorPromise, form) => {
+    return state.previewForms.reduce((accumulatorPromise, form) => {
       return accumulatorPromise.then(() => {
         return addPreview(form)
       })
@@ -693,7 +691,8 @@ const mutations = {
           return {
             id: p.id,
             annotations: p.annotations,
-            extension: p.extension
+            extension: p.extension,
+            revision: p.revision
           }
         })
         previews.push(preview)

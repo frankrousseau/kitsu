@@ -90,16 +90,16 @@
               >
                 <preview-player
                   :entity-preview-files="taskEntityPreviews"
-                  :last-preview-files="lastFiveMoviePreviews"
+                  :last-preview-files="lastFivePreviews"
                   :previews="currentPreview.previews"
                   :task-type-map="taskTypeMap"
                   :light="!isWide"
                   :read-only="!isCurrentUserManager"
                   @annotationchanged="onAnnotationChanged"
                   @change-current-preview="changeCurrentPreview"
-                  @add-preview="onAddExtraPreview"
+                  @add-extra-preview="onAddExtraPreview"
                   @remove-extra-preview="onRemoveExtraPreview"
-                  ref="preview-movie"
+                  ref="preview-player"
                 />
               </div>
 
@@ -495,24 +495,6 @@ export default {
       }
     },
 
-    lastFiveMoviePreviews () {
-      if (this.taskPreviews) {
-        const isMovie = previewFile => previewFile.extension === 'mp4'
-        return this.taskPreviews.filter(isMovie).slice(0, 5)
-      } else {
-        return []
-      }
-    },
-
-    lastFivePicturePreviews () {
-      if (this.taskPreviews) {
-        const isPicture = previewFile => previewFile.extension === 'png'
-        return this.taskPreviews.filter(isPicture).slice(0, 5)
-      } else {
-        return []
-      }
-    },
-
     panelStyle () {
       return {
         width: this.isWide ? 700 : 350
@@ -865,7 +847,7 @@ export default {
         return comment.previews.findIndex((p) => p.id === previewId) >= 0
       })
 
-      this.$refs['preview-picture'].displayFirst()
+      this.previewPlayer.displayFirst()
       this.deleteTaskPreview({
         taskId: this.task.id,
         commentId: comment.id,
@@ -935,15 +917,6 @@ export default {
             taskId: this.task.id,
             previewId: eventData.preview_file_id
           }).then(() => {
-            if (this.$refs['preview-movie']) {
-              if (!this.$refs['preview-movie'].isDrawing) {
-                this.$refs['preview-movie'].reloadAnnotations()
-              }
-            } else if (this.$refs['preview-picture']) {
-              if (!this.$refs['preview-picture'].isDrawing) {
-                this.$refs['preview-picture'].reloadAnnotations()
-              }
-            }
           })
         }
       },

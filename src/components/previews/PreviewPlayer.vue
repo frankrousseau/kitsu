@@ -2,9 +2,18 @@
 <div ref="container" class="preview-player dark">
 
   <div class="preview">
+    <div class="canvas-wrapper" ref="canvas-wrapper">
+      <canvas
+        id="annotation-canvas"
+        ref="annotation-canvas"
+        class="canvas"
+      >
+      </canvas>
+    </div>
+
     <video-player
       ref="video-player"
-      class="flexrow-item video-player"
+      class="video-player"
       :big="big"
       :is-comparing="isComparing"
       :is-drawing="isDrawing"
@@ -22,11 +31,14 @@
     />
 
     <picture-viewer
+      ref="picture-player"
       :preview="currentPreview"
+      :big="big"
       :light="light"
       :read-only="readOnly"
       :full-screen="fullScreen"
-      ref="preview-picture"
+      :is-drawing="isDrawing"
+      :is-typing="isTyping"
       @annotation-changed="(payload) => $emit('annotationchanged', payload)"
       v-show="isPicture"
     />
@@ -159,7 +171,7 @@
             <span
               :class="{
                 'previous-preview-file': true,
-                'current-preview-file': previewFile.revision === preview.revision
+                'current-preview-file': previewFile.revision === currentPreview.revision
               }"
               :key="`last-preview-${previewFile.id}`"
               @click="changeCurrentPreview(previewFile)"
@@ -249,6 +261,12 @@
           />
         </div>
 
+        <div
+          class="separator"
+          v-if="!readOnly && fullScreen"
+        >
+        </div>
+
         <a
           class="button flexrow-item"
           :href="originalPath"
@@ -261,6 +279,7 @@
 
         <div
           class="separator"
+          v-if="!fullScreen || (fullScreen && previews.length > 1)"
         >
         </div>
 
@@ -270,7 +289,7 @@
           :read-only="readOnly"
           :light="light"
           :full-screen="fullScreen"
-          @add-preview-clicked="$emit('add-preview')"
+          @add-preview-clicked="$emit('add-extra-preview')"
           @next-clicked="onNextClicked"
           @previous-clicked="onPreviousClicked"
           @remove-preview-clicked="onRemovePreviewClicked"
@@ -279,6 +298,7 @@
 
         <div
           class="separator"
+          v-if="!fullScreen || (fullScreen && previews.length > 1)"
         >
         </div>
 
@@ -400,7 +420,8 @@ export default {
 
   mounted () {
     if (!this.container) return
-    if (this.videoPlayer) this.configureVideo()
+    this.configureEvents()
+    if (this.isVideo) this.configureVideo()
   },
 
   beforeDestroy () {
@@ -408,6 +429,14 @@ export default {
       this.container.removeEventListener('keydown', this.onKeyDown)
     }
     window.removeEventListener('resize', this.onWindowResize)
+    document.removeEventListener(
+      'fullscreenchange', this.onExitFullScreen)
+    document.removeEventListener(
+      'mozfullscreenchange', this.onExitFullScreen)
+    document.removeEventListener(
+      'MSFullscreenChange', this.onExitFullScreen)
+    document.removeEventListener(
+      'webkitfullscreenchange', this.onExitFullScreen)
   },
 
   computed: {
@@ -484,8 +513,11 @@ export default {
     },
 
     videoPlayer () {
-      console.log(this.$refs)
       return this.$refs['video-player']
+    },
+
+    picturePlayer () {
+      return this.$refs['picture-player']
     },
 
     taskTypeOptions () {
@@ -623,6 +655,7 @@ export default {
       }
       this.container.setAttribute('data-fullscreen', !!true)
       this.fullScreen = true
+      console.log(this.fullScreen)
       this.$refs['button-bar'].focus()
     },
 
@@ -632,6 +665,7 @@ export default {
 
     deleteSelection () {
       if (this.isMovie) this.videoPlayer.deleteSelection()
+      if (this.isPicture) this.picturePlayer.deleteSelection()
     },
 
     onVideoEnd () {
@@ -674,10 +708,15 @@ export default {
     onFullscreenClicked () {
       if (this.isFullScreen()) {
         if (this.isMovie) this.videoPlayer.removeTypeArea()
+        if (this.isPicture) this.picturePlayer.removeTypeArea()
         this.exitFullScreen()
       } else {
         if (this.isMovie) this.videoPlayer.addTypeArea()
+        if (this.isPicture) this.picturePlayer.addTypeArea()
         this.setFullScreen()
+        setTimeout(() => {
+          if (this.isPicture) this.picturePlayer.setupFabricCanvas()
+        }, 1000)
       }
     },
 
@@ -728,16 +767,21 @@ export default {
           this.undoLastAction()
         } else if (event.altKey && event.keyCode === 82) {
           this.redoLastAction()
+        } else if (event.keyCode === 27) {
+          if (this.picturePlayer) {
+          }
         }
       }
     },
 
     undoLastAction () {
-      this.videoPlayer.undoLastAction()
+      if (this.isMovie) this.videoPlayer.undoLastAction()
+      if (this.isPicture) this.picturePlayer.undoLastAction()
     },
 
     redoLastAction () {
-      this.videoPlayer.redoLastAction()
+      if (this.isMovie) this.videoPlayer.redoLastAction()
+      if (this.isPicture) this.picturePlayer.redoLastAction()
     },
 
     loadAnnotation (annotation) {
@@ -787,6 +831,7 @@ export default {
     },
 
     onRemovePreviewClicked () {
+      console.log('remove-clicked')
       this.$emit('remove-extra-preview', this.currentPreview)
     },
 
@@ -826,20 +871,36 @@ export default {
         return false
       })
       */
+    },
+
+    configureEvents () {
       this.container.addEventListener('keydown', this.onKeyDown, false)
       window.addEventListener('resize', this.onWindowResize)
+      document.addEventListener('fullscreenchange', this.onExitFullScreen, false)
+      document.addEventListener('mozfullscreenchange', this.onExitFullScreen, false)
+      document.addEventListener('MSFullscreenChange', this.onExitFullScreen, false)
+      document.addEventListener('webkitfullscreenchange', this.onExitFullScreen, false)
+    },
+
+    onExitFullScreen () {
+      if (!document.webkitIsFullScreen && !document.mozFullScreen && document.msFullscreenElement === null) {
+        this.fullScreen = false
+      }
     }
   },
 
   watch: {
     preview () {
-      if (this.videoPlayer) {
+      if (this.isMovie) {
         this.configureVideo()
+        this.pause()
         this.maxDuration = '00:00.000'
         this.isDrawing = false
-        this.pause()
         if (this.isComparing) this.isComparing = false
         this.setDefaultComparisonTaskType()
+      } else if (this.isPicture) {
+        this.pause()
+        this.isDrawing = false
       }
     },
 
@@ -858,11 +919,6 @@ export default {
 
     light () {
       this.onWindowResize()
-    },
-
-    currentIndex () {
-      console.log(this.preview)
-      console.log(this.entityPreviewFiles)
     }
   }
 }

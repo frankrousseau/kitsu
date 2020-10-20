@@ -10,15 +10,6 @@
         }"
       >
       </div>
-      <canvas
-        :style="{
-          display: 'block'
-        }"
-        id="annotation-canvas"
-        ref="annotation-canvas"
-        class="canvas"
-      >
-      </canvas>
     </div>
     <div v-show="!isLoading" ref="picture-subwrapper">
       <div v-show="isGif">
@@ -29,9 +20,7 @@
         <img id="picture" ref="picture" :src="picturePath" v-show="!fullScreen" />
       </div>
     </div>
-    <spinner v-if="isLoading"/>
-  </div>
-</div>
+    <spinner v-if="isLoading"/> </div> </div>
 </template>
 
 <script>
@@ -73,6 +62,14 @@ export default {
     fullScreen: {
       type: Boolean,
       default: false
+    },
+    isDrawing: {
+      type: Boolean,
+      default: false
+    },
+    isTyping: {
+      type: Boolean,
+      default: false
     }
   },
 
@@ -85,8 +82,6 @@ export default {
       textColor: '#ff3860',
       fabricCanvas: null,
       isLoading: true,
-      isDrawing: false,
-      isTyping: false,
       isShowingPalette: false,
       palette: ['#ff3860', '#008732', '#5E60BA', '#f57f17'],
       pencil: 'big',
@@ -189,11 +184,11 @@ export default {
     mountPicture () {
       this.container.style.height = this.getDefaultHeight() + 'px'
       if (this.pictureWrapper) {
-        this.pictureWrapper.style.height = this.getDefaultHeight() - 32 + 'px'
+        this.pictureWrapper.style.height = this.getDefaultHeight() + 'px'
       }
       if (this.pictureSubWrapper) {
         this.pictureSubWrapper.style['max-height'] =
-          this.getDefaultHeight() - 32 + 'px'
+          this.getDefaultHeight() + 'px'
       }
       if (!this.fabricCanvas) {
         this.setupFabricCanvas()
@@ -211,6 +206,7 @@ export default {
       })
 
       this.container.style.height = this.getDefaultHeight() + 'px'
+      console.log('set fabric canvas', dimensions)
       fabricCanvas.setDimensions({
         width: width,
         height: height
@@ -238,10 +234,13 @@ export default {
     },
 
     getDefaultHeight () {
-      if (this.fullScreen) {
-        return screen.height - 30
+      if (this.isFullScreen()) {
+        return screen.height + 60
       } else {
-        return screen.width > 1300 && (!this.light || this.big) ? 470 : 170
+        const bigHeight = screen.height > 900 ? 470 : 300
+        return screen.width > 1300 && (
+          !this.light || this.big
+        ) ? bigHeight : 170
       }
     },
 
@@ -275,37 +274,11 @@ export default {
       }
       let width = this.container.offsetWidth - 1
       let height = Math.floor(width * ratio)
-      if (height > this.getDefaultHeight() - 32) {
-        height = this.getDefaultHeight() - 32
+      if (height > this.getDefaultHeight()) {
+        height = this.getDefaultHeight()
       }
       width = Math.floor(height / ratio)
       return { width, height }
-    },
-
-    onFullscreenClicked () {
-      /** @lends fabric.IText.prototype */
-      // fix for : IText not editable when canvas is in a fullscreen
-      // element on chrome
-      // https://github.com/fabricjs/fabric.js/issues/5126
-      const originalInitHiddenTextarea =
-        fabric.IText.prototype.initHiddenTextarea
-      if (this.isFullScreen()) {
-        fabric.util.object.extend(fabric.IText.prototype, {
-          initHiddenTextarea: function () {
-            originalInitHiddenTextarea.call(this)
-            fabric.document.body.appendChild(this.hiddenTextarea)
-          }
-        })
-        this.exitFullScreen()
-      } else {
-        fabric.util.object.extend(fabric.IText.prototype, {
-          initHiddenTextarea: function () {
-            originalInitHiddenTextarea.call(this)
-            this.canvas.wrapperEl.appendChild(this.hiddenTextarea)
-          }
-        })
-        this.setFullScreen()
-      }
     },
 
     onDeleteClicked () {
@@ -324,31 +297,6 @@ export default {
       this.color = newValue
       this.fabricCanvas.freeDrawingBrush.color = this.color
       this.isShowingPalette = false
-    },
-
-    onPencilAnnotateClicked () {
-      if (this.fabricCanvas.isDrawingMode) {
-        this.fabricCanvas.isDrawingMode = false
-        this.isDrawing = false
-      } else {
-        this.isTyping = false
-        this.fabricCanvas.isDrawingMode = true
-        this.isDrawing = true
-      }
-    },
-
-    onTypeClicked () {
-      const clickarea =
-        this.canvasWrapper.getElementsByClassName('upper-canvas')[0]
-      if (this.isTyping) {
-        this.isTyping = false
-        clickarea.removeEventListener('dblclick', this.addText)
-      } else {
-        this.fabricCanvas.isDrawingMode = false
-        this.isDrawing = false
-        this.isTyping = true
-        clickarea.addEventListener('dblclick', this.addText)
-      }
     },
 
     resetPicture () {
@@ -536,7 +484,6 @@ export default {
       this.clearCanvas()
       this.annotations = []
       this.reloadAnnotations()
-      this.isDrawing = false
       if (this.fabricCanvas) this.fabricCanvas.isDrawingMode = false
     },
 
@@ -558,15 +505,18 @@ export default {
       this.pictureGif.height = height
 
       if (this.fabricCanvas) {
+        console.log('fix', width, height)
         this.fabricCanvas.setDimensions({ width, height })
         const containerWidth = this.container.offsetWidth
         const margin = Math.round((containerWidth - width) / 2)
         if (this.canvasWrapper) {
+          console.log('yeah', width, height)
           this.canvasWrapper.style.left = margin + 'px'
           this.canvasWrapper.style.width = width + 'px'
           this.canvasWrapper.style.height = height + 'px'
           setTimeout(() => {
             this.fabricCanvas.calcOffset()
+            this.fabricCanvas.setDimensions({ width, height })
           }, 10)
         }
       }
@@ -681,6 +631,20 @@ export default {
       }
     },
 
+    isDrawing () {
+      if (this.fabricCanvas) this.fabricCanvas.isDrawingMode = this.isDrawing
+    },
+
+    isTyping () {
+      const clickarea =
+        this.canvasWrapper.getElementsByClassName('upper-canvas')[0]
+      if (this.isTyping && clickarea) {
+        clickarea.addEventListener('dblclick', this.addText)
+      } else {
+        clickarea.removeEventListener('dblclick', this.addText)
+      }
+    },
+
     light () {
       this.onWindowResize()
     },
@@ -691,8 +655,7 @@ export default {
         this.setPictureDlPath()
         if (this.pictureBig.complete) this.isLoading = false
       } else {
-        this.fabricCanvas.isDrawingMode = false
-        this.isDrawing = false
+        if (this.fabricCanvas) this.fabricCanvas.isDrawingMode = false
         this.setPicturePath()
       }
     }
@@ -808,10 +771,6 @@ export default {
   position: absolute;
   left: 0;
   z-index: 300;
-
-  div {
-    margin: auto;
-  }
 }
 
 .annotation-tools {

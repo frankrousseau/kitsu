@@ -4,14 +4,6 @@
     <div class="loading-background" v-if="isLoading" >
       <spinner class="spinner" />
     </div>
-    <div class="canvas-wrapper" ref="canvas-wrapper">
-      <canvas
-        id="annotation-canvas"
-        ref="annotation-canvas"
-        class="canvas"
-      >
-      </canvas>
-    </div>
     <video
       id="annotation-movie"
       ref="movie"
@@ -202,23 +194,16 @@ export default {
       return this.currentProduction.fps || 24
     },
 
-    isFullScreenEnabled () {
-      return !!(
-        document.fullscreenEnabled ||
-        document.mozFullScreenEnabled ||
-        document.msFullscreenEnabled ||
-        document.webkitSupportsFullscreen ||
-        document.webkitFullscreenEnabled ||
-        document.createElement('video').webkitRequestFullScreen
-      )
-    },
-
     isVideo () {
       return this.$refs.movie && this.videoDuration && this.videoDuration > 0
     },
 
     moviePath () {
-      return `/api/movies/originals/preview-files/${this.preview.id}.mp4`
+      if (this.preview.extension === 'mp4') {
+        return `/api/movies/originals/preview-files/${this.preview.id}.mp4`
+      } else {
+        return null
+      }
     },
 
     movieDlPath () {
@@ -226,7 +211,11 @@ export default {
     },
 
     posterPath () {
-      return `/api/pictures/previews/preview-files/${this.preview.id}.png`
+      if (this.preview.extension === 'mp4') {
+        return `/api/pictures/previews/preview-files/${this.preview.id}.png`
+      } else {
+        return null
+      }
     },
 
     comparisonMoviePath () {
@@ -313,19 +302,9 @@ export default {
 
     formatTime,
 
-    isFullScreen () {
-      return !!(
-        document.fullScreen ||
-        document.webkitIsFullScreen ||
-        document.mozFullScreen ||
-        document.msFullscreenElement ||
-        document.fullscreenElement
-      )
-    },
-
     getDefaultHeight () {
-      if (this.isFullScreen()) {
-        return screen.height - 30
+      if (this.fullScreen) {
+        return screen.height + 60
       } else {
         return screen.width > 1000 && (!this.light || this.big) ? 470 : 170
       }
@@ -465,32 +444,6 @@ export default {
       if (annotation) this.loadAnnotation(annotation)
     },
 
-    exitFullScreen () {
-      if (document.exitFullscreen) {
-        document.exitFullscreen()
-      } else if (document.mozCancelFullScreen) {
-        document.mozCancelFullScreen()
-      } else if (document.webkitCancelFullScreen) {
-        document.webkitCancelFullScreen()
-      } else if (document.msExitFullscreen) {
-        document.msExitFullscreen()
-      }
-      this.container.setAttribute('data-fullscreen', !!false)
-    },
-
-    setFullScreen () {
-      if (this.container.requestFullscreen) {
-        this.container.requestFullscreen()
-      } else if (this.container.mozRequestFullScreen) {
-        this.container.mozRequestFullScreen()
-      } else if (this.container.webkitRequestFullScreen) {
-        this.container.webkitRequestFullScreen()
-      } else if (this.container.msRequestFullscreen) {
-        this.container.msRequestFullscreen()
-      }
-      this.container.setAttribute('data-fullscreen', !!true)
-    },
-
     onDeleteClicked () {
       this.deleteSelection()
     },
@@ -546,32 +499,6 @@ export default {
       }
       this.progress.value = this.video.currentTime * 1
       this.currentTime = this.formatTime(this.video.currentTime)
-    },
-
-    onFullscreenClicked () {
-      /** @lends fabric.IText.prototype */
-      // fix for : IText not editable when canvas is in a fullscreen
-      // element on chrome
-      // https://github.com/fabricjs/fabric.js/issues/5126
-      const originalInitHiddenTextarea =
-        fabric.IText.prototype.initHiddenTextarea
-      if (this.isFullScreen()) {
-        fabric.util.object.extend(fabric.IText.prototype, {
-          initHiddenTextarea: function () {
-            originalInitHiddenTextarea.call(this)
-            fabric.document.body.appendChild(this.hiddenTextarea)
-          }
-        })
-        this.exitFullScreen()
-      } else {
-        fabric.util.object.extend(fabric.IText.prototype, {
-          initHiddenTextarea: function () {
-            originalInitHiddenTextarea.call(this)
-            this.canvas.wrapperEl.appendChild(this.hiddenTextarea)
-          }
-        })
-        this.setFullScreen()
-      }
     },
 
     onWindowResize (callback) {
@@ -770,7 +697,7 @@ export default {
       if (e.buttons === 1) { // Primary button (left click)
         this.pauseEvent(e)
         let left = this.progress.offsetLeft
-        if (left === 0 && !this.isFullScreen()) {
+        if (left === 0 && !this.fullScreen) {
           left = this.progress.parentElement.offsetParent.offsetLeft - 10
         }
         const pos = (e.pageX - left) / this.progress.offsetWidth
@@ -786,7 +713,7 @@ export default {
         if (now - this.lastCall > 130) {
           this.lastCall = now
           let left = this.progress.offsetLeft
-          if (left === 0 && !this.isFullScreen()) {
+          if (left === 0 && !this.fullScreen) {
             left = this.progress.parentElement.offsetParent.offsetLeft - 10
           }
           const pos = (e.pageX - left) / this.progress.offsetWidth
@@ -794,32 +721,6 @@ export default {
           this.setCurrentTime(currentTime)
         }
       }
-    },
-
-    addTypeArea () {
-      /** @lends fabric.IText.prototype */
-      // fix for : IText not editable when canvas is in a fullscreen
-      // element on chrome
-      // https://github.com/fabricjs/fabric.js/issues/5126
-      const originalInitHiddenTextarea =
-        fabric.IText.prototype.initHiddenTextarea
-      fabric.util.object.extend(fabric.IText.prototype, {
-        initHiddenTextarea: function () {
-          originalInitHiddenTextarea.call(this)
-          this.canvas.wrapperEl.appendChild(this.hiddenTextarea)
-        }
-      })
-    },
-
-    removeTypeArea () {
-      const originalInitHiddenTextarea =
-        fabric.IText.prototype.initHiddenTextarea
-      fabric.util.object.extend(fabric.IText.prototype, {
-        initHiddenTextarea: function () {
-          originalInitHiddenTextarea.call(this)
-          fabric.document.body.appendChild(this.hiddenTextarea)
-        }
-      })
     }
   },
 

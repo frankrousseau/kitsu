@@ -5,13 +5,13 @@
     icon="left"
     :title="$t('playlists.actions.files_previous')"
     @click="$emit('previous-clicked')"
-    v-if="!light"
+    v-if="!light && previews.length > 1"
   />
 
   <span
     class="flexrow-item bar-element"
     :title="$t('playlists.actions.files_position')"
-    v-if="!light"
+    v-if="!light && previews.length > 1"
   >
     {{ currentIndex }} / {{ previews.length }}
   </span>
@@ -21,7 +21,7 @@
     icon="right"
     :title="$t('playlists.actions.files_next')"
     @click="$emit('next-clicked')"
-    v-if="!light"
+    v-if="!light && previews.length > 1"
   />
 
   <button-simple
@@ -36,7 +36,7 @@
     class="flexrow-item"
     icon="delete"
     :title="$t('playlists.actions.files_delete')"
-    @click="$emit('remove-clicked')"
+    @click="$emit('remove-preview-clicked')"
     v-if="!readOnly && !fullScreen"
   />
 </div>

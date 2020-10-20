@@ -78,7 +78,10 @@
               @file-drop="selectFile"
               v-if="isCommentingAllowed"
             />
-            <div class="comments" v-if="currentTaskComments && currentTaskComments.length > 0">
+            <div
+              class="comments"
+              v-if="currentTaskComments && currentTaskComments.length > 0"
+            >
               <comment
                 :comment="comment"
                 :task="currentTask"
@@ -173,6 +176,8 @@
                 :entity-preview-files="taskEntityPreviews"
                 :read-only="isCurrentUserArtist"
                 @annotationchanged="onAnnotationChanged"
+                @add-extra-preview="onAddExtraPreviewClicked"
+                @remove-extra-preview="onRemoveExtraPreviewClicked"
                 ref="preview-player"
                 v-if="currentPreview"
               />
@@ -199,7 +204,6 @@
       :is-loading="loading.addExtraPreview"
       :is-error="errors.addExtraPreview"
       :form-data="addExtraPreviewFormData"
-      extensions=".png,.jpg,.jpeg"
       @cancel="hideExtraPreviewModal"
       @fileselected="selectFile"
       @confirm="createExtraPreview"
@@ -561,6 +565,10 @@ export default {
       }
     },
 
+    previewPlayer () {
+      return this.$refs['preview-player']
+    },
+
     title () {
       if (this.currentTask) {
         const type = this.currentTask.entity_type_name
@@ -834,15 +842,11 @@ export default {
       })
         .then(() => {
           this.loading.addExtraPreview = false
-          if (this.currentPreview) {
-            this.resetPreview()
-          } else {
-            this.resetPreview()
-          }
+          this.resetPreview(false)
           this.modals.addExtraPreview = false
           this.$refs['add-extra-preview-modal'].reset()
           setTimeout(() => {
-            this.$refs['preview-player'].displayLast()
+            this.previewPlayer.displayLast()
           }, 0)
         })
         .catch((err) => {
@@ -852,12 +856,14 @@ export default {
         })
     },
 
-    resetPreview () {
+    resetPreview (changeRoute = true) {
       const previews = this.currentTaskPreviews
       const preview = previews.length > 0 ? previews[0] : null
       this.currentTaskComments = this.getCurrentTaskComments()
       this.currentTaskPreviews = this.getCurrentTaskPreviews()
-      if (preview) this.$router.push(this.previewPath(preview.id))
+      if (preview && changeRoute) {
+        this.$router.push(this.previewPath(preview.id))
+      }
     },
 
     setPreview () {
@@ -932,7 +938,7 @@ export default {
         return comment.previews.findIndex((p) => p.id === previewId) >= 0
       })
 
-      this.$refs['preview-player'].displayFirst()
+      this.previewPlayer.displayFirst()
       this.deleteTaskPreview({
         taskId: this.currentTask.id,
         commentId: comment.id,
@@ -1033,8 +1039,12 @@ export default {
       this.updatePreviewAnnotation({ taskId, preview, annotations })
     },
 
-    onAddExtraPreview () {
+    onAddExtraPreviewClicked () {
       this.modals.addExtraPreview = true
+    },
+
+    onRemoveExtraPreviewClicked (preview) {
+      this.showRemoveExtraPreviewModal(preview)
     },
 
     hideExtraPreviewModal () {
