@@ -797,14 +797,11 @@ a:hover {
   flex: 1;
 }
 
- label.label {
+label.label {
   color: $grey;
   text-transform: uppercase;
   font-size: 0.8em;
   margin-left: 2px;
-}
-
-span.select {
 }
 
 texarea,

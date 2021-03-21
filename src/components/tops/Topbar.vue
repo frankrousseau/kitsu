@@ -1,7 +1,9 @@
 <template>
   <div class="topbar">
-    <div id="c-mask-user-menu" @click="toggleUserMenu()"
-         v-bind:class="{'is-active': !isUserMenuHidden}"
+    <div
+      id="c-mask-user-menu"
+      @click="toggleUserMenu()"
+      v-bind:class="{'is-active': !isUserMenuHidden}"
     >
     </div>
 
@@ -13,44 +15,54 @@
            @click='toggleSidebar()'
            :class="{'selected': !isSidebarHidden}"
            v-if="!isCurrentUserClient"
-
         >
           ≡
         </a>
 
-        <div :class="{
-          'nav-item': true,
-        }" v-if="isProductionContext">
-          <div class="level">
-            <div class="level-item">
-              <combobox
-                class="context-selector"
-                :options="openProductionOptions"
-                :is-top="true"
-                v-model="currentProductionId"
-              />
-              <strong>
+        <div
+          class="flexrow"
+          v-if="isProductionContext"
+        >
+          <div class="flexrow-item">
+            <topbar-production-list
+              :production-list="openProductions"
+              :production="currentProduction"
+              :section="(sectionOptions.find(
+                         o => o.value === currentProjectSection) || {}).value"
+              :episode-id="(currentEpisodeOptions.find(
+                         o => o.value === currentEpisodeId) || {}).value"
+            />
+          </div>
+          <div class="flexrow-item">
+            <strong>
               >
-              </strong>
-              <combobox
-                class="context-selector"
-                :options="sectionOptions"
-                :is-top="true"
-                v-model="currentProjectSection"
-              />
+            </strong>
+          </div>
+          <div class="flexrow-item">
+            <topbar-section-list
+              :section-list="sectionOptions"
+              :section="(sectionOptions.find(
+                         o => o.value === currentProjectSection) || {}).value"
+              :episode-id="(currentEpisodeOptions.find(
+                         o => o.value === currentEpisodeId) || {}).value"
+            />
+          </div>
+          <div class="flexrow-item">
               <strong
                 v-if="isEpisodeContext"
               >
               >
               </strong>
-              <combobox
-                class="context-selector"
-                :options="currentEpisodeOptions"
-                :is-top="true"
-                v-model="currentEpisodeId"
-                v-if="isEpisodeContext"
-              />
-            </div>
+          </div>
+          <div class="flexrow-item">
+            <topbar-episode-list
+              :episode-list="currentEpisodeOptions"
+              :episode="(currentEpisodeOptions.find(
+                         o => o.value === currentEpisodeId) || {}).label"
+              :section="(sectionOptions.find(
+                         o => o.value === currentProjectSection) || {}).value"
+              v-if="isEpisodeContext"
+            />
           </div>
         </div>
         <div
@@ -89,11 +101,7 @@
         >
           {{ $t('timesheets.title') }}
         </router-link>
-        <div class="nav-item">
-          <button  data-canny-changelog class="changelog-button" >
-            <zap-icon />
-          </button>
-        </div>
+
         <notification-bell />
         <div
           :class="{
@@ -111,6 +119,10 @@
             :person="user"
             :is-link="false"
           />
+          <people-name
+            class="user-name"
+            :person="user"
+          />
         </div>
       </div>
     </nav>
@@ -118,9 +130,7 @@
     <nav
       class="user-menu"
       ref="user-menu"
-      :style="{
-        top: isUserMenuHidden ? '-460px' : '60px'
-      }"
+      v-show="!isUserMenuHidden"
     >
       <ul>
         <li>
@@ -136,7 +146,6 @@
             {{ $t("main.white_theme")}}
           </span>
         </li>
-        <hr />
         <li>
           <a href="https://kitsu.cg-wire.com" target="_blank">
             {{ $t("main.documentation")}}
@@ -157,30 +166,26 @@
             {{ $t('keyboard.shortcuts') }}
           </a>
         </li>
-        <hr />
         <li>
-          <a href="https://discord.gg/VbCxtKN" target="_blank">
-            Discord
+          <a href="https://slack.cg-wire.com" target="_blank">
+            Slack
           </a>
         </li>
         <li>
           <a href="https://cgwire.canny.io" target="_blank">
-            Roadmap / Feedback
+            Roadmap
           </a>
         </li>
-        <hr />
         <li>
           <a href="https://cg-wire.com/en/about.html" target="_blank">
-            {{ $t("main.about") }}
+            {{ $t("main.about")}}
           </a>
+        </li>
+        <li @click="onLogoutClicked">
+          {{ $t("main.logout") }}
         </li>
         <li class="version">
           Kitsu {{ kitsuVersion }}
-        </li>
-        <hr />
-        <li class="flexrow" @click="onLogoutClicked">
-          <log-out-icon class="flexrow-item" size="1x" />
-          <span class="flexrow-item">{{ $t("main.logout") }}</span>
         </li>
       </ul>
     </nav>
@@ -195,24 +200,28 @@
 
 <script>
 import { mapGetters, mapActions } from 'vuex'
-import { ChevronLeftIcon, LogOutIcon, ZapIcon } from 'vue-feather-icons'
+import { ChevronLeftIcon } from 'vue-feather-icons'
 
-import Combobox from '../widgets/Combobox'
+import TopbarEpisodeList from '../widgets/TopbarEpisodeList'
+import TopbarProductionList from '../widgets/TopbarProductionList'
+import TopbarSectionList from '../widgets/TopbarSectionList'
 import NotificationBell from '../widgets/NotificationBell'
 import PeopleAvatar from '../widgets/PeopleAvatar'
+import PeopleName from '../widgets/PeopleName'
 import ShortcutModal from '../modals/ShortcutModal'
 import { version } from '../../../package.json'
 
 export default {
   name: 'topbar',
   components: {
-    Combobox,
+    TopbarEpisodeList,
+    TopbarProductionList,
+    TopbarSectionList,
     ChevronLeftIcon,
-    LogOutIcon,
     NotificationBell,
+    PeopleName,
     PeopleAvatar,
-    ShortcutModal,
-    ZapIcon
+    ShortcutModal
   },
 
   data () {
@@ -221,7 +230,8 @@ export default {
       currentEpisodeId: this.$route.params.episode_id,
       currentProjectSection: this.isCurrentUserClient ? 'playlists' : 'assets',
       kitsuVersion: version,
-      silent: true,
+      silent: false,
+
       display: {
         shortcutModal: false
       }
@@ -229,12 +239,17 @@ export default {
   },
 
   mounted () {
-    Canny('initChangelog', { // eslint-disable-line
-      appID: '5db968118d1a9c132c168d54',
-      position: 'bottom',
-      align: 'right'
-    })
-    this.currentProjectSection = this.getCurrentSectionFromRoute()
+    const userMenu = this.$refs['user-menu']
+    const userName = this.$refs['user-name']
+    if (userName) {
+      const userNameWidth = userName.clientWidth
+
+      if (userNameWidth > 100) {
+        userMenu.style.width = `${userNameWidth}px`
+        userName.style.width = `${userNameWidth}px`
+      }
+    }
+
     this.setProductionFromRoute()
   },
 
@@ -279,7 +294,7 @@ export default {
           { label: 'Main Pack', value: 'main' }
         ].concat(this.episodeOptions)
       } else {
-        return this.episodeOptions
+        return this.episodeOptions || []
       }
     },
 
@@ -449,11 +464,9 @@ export default {
     configureProduction (routeProductionId) {
       this.setProduction(routeProductionId)
       if (this.isTVShow) {
-        this.loadEpisodes()
-          .then((episodes) => {
-            this.updateCombosFromRoute()
-          })
-          .catch(console.error)
+        this.loadEpisodes(() => {
+          this.updateCombosFromRoute()
+        })
       } else {
         this.clearEpisodes()
         this.updateCombosFromRoute()
@@ -462,12 +475,10 @@ export default {
 
     configureEpisode (routeEpisodeId) {
       if (this.episodes.length < 2) {
-        this.loadEpisodes()
-          .then(episodes => {
-            this.setEpisodeFromRoute()
-            this.updateCombosFromRoute()
-          })
-          .catch(console.error)
+        this.loadEpisodes(() => {
+          this.setEpisodeFromRoute()
+          this.updateCombosFromRoute()
+        })
       } else {
         this.setEpisodeFromRoute()
         this.updateCombosFromRoute()
@@ -514,20 +525,13 @@ export default {
       this.silent = true
       this.currentProductionId = productionId
       this.currentProjectSection = section
-
+      this.currentProjectSection = null
       this.$nextTick(() => {
-        this.currentProjectSection = null
+        this.currentProjectSection = section
+        this.currentEpisodeId = null
         this.$nextTick(() => {
-          this.currentProjectSection = section
-          this.$nextTick(() => {
-            this.currentEpisodeId = null
-            this.$nextTick(() => {
-              this.currentEpisodeId = episodeId
-              this.$nextTick(() => {
-                this.silent = false
-              })
-            })
-          })
+          this.currentEpisodeId = episodeId
+          this.silent = false
         })
       })
     },
@@ -581,15 +585,7 @@ export default {
         }
       }
       route = this.episodifyRoute(route, section, episodeId, isTVShow)
-
-      if (['assets', 'shots'].includes(section)) {
-        route.query = { search: '' }
-      }
-      if (route && route.params.production_id) {
-        this.$router.push(route).catch(err => {
-          console.error(err)
-        })
-      }
+      if (route && route.params.production_id) this.$router.push(route)
     },
 
     episodifyRoute (route, section, episodeId, isTVShow) {
@@ -657,18 +653,13 @@ export default {
   watch: {
     $route () {
       const productionId = this.$route.params.production_id
-      if (productionId) {
-        this.updateContext(productionId)
-      }
+      this.updateContext(productionId)
     },
 
     currentProductionId () {
       this.updateRoute()
       this.resetEpisodeForTVShow()
-      if (this.isTVShow) {
-        this.loadEpisodes()
-          .catch(console.error)
-      }
+      if (this.currentProduction.isTVShow) this.loadEpisodes()
     },
 
     currentProjectSection () {
@@ -683,15 +674,11 @@ export default {
     },
 
     currentEpisode () {
-      this.silent = true
       if (!this.currentEpisode) {
         this.currentEpisodeId = null
       } else if (this.currentEpisodeId !== this.currentEpisode.id) {
         this.currentEpisodeId = this.currentEpisode.id
       }
-      this.$nextTick(() => {
-        this.silent = false
-      })
     },
 
     currentProduction () {
@@ -738,23 +725,10 @@ export default {
     border-left: 1px solid #2F3136;
     border-bottom: 1px solid #2F3136;
   }
-
-  .changelog-button {
-    color: $grey;
-  }
-
-  hr {
-    background-color: $grey-strong;
-  }
-
-  .user-menu li {
-    &:not(.version):hover {
-      background: $dark-grey-light;
-    }
-  }
 }
 
 .nav {
+  z-index: 2000;
   box-shadow: 0px 0px 6px rgba(0,0,0,0.2);
   max-height: 60px;
   min-height: 60px;
@@ -775,6 +749,7 @@ export default {
 
 .user-nav {
   cursor: pointer;
+  min-width: 150px;
 }
 
 .user-nav.active {
@@ -782,16 +757,19 @@ export default {
 
 .user-menu {
   position: fixed;
-  width: 220px;
-  min-width: 220px;
+  top: 60px;
+  width: 200px;
+  min-width: 150px;
   right: 0;
   background-color: white;
   padding: 1em 1em 1em 1em;
   z-index: 203;
   box-shadow: 2px 3px 3px rgba(0,0,0,0.2);
+  transition-property: all;
+  transition-duration: .5s;
+  transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
   border-left: 1px solid $white-grey;
   border-bottom: 1px solid $white-grey;
-  transition: top .5s ease;
 }
 
 .user-menu ul {
@@ -799,17 +777,10 @@ export default {
 }
 
 .user-menu li {
-  cursor: default;
+  cursor: pointer;
   padding: 0.2em;
-  padding-left: 0.4em;
   font-size: 1.1em;
   list-style-type: none;
-
-  &:not(.version):hover {
-    cursor: pointer;
-    background: $white-grey;
-    border-radius: 5px;
-  }
 }
 
 .user-menu li a {
@@ -859,10 +830,9 @@ strong {
   color: $grey;
 }
 
-.changelog-button {
-  background: transparent;
-  color: $light-grey;
-  cursor: pointer;
+.user-name {
+  min-width: 130px;
+  text-align: left;
 }
 
 @media screen and (max-width: 768px) {
