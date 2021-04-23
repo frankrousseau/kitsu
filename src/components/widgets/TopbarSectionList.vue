@@ -26,7 +26,7 @@
         :key="section.value"
       >
         <router-link
-          :to="getProductionPath(section)"
+          :to="getSectionPath(section)"
         >
           {{ section.label }}
         </router-link>
@@ -94,9 +94,12 @@ export default {
       this.showSectionList = !this.showSectionList
     },
 
-    getProductionPath (section) {
+    getSectionPath (section) {
+      let name = section.value
+      if (name === 'assetTypes') name = 'production-asset-types'
+      if (name === 'newsFeed') name = 'news-feed'
       const route = {
-        name: section.value,
+        name,
         params: {
           production_id: this.currentProduction.id
         }
@@ -110,7 +113,6 @@ export default {
       if (['assets', 'shots'].includes(section.value)) {
         route.query = { search: '' }
       }
-
       return route
     }
   }
