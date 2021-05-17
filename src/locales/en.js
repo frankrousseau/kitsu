@@ -456,6 +456,7 @@ export default {
     add_sequence: 'Add whole sequence',
     add_episode: 'Add whole episode',
     add_movie: 'Add whole movie',
+    annotations_not_saved: 'Annotations not saved (wait 3s)',
     apply_task_type_change: 'This will set the last revison for given task type on all shots.',
     available_build: 'Available builds',
     build_daily: 'Daily pending',

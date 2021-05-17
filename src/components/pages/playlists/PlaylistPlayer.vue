@@ -18,6 +18,9 @@
     <span class="flexrow-item playlist-name">
       {{ playlist.name }}
     </span>
+    <span class="flexrow-item tag is-danger" v-if="notSaved">
+      {{ $t('playlists.annotations_not_saved') }}
+    </span>
     <button-simple
       @click="$emit('show-add-entities')"
       class="playlist-button add-entities-button flexrow-item"
@@ -816,6 +819,7 @@ export default {
       isTyping: false,
       maxDuration: '00:00.000',
       maxDurationRaw: 0,
+      notSaved: false,
       palette: ['#ff3860', '#008732', '#5E60BA', '#f57f17'],
       pencil: 'big',
       pencilPalette: ['big', 'medium', 'small'],
@@ -2159,7 +2163,7 @@ export default {
         annotations: entity.preview_file_annotations || []
       }
       // If we are working on a subpreview build the preview object from it.
-      if (this.isCurrentPreviewPicture && this.currentPreviewIndex > 0) {
+      if (this.currentPreviewIndex > 0) {
         const index = this.currentPreviewIndex - 1
         const previewFile = this.currentEntity.preview_file_previews[index]
         preview = {
@@ -2170,10 +2174,17 @@ export default {
       }
       if (!this.isCurrentUserArtist) { // Artists are not allowed to draw
         // Emit an event for remote and store update
-        this.$emit('annotationchanged', {
-          preview: preview,
-          annotations: annotations
-        })
+        if (!this.notSaved) {
+          this.notSaved = true
+          this.$options.changesToSave = { preview, annotations }
+          setTimeout(() => {
+            this.notSaved = false
+            this.$emit('annotation-changed', this.$options.changesToSave)
+          }, 3000)
+        } else {
+          this.$options.changesToSave = { preview, annotations }
+        }
+
         // Update information locally
         entity.preview_file_annotations = annotations
         Object.keys(entity.preview_files).forEach(taskTypeId => {
@@ -2200,7 +2211,7 @@ export default {
         this.annotations = this.currentEntity.preview_file_annotations
       }
       time = roundToFrame(time, this.fps)
-      if (this.annotations) {
+      if (this.annotations && this.annotations.find) {
         let annotation = this.annotations.find(
           (annotation) => annotation.time === time
         )
@@ -2219,6 +2230,7 @@ export default {
         }
         return annotation
       } else {
+        this.annotations = []
         return null
       }
     },

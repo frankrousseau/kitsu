@@ -150,6 +150,7 @@ export const annotationMixin = {
           this.annotations.splice(index, 1)
         }
       } else {
+        if (!this.annotations || !this.annotations.push) this.annotations = []
         this.annotations.push({
           time: currentTime,
           width: this.fabricCanvas.width,
