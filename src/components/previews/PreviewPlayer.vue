@@ -483,6 +483,7 @@ export default {
   },
 
   beforeDestroy () {
+    this.endAnnotationSaving()
     this.removeEvents()
   },
 
@@ -1036,10 +1037,12 @@ export default {
       const annotation = this.getAnnotation(currentTime)
       const annotations = this.getNewAnnotations(currentTime, annotation)
       if (!this.readOnly) {
-        this.$emit('annotation-changed', {
-          preview: this.currentPreview,
-          annotations: annotations
-        })
+        const preview = this.currentPreview
+        if (!this.notSaved) {
+          this.startAnnotationSaving(preview, annotations)
+        } else {
+          this.$options.changesToSave = { preview, annotations }
+        }
       }
     },
 
@@ -1361,6 +1364,7 @@ export default {
 
   watch: {
     currentPreview () {
+      this.endAnnotationSaving()
       this.reloadAnnotations()
       if (this.isMovie) {
         this.configureVideo()
@@ -1386,6 +1390,7 @@ export default {
     },
 
     'currentPreview.revision' () {
+      this.endAnnotationSaving()
       this.currentIndex = 1
     },
 

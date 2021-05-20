@@ -9,6 +9,7 @@ export const annotationMixin = {
 
   data () {
     return {
+      notSave: false,
       isShowingPalette: false,
       isShowingPencilPalette: false
     }
@@ -303,6 +304,25 @@ export const annotationMixin = {
     clearCanvas () {
       if (this.fabricCanvas) {
         this.fabricCanvas.clear()
+      }
+    },
+
+    // Saving
+
+    startAnnotationSaving (preview, annotations) {
+      this.notSaved = true
+      this.$options.changesToSave = { preview, annotations }
+      this.$options.annotationToSave = setTimeout(() => {
+        this.notSaved = false
+        this.$emit('annotation-changed', this.$options.changesToSave)
+      }, 3000)
+    },
+
+    endAnnotationSaving () {
+      if (this.notSaved) {
+        clearTimeout(this.$options.annotationToSave)
+        this.notSaved = false
+        this.$emit('annotation-changed', this.$options.changesToSave)
       }
     }
   }

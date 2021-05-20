@@ -18,9 +18,9 @@
     <span class="flexrow-item playlist-name">
       {{ playlist.name }}
     </span>
-    <span class="flexrow-item tag is-danger" v-if="notSaved">
+    <!--span class="flexrow-item tag is-danger" v-if="notSaved">
       {{ $t('playlists.annotations_not_saved') }}
-    </span>
+    </span-->
     <button-simple
       @click="$emit('show-add-entities')"
       class="playlist-button add-entities-button flexrow-item"
@@ -819,7 +819,6 @@ export default {
       isTyping: false,
       maxDuration: '00:00.000',
       maxDurationRaw: 0,
-      notSaved: false,
       palette: ['#ff3860', '#008732', '#5E60BA', '#f57f17'],
       pencil: 'big',
       pencilPalette: ['big', 'medium', 'small'],
@@ -873,6 +872,7 @@ export default {
   },
 
   beforeDestroy () {
+    this.endAnnotationSaving()
     this.removeEvents()
   },
 
@@ -2175,12 +2175,7 @@ export default {
       if (!this.isCurrentUserArtist) { // Artists are not allowed to draw
         // Emit an event for remote and store update
         if (!this.notSaved) {
-          this.notSaved = true
-          this.$options.changesToSave = { preview, annotations }
-          setTimeout(() => {
-            this.notSaved = false
-            this.$emit('annotation-changed', this.$options.changesToSave)
-          }, 3000)
+          this.startAnnotationSaving(preview, annotations)
         } else {
           this.$options.changesToSave = { preview, annotations }
         }
@@ -2345,6 +2340,7 @@ export default {
 
   watch: {
     currentPreviewIndex () {
+      this.endAnnotationSaving()
       this.resetUndoStacks()
       this.$nextTick(() => {
         if (this.isCurrentPreviewPicture) {
@@ -2356,6 +2352,7 @@ export default {
     },
 
     playingEntityIndex () {
+      this.endAnnotationSaving()
       this.updateTaskPanel()
       this.resetUndoStacks()
       this.currentPreviewIndex = 0
@@ -2428,6 +2425,7 @@ export default {
     },
 
     playlist () {
+      this.endAnnotationSaving()
       this.forClient = Boolean(this.playlist.for_client).toString()
       this.$nextTick(() => {
         this.updateProgressBar()
