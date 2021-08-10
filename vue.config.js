@@ -2,8 +2,23 @@ module.exports = {
   configureWebpack: {
     resolve: {
       alias: {
-        vue$: 'vue/dist/vue.js'
+        vue: '@vue/compat'
       }
+    },
+    module: {
+      rules: [
+        {
+          test: /\.vue$/,
+          loader: 'vue-loader',
+          options: {
+            compilerOptions: {
+              compatConfig: {
+                MODE: 3
+              }
+            }
+          }
+        }
+      ]
     },
     optimization: {
       splitChunks: {
