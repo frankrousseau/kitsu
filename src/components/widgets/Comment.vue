@@ -231,13 +231,13 @@
       </span>
     </div>
 
-    <div
+    <!--div
       class="has-text-centered add-checklist"
       @click="addChecklistEntry()"
       v-if="isAddChecklistAllowed"
     >
       {{ $t('comments.add_checklist') }}
-    </div>
+    </div-->
   </article>
   <div class="empty-comment" v-else>
     <div class="flexrow content-wrapper">
