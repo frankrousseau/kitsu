@@ -574,10 +574,15 @@ export default {
     },
 
     addChecklistEntry () {
+      this.$options.silent = true
       this.checklist.push({
         text: '',
         checked: false
       })
+      this.$nextTick()
+        .then(() => {
+          this.$options.silent = false
+        })
     },
 
     removeTask (entry) {
