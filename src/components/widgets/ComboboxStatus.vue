@@ -10,6 +10,14 @@
   </label>
   <div
     class="status-combo"
+    :style="{
+      background: colorOnly ? backgroundColor(currentStatus): 'transparent',
+      color: colorOnly ? color(currentStatus): 'inherit',
+      'border-top-left-radius': colorOnly ? '20px' : 0,
+      'border-bottom-left-radius': showStatusList ? '0' : '20px',
+      'border-bottom-right-radius': showStatusList ? '0' : '0px',
+      border: 0
+    }"
   >
     <div
       class="flexrow"
@@ -29,7 +37,11 @@
           {{ currentStatus.short_name }}
         </span>
       </div>
-      <chevron-down-icon class="down-icon flexrow-item"/>
+      <chevron-down-icon :class="{
+        'down-icon': true,
+        'flexrow-item': true,
+        'white': colorOnly
+      }"/>
     </div>
     <div
       ref="select"
@@ -86,6 +98,10 @@ export default {
   },
 
   props: {
+    colorOnly: {
+      default: false,
+      type: Boolean
+    },
     label: {
       default: '',
       type: String
@@ -261,5 +277,10 @@ export default {
 
 .field .label {
   padding-top: 5px;
+}
+
+.down-icon.white {
+  color: $white;
+  margin-right: 0.8em;
 }
 </style>

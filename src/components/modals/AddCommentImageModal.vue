@@ -7,6 +7,7 @@
 
   <div class="modal-content">
     <div class="box content">
+      <h2 class="subtitle">{{ title }}</h2>
       <h1 class="title">
         {{ $t("tasks.comment_image") }}
       </h1>
@@ -132,6 +133,10 @@ export default {
     extensions: {
       type: String,
       default: files.ALL_EXTENSIONS_STRING
+    },
+    title: {
+      type: String,
+      default: ''
     }
   },
 
@@ -243,5 +248,17 @@ export default {
 
 .upload-previews {
   text-align: center;
+}
+
+.subtitle {
+  color: $grey;
+  font-size: 1.2em;
+  margin: 0;
+  padding: 0;
+  text-transform: uppercase;
+}
+
+h1.title {
+  margin-top: 0.5em;
 }
 </style>

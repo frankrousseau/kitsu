@@ -8,17 +8,54 @@
       'add-comment': true,
       'word-break': true,
       media: true,
+      publishing: isFileAttached,
       'is-dragging': isDragging
     }"
   >
-    <figure class="media-left" v-if="!light">
-      <div class="level">
-        <div class="level-left">
-          <people-avatar class="level-item" :person="user" />
-        </div>
-      </div>
-    </figure>
+
     <div class="media-content">
+      <div class="flexrow tab-row">
+        <span
+          :class="{
+            'flexrow-item': true,
+            filler: true,
+            'has-text-centered': true,
+            active: mode === 'status'
+          }"
+          @click="mode = 'status'"
+        >
+          Change status
+        </span>
+        <span
+          :class="{
+            'flexrow-item': true,
+            filler: true,
+            'has-text-centered': true,
+            active: mode === 'publish'
+          }"
+          @click="mode = 'publish'"
+        >
+          Publish
+        </span>
+      </div>
+
+      <div class="flexrow preview-section" v-if="mode === 'publish'">
+        <button
+          class="button flexrow-item preview-button"
+          @click="$emit('add-preview')"
+        >
+          <template
+            class="attachment-file flexrow-item"
+            v-if="isFileAttached"
+          >
+            Publishing {{ attachedFileName }}
+          </template>
+          <template v-else>
+            {{ $t('comments.add_preview') }}
+          </template>
+        </button>
+      </div>
+
       <at-ta
         :members="atOptions"
         name-key="full_name"
@@ -44,16 +81,18 @@
             </div>
           </template>
         </template>
-        <textarea
+        <textarea-autosize
           ref="comment-textarea"
           class="textarea flexrow-item"
           :placeholder="$t('comments.add_comment')"
           :disabled="isLoading"
+          :min-height="50"
+          :max-height="300"
+          @keyup.enter.ctrl.native="runAddComment(text, attachment, checklist, task_status_id)"
+          @keyup.enter.meta.native="runAddComment(text, attachment, checklist, task_status_id)"
           v-model="text"
-          @keyup.enter.ctrl="runAddComment(text, attachment, checklist, task_status_id)"
-          @keyup.enter.meta="runAddComment(text, attachment, checklist, task_status_id)"
-          v-focus>
-        </textarea>
+          v-focus
+        />
       </at-ta>
       <checklist
         :checklist="checklist"
@@ -61,38 +100,23 @@
         @remove-task="removeTask"
         v-if="checklist.length > 0"
       />
-      <div class="flexrow preview-section">
-        <button
-          class="button flexrow-item"
-          @click="$emit('add-preview')"
-        >
-          {{ $t('comments.add_preview') }}
-        </button>
-        <span
-          class="attachment-file flexrow-item"
-        >
-          <em
-            v-if="!isFileAttached"
-          >
-            {{ $t('comments.no_file_attached') }}
-          </em>
-          <em
-            v-if="isFileAttached"
-          >
-            {{ attachedFileName }}
-          </em>
-        </span>
-      </div>
-      <group-button class="mt1">
-        <combobox-status
-          class="status-selector"
-          :narrow="true"
-          :task-status-list="taskStatus"
-          v-model="task_status_id"
-        />
+
+      <div class="flexrow button-row mt1">
         <button-simple
           :class="{
             'button': true,
+            'flexrow-item': true,
+            'active': attachment.length !== 0
+          }"
+          icon="attach"
+          :title="$t('comments.add_attachment')"
+          @click="onAddCommentAttachmentClicked()"
+        >
+        </button-simple>
+        <button-simple
+          :class="{
+            'button': true,
+            'flexrow-item': true,
             'active': checklist.length !== 0
           }"
           icon="list"
@@ -100,30 +124,30 @@
           @click="addChecklistEntry(-1)"
         >
         </button-simple>
+        <div class="filler"></div>
+        <div class="">
+          <combobox-status
+            class="flexrow-item status-selector"
+            :narrow="true"
+            :color-only="true"
+            :task-status-list="taskStatus"
+            v-model="task_status_id"
+          />
+        </div>
         <button-simple
           :class="{
             'button': true,
-            'active': attachment.length !== 0
-          }"
-          icon="image"
-          :title="$t('comments.add_attachment')"
-          @click="onAddCommentAttachmentClicked()"
-        >
-        </button-simple>
-        <button
-          :class="{
-            'button': true,
-            'is-primary': true,
+            'post-button': true,
+            'flexrow-item': true,
             'is-loading': isLoading
           }"
-          :style="{
-            'background-color': taskStatusColor
-          }"
+          icon="send"
+          text="Post"
+          :title="$t('comments.post_status')"
           @click="runAddComment(text, attachment, checklist, task_status_id)"
-        >
-          {{ $t('comments.post_status') }}
-        </button>
-      </group-button>
+        />
+      </div>
+
       <div
         class="error pull-right"
         v-if="isError"
@@ -144,6 +168,7 @@
       :is-loading="loading.addCommentAttachment"
       :is-error="errors.addCommentAttachment"
       :is-movie="isMovie"
+      :title="task.entity_name + ' / ' + taskTypeMap.get(task.task_type_id).name"
       @cancel="onCloseCommentAttachment"
       @confirm="createCommentAttachment"
       @add-snapshots="$emit('annotation-snapshots-requested')"
@@ -156,12 +181,12 @@ import { mapGetters } from 'vuex'
 import { remove } from '@/lib/models'
 import colors from '@/lib/colors'
 import { replaceTimeWithTimecode } from '@/lib/render'
+// import { roundToFrame } from '@/lib/video'
 
 import AtTa from 'vue-at/dist/vue-at-textarea'
 import AddCommentImageModal from '@/components/modals/AddCommentImageModal'
 import ComboboxStatus from '@/components/widgets/ComboboxStatus'
 import PeopleAvatar from '@/components/widgets/PeopleAvatar'
-import GroupButton from '@/components/widgets/GroupButton'
 import ButtonSimple from '@/components/widgets/ButtonSimple'
 import Checklist from '@/components/widgets/Checklist'
 
@@ -171,11 +196,10 @@ export default {
   components: {
     AtTa,
     AddCommentImageModal,
-    ComboboxStatus,
-    PeopleAvatar,
-    GroupButton,
     ButtonSimple,
-    Checklist
+    Checklist,
+    ComboboxStatus,
+    PeopleAvatar
   },
 
   data () {
@@ -185,6 +209,7 @@ export default {
       text: '',
       attachment: [],
       checklist: [],
+      mode: 'status',
       task_status_id: null,
       errors: {
         addCommentAttachment: false
@@ -278,6 +303,7 @@ export default {
       'isDarkTheme',
       'isCurrentUserArtist',
       'taskStatusForCurrentUser',
+      'taskTypeMap',
       'taskStatusMap'
     ]),
 
@@ -330,7 +356,9 @@ export default {
     },
 
     focus () {
-      this.$refs['comment-textarea'].focus()
+      if (this.$refs['comment-textarea']) {
+        this.$refs['comment-textarea'].$el.focus()
+      }
     },
 
     showAnnotationLoading () {
@@ -455,28 +483,42 @@ export default {
   background: #555;
 }
 
+article.add-comment {
+  padding: 4px;
+}
+
 .add-comment {
   border-radius: 5px;
   background: white;
+  border: 1px solid $light-grey-light;
   transition: background 0.2s ease;
 
   textarea {
-    min-height: 7em;
-    margin-bottom: 0.3em;
+    margin-top: 4px;
+    min-height: 3.5em;
+    border-radius: 3px;
+
+    &:focus,
+    &:active {
+      border-color: $green;
+    }
   }
 
-  textarea:focus,
-  textarea:active {
-    border-color: $green;
+  &.publishing {
+    textarea {
+      min-height: 7em;
+      border-color: $light-green;
+    }
+
+    .preview-button {
+      background: $light-green;
+      color: $white;
+    }
   }
 }
 
 .control {
   margin-bottom: 0.1em;
-}
-
-.preview-section {
-  word-break: break-all;
 }
 
 .post-button-wrapper {
@@ -508,5 +550,60 @@ export default {
 
 .status-selector {
   margin: 0;
+}
+
+.preview-button {
+  border-radius: 5px;
+  background: $white-grey;
+  color: $dark-grey-light;
+  margin: 0;
+  text-align: center;
+  width: 100%;
+}
+
+.button-row {
+  padding-bottom: 0.5em;
+
+  .button {
+    border: 0;
+    margin: 0;
+    margin-right: 3px;
+    color: $grey;
+    padding: 0em 10px;
+
+    &:hover {
+      color: $dark-grey;
+    }
+
+    &.post-button {
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+  }
+
+  .button:last-child {
+    border: 1px solid #CCC;
+  }
+}
+
+.tab-row {
+  color: lighten($dark-grey-light, 40%);
+  font-size: 0.9em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+
+  span {
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    padding-bottom: 0.5em;
+  }
+
+  span.active {
+    color: var(--text);
+    border-bottom: 1px solid $green;
+  }
+}
+
+.dark {
 }
 </style>
