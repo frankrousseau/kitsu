@@ -8,7 +8,7 @@
       'add-comment': true,
       'word-break': true,
       media: true,
-      publishing: isFileAttached,
+      publishing: isPreviewAttached,
       'is-dragging': isDragging
     }"
   >
@@ -39,20 +39,27 @@
         </span>
       </div>
 
+      <div
+        class="attachment-title"
+        v-if="previewForms.length > 0"
+      >
+        Previews to publish as a new revision:
+      </div>
+      <div
+        :key="'preview-' + index"
+        class="attachment-file"
+        v-for="(preview, index) in previewForms"
+      >
+        {{ preview.get('file').name }}
+        <span @click="$emit('remove-preview', preview)">x</span>
+      </div>
+
       <div class="flexrow preview-section" v-if="mode === 'publish'">
         <button
           class="button flexrow-item preview-button"
           @click="$emit('add-preview')"
         >
-          <template
-            class="attachment-file flexrow-item"
-            v-if="isFileAttached"
-          >
-            Publishing {{ attachedFileName }}
-          </template>
-          <template v-else>
-            {{ $t('comments.add_preview') }}
-          </template>
+          {{ $t('comments.add_preview') }}
         </button>
       </div>
 
@@ -61,6 +68,7 @@
         name-key="full_name"
         :limit="2"
         @input="onTextChanged"
+        v-if="mode === 'status' || showCommentArea"
       >
         <template slot="item" slot-scope="team">
           <template v-if="team.item.isTime">
@@ -101,6 +109,21 @@
         v-if="checklist.length > 0"
       />
 
+      <div
+        class="attachment-title"
+        v-if="attachment.length > 0"
+      >
+        Attachments:
+      </div>
+      <div
+        :key="'attachment-' + index"
+        class="attachment-file"
+        v-for="(attach, index) in attachment"
+      >
+        {{ attach.get('file').name }}
+        <span @click="removeAttachment(attach)">x</span>
+      </div>
+
       <div class="flexrow button-row mt1">
         <button-simple
           :class="{
@@ -111,8 +134,7 @@
           icon="attach"
           :title="$t('comments.add_attachment')"
           @click="onAddCommentAttachmentClicked()"
-        >
-        </button-simple>
+        />
         <button-simple
           :class="{
             'button': true,
@@ -122,8 +144,18 @@
           icon="list"
           :title="$t('comments.add_checklist')"
           @click="addChecklistEntry(-1)"
-        >
-        </button-simple>
+        />
+        <button-simple
+          :class="{
+            'button': true,
+            'flexrow-item': true,
+            'active': showCommentArea
+          }"
+          icon="comment"
+          :title="$t('comments.add_comment')"
+          @click="showCommentArea = !showCommentArea"
+          v-if="mode === 'publish'"
+        />
         <div class="filler"></div>
         <div class="">
           <combobox-status
@@ -205,11 +237,12 @@ export default {
   data () {
     return {
       atOptions: [],
-      isDragging: false,
-      text: '',
       attachment: [],
       checklist: [],
+      isDragging: false,
       mode: 'status',
+      showCommentArea: false,
+      text: '',
       task_status_id: null,
       errors: {
         addCommentAttachment: false
@@ -260,7 +293,7 @@ export default {
       type: Object,
       default: () => {}
     },
-    attachedFileName: {
+    attachedPreviewFiles: {
       type: String,
       default: ''
     },
@@ -279,6 +312,10 @@ export default {
     time: {
       type: Number,
       default: 0
+    },
+    previewForms: {
+      type: Array,
+      default: () => []
     }
   },
 
@@ -311,10 +348,10 @@ export default {
       return this.$refs['add-comment-image-modal']
     },
 
-    isFileAttached () {
+    isPreviewAttached () {
       return (
-        this.attachedFileName !== undefined &&
-        this.attachedFileName.length > 0
+        this.attachedPreviewFiles !== undefined &&
+        this.attachedPreviewFiles.length > 0
       )
     },
 
@@ -394,11 +431,16 @@ export default {
 
     createCommentAttachment (forms) {
       this.onCloseCommentAttachment()
+      console.log(forms.map(f => Array.from(f.keys())))
       this.attachment = forms
     },
 
     onCloseCommentAttachment () {
       this.modals.addCommentAttachment = false
+    },
+
+    removeAttachment (attach) {
+      this.attachment = this.attachment.filter(a => a !== attach)
     },
 
     addChecklistEntry (index) {
@@ -604,6 +646,25 @@ article.add-comment {
   }
 }
 
-.dark {
+.attachment-title {
+  margin-left: 3px;
+  margin-top: 6px;
+  color: $grey;
+  font-size: 0.8em;
+  text-transform: uppercase;
+}
+
+.attachment-file {
+  margin-top: 3px;
+  margin-bottom: 3px;
+  margin-left: 3px;
+  margin-right: 3px;
+  padding-bottom: 3px;
+  border-bottom: 1px dashed $light-grey-light;
+
+  span {
+    cursor: pointer;
+    float: right;
+  }
 }
 </style>

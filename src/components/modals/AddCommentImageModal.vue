@@ -12,23 +12,20 @@
         {{ $t("tasks.comment_image") }}
       </h1>
 
-      <p>
-        {{ $t("tasks.select_file") }}
-      </p>
-
       <file-upload
         ref="file-field"
         :label="$t('main.select_file')"
         :accept="extensions"
         :multiple="true"
         @fileselected="onFileSelected"
+        hide-file-names
       />
       <p class="error" v-if="isError">
         $t('main.add')
       </p>
 
       <p class="mt1" v-if="isMovie">
-        Or:
+        $t('main.or')
       </p>
 
       <p v-if="isMovie">
@@ -43,28 +40,15 @@
         </button>
       </p>
 
-      <p class="has-text-right">
-        <a
-          :class="{
-            button: true,
-            'is-primary': true,
-            'is-loading': isLoading,
-            'is-disabled': forms == undefined
-          }"
-          @click="confirm()"
-        >
-          {{ $t("main.confirmation") }}
-        </a>
-        <button
-          @click="$emit('cancel')"
-          class="button is-link">
-          {{ $t("main.cancel") }}
-        </button>
-      </p>
-
-      <p class="upload-previews" v-if="forms">
+      <h3 v-if="forms.length > 0">
+        Files to attach
+      </h3>
+      <p class="upload-previews" v-if="forms.length > 0">
         <template v-for="(form, i) in forms">
-          <hr :key="'separator-' + i"/>
+          <p class="attachment-name" :key="'name-' + i" >
+            {{ form.get('file').name }}
+            <span @click="removeAttachment(form)">x</span>
+          </p>
           <img
             alt="uploaded file"
             :src="getURL(form)"
@@ -88,7 +72,27 @@
             :key="i"
             v-else-if="isPdf(form)"
           />
+          <hr :key="'separator-' + i" />
         </template>
+      </p>
+      <p class="has-text-right">
+        <a
+          :class="{
+            button: true,
+            'is-primary': true,
+            'is-loading': isLoading,
+            'is-disabled': forms.length === 0
+          }"
+          @click="confirm()"
+        >
+          {{ $t("main.confirmation") }}
+        </a>
+        <button
+          @click="$emit('cancel')"
+          class="button is-link"
+        >
+          {{ $t("main.cancel") }}
+        </button>
       </p>
     </div>
   </div>
@@ -142,7 +146,7 @@ export default {
 
   data () {
     return {
-      forms: null,
+      forms: [],
       isAnnotationLoading: false
     }
   },
@@ -161,7 +165,7 @@ export default {
     ]),
 
     onFileSelected (forms) {
-      this.forms = forms
+      this.forms = this.forms.concat(forms)
     },
 
     confirm () {
@@ -170,7 +174,7 @@ export default {
 
     reset () {
       this.fileField.reset()
-      this.forms = null
+      this.forms = []
     },
 
     onPaste (event) {
@@ -205,6 +209,10 @@ export default {
 
     hideAnnotationLoading () {
       this.isAnnotationLoading = false
+    },
+
+    removeAttachment (form) {
+      this.forms = this.forms.filter(f => f !== form)
     }
   },
 
@@ -215,7 +223,7 @@ export default {
   },
 
   mounted () {
-    this.forms = null
+    this.forms = []
     window.addEventListener('paste', this.onPaste, false)
   },
 
@@ -259,6 +267,21 @@ export default {
 }
 
 h1.title {
+  font-size: 1.7em;
+  font-weight: 350;
+  margin-bottom: 0.3em;
   margin-top: 0.5em;
+}
+
+h3 {
+  font-weight: 350;
+  font-size: 1.4em;
+  margin-top: 0.5em;
+  padding: 0;
+}
+
+.attachment-name span {
+  cursor: pointer;
+  float: right;
 }
 </style>

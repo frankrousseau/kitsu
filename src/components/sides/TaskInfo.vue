@@ -141,7 +141,7 @@
               :task-status="getTaskStatusForCurrentUser(task.project_id)"
               :light="true"
               :is-loading="loading.addComment"
-              :attached-file-name="attachedFileName"
+              :attached-preview-files="attachedPreviewFiles"
               :is-error="errors.addComment"
               :is-max-retakes-error="errors.addCommentMaxRetakes"
               :fps="parseInt(currentFps)"
@@ -320,7 +320,7 @@ export default {
   data () {
     return {
       addExtraPreviewFormData: null,
-      attachedFileName: '',
+      attachedPreviewFiles: '',
       attachedImage: '',
       currentPreviewIndex: 0,
       currentPreviewPath: '',
@@ -640,7 +640,7 @@ export default {
         comment
       }
       let action = 'commentTask'
-      if (this.attachedFileName) action = 'commentTaskWithPreview'
+      if (this.attachedPreviewFiles) action = 'commentTaskWithPreview'
       this.loading.addComment = true
       this.errors.addComment = false
       this.errors.addCommentMaxRetakes = false
@@ -652,7 +652,7 @@ export default {
           }
           drafts.clearTaskDraft(this.task.id)
           this.reset()
-          this.attachedFileName = ''
+          this.attachedPreviewFiles = []
           this.loading.addComment = false
           this.$emit('comment-added')
         })
@@ -710,9 +710,8 @@ export default {
 
     selectFile (forms) {
       this.loadPreviewFileFormData(forms)
-      this.attachedFileName = forms
-        .map((form) => form.get('file').name)
-        .join(', ')
+      this.attachedPreviewFiles = forms
+        .map(form => form.get('file').name)
     },
 
     createExtraPreview () {
@@ -1090,7 +1089,7 @@ export default {
 
   watch: {
     task () {
-      this.attachedFileName = ''
+      this.attachedPreviewFiles = []
       this.currentPreviewIndex = 0
       if (
         this.previousTaskId &&

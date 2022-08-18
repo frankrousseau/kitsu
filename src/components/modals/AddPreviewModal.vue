@@ -10,6 +10,7 @@
 
   <div class="modal-content">
     <div class="box content">
+      <h2 class="subtitle">{{ title }}</h2>
       <h1 class="title" v-if="isEditing">
         {{ $t("tasks.change_preview") }}
       </h1>
@@ -23,37 +24,23 @@
 
       <file-upload
         ref="preview-field"
-        :label="$t('main.csv.upload_file')"
         :accept="extensions"
-        @fileselected="onFileSelected"
         :multiple="true"
+        :label="'Select files from your hard drive'"
+        @fileselected="onFileSelected"
+        hide-file-names
       />
 
       <p class="error" v-if="isError">
         {{ $t("tasks.add_preview_error") }}
       </p>
 
-      <p class="has-text-right">
-        <a
-          :class="{
-            button: true,
-            'is-primary': true,
-            'is-loading': isLoading,
-            'is-disabled': forms == undefined
-          }"
-          @click="$emit('confirm')">
-          {{ $t("main.confirmation") }}
-        </a>
-        <button
-          @click="$emit('cancel')"
-          class="button is-link">
-          {{ $t("main.cancel") }}
-        </button>
-      </p>
-
-      <p class="upload-previews" v-if="forms">
+      <p class="upload-previews" v-if="forms.length > 0">
         <template v-for="(form, i) in forms">
-          <hr :key="'separator-' + i"/>
+          <p class="preview-name" :key="'name-' + i" >
+            {{ form.get('file').name }}
+            <span @click="removePreview(form)">x</span>
+          </p>
           <img
             alt="uploaded file"
             :src="getURL(form)"
@@ -78,7 +65,26 @@
             :key="i"
             v-else-if="isPdf(form)"
           />
+          <hr :key="'separator-' + i"/>
         </template>
+      </p>
+
+      <p class="has-text-right">
+        <a
+          :class="{
+            button: true,
+            'is-primary': true,
+            'is-loading': isLoading,
+            'is-disabled': forms.length === 0
+          }"
+          @click="$emit('confirm')">
+          {{ $t("main.confirmation") }}
+        </a>
+        <button
+          @click="$emit('cancel')"
+          class="button is-link">
+          {{ $t("main.cancel") }}
+        </button>
       </p>
     </div>
   </div>
@@ -119,12 +125,16 @@ export default {
     extensions: {
       type: String,
       default: files.ALL_EXTENSIONS_STRING
+    },
+    title: {
+      type: String,
+      default: ''
     }
   },
 
   data () {
     return {
-      forms: null
+      forms: []
     }
   },
 
@@ -142,13 +152,13 @@ export default {
     ]),
 
     onFileSelected (forms) {
-      this.forms = forms
-      this.$emit('fileselected', forms)
+      this.forms = this.forms.concat(forms)
+      this.$emit('fileselected', this.forms)
     },
 
     reset () {
       this.previewField.reset()
-      this.forms = null
+      this.forms = []
     },
 
     onPaste (event) {
@@ -171,6 +181,10 @@ export default {
 
     isPdf (form) {
       return form.get('file').type.indexOf('pdf') > 0
+    },
+
+    removePreview (form) {
+      this.forms = this.forms.filter(f => f !== form)
     }
   },
 
@@ -181,7 +195,7 @@ export default {
   },
 
   mounted () {
-    this.forms = null
+    this.forms = []
     window.addEventListener('paste', this.onPaste, false)
   },
 
@@ -216,4 +230,30 @@ export default {
   text-align: center;
 }
 
+.subtitle {
+  color: $grey;
+  font-size: 1.2em;
+  margin: 0;
+  padding: 0;
+  text-transform: uppercase;
+}
+
+h1.title {
+  font-size: 1.7em;
+  font-weight: 350;
+  margin-bottom: 0.3em;
+  margin-top: 0.5em;
+}
+
+h3 {
+  font-weight: 350;
+  font-size: 1.4em;
+  margin-top: 0.5em;
+  padding: 0;
+}
+
+.preview-name span {
+  cursor: pointer;
+  float: right;
+}
 </style>

@@ -192,7 +192,7 @@
               :team="currentTeam"
               :task="currentTask"
               :task-status="taskStatusForCurrentUser"
-              :attached-file-name="attachedFileName"
+              :preview-forms="previewForms"
               :fps="parseInt(currentFps)"
               :time="currentTime"
               :revision="currentRevision"
@@ -201,6 +201,7 @@
               @duplicate-comment="onDuplicateComment"
               @file-drop="selectFile"
               @annotation-snapshots-requested="extractAnnotationSnapshots"
+              @remove-preview="onPreviewFormRemoved"
               v-if="isCommentingAllowed"
             />
             <div
@@ -250,6 +251,7 @@
       :is-loading="loading.addPreview"
       :is-error="errors.addPreview"
       :form-data="addPreviewFormData"
+      :title="currentTask ? currentTask.entity_name + ' / ' + taskTypeMap.get(currentTask.task_type_id).name : ''"
       @cancel="modals.addPreview = false"
       @fileselected="selectFile"
       @confirm="closeAddPreviewModal"
@@ -261,6 +263,7 @@
       :is-loading="loading.addExtraPreview"
       :is-error="errors.addExtraPreview"
       :form-data="addExtraPreviewFormData"
+      :title="currentTask ? currentTask.entity_name + ' / ' + taskTypeMap.get(currentTask.task_type_id).name : ''"
       @cancel="hideExtraPreviewModal"
       @fileselected="selectFile"
       @confirm="createExtraPreview"
@@ -349,7 +352,7 @@ export default {
 
   data () {
     return {
-      attachedFileName: '',
+      previewForms: [],
       currentTime: 0,
       selectedTab: 'validation',
       taskLoading: {
@@ -833,7 +836,7 @@ export default {
         attachment
       }
       let action = 'commentTask'
-      if (this.attachedFileName) action = 'commentTaskWithPreview'
+      if (this.previewForms.length > 0) action = 'commentTaskWithPreview'
       this.loading.addComment = true
       this.errors.addComment = false
       this.errors.addCommentMaxRetakes = false
@@ -843,7 +846,7 @@ export default {
           this.resetPreview()
           this.$refs['add-preview-modal'].reset()
           this.reset()
-          this.attachedFileName = ''
+          this.previewForms = []
           this.loading.addComment = false
         })
         .catch((err) => {
@@ -876,9 +879,7 @@ export default {
 
     selectFile (forms) {
       this.loadPreviewFileFormData(forms)
-      this.attachedFileName = forms
-        .map((form) => form.get('file').name)
-        .join(', ')
+      this.previewForms = this.previewForms.concat(forms)
     },
 
     isHighlighted (comment) {
@@ -1155,6 +1156,10 @@ export default {
 
     onTimeUpdated (time) {
       this.currentTime = time
+    },
+
+    onPreviewFormRemoved (previewForm) {
+      this.previewForms = this.previewForms.filter(f => f !== previewForm)
     },
 
     changeCurrentPreview (preview) {
