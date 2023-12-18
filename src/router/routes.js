@@ -61,6 +61,7 @@ const Shot = () => import('@/components/pages/Shot.vue')
 const StatusAutomations = () =>
   import('@/components/pages/StatusAutomations.vue')
 const Task = () => import('@/components/pages/Task.vue')
+const Tasks = () => import('@/components/pages/Tasks.vue')
 const TaskStatus = () => import('@/components/pages/TaskStatus.vue')
 const TaskTypes = () => import('@/components/pages/TaskTypes.vue')
 const Team = () => import('@/components/pages/Team.vue')
@@ -231,6 +232,12 @@ export const routes = [
         path: '/entity-search',
         component: EntitySearch,
         name: 'entity-search'
+      },
+
+      {
+        path: 'tasks',
+        component: Tasks,
+        name: 'tasks'
       },
 
       {

@@ -59,6 +59,13 @@
             </p>
 
             <p @click="toggleSidebar()">
+              <router-link :to="{ name: 'tasks' }">
+                <check-icon size="0.9x" />
+                {{ $t('tasks.title') }}
+              </router-link>
+            </p>
+
+            <p @click="toggleSidebar()">
               <router-link :to="{ name: 'timesheets' }">
                 <clock-icon size="0.9x" />
                 {{ $t('timesheets.title') }}
