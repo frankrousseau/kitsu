@@ -1234,6 +1234,7 @@ export default {
     new_task_type: 'Add a task type',
     no_task_types: 'There is no task type for this entity type',
     number: 'task type | task types',
+    select_task_type: 'Select a task type...',
     title: 'Task Types',
     fields: {
       dedicated_to: 'For',
@@ -1359,6 +1360,9 @@ export default {
     empty_list: 'There is no shot in the production. What about creating some?',
     empty_list_client: 'There is no shot in this production.',
     episodes: 'Episodes',
+    get_frames_from_previews: 'Set frame numbers from previews',
+    get_frames_from_previews_description: 'Select a task type to extract the frame numbers from the latest published movie previews.',
+    get_frames_from_previews_error: 'There was an error while extracting the frame numbers from the task type previews. Please contact our support team.',
     history: 'Shot values history',
     multiple_delete_error: 'An error occurred while deleting a shot. There is probably some data linked to a shot. Are you sure there is no task linked to a selected shot?',
     new_shot: 'Add a shot',
