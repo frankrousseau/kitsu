@@ -89,9 +89,7 @@
               />
               <td v-else></td>
 
-              <template
-                v-for="columnId in validationColumns"
-              >
+              <template v-for="columnId in validationColumns">
                 <stats-cell
                   :key="entry.id + columnId"
                   :style="getValidationStyle(columnId)"
