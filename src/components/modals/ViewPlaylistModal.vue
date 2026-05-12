@@ -189,15 +189,21 @@ export default {
       })
     },
 
-    onAnnotationChanged({ preview, additions, deletions, updates }) {
+    async onAnnotationChanged({ preview, additions, deletions, updates }) {
       const taskId = preview.task_id
-      this.updatePreviewAnnotation({
-        taskId,
-        preview,
-        additions,
-        deletions,
-        updates
-      })
+      const playlistPlayer = this.$refs['playlist-player']
+      try {
+        await this.updatePreviewAnnotation({
+          taskId,
+          preview,
+          additions,
+          deletions,
+          updates
+        })
+        playlistPlayer?.confirmAnnotationsSaved()
+      } catch {
+        playlistPlayer?.restoreFailedAnnotations()
+      }
     },
 
     onAnnotationsRefreshed(preview) {
