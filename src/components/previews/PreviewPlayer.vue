@@ -1347,12 +1347,8 @@ const resetPreviewFileMap = () => {
 const onZoomPanClicked = () => {
   if (!isZoomPan.value) {
     isDrawing.value = false
-    isAnnotationsDisplayed.value = false
-    isZoomPan.value = true
-  } else {
-    isZoomPan.value = false
-    isAnnotationsDisplayed.value = true
   }
+  isZoomPan.value = !isZoomPan.value
 }
 
 const onObjectBackgroundSelected = () => {
