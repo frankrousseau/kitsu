@@ -2029,6 +2029,7 @@ watch(isComparing, () => {
     comparisonViewer.value.resize()
     previewViewer.value.resetZoom()
     comparisonViewer.value.resetZoom()
+    resetPanzoomTransform()
   })
 })
 
