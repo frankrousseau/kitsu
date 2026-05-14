@@ -565,8 +565,7 @@ const userId = computed(() => store.getters.user?.id)
 const {
   transform: panzoomTransform,
   onPanzoomChanged,
-  reset: resetPanzoomTransform,
-  applyTo: applyPanzoomTo
+  reset: resetPanzoomTransform
 } = usePanzoomSync()
 
 // Annotation composable
@@ -2106,12 +2105,22 @@ watch(isZoomPan, enabled => {
   }
 })
 
+// Apply panzoom as a CSS transform on the canvas wrappers (matching
+// what panzoom does on the picture element), so the wrappers move and
+// scale with the underlying viewer instead of clipping content at the
+// fabric pixel buffer's bounds.
+const applyTransformToWrapper = (wrapper, transform) => {
+  if (!wrapper) return
+  wrapper.style.transformOrigin = '0 0'
+  wrapper.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`
+}
+
 watch(
   panzoomTransform,
   transform => {
-    applyPanzoomTo(fabricCanvas.value)
+    applyTransformToWrapper(canvasWrapper.value, transform)
     if (isComparing.value && !isComparisonOverlay.value) {
-      applyPanzoomTo(fabricCanvasComparison.value)
+      applyTransformToWrapper(canvasComparisonWrapper.value, transform)
     }
     if (isComparing.value) {
       comparisonViewer.value?.setPanZoom(
