@@ -380,6 +380,7 @@ import { useI18n } from 'vue-i18n'
 import { useStore } from 'vuex'
 
 import { useAnnotation } from '@/composables/annotation'
+import { usePanzoomSync } from '@/composables/panzoom'
 import { getEntityPath } from '@/lib/path'
 import localPreferences from '@/lib/preferences'
 import {
@@ -553,6 +554,13 @@ const organisation = computed(() => store.getters.organisation)
 const productionMap = computed(() => store.getters.productionMap)
 const selectedConcepts = computed(() => store.getters.selectedConcepts)
 const userId = computed(() => store.getters.user?.id)
+
+// Panzoom transform sync
+// Currently used only to reset state alongside viewer resets; the
+// onPanzoomChanged / applyTo handles will be wired in phase 3 when
+// annotations become a live overlay on top of the zoom transform.
+
+const { reset: resetPanzoomTransform } = usePanzoomSync()
 
 // Annotation composable
 // Callbacks are wrapped in closures so they can reference functions defined later.
@@ -1453,6 +1461,7 @@ const onAnnotationDisplayedClicked = () => {
   isZoomPan.value = false
   previewViewer.value.resetZoom()
   comparisonViewer.value.resetZoom()
+  resetPanzoomTransform()
 }
 
 const saveAnnotations = () => {
@@ -2078,6 +2087,7 @@ watch(isAnnotationsDisplayed, () => {
     nextTick(() => {
       previewViewer.value.resetZoom()
       comparisonViewer.value.resetZoom()
+      resetPanzoomTransform()
     })
   }
   if (!isAnnotationsDisplayed.value) {
@@ -2101,6 +2111,7 @@ watch(isZoomPan, enabled => {
       viewer?.pauseZoom()
       viewer?.resetZoom()
     })
+    resetPanzoomTransform()
   }
 })
 
