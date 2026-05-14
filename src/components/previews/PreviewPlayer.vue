@@ -8,6 +8,7 @@
             ref="canvas-wrapper"
             oncontextmenu="return false"
             @click="onCanvasClicked"
+            :style="{ pointerEvents: isZoomPan ? 'none' : 'auto' }"
             v-show="isAnnotationsDisplayed"
           >
             <canvas ref="annotation-canvas" class="canvas" :id="canvasId">
@@ -18,6 +19,7 @@
             ref="canvas-comparison-wrapper"
             oncontextmenu="return false"
             @click="onCanvasClicked"
+            :style="{ pointerEvents: isZoomPan ? 'none' : 'auto' }"
             v-show="
               isAnnotationsDisplayed &&
               isComparing &&
