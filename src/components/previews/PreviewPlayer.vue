@@ -562,11 +562,8 @@ const userId = computed(() => store.getters.user?.id)
 // underlying panzoom (via setPanZoom). Comparison viewer's own panzoom
 // stays paused; it only reflects the main viewer's transform.
 
-const {
-  transform: panzoomTransform,
-  onPanzoomChanged,
-  reset: resetPanzoomTransform
-} = usePanzoomSync()
+const { panzoomTransform, onPanzoomChanged, resetPanzoomTransform } =
+  usePanzoomSync()
 
 // Annotation composable
 // Callbacks are wrapped in closures so they can reference functions defined later.
@@ -616,7 +613,9 @@ const {
   copyAnnotations,
   pasteAnnotations,
   startAnnotationSaving,
-  endAnnotationSaving
+  endAnnotationSaving,
+  confirmAnnotationsSaved,
+  restoreFailedAnnotations
 } = annotation
 
 // Computed
@@ -2148,23 +2147,24 @@ watch(volume, () => {
 
 onMounted(() => {
   configureEvents()
+
   setupFabricCanvas()
   reloadAnnotations()
   if (isPicture.value) loadAnnotation()
+
   resetPreviewFileMap()
   initPreferences()
+
+  resetPencilConfiguration()
   if (isSound.value || is3DModel.value || isFile.value) {
     fixCanvasSize({ width: 0, height: 0, left: 0, top: 0 })
   }
-  new ResizeObserver(() => comparisonViewer.value?.resize()).observe(
-    container.value
-  )
   if (is3DModel.value) {
     currentBackground.value =
       productionBackgrounds.value.find(isDefaultBackground) || null
     onObjectBackgroundSelected()
   }
-  resetPencilConfiguration()
+
   if (isMuted.value) {
     previewViewer.value.setVolume(0)
   } else {
@@ -2172,6 +2172,10 @@ onMounted(() => {
       localPreferences.getPreference('player:volume') || volume.value
     previewViewer.value.setVolume(volume.value)
   }
+
+  new ResizeObserver(() => comparisonViewer.value?.resize()).observe(
+    container.value
+  )
 })
 
 onBeforeUnmount(() => {
@@ -2208,7 +2212,9 @@ defineExpose({
   loadAnnotation,
   onCanvasMouseMoved,
   onCanvasReleased,
-  isValidPreviewModification
+  isValidPreviewModification,
+  confirmAnnotationsSaved,
+  restoreFailedAnnotations
 })
 </script>
 

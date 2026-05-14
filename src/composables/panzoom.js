@@ -1,22 +1,27 @@
 import { ref } from 'vue'
 
-export function usePanzoomSync() {
-  const transform = ref({ x: 0, y: 0, scale: 1 })
+export const usePanzoomSync = () => {
+  const panzoomTransform = ref({ x: 0, y: 0, scale: 1 })
 
   const onPanzoomChanged = ({ x, y, scale }) => {
-    transform.value = { x, y, scale }
+    panzoomTransform.value = { x, y, scale }
   }
 
-  const reset = () => {
-    transform.value = { x: 0, y: 0, scale: 1 }
+  const resetPanzoomTransform = () => {
+    panzoomTransform.value = { x: 0, y: 0, scale: 1 }
   }
 
-  const applyTo = fabricCanvas => {
+  const applyPanzoomTo = fabricCanvas => {
     if (!fabricCanvas) return
-    const { x, y, scale } = transform.value
+    const { x, y, scale } = panzoomTransform.value
     fabricCanvas.setViewportTransform([scale, 0, 0, scale, x, y])
     fabricCanvas.requestRenderAll()
   }
 
-  return { transform, onPanzoomChanged, reset, applyTo }
+  return {
+    panzoomTransform,
+    onPanzoomChanged,
+    resetPanzoomTransform,
+    applyPanzoomTo
+  }
 }

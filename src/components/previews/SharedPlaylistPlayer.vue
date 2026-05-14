@@ -263,11 +263,8 @@ const currentFrameNumber = ref(0)
 const currentPlaylistProgress = ref(0)
 const maxDuration = ref(0)
 const movieDimensions = ref({ width: 0, height: 0 })
-const {
-  transform: panzoomTransform,
-  onPanzoomChanged,
-  reset: resetPanzoomTransform
-} = usePanzoomSync()
+const { panzoomTransform, onPanzoomChanged, resetPanzoomTransform } =
+  usePanzoomSync()
 const volume = ref(100)
 
 const isPlaying = ref(false)
