@@ -2092,11 +2092,15 @@ watch(isComparisonOverlay, () => {
   })
 })
 
-watch(isZoomPan, () => {
-  if (isZoomPan.value) {
-    previewViewer.value.resumeZoom()
+watch(isZoomPan, enabled => {
+  const viewers = [previewViewer.value, comparisonViewer.value]
+  if (enabled) {
+    viewers.forEach(viewer => viewer?.resumeZoom())
   } else {
-    previewViewer.value.pauseZoom()
+    viewers.forEach(viewer => {
+      viewer?.pauseZoom()
+      viewer?.resetZoom()
+    })
   }
 })
 
