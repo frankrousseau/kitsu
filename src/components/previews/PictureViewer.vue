@@ -304,7 +304,7 @@ const setupPanZoom = () => {
     if (!props.big) return
     emitPanZoom(panzoomBig)
   })
-  panzoomBig.on('panend', () => {
+  panzoomBig.on('pan', () => {
     if (!props.big) return
     emitPanZoom(panzoomBig)
   })
@@ -312,7 +312,7 @@ const setupPanZoom = () => {
     if (!isGif.value) return
     emitPanZoom(panzoomGifInstance)
   })
-  panzoomGifInstance.on('panend', () => {
+  panzoomGifInstance.on('pan', () => {
     if (!isGif.value) return
     emitPanZoom(panzoomGifInstance)
   })

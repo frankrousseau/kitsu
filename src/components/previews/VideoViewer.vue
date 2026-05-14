@@ -469,7 +469,7 @@ onMounted(() => {
       minZoom: 1
     })
     panzoomInstance.on('zoom', emitPanZoom)
-    panzoomInstance.on('panend', emitPanZoom)
+    panzoomInstance.on('pan', emitPanZoom)
     pausePanZoom()
   }
 })
