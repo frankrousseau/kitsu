@@ -11,10 +11,8 @@
             :style="{ pointerEvents: isZoomPan ? 'none' : 'auto' }"
             v-show="isAnnotationsDisplayed"
           >
-            <div ref="canvas-transform" class="canvas-transform">
-              <canvas ref="annotation-canvas" class="canvas" :id="canvasId">
-              </canvas>
-            </div>
+            <canvas ref="annotation-canvas" class="canvas" :id="canvasId">
+            </canvas>
           </div>
           <div
             class="canvas-comparison-wrapper"
@@ -29,14 +27,12 @@
               !isComparisonOverlay
             "
           >
-            <div ref="canvas-comparison-transform" class="canvas-transform">
-              <canvas
-                ref="annotation-canvas-comparison"
-                class="canvas"
-                :id="`${canvasId}-comparison`"
-              >
-              </canvas>
-            </div>
+            <canvas
+              ref="annotation-canvas-comparison"
+              class="canvas"
+              :id="`${canvasId}-comparison`"
+            >
+            </canvas>
           </div>
           <div class="viewers">
             <preview-viewer
@@ -494,9 +490,7 @@ const annotationCanvasRef = useTemplateRef('annotation-canvas')
 const previewViewer = useTemplateRef('preview-viewer')
 const comparisonViewer = useTemplateRef('comparison-preview-viewer')
 const canvasWrapper = useTemplateRef('canvas-wrapper')
-const canvasTransform = useTemplateRef('canvas-transform')
 const canvasComparisonWrapper = useTemplateRef('canvas-comparison-wrapper')
-const canvasComparisonTransform = useTemplateRef('canvas-comparison-transform')
 const previewContainer = useTemplateRef('preview-container')
 const commentContainer = useTemplateRef('task-info-player')
 const progress = useTemplateRef('progress')
@@ -2124,9 +2118,9 @@ const applyTransformToWrapper = (wrapper, transform) => {
 watch(
   panzoomTransform,
   transform => {
-    applyTransformToWrapper(canvasTransform.value, transform)
+    applyTransformToWrapper(canvasWrapper.value, transform)
     if (isComparing.value && !isComparisonOverlay.value) {
-      applyTransformToWrapper(canvasComparisonTransform.value, transform)
+      applyTransformToWrapper(canvasComparisonWrapper.value, transform)
     }
     if (isComparing.value) {
       comparisonViewer.value?.setPanZoom(
@@ -2331,19 +2325,12 @@ defineExpose({
   width: 100%;
   left: 0;
   z-index: 500;
-  overflow: hidden;
 }
 .canvas-comparison-wrapper {
   position: absolute;
   width: 100%;
   left: 0;
   z-index: 5;
-  overflow: hidden;
-}
-.canvas-transform {
-  width: 100%;
-  height: 100%;
-  transform-origin: 0 0;
 }
 
 .center {
@@ -2422,6 +2409,7 @@ defineExpose({
 
 .preview-container {
   position: relative;
+  overflow: hidden;
 }
 
 .viewers {
