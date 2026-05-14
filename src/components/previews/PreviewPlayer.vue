@@ -8,7 +8,7 @@
             ref="canvas-wrapper"
             oncontextmenu="return false"
             @click="onCanvasClicked"
-            v-show="!isZoomPan && isAnnotationsDisplayed"
+            v-show="isAnnotationsDisplayed"
           >
             <canvas ref="annotation-canvas" class="canvas" :id="canvasId">
             </canvas>
@@ -19,7 +19,6 @@
             oncontextmenu="return false"
             @click="onCanvasClicked"
             v-show="
-              !isZoomPan &&
               isAnnotationsDisplayed &&
               isComparing &&
               previewToCompare &&
@@ -61,6 +60,7 @@
               @duration-changed="changeMaxDuration"
               @frame-update="setVideoFrameContext"
               @model-loaded="onModelLoaded"
+              @panzoom-changed="onPanzoomChanged"
               @play-ended="pause"
               @size-changed="fixCanvasSize"
               @video-end="onVideoEnd"
@@ -555,12 +555,17 @@ const productionMap = computed(() => store.getters.productionMap)
 const selectedConcepts = computed(() => store.getters.selectedConcepts)
 const userId = computed(() => store.getters.user?.id)
 
-// Panzoom transform sync
-// Currently used only to reset state alongside viewer resets; the
-// onPanzoomChanged / applyTo handles will be wired in phase 3 when
-// annotations become a live overlay on top of the zoom transform.
+// Panzoom transform sync — the main viewer drives both the fabric
+// annotation canvases (via applyPanzoomTo) and the comparison viewer's
+// underlying panzoom (via setPanZoom). Comparison viewer's own panzoom
+// stays paused; it only reflects the main viewer's transform.
 
-const { reset: resetPanzoomTransform } = usePanzoomSync()
+const {
+  transform: panzoomTransform,
+  onPanzoomChanged,
+  reset: resetPanzoomTransform,
+  applyTo: applyPanzoomTo
+} = usePanzoomSync()
 
 // Annotation composable
 // Callbacks are wrapped in closures so they can reference functions defined later.
@@ -1458,10 +1463,6 @@ const getPreviousAnnotationTime = time => {
 const onAnnotationDisplayedClicked = () => {
   clearFocus()
   isAnnotationsDisplayed.value = !isAnnotationsDisplayed.value
-  isZoomPan.value = false
-  previewViewer.value.resetZoom()
-  comparisonViewer.value.resetZoom()
-  resetPanzoomTransform()
 }
 
 const saveAnnotations = () => {
@@ -2084,13 +2085,6 @@ watch(isTyping, () => {
 })
 
 watch(isAnnotationsDisplayed, () => {
-  if (isAnnotationsDisplayed.value) {
-    nextTick(() => {
-      previewViewer.value.resetZoom()
-      comparisonViewer.value.resetZoom()
-      resetPanzoomTransform()
-    })
-  }
   if (!isAnnotationsDisplayed.value) {
     isDrawing.value = false
   }
@@ -2104,17 +2098,33 @@ watch(isComparisonOverlay, () => {
 })
 
 watch(isZoomPan, enabled => {
-  const viewers = [previewViewer.value, comparisonViewer.value]
   if (enabled) {
-    viewers.forEach(viewer => viewer?.resumeZoom())
+    previewViewer.value?.resumeZoom()
   } else {
-    viewers.forEach(viewer => {
-      viewer?.pauseZoom()
-      viewer?.resetZoom()
-    })
+    previewViewer.value?.pauseZoom()
+    previewViewer.value?.resetZoom()
+    comparisonViewer.value?.resetZoom()
     resetPanzoomTransform()
   }
 })
+
+watch(
+  panzoomTransform,
+  transform => {
+    applyPanzoomTo(fabricCanvas.value)
+    if (isComparing.value && !isComparisonOverlay.value) {
+      applyPanzoomTo(fabricCanvasComparison.value)
+    }
+    if (isComparing.value) {
+      comparisonViewer.value?.setPanZoom(
+        transform.x,
+        transform.y,
+        transform.scale
+      )
+    }
+  },
+  { deep: true }
+)
 
 watch(speed, () => {
   const rates = [0.25, 0.5, 1, 1.5, 2]
