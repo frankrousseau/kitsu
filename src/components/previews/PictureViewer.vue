@@ -325,6 +325,7 @@ const setupPanZoom = () => {
     if (!isGif.value) return
     emitPanZoom(panzoomGifInstance)
   })
+  pausePanZoom()
 }
 
 const resetPanZoom = () => {
