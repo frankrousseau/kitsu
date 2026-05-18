@@ -560,11 +560,18 @@ const playlistPath = notification => {
   }
   const isTVShow = production.production_type === 'tvshow'
   if (isTVShow) {
-    if (notification.episode_id) {
-      params.episode_id = notification.episode_id
-    }
-    if (notification.playlist_for_entity === 'asset') {
-      params.episode_id = notification.playlist_is_for_all ? 'all' : 'main'
+    switch (notification.playlist_for_entity) {
+      case 'asset':
+        params.episode_id = notification.playlist_is_for_all ? 'all' : 'main'
+        break
+      case 'sequence':
+      case 'edit':
+      case 'shot':
+      default:
+        if (notification.episode_id) {
+          params.episode_id = notification.episode_id
+        }
+        break
     }
   }
   return { name: isTVShow ? 'episode-playlist' : 'playlist', params }
