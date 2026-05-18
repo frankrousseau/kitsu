@@ -566,6 +566,7 @@ const playlistPath = notification => {
         break
       case 'sequence':
       case 'edit':
+      case 'episode':
       case 'shot':
       default:
         if (notification.episode_id) {
