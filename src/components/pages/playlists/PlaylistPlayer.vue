@@ -851,14 +851,8 @@
  * This modules manages all the options available while playing a playlist.
  * It is made to work with a single playlist.
  */
-import { fabric } from 'fabric'
 import { PSBrush } from 'fabricjs-psbrush'
-import {
-  ArrowUpRightIcon,
-  DownloadIcon,
-  GlobeIcon,
-  PlayIcon
-} from 'lucide-vue-next'
+import { ArrowUpRightIcon, DownloadIcon, PlayIcon } from 'lucide-vue-next'
 import moment from 'moment-timezone'
 import { v4 as uuidv4 } from 'uuid'
 import {
@@ -920,9 +914,6 @@ import SoundViewer from '@/components/previews/SoundViewer.vue'
 import VideoProgress from '@/components/previews/VideoProgress.vue'
 
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
-import ColorPicker from '@/components/widgets/ColorPicker.vue'
-import ComboboxStyled from '@/components/widgets/ComboboxStyled.vue'
-import PencilPicker from '@/components/widgets/PencilPicker.vue'
 // eslint-disable-next-line no-unused-vars -- shadowed by const previewRoom in script
 import PreviewRoom from '@/components/widgets/PreviewRoom.vue'
 import Spinner from '@/components/widgets/Spinner.vue'
@@ -1501,8 +1492,6 @@ const {
   loadSingleAnnotation,
   loadSingleAnnotationComparison,
   clearComparisonCanvas,
-  onPickPencilWidth,
-  onPickPencilColor,
   onChangePencilColor,
   onChangePencilWidth,
   onChangeTextColor,
@@ -3474,24 +3463,6 @@ const onAnnotateClicked = () => {
   }
 }
 
-const onEraseClicked = () => {
-  showCanvas()
-  if (isDrawing.value) {
-    if (fabricCanvas.value) fabricCanvas.value.isDrawingMode = false
-    isDrawing.value = false
-  } else {
-    isTyping.value = false
-    if (fabricCanvas.value) {
-      fabricCanvas.value.isDrawingMode = true
-      fabricCanvas.value.freeDrawingBrush = new fabric.EraserBrush(
-        fabricCanvas.value
-      )
-      fabricCanvas.value.freeDrawingBrush.width = 10
-    }
-    isDrawing.value = true
-  }
-}
-
 const onTypeClicked = () => {
   const clickarea =
     canvasWrapper.value?.getElementsByClassName('upper-canvas')[0]
@@ -4208,18 +4179,6 @@ const playerProxy = {
   pointer-events: none;
 }
 
-.playlist-footer .background-combo {
-  max-width: 300px;
-
-  :deep(.combo) {
-    max-width: 100%;
-  }
-  .icon {
-    height: 1rem;
-    margin-top: 0;
-  }
-}
-
 .mr1 {
   margin-right: 1em;
 }
@@ -4312,12 +4271,6 @@ const playerProxy = {
   margin-left: 1em;
 }
 
-.annotation-tools {
-  display: flex;
-  align-items: stretch;
-  height: 100%;
-}
-
 .slide-enter-active {
   transition: all 0.3s ease;
 }
@@ -4405,8 +4358,7 @@ const playerProxy = {
   }
 }
 
-.playlist-button.button.active,
-.buttons .background-combo.active .icon {
+.playlist-button.button.active {
   color: var(--background-selectable);
 
   img.active {
