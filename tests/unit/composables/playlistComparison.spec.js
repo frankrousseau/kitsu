@@ -84,4 +84,40 @@ describe('composables/playlistComparison', () => {
       ])
     })
   })
+
+  describe('revisionOptions', () => {
+    it('lists revisions for the selected task type, descending, with Last prepended', () => {
+      const entity = {
+        preview_files: {
+          'tt-anim': [
+            { id: 'p1', revision: 1, extension: 'mp4' },
+            { id: 'p3', revision: 3, extension: 'mp4' },
+            { id: 'p2', revision: 2, extension: 'mp4' }
+          ]
+        }
+      }
+      const c = usePlaylistComparison(
+        makeInputs({
+          entityList: [entity],
+          taskTypeMap: new Map([['tt-anim', { id: 'tt-anim', name: 'Anim' }]])
+        })
+      )
+      c.taskTypeId.value = 'tt-anim'
+      expect(c.revisionOptions.value).toEqual([
+        { label: 'Last', value: null },
+        { label: 'v3', value: '3' },
+        { label: 'v2', value: '2' },
+        { label: 'v1', value: '1' }
+      ])
+    })
+
+    it('returns [] when the selected task type has no preview files for the current entity', () => {
+      const entity = { preview_files: {} }
+      const c = usePlaylistComparison(
+        makeInputs({ entityList: [entity], taskTypeMap: new Map() })
+      )
+      c.taskTypeId.value = 'tt-missing'
+      expect(c.revisionOptions.value).toEqual([])
+    })
+  })
 })

@@ -52,7 +52,16 @@ export const usePlaylistComparison = ({
         (a, b) => -a.label.localeCompare(b.label, undefined, { numeric: true })
       )
   })
-  const revisionOptions = ref([])
+  const revisionOptions = computed(() => {
+    const entity = currentEntity.value
+    const files = entity?.preview_files?.[base.taskTypeId.value]
+    if (!files) return []
+    const revisions = files.map(p => p.revision).sort((a, b) => b - a)
+    return [
+      { label: 'Last', value: null },
+      ...revisions.map(r => ({ label: `v${r}`, value: `${r}` }))
+    ]
+  })
 
   return {
     // Shared from useComparison
