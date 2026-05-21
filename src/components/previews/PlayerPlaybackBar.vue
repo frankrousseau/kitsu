@@ -62,6 +62,17 @@
       v-if="isWaveformDisplayed !== undefined && (!light || fullScreen)"
     />
 
+    <button-simple
+      class="flexrow-item"
+      :active="isShowAnnotationsWhilePlaying"
+      :title="$t('playlists.actions.toggle_playing_annotations')"
+      icon="triangle"
+      @click="isShowAnnotationsWhilePlaying = !isShowAnnotationsWhilePlaying"
+      v-if="
+        isShowAnnotationsWhilePlaying !== undefined && (!light || fullScreen)
+      "
+    />
+
     <span
       class="flexrow-item time-indicator"
       :title="$t('playlists.actions.current_time')"
@@ -166,6 +177,10 @@ const volume = defineModel('volume', { default: 50 })
 const isWaveformDisplayed = defineModel('isWaveformDisplayed', {
   default: undefined
 })
+const isShowAnnotationsWhilePlaying = defineModel(
+  'isShowAnnotationsWhilePlaying',
+  { default: undefined }
+)
 </script>
 
 <style lang="scss" scoped>
