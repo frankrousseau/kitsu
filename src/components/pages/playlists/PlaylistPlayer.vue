@@ -4297,33 +4297,6 @@ const playerProxy = {
   }
 }
 
-progress::-moz-progress-bar {
-  background-color: #43b581;
-}
-
-progress::-webkit-progress-value {
-  background-color: #43b581;
-}
-
-progress {
-  width: 100%;
-  border-radius: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: $grey;
-  height: 8px;
-  display: block;
-}
-
-.progress span#progress-bar {
-  width: 100%;
-  border-radius: 0;
-  margin: 0;
-  padding: 0;
-  background-color: #43b581;
-}
-
 .mr1 {
   margin-right: 1em;
 }
@@ -4498,40 +4471,9 @@ progress {
   color: $grey;
 }
 
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
-  /* display: none; <- Crashes Chrome on hover */
-  -webkit-appearance: none;
-  margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
-}
-
-input[type='number'] {
-  -moz-appearance: textfield; /* Firefox */
-}
-
-.frame-per-image-input {
-  padding: 2px;
-  margin-left: 4px;
-  padding-left: 5px;
-  background-color: $dark-grey-2;
-  border: 1px solid $dark-grey-stronger;
-  border-radius: 5px;
-  color: white;
-  width: 3rem;
-}
-
 #resize-annotation-canvas,
 #annotation-snapshot {
   display: none;
-}
-
-.video-time {
-  position: absolute;
-  background: black;
-  color: white;
-  top: 0;
-  left: 0;
-  z-index: 100000;
 }
 
 .full-button {
