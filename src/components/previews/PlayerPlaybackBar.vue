@@ -56,6 +56,8 @@
       >)
     </div>
 
+    <div class="separator"></div>
+
     <button-simple
       :active="isRepeating"
       :title="$t('playlists.actions.looping')"
