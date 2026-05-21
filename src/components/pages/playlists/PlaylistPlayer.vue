@@ -458,175 +458,96 @@
         />
       </div>
 
-      <div
-        class="flexrow flexrow-item mr0"
-        v-if="
-          isCurrentPreviewMovie ||
-          isCurrentPreviewPicture ||
-          isCurrentPreviewSound ||
-          isCurrentPreviewModel
+      <player-playback-bar
+        :available-3-d-animations="objectModel.availableAnimations"
+        :compact="isFullMode"
+        :current-frame-label="currentFrame"
+        :current-time="currentTime"
+        :full-screen="fullScreen"
+        :is-3-d-animation="objectModel.isAnimation"
+        :is-3-d-model="isCurrentPreviewModel"
+        :is-movie="isCurrentPreviewMovie"
+        :is-picture="isCurrentPreviewPicture"
+        :is-playing="isPlaying"
+        :is-repeating="isRepeating"
+        :is-sound="isCurrentPreviewSound"
+        :max-duration="maxDuration"
+        :nb-frames="nbFrames"
+        v-model:current-3-d-animation="objectModel.currentAnimation"
+        v-model:is-hd="isHd"
+        v-model:is-muted="isMuted"
+        v-model:is-show-annotations-while-playing="
+          isShowAnnotationsWhilePlaying
         "
+        v-model:is-waveform-displayed="isWaveformDisplayed"
+        v-model:speed="speed"
+        v-model:volume="volume"
+        @play-pause-clicked="onPlayPauseClicked"
+        @repeat-clicked="onRepeatClicked"
+        @toggle-sound-clicked="onToggleSoundClicked"
       >
-        <button-simple
-          class="button playlist-button flexrow-item"
-          @click="playClicked"
-          :title="$t('playlists.actions.play')"
-          icon="play"
-          v-if="!isPlaying"
-        />
-        <button-simple
-          class="button playlist-button flexrow-item"
-          @click="pauseClicked"
-          :title="$t('playlists.actions.pause')"
-          icon="pause"
-          v-else
-        />
+        <template #extra-controls>
+          <div class="separator"></div>
 
-        <combobox-styled
-          class="flexrow-item"
-          :options="objectModel.availableAnimations"
-          :is-dark="true"
-          :thin="true"
-          is-reversed
-          v-model="objectModel.currentAnimation"
-          v-if="isCurrentPreviewModel && objectModel.isAnimation"
-        />
-      </div>
+          <div
+            class="flexrow-item"
+            :title="$t('playlists.actions.frame_number')"
+            v-if="isCurrentPreviewPicture"
+          >
+            {{ (framesSeenOfPicture + '').padStart(2, '0') }} /
+            {{
+              currentEntity.preview_nb_frames
+                ? currentEntity.preview_nb_frames
+                : Math.round(2 * fps)
+            }}
+          </div>
 
-      <div
-        class="flexrow flexrow-item mr0"
-        v-if="isCurrentPreviewMovie && !isFullMode"
-      >
-        <span
-          class="flexrow-item time-indicator"
-          :title="$t('playlists.actions.current_time')"
-        >
-          {{ currentTime }}
-        </span>
-        <span
-          class="flexrow-item time-indicator is-hidden-touch is-hidden-desktop-only"
-        >
-          /
-        </span>
-        <span
-          class="flexrow-item time-indicator is-hidden-touch is-hidden-desktop-only"
-          :title="$t('playlists.actions.max_duration')"
-        >
-          {{ maxDuration }}
-        </span>
-        <span
-          class="flexrow-item time-indicator mr05 nowrap"
-          :title="$t('playlists.actions.frame_number')"
-        >
-          ({{ currentFrame
-          }}<span class="is-hidden-touch is-hidden-desktop-only">
-            / {{ (nbFrames + '').padStart(3, '0') }} </span
-          >)
-        </span>
-      </div>
+          <div
+            class="flexrow flexrow-item"
+            :class="{ mr0: isCurrentPreviewPicture }"
+            v-if="currentEntityPreviewLength > 1"
+          >
+            <button-simple
+              class="button playlist-button flexrow-item"
+              icon="left"
+              :title="$t('playlists.actions.files_previous')"
+              :disabled="isPlaying"
+              @click="onPreviousPreviewClicked"
+            />
+            <span
+              class="ml05 mr05 nowrap"
+              :title="$t('playlists.actions.files_position')"
+            >
+              {{ currentPreviewIndex + 1 }} / {{ currentEntityPreviewLength }}
+            </span>
+            <button-simple
+              class="button playlist-button flexrow-item"
+              icon="right"
+              :title="$t('playlists.actions.files_next')"
+              :disabled="isPlaying"
+              @click="onNextPreviewClicked"
+            />
+            <a
+              class="button playlist-button flexrow-item"
+              :href="currentPreviewPath"
+              :title="$t('playlists.actions.see_original_file')"
+              target="blank"
+            >
+              <arrow-up-right-icon class="icon is-small" />
+            </a>
+            <div class="separator" v-if="!isCurrentPreviewPicture"></div>
+          </div>
 
-      <div class="separator"></div>
-
-      <div
-        class="flexrow-item"
-        :title="$t('playlists.actions.frame_number')"
-        v-if="isCurrentPreviewPicture"
-      >
-        {{ (framesSeenOfPicture + '').padStart(2, '0') }} /
-        {{
-          currentEntity.preview_nb_frames
-            ? currentEntity.preview_nb_frames
-            : Math.round(2 * fps)
-        }}
-      </div>
-
-      <div
-        class="flexrow flexrow-item"
-        :class="{ mr0: isCurrentPreviewPicture }"
-        v-if="currentEntityPreviewLength > 1"
-      >
-        <button-simple
-          class="button playlist-button flexrow-item"
-          icon="left"
-          :title="$t('playlists.actions.files_previous')"
-          :disabled="isPlaying"
-          @click="onPreviousPreviewClicked"
-        />
-        <span
-          class="ml05 mr05 nowrap"
-          :title="$t('playlists.actions.files_position')"
-        >
-          {{ currentPreviewIndex + 1 }} / {{ currentEntityPreviewLength }}
-        </span>
-        <button-simple
-          class="button playlist-button flexrow-item"
-          icon="right"
-          :title="$t('playlists.actions.files_next')"
-          :disabled="isPlaying"
-          @click="onNextPreviewClicked"
-        />
-        <a
-          class="button playlist-button flexrow-item"
-          :href="currentPreviewPath"
-          :title="$t('playlists.actions.see_original_file')"
-          target="blank"
-        >
-          <arrow-up-right-icon class="icon is-small" />
-        </a>
-        <div class="separator" v-if="!isCurrentPreviewPicture"></div>
-      </div>
-
-      <div
-        class="flexrow flexrow-item mr0"
-        v-if="isCurrentPreviewMovie && !isFullMode"
-      >
-        <button-simple
-          class="button playlist-button flexrow-item"
-          :active="isRepeating"
-          :title="$t('playlists.actions.looping')"
-          icon="repeat"
-          @click="onRepeatClicked"
-        />
-        <button-simple
-          class="playlist-button flexrow-item"
-          :title="$t('playlists.actions.' + (isHd ? 'switch_ld' : 'switch_hd'))"
-          :text="isHd ? 'HD' : 'LD'"
-          @click="isHd = !isHd"
-          v-if="isCurrentPreviewMovie"
-        />
-        <speed-button class="playlist-button flexrow-item" v-model="speed" />
-        <button-simple
-          class="button playlist-button flexrow-item mr0"
-          :active="isShowAnnotationsWhilePlaying"
-          :title="$t('playlists.actions.toggle_playing_annotations')"
-          icon="triangle"
-          @click="
-            isShowAnnotationsWhilePlaying = !isShowAnnotationsWhilePlaying
-          "
-        />
-        <button-sound
-          class="flexrow-item playlist-button"
-          @change-sound="onToggleSoundClicked"
-          v-model:muted="isMuted"
-          v-model:volume="volume"
-        />
-        <button-simple
-          class="button playlist-button flexrow-item"
-          :active="isWaveformDisplayed"
-          :title="$t('playlists.actions.toggle_waveform')"
-          icon="waveform"
-          @click="isWaveformDisplayed = !isWaveformDisplayed"
-        />
-      </div>
-
-      <div class="separator" v-if="!isFullMode"></div>
-      <button-simple
-        class="playlist-button flexrow-item"
-        :title="$t('playlists.actions.change_task_type')"
-        icon="check"
-        @click="showTaskTypeModal"
-        v-if="!tempMode && !isFullMode"
-      />
+          <div class="separator" v-if="!isFullMode"></div>
+          <button-simple
+            class="playlist-button flexrow-item"
+            :title="$t('playlists.actions.change_task_type')"
+            icon="check"
+            @click="showTaskTypeModal"
+            v-if="!tempMode && !isFullMode"
+          />
+        </template>
+      </player-playback-bar>
       <div
         class="flexrow flexrow-item comparison-buttons"
         v-if="(isCurrentPreviewMovie || isCurrentPreviewPicture) && !isFullMode"
@@ -1089,19 +1010,18 @@ import ObjectViewer from '@/components/previews/ObjectViewer.vue'
 import PdfViewer from '@/components/previews/PdfViewer.vue'
 import PictureViewer from '@/components/previews/PictureViewer.vue'
 import PlayerComparisonBar from '@/components/previews/PlayerComparisonBar.vue'
+import PlayerPlaybackBar from '@/components/previews/PlayerPlaybackBar.vue'
 // eslint-disable-next-line no-unused-vars -- shadowed by setPlaylistProgress / playlistProgressRef in script
 import PlaylistProgress from '@/components/previews/PlaylistProgress.vue'
 import SoundViewer from '@/components/previews/SoundViewer.vue'
 import VideoProgress from '@/components/previews/VideoProgress.vue'
 
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
-import ButtonSound from '@/components/widgets/ButtonSound.vue'
 import ColorPicker from '@/components/widgets/ColorPicker.vue'
 import ComboboxStyled from '@/components/widgets/ComboboxStyled.vue'
 import PencilPicker from '@/components/widgets/PencilPicker.vue'
 // eslint-disable-next-line no-unused-vars -- shadowed by const previewRoom in script
 import PreviewRoom from '@/components/widgets/PreviewRoom.vue'
-import SpeedButton from '@/components/widgets/SpeedButton.vue'
 import Spinner from '@/components/widgets/Spinner.vue'
 
 // eslint-disable-next-line no-unused-vars
