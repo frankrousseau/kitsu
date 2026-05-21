@@ -69,6 +69,20 @@
     />
 
     <button-simple
+      class="flexrow-item"
+      icon="laser"
+      :active="isLaserModeOn"
+      :title="$t('playlists.actions.toggle_laser')"
+      @click="isLaserModeOn = !isLaserModeOn"
+      v-if="
+        isLaserModeOn !== undefined &&
+        !readOnly &&
+        (!light || fullScreen) &&
+        !isConcept
+      "
+    />
+
+    <button-simple
       icon="pen"
       :title="$t('playlists.actions.toggle_annotations')"
       :active="isAnnotationsDisplayed"
@@ -247,6 +261,7 @@ const isEnvironmentSkybox = defineModel('isEnvironmentSkybox', {
   default: false
 })
 const isWireframe = defineModel('isWireframe', { default: false })
+const isLaserModeOn = defineModel('isLaserModeOn', { default: undefined })
 </script>
 
 <style lang="scss" scoped>
