@@ -186,5 +186,23 @@ describe('composables/playlistComparison', () => {
       const c = usePlaylistComparison(makeInputs({ entityList: [{}, {}] }))
       expect(c.entityListToCompare.value).toEqual([])
     })
+
+    it('returns the "none" placeholder when the fallback task-type has an empty array', () => {
+      const entity = {
+        preview_files: {
+          'tt-other': []
+        }
+      }
+      const c = usePlaylistComparison(
+        makeInputs({
+          entityList: [entity],
+          taskTypeMap: new Map([['tt-anim', { id: 'tt-anim', name: 'Anim' }]])
+        })
+      )
+      c.taskTypeId.value = 'tt-anim'
+      expect(c.entityListToCompare.value).toEqual([
+        { preview_file_id: '', preview_file_extension: 'none' }
+      ])
+    })
   })
 })

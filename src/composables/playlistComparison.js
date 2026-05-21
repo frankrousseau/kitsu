@@ -74,9 +74,12 @@ export const usePlaylistComparison = ({
         key = Object.keys(previewFiles)[0]
         files = previewFiles[key]
       }
-      if (!files) return null
-      let preview = files.find(p => `${p.revision}` === revisionToCompare.value)
-      if (!preview) preview = files[0]
+      const preview =
+        files?.find(p => `${p.revision}` === revisionToCompare.value) ||
+        files?.[0]
+      if (!preview) {
+        return { preview_file_id: '', preview_file_extension: 'none' }
+      }
       return {
         preview_file_id: preview.id,
         preview_file_extension: preview.extension
