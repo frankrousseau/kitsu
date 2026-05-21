@@ -35,7 +35,13 @@ export const usePlaylistComparison = ({
 
   // Playlist-specific state
   const revisionToCompare = ref(null)
-  const comparisonEntityMissing = ref(false)
+  const comparisonEntityMissing = computed(() => {
+    if (!savedTaskTypeToCompare.value) return false
+    if (taskTypeOptions.value.length === 0) return false
+    return !taskTypeOptions.value.some(
+      o => o.value === savedTaskTypeToCompare.value
+    )
+  })
   const currentComparisonPreviewIndex = ref(0)
   const savedTaskTypeToCompare = ref(null)
 

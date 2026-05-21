@@ -205,4 +205,53 @@ describe('composables/playlistComparison', () => {
       ])
     })
   })
+
+  describe('comparisonEntityMissing', () => {
+    it('is true when the saved task-type is not available on the current entity', () => {
+      const entity = {
+        preview_files: {
+          'tt-anim': [{ id: 'p1', revision: 1, extension: 'mp4' }]
+        }
+      }
+      const c = usePlaylistComparison(
+        makeInputs({
+          entityList: [entity],
+          taskTypeMap: new Map([['tt-anim', { id: 'tt-anim', name: 'Anim' }]])
+        })
+      )
+      c.savedTaskTypeToCompare.value = 'tt-comp' // not available
+      expect(c.comparisonEntityMissing.value).toBe(true)
+    })
+
+    it('is false when the saved task-type is available', () => {
+      const entity = {
+        preview_files: {
+          'tt-anim': [{ id: 'p1', revision: 1, extension: 'mp4' }]
+        }
+      }
+      const c = usePlaylistComparison(
+        makeInputs({
+          entityList: [entity],
+          taskTypeMap: new Map([['tt-anim', { id: 'tt-anim', name: 'Anim' }]])
+        })
+      )
+      c.savedTaskTypeToCompare.value = 'tt-anim'
+      expect(c.comparisonEntityMissing.value).toBe(false)
+    })
+
+    it('is false when no saved task-type has been set yet', () => {
+      const entity = {
+        preview_files: {
+          'tt-anim': [{ id: 'p1', revision: 1, extension: 'mp4' }]
+        }
+      }
+      const c = usePlaylistComparison(
+        makeInputs({
+          entityList: [entity],
+          taskTypeMap: new Map([['tt-anim', { id: 'tt-anim', name: 'Anim' }]])
+        })
+      )
+      expect(c.comparisonEntityMissing.value).toBe(false)
+    })
+  })
 })
