@@ -100,6 +100,8 @@
       >)
     </div>
   </div>
+
+  <slot name="extra-controls" />
 </template>
 
 <script setup>
