@@ -28,7 +28,7 @@
     />
   </div>
 
-  <div class="left flexrow" v-if="isMovie">
+  <div class="left flexrow" v-if="isMovie && !compact">
     <button-simple
       :active="isRepeating"
       :title="$t('playlists.actions.looping')"
@@ -112,6 +112,10 @@ defineProps({
   available3DAnimations: {
     type: Array,
     default: () => []
+  },
+  compact: {
+    type: Boolean,
+    default: false
   },
   currentFrameLabel: {
     type: String,
