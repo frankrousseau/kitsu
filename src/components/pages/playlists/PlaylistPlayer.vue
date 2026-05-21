@@ -627,32 +627,37 @@
         @click="showTaskTypeModal"
         v-if="!tempMode && !isFullMode"
       />
-      <player-comparison-bar
-        :comparison-mode-options="comparisonModeOptions"
-        :comparison-preview-index="currentComparisonPreviewIndex"
-        :comparison-preview-length="currentComparisonPreviewLength"
-        :is-comparing="isComparing"
-        :is-comparison-enabled="true"
-        :is-movie="isCurrentPreviewMovie"
-        :is-sound="isCurrentPreviewSound"
-        :preview-file-options="revisionOptions"
-        :task-type-options="taskTypeOptions"
-        v-model:comparison-mode="comparisonMode"
-        v-model:preview-to-compare-id="revisionToCompare"
-        v-model:task-type-id="taskTypeToCompare"
-        @compare-clicked="onCompareClicked"
-        @previous-comparison-clicked="onPreviousComparisonPictureClicked"
-        @next-comparison-clicked="onNextComparisonPictureClicked"
+      <div
+        class="flexrow flexrow-item comparison-buttons"
+        v-if="(isCurrentPreviewMovie || isCurrentPreviewPicture) && !isFullMode"
       >
-        <template #missing>
-          <div
-            class="flexrow flexrow-item comparison-missing"
-            v-if="isComparing && comparisonEntityMissing"
-          >
-            ⚠️ {{ $t('playlists.comparing_missing_plan') }}
-          </div>
-        </template>
-      </player-comparison-bar>
+        <player-comparison-bar
+          :comparison-mode-options="comparisonModeOptions"
+          :comparison-preview-index="currentComparisonPreviewIndex"
+          :comparison-preview-length="currentComparisonPreviewLength"
+          :is-comparing="isComparing"
+          :is-comparison-enabled="true"
+          :is-movie="isCurrentPreviewMovie"
+          :is-sound="isCurrentPreviewSound"
+          :preview-file-options="revisionOptions"
+          :task-type-options="taskTypeOptions"
+          v-model:comparison-mode="comparisonMode"
+          v-model:preview-to-compare-id="revisionToCompare"
+          v-model:task-type-id="taskTypeToCompare"
+          @compare-clicked="onCompareClicked"
+          @previous-comparison-clicked="onPreviousComparisonPictureClicked"
+          @next-comparison-clicked="onNextComparisonPictureClicked"
+        >
+          <template #missing>
+            <div
+              class="flexrow flexrow-item comparison-missing"
+              v-if="isComparing && comparisonEntityMissing"
+            >
+              ⚠️ {{ $t('playlists.comparing_missing_plan') }}
+            </div>
+          </template>
+        </player-comparison-bar>
+      </div>
 
       <span class="filler"></span>
 
