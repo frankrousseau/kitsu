@@ -1,7 +1,7 @@
 <template>
   <div
     class="left flexrow"
-    v-if="isMovie || isSound || (is3DModel && is3DAnimation)"
+    v-if="isMovie || isSound || (is3DModel && is3DAnimation) || isPicture"
   >
     <button-simple
       class="flexrow-item"
@@ -114,6 +114,10 @@ defineProps({
     default: false
   },
   isMovie: {
+    type: Boolean,
+    default: false
+  },
+  isPicture: {
     type: Boolean,
     default: false
   },
