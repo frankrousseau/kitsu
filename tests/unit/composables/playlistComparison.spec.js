@@ -36,4 +36,52 @@ describe('composables/playlistComparison', () => {
       expect(c.comparisonMode.value).toBe('sidebyside')
     })
   })
+
+  describe('taskTypeOptions', () => {
+    it('lists task types from currentEntity.preview_files sorted by name desc', () => {
+      const ttMap = new Map([
+        ['tt-anim', { id: 'tt-anim', name: 'Animation' }],
+        ['tt-lay', { id: 'tt-lay', name: 'Layout' }],
+        ['tt-comp', { id: 'tt-comp', name: 'Compositing' }]
+      ])
+      const entity = {
+        preview_files: {
+          'tt-anim': [{ id: 'p1', revision: 1, extension: 'mp4' }],
+          'tt-lay': [{ id: 'p2', revision: 1, extension: 'mp4' }],
+          'tt-comp': [{ id: 'p3', revision: 1, extension: 'mp4' }]
+        }
+      }
+      const c = usePlaylistComparison(
+        makeInputs({ entityList: [entity], taskTypeMap: ttMap })
+      )
+      expect(c.taskTypeOptions.value).toEqual([
+        { label: 'Layout', value: 'tt-lay' },
+        { label: 'Compositing', value: 'tt-comp' },
+        { label: 'Animation', value: 'tt-anim' }
+      ])
+    })
+
+    it('returns [] when currentEntity is null', () => {
+      const c = usePlaylistComparison(makeInputs())
+      expect(c.taskTypeOptions.value).toEqual([])
+    })
+
+    it('skips task types absent from taskTypeMap', () => {
+      const entity = {
+        preview_files: {
+          'tt-known': [{ id: 'p1', revision: 1, extension: 'mp4' }],
+          'tt-unknown': [{ id: 'p2', revision: 1, extension: 'mp4' }]
+        }
+      }
+      const c = usePlaylistComparison(
+        makeInputs({
+          entityList: [entity],
+          taskTypeMap: new Map([['tt-known', { id: 'tt-known', name: 'Anim' }]])
+        })
+      )
+      expect(c.taskTypeOptions.value).toEqual([
+        { label: 'Anim', value: 'tt-known' }
+      ])
+    })
+  })
 })

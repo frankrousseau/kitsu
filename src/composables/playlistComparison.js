@@ -41,7 +41,17 @@ export const usePlaylistComparison = ({
   const savedTaskTypeToCompare = ref(null)
 
   // Playlist-specific computeds (placeholders, filled in subsequent tasks)
-  const taskTypeOptions = ref([])
+  const taskTypeOptions = computed(() => {
+    const entity = currentEntity.value
+    if (!entity?.preview_files) return []
+    const map = taskTypeMap.value
+    return Object.keys(entity.preview_files)
+      .filter(id => entity.preview_files[id] && map.get(id))
+      .map(id => ({ label: map.get(id).name, value: id }))
+      .sort(
+        (a, b) => -a.label.localeCompare(b.label, undefined, { numeric: true })
+      )
+  })
   const revisionOptions = ref([])
 
   return {
