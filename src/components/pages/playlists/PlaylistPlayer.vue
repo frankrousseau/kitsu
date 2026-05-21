@@ -3991,10 +3991,6 @@ watch(isComparing, () => {
   })
 })
 
-watch(taskTypeToCompare, () => {
-  if (isComparing.value) resetComparison()
-})
-
 watch(currentRevisionToCompare, () => {
   if (isComparing.value && !isComparisonOverlay.value) {
     loadComparisonAnnotation(currentTimeRaw.value)
@@ -4009,6 +4005,7 @@ watch(taskTypeToCompare, (newVal, oldVal) => {
   if (newVal && oldVal !== null && newVal !== oldVal) {
     onTaskTypeToCompareChanged()
   }
+  if (isComparing.value) resetComparison()
 })
 
 watch(revisionToCompare, (newVal, oldVal) => {
@@ -4368,10 +4365,6 @@ const playerProxy = {
   pointer-events: none;
 }
 
-.comparison-combobox {
-  margin-bottom: 0;
-}
-
 .playlist-footer .background-combo {
   max-width: 300px;
 
@@ -4425,14 +4418,6 @@ progress {
   transition: opacity 0.5s ease;
 }
 
-.comparison-list,
-.comparison-list p,
-.comparison-list select {
-  font-size: 0.8em;
-}
-.comparison-list select {
-  height: 2.2em;
-}
 .comparison-missing {
   padding: 6px 10px;
   border: 1px solid $dark-grey;
@@ -4589,11 +4574,6 @@ progress {
   position: relative;
 }
 
-.comparison-index {
-  min-width: 30px;
-  margin: 0;
-}
-
 .disabled {
   color: $grey;
 }
@@ -4648,13 +4628,6 @@ input[type='number'] {
     filter: invert(59%) sepia(38%) saturate(660%) hue-rotate(201deg)
       brightness(95%) contrast(93%);
     box-shadow: none;
-  }
-}
-
-@media only screen and (min-width: 1600px) {
-  .comparison-combos {
-    top: -1px;
-    left: 33px;
   }
 }
 </style>
