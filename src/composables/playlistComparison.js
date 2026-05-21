@@ -35,7 +35,6 @@ export const usePlaylistComparison = ({
 
   // Playlist-specific state
   const revisionToCompare = ref(null)
-  const entityListToCompare = ref([])
   const comparisonEntityMissing = ref(false)
   const currentComparisonPreviewIndex = ref(0)
   const savedTaskTypeToCompare = ref(null)
@@ -61,6 +60,28 @@ export const usePlaylistComparison = ({
       { label: 'Last', value: null },
       ...revisions.map(r => ({ label: `v${r}`, value: `${r}` }))
     ]
+  })
+  const entityListToCompare = computed(() => {
+    if (!base.taskTypeId.value) return []
+    return entityList.value.map(entity => {
+      const previewFiles = entity?.preview_files
+      if (!previewFiles || Object.keys(previewFiles).length === 0) {
+        return { preview_file_id: '', preview_file_extension: 'none' }
+      }
+      let key = base.taskTypeId.value
+      let files = previewFiles[key]
+      if (!files) {
+        key = Object.keys(previewFiles)[0]
+        files = previewFiles[key]
+      }
+      if (!files) return null
+      let preview = files.find(p => `${p.revision}` === revisionToCompare.value)
+      if (!preview) preview = files[0]
+      return {
+        preview_file_id: preview.id,
+        preview_file_extension: preview.extension
+      }
+    })
   })
 
   return {

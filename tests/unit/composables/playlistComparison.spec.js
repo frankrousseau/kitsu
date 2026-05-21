@@ -120,4 +120,71 @@ describe('composables/playlistComparison', () => {
       expect(c.revisionOptions.value).toEqual([])
     })
   })
+
+  describe('entityListToCompare', () => {
+    it('maps each playlist entity to its matching preview for the selected revision', () => {
+      const entityA = {
+        preview_files: {
+          'tt-anim': [
+            { id: 'a1', revision: 1, extension: 'mp4' },
+            { id: 'a2', revision: 2, extension: 'mp4' }
+          ]
+        }
+      }
+      const entityB = {
+        preview_files: {
+          'tt-anim': [{ id: 'b1', revision: 1, extension: 'png' }]
+        }
+      }
+      const c = usePlaylistComparison(
+        makeInputs({
+          entityList: [entityA, entityB],
+          taskTypeMap: new Map([['tt-anim', { id: 'tt-anim', name: 'Anim' }]])
+        })
+      )
+      c.taskTypeId.value = 'tt-anim'
+      c.revisionToCompare.value = '2'
+      expect(c.entityListToCompare.value).toEqual([
+        { preview_file_id: 'a2', preview_file_extension: 'mp4' },
+        // entity B has no revision 2 → fall back to its first preview
+        { preview_file_id: 'b1', preview_file_extension: 'png' }
+      ])
+    })
+
+    it('returns a "none" placeholder for entities without any preview files', () => {
+      const c = usePlaylistComparison(
+        makeInputs({
+          entityList: [{ preview_files: {} }],
+          taskTypeMap: new Map([['tt-anim', { id: 'tt-anim', name: 'Anim' }]])
+        })
+      )
+      c.taskTypeId.value = 'tt-anim'
+      expect(c.entityListToCompare.value).toEqual([
+        { preview_file_id: '', preview_file_extension: 'none' }
+      ])
+    })
+
+    it('falls back to the first task-type when the selected one is missing on that entity', () => {
+      const entity = {
+        preview_files: {
+          'tt-other': [{ id: 'o1', revision: 1, extension: 'mp4' }]
+        }
+      }
+      const c = usePlaylistComparison(
+        makeInputs({
+          entityList: [entity],
+          taskTypeMap: new Map([['tt-anim', { id: 'tt-anim', name: 'Anim' }]])
+        })
+      )
+      c.taskTypeId.value = 'tt-anim'
+      expect(c.entityListToCompare.value).toEqual([
+        { preview_file_id: 'o1', preview_file_extension: 'mp4' }
+      ])
+    })
+
+    it('returns [] when no task type is selected', () => {
+      const c = usePlaylistComparison(makeInputs({ entityList: [{}, {}] }))
+      expect(c.entityListToCompare.value).toEqual([])
+    })
+  })
 })
