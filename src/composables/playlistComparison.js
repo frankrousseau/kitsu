@@ -93,6 +93,38 @@ export const usePlaylistComparison = ({
     })
   })
 
+  const currentRevisionToCompare = computed(() => {
+    const entity = currentEntity.value
+    const files = entity?.preview_files?.[base.taskTypeId.value]
+    if (!files || files.length === 0) return null
+    const match = files.find(p => `${p.revision}` === revisionToCompare.value)
+    return match || files[0]
+  })
+
+  const currentPreviewToCompare = computed(() => {
+    const revision = currentRevisionToCompare.value
+    if (!revision) return null
+    if (currentComparisonPreviewIndex.value > 0) {
+      return (
+        revision.previews?.[currentComparisonPreviewIndex.value - 1] || null
+      )
+    }
+    return revision
+  })
+
+  const currentComparisonPreviewLength = computed(() => {
+    const revision = currentRevisionToCompare.value
+    if (!revision) return 0
+    const previews = revision.previews
+    return previews ? previews.length + 1 : 0
+  })
+
+  const comparisonAnnotations = computed(() =>
+    base.isComparing.value && currentRevisionToCompare.value
+      ? currentRevisionToCompare.value.annotations || []
+      : []
+  )
+
   return {
     // Shared from useComparison
     isComparing: base.isComparing,
@@ -112,6 +144,10 @@ export const usePlaylistComparison = ({
 
     // Playlist-specific computeds (filled in next tasks)
     taskTypeOptions,
-    revisionOptions
+    revisionOptions,
+    currentRevisionToCompare,
+    currentPreviewToCompare,
+    currentComparisonPreviewLength,
+    comparisonAnnotations
   }
 }

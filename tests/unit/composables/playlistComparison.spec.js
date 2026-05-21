@@ -206,6 +206,76 @@ describe('composables/playlistComparison', () => {
     })
   })
 
+  describe('current revision / preview / length / annotations', () => {
+    const setup = ({ revision = null, index = 0 } = {}) => {
+      const entity = {
+        preview_files: {
+          'tt-anim': [
+            {
+              id: 'p1',
+              revision: 1,
+              extension: 'mp4',
+              annotations: [{ id: 'ann-1' }],
+              previews: [{ id: 'p1-prev' }]
+            },
+            { id: 'p2', revision: 2, extension: 'mp4', annotations: [] }
+          ]
+        }
+      }
+      const c = usePlaylistComparison(
+        makeInputs({
+          entityList: [entity],
+          taskTypeMap: new Map([['tt-anim', { id: 'tt-anim', name: 'Anim' }]])
+        })
+      )
+      c.taskTypeId.value = 'tt-anim'
+      c.revisionToCompare.value = revision
+      c.currentComparisonPreviewIndex.value = index
+      return c
+    }
+
+    it('resolves currentRevisionToCompare to the matching preview', () => {
+      const c = setup({ revision: '2' })
+      expect(c.currentRevisionToCompare.value.id).toBe('p2')
+    })
+
+    it('falls back to the first preview when the revision is not found', () => {
+      const c = setup({ revision: '99' })
+      expect(c.currentRevisionToCompare.value.id).toBe('p1')
+    })
+
+    it('currentPreviewToCompare returns the indexed sub-preview when index > 0', () => {
+      const c = setup({ revision: '1', index: 1 })
+      expect(c.currentPreviewToCompare.value.id).toBe('p1-prev')
+    })
+
+    it('currentPreviewToCompare returns the revision itself when index = 0', () => {
+      const c = setup({ revision: '1', index: 0 })
+      expect(c.currentPreviewToCompare.value.id).toBe('p1')
+    })
+
+    it('currentComparisonPreviewLength counts sub-previews + 1', () => {
+      const c = setup({ revision: '1' })
+      expect(c.currentComparisonPreviewLength.value).toBe(2)
+    })
+
+    it('currentComparisonPreviewLength is 0 when there are no sub-previews', () => {
+      const c = setup({ revision: '2' })
+      expect(c.currentComparisonPreviewLength.value).toBe(0)
+    })
+
+    it('comparisonAnnotations is [] when not comparing', () => {
+      const c = setup({ revision: '1' })
+      expect(c.comparisonAnnotations.value).toEqual([])
+    })
+
+    it('comparisonAnnotations returns the revision annotations when comparing', () => {
+      const c = setup({ revision: '1' })
+      c.isComparing.value = true
+      expect(c.comparisonAnnotations.value).toEqual([{ id: 'ann-1' }])
+    })
+  })
+
   describe('comparisonEntityMissing', () => {
     it('is true when the saved task-type is not available on the current entity', () => {
       const entity = {
