@@ -125,6 +125,18 @@ export const usePlaylistComparison = ({
       : []
   )
 
+  const goToPreviousComparisonPicture = () => {
+    const index = currentComparisonPreviewIndex.value - 1
+    currentComparisonPreviewIndex.value =
+      index < 0 ? currentComparisonPreviewLength.value - 1 : index
+  }
+
+  const goToNextComparisonPicture = () => {
+    const index = currentComparisonPreviewIndex.value + 1
+    currentComparisonPreviewIndex.value =
+      index > currentComparisonPreviewLength.value - 1 ? 0 : index
+  }
+
   const toggleComparison = () => {
     if (base.isComparing.value) {
       base.isComparing.value = false
@@ -153,6 +165,8 @@ export const usePlaylistComparison = ({
 
     // Playlist-specific actions
     toggleComparison,
+    goToPreviousComparisonPicture,
+    goToNextComparisonPicture,
 
     // Playlist-specific state
     revisionToCompare,

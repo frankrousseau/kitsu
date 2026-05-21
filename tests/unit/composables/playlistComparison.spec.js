@@ -334,6 +334,51 @@ describe('composables/playlistComparison', () => {
     })
   })
 
+  describe('comparison picture navigation', () => {
+    const setup = () => {
+      const entity = {
+        preview_files: {
+          'tt-anim': [
+            {
+              id: 'p1',
+              revision: 1,
+              extension: 'png',
+              previews: [{ id: 'sub-1' }, { id: 'sub-2' }]
+            }
+          ]
+        }
+      }
+      const c = usePlaylistComparison(
+        makeInputs({
+          entityList: [entity],
+          taskTypeMap: new Map([['tt-anim', { id: 'tt-anim', name: 'Anim' }]])
+        })
+      )
+      c.taskTypeId.value = 'tt-anim'
+      return c
+    }
+
+    it('next: 0 -> 1 -> 2 -> 0', () => {
+      const c = setup()
+      c.goToNextComparisonPicture()
+      expect(c.currentComparisonPreviewIndex.value).toBe(1)
+      c.goToNextComparisonPicture()
+      expect(c.currentComparisonPreviewIndex.value).toBe(2)
+      c.goToNextComparisonPicture()
+      expect(c.currentComparisonPreviewIndex.value).toBe(0)
+    })
+
+    it('previous: 0 -> 2 -> 1 -> 0', () => {
+      const c = setup()
+      c.goToPreviousComparisonPicture()
+      expect(c.currentComparisonPreviewIndex.value).toBe(2)
+      c.goToPreviousComparisonPicture()
+      expect(c.currentComparisonPreviewIndex.value).toBe(1)
+      c.goToPreviousComparisonPicture()
+      expect(c.currentComparisonPreviewIndex.value).toBe(0)
+    })
+  })
+
   describe('comparisonEntityMissing', () => {
     it('is true when the saved task-type is not available on the current entity', () => {
       const entity = {
