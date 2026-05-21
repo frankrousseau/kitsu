@@ -4207,6 +4207,26 @@ const playerProxy = {
   font-variant-numeric: tabular-nums;
 }
 
+// Match .playlist-button look on bar buttons that come from child
+// components (PlayerComparisonBar, PlayerPlaybackBar), since scoped
+// styles otherwise stop at the component boundary.
+.playlist-footer :deep(.button) {
+  margin: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: var(--background-tag-button);
+    border-radius: 5px;
+  }
+
+  &.active {
+    color: var(--background-selectable);
+  }
+}
+
 .playlisted-entities {
   border-top: 1px solid $dark-grey-strong;
   padding: 0.4em 0 0 0.4em;
