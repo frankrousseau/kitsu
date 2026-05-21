@@ -53,6 +53,15 @@
 
     <speed-button class="flexrow-item" v-model="speed" v-if="isMovie" />
 
+    <button-simple
+      class="flexrow-item"
+      :active="isWaveformDisplayed"
+      :title="$t('playlists.actions.toggle_waveform')"
+      icon="waveform"
+      @click="isWaveformDisplayed = !isWaveformDisplayed"
+      v-if="isWaveformDisplayed !== undefined && (!light || fullScreen)"
+    />
+
     <span
       class="flexrow-item time-indicator"
       :title="$t('playlists.actions.current_time')"
@@ -154,6 +163,9 @@ const isHd = defineModel('isHd', { default: false })
 const isMuted = defineModel('isMuted', { default: false })
 const speed = defineModel('speed', { default: 3 })
 const volume = defineModel('volume', { default: 50 })
+const isWaveformDisplayed = defineModel('isWaveformDisplayed', {
+  default: undefined
+})
 </script>
 
 <style lang="scss" scoped>
