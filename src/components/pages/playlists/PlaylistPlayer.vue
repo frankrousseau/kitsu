@@ -487,7 +487,10 @@
         @toggle-sound-clicked="onToggleSoundClicked"
       >
         <template #extra-controls>
-          <div class="separator"></div>
+          <div
+            class="separator"
+            v-if="isCurrentPreviewPicture || currentEntityPreviewLength > 1"
+          ></div>
 
           <div
             class="flexrow-item"
