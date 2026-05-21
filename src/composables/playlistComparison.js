@@ -125,6 +125,22 @@ export const usePlaylistComparison = ({
       : []
   )
 
+  const toggleComparison = () => {
+    if (base.isComparing.value) {
+      base.isComparing.value = false
+      return
+    }
+    if (taskTypeOptions.value.length === 0) {
+      base.isComparing.value = true
+      return
+    }
+    base.isComparing.value = true
+    const saved = savedTaskTypeToCompare.value
+    const isAvailable = taskTypeOptions.value.some(o => o.value === saved)
+    base.taskTypeId.value = isAvailable ? saved : taskTypeOptions.value[0].value
+    revisionToCompare.value = null
+  }
+
   return {
     // Shared from useComparison
     isComparing: base.isComparing,
@@ -134,6 +150,9 @@ export const usePlaylistComparison = ({
     isComparisonOverlay: base.isComparisonOverlay,
     overlayOpacity: base.overlayOpacity,
     toggleFullOverlay: base.toggleFullOverlay,
+
+    // Playlist-specific actions
+    toggleComparison,
 
     // Playlist-specific state
     revisionToCompare,

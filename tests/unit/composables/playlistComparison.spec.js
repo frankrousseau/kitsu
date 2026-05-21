@@ -276,6 +276,64 @@ describe('composables/playlistComparison', () => {
     })
   })
 
+  describe('toggleComparison', () => {
+    const entity = {
+      preview_files: {
+        'tt-anim': [{ id: 'p1', revision: 1, extension: 'mp4' }],
+        'tt-comp': [{ id: 'p2', revision: 1, extension: 'mp4' }]
+      }
+    }
+
+    it('turns comparison on and picks the saved task-type when available', () => {
+      const c = usePlaylistComparison(
+        makeInputs({
+          entityList: [entity],
+          taskTypeMap: new Map([
+            ['tt-anim', { id: 'tt-anim', name: 'Anim' }],
+            ['tt-comp', { id: 'tt-comp', name: 'Compositing' }]
+          ])
+        })
+      )
+      c.savedTaskTypeToCompare.value = 'tt-anim'
+      c.toggleComparison()
+      expect(c.isComparing.value).toBe(true)
+      expect(c.taskTypeId.value).toBe('tt-anim')
+      expect(c.revisionToCompare.value).toBe(null)
+    })
+
+    it('falls back to the first option and flags missing when saved is unavailable', () => {
+      const c = usePlaylistComparison(
+        makeInputs({
+          entityList: [entity],
+          taskTypeMap: new Map([
+            ['tt-anim', { id: 'tt-anim', name: 'Anim' }],
+            ['tt-comp', { id: 'tt-comp', name: 'Compositing' }]
+          ])
+        })
+      )
+      c.savedTaskTypeToCompare.value = 'tt-lay' // not available
+      c.toggleComparison()
+      expect(c.isComparing.value).toBe(true)
+      // Sort is descending, so first option is "Compositing"
+      expect(c.taskTypeId.value).toBe('tt-comp')
+      expect(c.comparisonEntityMissing.value).toBe(true)
+    })
+
+    it('turns comparison off and clears the missing flag', () => {
+      const c = usePlaylistComparison(
+        makeInputs({
+          entityList: [entity],
+          taskTypeMap: new Map([
+            ['tt-anim', { id: 'tt-anim', name: 'Anim' }]
+          ])
+        })
+      )
+      c.toggleComparison()
+      c.toggleComparison()
+      expect(c.isComparing.value).toBe(false)
+    })
+  })
+
   describe('comparisonEntityMissing', () => {
     it('is true when the saved task-type is not available on the current entity', () => {
       const entity = {
