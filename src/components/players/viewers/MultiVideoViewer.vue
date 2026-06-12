@@ -189,7 +189,9 @@ const setupPanZoom = () => {
     maxZoom: 5,
     minZoom: 0.5,
     beforeMouseDown: e => e.target !== displayCanvasRef.value,
-    beforeWheel: e => e.target !== displayCanvasRef.value,
+    // Zoom is a Ctrl+wheel gesture: a plain wheel keeps scrolling the
+    // surrounding widgets/page.
+    beforeWheel: e => !e.ctrlKey || e.target !== displayCanvasRef.value,
     disableKeyboardInteraction: true
   })
   PANZOOM_EVENTS.forEach(name => {

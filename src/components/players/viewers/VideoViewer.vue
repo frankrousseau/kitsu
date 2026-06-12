@@ -542,7 +542,9 @@ const setupPanZoom = () => {
     minZoom: 1,
     smoothScroll: false,
     beforeMouseDown: e => e.target !== displayCanvas.value,
-    beforeWheel: e => e.target !== displayCanvas.value,
+    // Zoom is a Ctrl+wheel gesture: a plain wheel keeps scrolling the
+    // surrounding widgets/page.
+    beforeWheel: e => !e.ctrlKey || e.target !== displayCanvas.value,
     // panzoom otherwise puts tabindex=0 on the owner and steals arrow
     // keys / +/- to pan and zoom — those shortcuts are owned by the
     // player (frame stepping, annotation navigation), so disable them.
