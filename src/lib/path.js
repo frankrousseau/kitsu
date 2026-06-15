@@ -137,7 +137,6 @@ const SECTION_NAME_MAP = {
 
 const TVSHOW_NON_EPISODIC_SECTIONS = [
   'news-feed',
-  'schedule',
   'production-settings',
   'quota',
   'budget',

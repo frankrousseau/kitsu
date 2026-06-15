@@ -969,7 +969,6 @@ export default {
         isTVShow &&
         section !== 'team' &&
         section !== 'news-feed' &&
-        section !== 'schedule' &&
         section !== 'production-settings' &&
         section !== 'brief' &&
         section !== 'budget' &&
