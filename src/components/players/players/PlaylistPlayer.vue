@@ -2378,10 +2378,14 @@ const onProgressChanged = (frame, updatePlaylistProgress = true) => {
   }
   sendUpdatePlayingStatus()
   onFrameUpdate(frame)
-  if (isFullMode.value && updatePlaylistProgress) {
+  if (updatePlaylistProgress && currentEntity.value) {
     const start = currentEntity.value.start_duration
     const time = (frame - 1) / fps.value + start
-    fullPlaylistPlayer.value.currentTime = time
+    // Keep the playlist cursor in sync on scrub/seek in every mode, not only
+    // full mode; the concatenated player only exists in full mode.
+    if (isFullMode.value) {
+      fullPlaylistPlayer.value.currentTime = time
+    }
     playlistProgress.value = time
   }
 }
