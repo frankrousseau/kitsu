@@ -13,7 +13,41 @@ export default defineConfig({
   ],
   build: {
     sourcemap: true,
-    target: 'es2020'
+    target: 'es2020',
+    rolldownOptions: {
+      output: {
+        // Stable vendor chunks: their hashes survive app-only deploys, so
+        // returning browsers keep them cached instead of re-downloading them.
+        codeSplitting: {
+          groups: [
+            {
+              name: 'vue-vendor',
+              test: /node_modules[\\/](?:@vue|vue-router|vuex|vue)[\\/]/
+            },
+            {
+              name: 'date-vendor',
+              test: /node_modules[\\/]moment(?:-timezone)?[\\/]/
+            },
+            {
+              name: 'sentry',
+              test: /node_modules[\\/]@sentry(?:-internal)?[\\/]/
+            },
+            {
+              name: 'realtime',
+              test: /node_modules[\\/](?:socket\.io-client|engine\.io-client|engine\.io-parser|socket\.io-parser)[\\/]/
+            },
+            {
+              name: 'charts',
+              test: /node_modules[\\/](?:chart\.js|chartkick|vue-chartkick|@kurkle|chartjs-adapter-date-fns)[\\/]/
+            },
+            {
+              name: 'datepicker',
+              test: /node_modules[\\/](?:@vuepic|date-fns)[\\/]/
+            }
+          ]
+        }
+      }
+    }
   },
   resolve: {
     extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.vue'],
