@@ -21,7 +21,9 @@ export default defineConfig({
       '@': `${import.meta.dirname}/src/`,
       vue: 'vue/dist/vue.esm-bundler.js',
       'fabricjs-psbrush': `${import.meta.dirname}/node_modules/fabricjs-psbrush/dist/index.mjs`,
-      moment: `${import.meta.dirname}/node_modules/moment/min/moment-with-locales.js`
+      moment: `${import.meta.dirname}/node_modules/moment/min/moment-with-locales.js`,
+      // Truncated IANA data (same zone names, exact offsets for 1970-2030); smaller windows shift historical timestamps by 1h.
+      'moment-timezone': `${import.meta.dirname}/node_modules/moment-timezone/builds/moment-timezone-with-data-1970-2030.min.js`
     }
   },
   css: {
