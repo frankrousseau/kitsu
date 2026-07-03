@@ -146,6 +146,7 @@ import { firstBy } from 'thenby'
 
 import { searchMixin } from '@/components/mixins/search'
 
+import { getTaskStatusPriorityOfProd } from '@/lib/productions'
 import { sortTaskStatuses } from '@/lib/sorting'
 import { parseDate } from '@/lib/time'
 
@@ -239,6 +240,7 @@ export default {
       'productionMap',
       'selectedTasks',
       'taskStatuses',
+      'taskStatusMap',
       'taskTypeMap',
       'timeSpentMap',
       'timeSpentTotal',
@@ -568,6 +570,7 @@ export default {
       const isPriority = currentSort === 'priority'
       const isDueDate = currentSort === 'due_date'
       const isStartDate = currentSort === 'start_date'
+      const isStatus = currentSort === 'task_status_short_name'
 
       if (isName) {
         return tasks.sort(
@@ -605,6 +608,21 @@ export default {
             else if (!b.start_date) return -1
             else return a.start_date.localeCompare(b.start_date)
           })
+            .thenBy('project_name')
+            .thenBy('task_type_name')
+            .thenBy('entity_name')
+        )
+      } else if (isStatus) {
+        // Follow the task status order from the studio / production
+        // settings instead of sorting short names alphabetically.
+        const statusPriority = task =>
+          getTaskStatusPriorityOfProd(
+            this.taskStatusMap.get(task.task_status_id),
+            this.productionMap.get(task.project_id)
+          )
+        return tasks.sort(
+          firstBy((a, b) => statusPriority(a) - statusPriority(b))
+            .thenBy('task_status_short_name')
             .thenBy('project_name')
             .thenBy('task_type_name')
             .thenBy('entity_name')
