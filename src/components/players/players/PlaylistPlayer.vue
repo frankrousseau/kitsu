@@ -2312,7 +2312,10 @@ const goPreviousDrawing = () => {
     clearCanvas()
     const previous = getPreviousAnnotationTime(currentTimeRaw.value)
     if (!previous) return
-    const annotationTime = Number(previous.frame) - 1
+    // Seek by the annotation's time, not its stored frame: .frame can be
+    // stale (off by one, or a zero-padded string) and lands on the wrong
+    // frame. See PreviewPlayer.jumpToAnnotationFrame.
+    const annotationTime = Math.round(previous.time / frameDuration.value)
     if (isFullMode.value) {
       setFullPlayerTime(annotationTime / fps.value)
     } else {
@@ -2330,7 +2333,8 @@ const goNextDrawing = () => {
     clearCanvas()
     const next = getNextAnnotationTime(currentTimeRaw.value)
     if (!next) return
-    const annotationTime = Number(next.frame) - 1
+    // Seek by time, not the stale .frame — see goPreviousDrawing.
+    const annotationTime = Math.round(next.time / frameDuration.value)
     if (isFullMode.value) {
       setFullPlayerTime(annotationTime / fps.value)
     } else {
