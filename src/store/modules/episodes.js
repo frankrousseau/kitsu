@@ -807,13 +807,14 @@ const mutations = {
     state.displayedEpisodes = state.episodes
     state.displayedEpisodesLength = state.episodes.length
 
-    // Set currentEpisode
-    if (state.episodes.length > 0) {
-      if (routeEpisodeId === 'all') {
-        state.currentEpisode = { id: 'all' }
-      } else if (routeEpisodeId === 'main') {
-        state.currentEpisode = { id: 'main' }
-      } else if (routeEpisodeId) {
+    // Set currentEpisode. The 'all' and 'main' pseudo-episodes are valid
+    // even when the production has no episodes.
+    if (routeEpisodeId === 'all') {
+      state.currentEpisode = { id: 'all' }
+    } else if (routeEpisodeId === 'main') {
+      state.currentEpisode = { id: 'main' }
+    } else if (state.episodes.length > 0) {
+      if (routeEpisodeId) {
         state.currentEpisode = cache.episodeMap.get(routeEpisodeId)
       }
       if (!state.currentEpisode) {
