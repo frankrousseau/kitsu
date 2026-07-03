@@ -83,6 +83,16 @@ const cache = {
   result: []
 }
 
+// Callbacks of loadShots calls made while another load was in flight.
+// They run once that load settles, so callers never see an empty cache.
+let pendingLoadShotsCallbacks = []
+
+const flushPendingLoadShotsCallbacks = err => {
+  const callbacks = pendingLoadShotsCallbacks
+  pendingLoadShotsCallbacks = []
+  callbacks.forEach(callback => callback(err))
+}
+
 const helpers = {
   getCurrentProduction() {
     return productionsStore.getters.currentProduction(productionsStore.state)
@@ -426,7 +436,12 @@ const actions = {
     }
 
     if (state.isShotsLoading) {
-      if (callback) return callback()
+      return new Promise(resolve => {
+        pendingLoadShotsCallbacks.push(err => {
+          if (callback) callback(err)
+          resolve()
+        })
+      })
     }
 
     commit(LOAD_SHOTS_START)
@@ -457,11 +472,13 @@ const actions = {
           commit(END_SHOTS_LOADING)
         }
         if (callback) callback()
+        flushPendingLoadShotsCallbacks()
       })
       .catch(err => {
         commit(LOAD_SHOTS_ERROR)
         console.error(err)
         if (callback) callback(err)
+        flushPendingLoadShotsCallbacks(err)
       })
   },
 
