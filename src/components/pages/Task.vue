@@ -142,6 +142,17 @@
                     :title="$t('tasks.hookup_playlist')"
                   />
                 </button>
+                <label
+                  class="flexrow-item pointer"
+                  v-if="isMovie && isCurrentUserManager"
+                >
+                  <input
+                    class="mr02"
+                    type="checkbox"
+                    v-model="isUseCurrentFrame"
+                  />
+                  {{ $t('tasks.use_current_frame') }}
+                </label>
                 <button
                   class="button flexrow-item mr0"
                   :class="{
@@ -1246,11 +1257,16 @@ export default {
       this.loading.setPreview = true
       this.errors.setPreview = false
       const previewId = previewPlayer.currentPreview.id
+      const frame =
+        this.isMovie && this.isUseCurrentFrame
+          ? this.currentFrame + 1
+          : undefined
       this.$store
         .dispatch('setPreview', {
           taskId: this.task.id,
           entityId: this.task.entity.id,
-          previewId
+          previewId,
+          frame
         })
         .then(() => {
           this.loading.setPreview = false
