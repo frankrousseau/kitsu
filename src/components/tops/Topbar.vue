@@ -389,6 +389,16 @@ export default {
       if (this.currentProjectSection) {
         section = this.currentProjectSection
       }
+      // Plugin pages accept the all / main pseudo-episodes (forwarded to
+      // the plugin iframe as episode_id): without these options the
+      // combobox silently displays the first episode while the route
+      // says "all".
+      if (this.$route.params.plugin_id !== undefined) {
+        const episodeList = this.getBaseEpisodeOptionGroups(
+          'episodes.all_episodes'
+        )
+        return [{ name: '', episodeList }].concat(this.episodeOptionGroups)
+      }
       if (this.assetSections.includes(section)) {
         const episodeList = this.getBaseEpisodeOptionGroups('main.all_assets')
         return [{ name: '', episodeList }].concat(this.episodeOptionGroups)
@@ -766,6 +776,11 @@ export default {
               routeEpisodeId === 'main'
             ) {
               this.currentEpisodeId = 'main'
+            } else if (
+              this.$route.params.plugin_id &&
+              ['all', 'main'].includes(routeEpisodeId)
+            ) {
+              this.currentEpisodeId = routeEpisodeId
             } else {
               let episode = episodes.find(({ id }) => id === routeEpisodeId)
               if (!episode) {
@@ -846,7 +861,11 @@ export default {
       const isAssetSection = this.assetSections.includes(section)
       const isEditSection = this.editSections.includes(section)
       const isBreakdownSection = this.breakdownSections.includes(section)
+      // Plugin pages keep the all / main pseudo-episodes: coercing to the
+      // first episode desyncs the combobox from the episode_id actually
+      // forwarded to the plugin iframe.
       if (
+        pluginId === undefined &&
         !isAssetSection &&
         !isEditSection &&
         !isBreakdownSection &&
