@@ -482,20 +482,23 @@ export default {
     },
 
     filteredAssets() {
+      // Build the lookup from the full asset cache, not the paginated
+      // display list, so the import duplicate check sees every asset.
+      // The cache Map is not reactive: depend on displayedAssets (updated
+      // by the same mutations) to invalidate this computed.
+      this.displayedAssets // eslint-disable-line no-unused-expressions
       const assets = {}
-      this.displayedAssetsByType.forEach(type => {
-        type.forEach(item => {
-          let assetKey = ''
-          if (
-            this.isTVShow &&
-            item.episode_id &&
-            this.episodeMap.has(item.episode_id)
-          ) {
-            assetKey += this.episodeMap.get(item.episode_id).name
-          }
-          assetKey += `${item.asset_type_name}${item.name}`
-          assets[assetKey] = true
-        })
+      this.assetMap.forEach(item => {
+        let assetKey = ''
+        if (
+          this.isTVShow &&
+          item.episode_id &&
+          this.episodeMap.has(item.episode_id)
+        ) {
+          assetKey += this.episodeMap.get(item.episode_id).name
+        }
+        assetKey += `${item.asset_type_name}${item.name}`
+        assets[assetKey] = true
       })
       return assets
     },
