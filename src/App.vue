@@ -354,6 +354,16 @@ export default {
         }
       },
 
+      // Emitted by Zou when a production has "set preview automatically"
+      // enabled: reflect the new entity thumbnail without a manual refresh.
+      'preview-file:set-main'(eventData) {
+        this.$store.commit('SET_PREVIEW', {
+          entityId: eventData.entity_id,
+          previewId: eventData.preview_file_id,
+          taskMap: this.taskMap
+        })
+      },
+
       'task:delete'(eventData) {
         const task = this.taskMap.get(eventData.task_id)
         if (task) {
