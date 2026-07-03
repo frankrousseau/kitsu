@@ -68,6 +68,46 @@ describe('render', () => {
       '<p>Text <strong>bold</strong> <img src="picture.png" /></p>')
   })
 
+  test('renderMarkdown - strikethrough', () => {
+    const result = renderMarkdown('this is ~~cut~~ kept')
+    expect(result.trim()).toEqual('<p>this is <del>cut</del> kept</p>')
+  })
+
+  test('renderMarkdown - image keeps alt and title', () => {
+    const result = renderMarkdown('![shot](shot.png "Shot 10")')
+    expect(result.trim()).toEqual(
+      '<p><img src="shot.png" alt="shot" title="Shot 10" /></p>'
+    )
+  })
+
+  test('renderMarkdown - table column alignment', () => {
+    const result = renderMarkdown('| a |\n|:--:|\n| 1 |')
+    expect(result).toContain('<th align="center">a</th>')
+    expect(result).toContain('<td align="center">1</td>')
+  })
+
+  test('renderMarkdown - task-list checkboxes stripped by default', () => {
+    const result = renderMarkdown('- [ ] todo\n- [x] done')
+    expect(result).not.toContain('<input')
+  })
+
+  test('renderMarkdown - task-list checkboxes kept with allowChecklist', () => {
+    const result = renderMarkdown('- [ ] todo\n- [x] done', {
+      allowChecklist: true
+    })
+    expect(result).toContain('<input disabled type="checkbox" /> todo')
+    expect(result).toContain('<input checked disabled type="checkbox" /> done')
+  })
+
+  test('renderMarkdown - checkbox input cannot smuggle other attributes', () => {
+    const result = renderMarkdown(
+      '<input type="text" onfocus="alert(1)" value="x">',
+      { allowChecklist: true }
+    )
+    expect(result).not.toContain('onfocus')
+    expect(result).not.toContain('value')
+  })
+
   test('renderFileSize', () => {
     let size = 1200000
     let result = renderFileSize(size)

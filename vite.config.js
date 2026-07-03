@@ -22,7 +22,7 @@ export default defineConfig({
           groups: [
             {
               name: 'vue-vendor',
-              test: /node_modules[\\/](?:@vue|vue-router|vuex|vue)[\\/]/
+              test: /node_modules[\\/](?:@intlify|@vue|vue-i18n|vue-router|vuex|vue)[\\/]/
             },
             {
               name: 'date-vendor',
@@ -30,7 +30,7 @@ export default defineConfig({
             },
             {
               name: 'sentry',
-              test: /node_modules[\\/]@sentry(?:-internal)?[\\/]/
+              test: /node_modules[\\/]@sentry[\\/]/
             },
             {
               name: 'realtime',

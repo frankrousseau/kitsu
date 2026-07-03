@@ -250,6 +250,7 @@ const localeOptions = [
   { label: 'French (Français)', value: 'fr_FR' },
   { label: 'German (Deutsch)', value: 'de_DE' },
   { label: 'Hungarian (Magyar)', value: 'hu_HU' },
+  { label: 'Italian (Italiano)', value: 'it_IT' },
   { label: 'Japanese (日本語)', value: 'ja_JP' },
   { label: 'Korean (한국어)', value: 'ko_KR' },
   { label: 'Portuguese Brazilian (Português)', value: 'pt_BR' },

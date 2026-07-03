@@ -19,19 +19,29 @@ export const sanitize = (html, options) => {
     allowedImageTag: true,
     ...options
   }
-  let allowedTags = [...sanitizeHTML.defaults.allowedTags]
+  // Allow <del>, which marked emits for ~~strikethrough~~.
+  let allowedTags = [...sanitizeHTML.defaults.allowedTags, 'del']
   if (!options.allowedLinkTag) {
     allowedTags = allowedTags.filter(tag => tag !== 'a')
   }
   if (options.allowedImageTag) {
     allowedTags.push('img')
   }
+  const allowedAttributes = {
+    a: ['class', 'href'],
+    img: ['src', 'alt', 'title'],
+    td: ['align'],
+    th: ['align']
+  }
+  // GFM task-list checkboxes are inert disabled inputs; allow them where a
+  // full document is rendered (file preview) so done/todo state survives.
+  if (options.allowChecklist) {
+    allowedTags.push('input')
+    allowedAttributes.input = ['type', 'checked', 'disabled']
+  }
   return sanitizeHTML(html, {
     allowedTags,
-    allowedAttributes: {
-      a: ['class', 'href'],
-      img: ['src']
-    }
+    allowedAttributes
   })
 }
 

@@ -51,7 +51,9 @@ const rawContent = ref('')
 
 // Computed
 
-const renderedHtml = computed(() => renderMarkdown(rawContent.value))
+const renderedHtml = computed(() =>
+  renderMarkdown(rawContent.value, { allowChecklist: true })
+)
 
 // Functions
 
@@ -186,6 +188,15 @@ watch(() => props.preview?.id, loadContent, { immediate: true })
   :deep(ol) {
     padding-left: 2em;
     margin-bottom: 1em;
+  }
+
+  :deep(li):has(> input[type='checkbox']) {
+    list-style: none;
+    margin-left: -1.4em;
+  }
+
+  :deep(input[type='checkbox']) {
+    margin-right: 0.4em;
   }
 
   :deep(hr) {
