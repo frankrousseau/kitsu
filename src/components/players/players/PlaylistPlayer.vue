@@ -290,6 +290,7 @@
         <sound-viewer
           ref="sound-player"
           class="sound-player"
+          :file-name="currentPreviewFileName"
           :preview-url="currentPreviewDlPath"
           :full-screen="fullScreen"
           @play-ended="pause"
@@ -1270,6 +1271,19 @@ const currentPreview = computed(() => {
     }
   }
   return entity.preview_file_previews?.[currentPreviewIndex.value - 1]
+})
+
+// The main preview entity fields don't carry original_name: look it up in
+// the full preview_files payload so reviewers see which file is playing.
+const currentPreviewFileName = computed(() => {
+  const preview = currentPreview.value
+  if (!preview) return ''
+  const originalName =
+    preview.original_name ||
+    Object.values(currentEntity.value?.preview_files || {})
+      .flat()
+      .find(previewFile => previewFile.id === preview.id)?.original_name
+  return originalName ? `${originalName}.${preview.extension}` : ''
 })
 
 const currentEntityPreviewLength = computed(() => {
