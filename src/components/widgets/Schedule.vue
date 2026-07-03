@@ -29,7 +29,7 @@
             </button>
           </div>
           <span class="total-value" v-if="!hideManDays">
-            {{ formatDuration(totalManDays) }} {{ $t('schedule.md') }}
+            {{ formatDuration(totalManDays) }} {{ durationUnit }}
           </span>
         </div>
 
@@ -128,7 +128,7 @@
                   !rootElement.avatar && rootElement.editable && !hideManDays
                 "
               >
-                {{ $t('schedule.md') }}
+                {{ durationUnit }}
               </span>
               <span
                 class="man-days-unit flexrow-item"
@@ -137,7 +137,7 @@
                 "
               >
                 {{ formatDuration(rootElement.man_days) }}
-                {{ $t('schedule.md') }}
+                {{ durationUnit }}
               </span>
             </div>
 
@@ -229,11 +229,11 @@
                         "
                         :value="formatDuration(childElement.man_days, false)"
                       />
-                      {{ $t('schedule.md') }}
+                      {{ durationUnit }}
                     </span>
                     <span class="man-days-unit flexrow-item" v-else>
                       {{ formatDuration(childElement.man_days) }}
-                      {{ $t('schedule.md') }}
+                      {{ durationUnit }}
                     </span>
                   </div>
                 </div>
@@ -948,6 +948,10 @@ const taskStatuses = computed(() => store.getters.taskStatuses)
 const isDurationInHours = computed(() => {
   return organisation.value.format_duration_in_hours
 })
+
+const durationUnit = computed(() =>
+  isDurationInHours.value ? t('schedule.hours') : t('schedule.md')
+)
 
 const formatDuration = (minutes, toLocale = true) => {
   if (!minutes) {
@@ -2017,7 +2021,7 @@ const timebarSubchildTitle = task => {
   const duration = isRealSchedule.value
     ? formatDuration(task.duration)
     : formatDuration(task.estimation)
-  return `${name} (${startDate} - ${endDate}) ${duration} ${t('schedule.md')}`
+  return `${name} (${startDate} - ${endDate}) ${duration} ${durationUnit.value}`
 }
 
 const getTimebarLeft = timeElement => {
