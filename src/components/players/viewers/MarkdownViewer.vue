@@ -18,10 +18,10 @@
 </template>
 
 <script setup>
-import { marked } from 'marked'
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { renderMarkdown } from '@/lib/render'
 import filesApi from '@/store/api/files'
 
 import Spinner from '@/components/widgets/Spinner.vue'
@@ -51,10 +51,7 @@ const rawContent = ref('')
 
 // Computed
 
-const renderedHtml = computed(() => {
-  if (!rawContent.value) return ''
-  return marked.parse(rawContent.value)
-})
+const renderedHtml = computed(() => renderMarkdown(rawContent.value))
 
 // Functions
 
