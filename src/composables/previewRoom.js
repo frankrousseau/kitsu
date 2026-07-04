@@ -524,7 +524,7 @@ export const usePreviewRoom = options => {
     if (r.localId === eventData.data?.local_id) return
     const annotation = getAnnotation(eventData.time)
     const obj = eventData.data.obj
-    if (getObjectById(obj)) return
+    if (getObjectById(obj.id)) return
     if (unref(isLaserModeOn)) {
       const result = addObjectToCanvas(annotation, obj)
       if (result && typeof result.then === 'function') {
@@ -540,7 +540,7 @@ export const usePreviewRoom = options => {
     if (!isValidRoomId(r) || !joinedRoom.value) return
     if (r.localId === eventData.data?.local_id) return
     const obj = eventData.data.obj
-    if (!getObjectById(obj)) return
+    if (!getObjectById(obj.id)) return
     removeObjectFromCanvas(obj)
   }
 
