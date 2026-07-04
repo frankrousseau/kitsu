@@ -187,9 +187,11 @@ export const routes = [
             to &&
             ADMIN_PAGES.includes(to.name)
           if (taskTypeStore.state.taskTypes.length === 0) {
-            init(() => {
+            init(err => {
               store.commit('DATA_LOADING_END')
-              if (isProhibited) {
+              if (err) {
+                next({ name: 'server-down' })
+              } else if (isProhibited) {
                 next({ name: 'not-found' })
               } else {
                 next()
