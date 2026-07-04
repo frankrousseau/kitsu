@@ -1561,7 +1561,7 @@ export default {
     },
 
     refreshPreviewPlay() {
-      this.$refs['preview-player']?.previewViewer?.resize()
+      this.$refs['preview-player']?.resize()
     },
 
     removeTaskFromSelection(task) {
