@@ -587,22 +587,17 @@ export const getDepartmentFilters = (departments, queryText) => {
 export const getAssignedToFilters = (persons, taskTypes, queryText) => {
   if (!queryText) return []
 
-  // create a deep copy of persons with slugified names to avoid reference issues
-  const shallowPersons = persons.map(person => ({
-    ...JSON.parse(JSON.stringify(person)),
-    name: hashName(person.name)
-  }))
-
   const results = []
   const rgxMatches = queryText.match(EQUAL_ASSIGNATION_REGEX)
   if (rgxMatches) {
     const taskTypeNameIndex = buildTaskTypeIndex(taskTypes)
     const personIndex = {}
-    shallowPersons.forEach(person => {
-      if (!personIndex[person.name]) {
-        personIndex[person.name] = []
+    persons.forEach(person => {
+      const name = hashName(person.name)
+      if (!personIndex[name]) {
+        personIndex[name] = []
       }
-      personIndex[person.name].push(person.id)
+      personIndex[name].push(person.id)
     })
 
     rgxMatches.forEach(rgxMatch => {
