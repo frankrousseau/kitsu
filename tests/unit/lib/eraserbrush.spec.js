@@ -228,11 +228,14 @@ describe('EraserBrush._addPathToObjectEraser', () => {
 })
 
 describe('EraserBrush._finalizeAndAddPath', () => {
-  const makeErasable = erasable => ({
+  const makeErasable = (
+    erasable,
+    bounds = { left: -5, top: -5, width: 20, height: 20 }
+  ) => ({
     erasable,
     eraser: undefined,
     group: undefined,
-    intersectsWithObject: () => true,
+    getBoundingRect: () => bounds,
     calcTransformMatrix: () => [1, 0, 0, 1, 0, 0],
     set: vi.fn(),
     fire: vi.fn()
@@ -265,6 +268,29 @@ describe('EraserBrush._finalizeAndAddPath', () => {
     expect(erasable.eraser).toBeDefined()
     expect(text.eraser).toBeUndefined()
     expect(end.data.path).toBeDefined()
+  })
+
+  it('uses the eraser stroke width when detecting affected objects', async () => {
+    const nearStrokeEdge = makeErasable(true, {
+      left: -5,
+      top: 7,
+      width: 20,
+      height: 4
+    })
+    const outsideStroke = makeErasable(true, {
+      left: -5,
+      top: 100,
+      width: 20,
+      height: 4
+    })
+    const canvas = makeCanvas([nearStrokeEdge, outsideStroke])
+    const brush = new EraserBrush(canvas)
+    brush.width = 20
+    brush._points = [{ x: 0, y: 0 }, { x: 10, y: 0 }]
+    await brush._finalizeAndAddPath()
+    const end = canvas._fired.find(f => f.name === 'erasing:end')
+    expect(end.data.targets).toContain(nearStrokeEdge)
+    expect(end.data.targets).not.toContain(outsideStroke)
   })
 
   it('fires a bare erasing:end and creates no path when there are too few points', async () => {
