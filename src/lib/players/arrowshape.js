@@ -206,13 +206,11 @@ export class Arrow extends Line {
     ].join('')
   }
 
-  static fromObject(object, callback) {
-    const arrow = new Arrow(
+  static fromObject(object) {
+    return new Arrow(
       [object.x1 || 0, object.y1 || 0, object.x2 || 0, object.y2 || 0],
       object
     )
-    if (callback) callback(arrow)
-    return arrow
   }
 }
 
