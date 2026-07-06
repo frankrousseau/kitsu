@@ -34,10 +34,10 @@
         :ref="el => setChecklistEntryRef(el, index)"
         rows="1"
         :placeholder="$t('comments.task_placeholder')"
-        @keydown.enter.prevent="addChecklistEntry(index)"
-        @keyup.backspace="removeChecklistEntry(index)"
-        @keyup.up="focusPrevious(index)"
-        @keyup.down="focusNext(index)"
+        @keydown.enter="onEnter(index, $event)"
+        @keyup.backspace="removeChecklistEntry(index, $event)"
+        @keyup.up="focusPrevious(index, $event)"
+        @keyup.down="focusNext(index, $event)"
         v-autosize
         v-model.trim="entry.text"
         v-else
@@ -99,6 +99,19 @@ const filteredChecklist = computed(() => {
   return props.checklist.filter(Boolean)
 })
 
+// Keys pressed while an IME composes (e.g. Vietnamese Telex) must not
+// trigger entry edition or focus moves: Enter confirms the composition,
+// the arrows browse the candidate list. Chrome reports them with
+// isComposing (or the legacy keyCode 229).
+const isComposingEvent = event =>
+  Boolean(event && (event.isComposing || event.keyCode === 229))
+
+const onEnter = (index, event) => {
+  if (isComposingEvent(event)) return
+  event.preventDefault()
+  addChecklistEntry(index)
+}
+
 const addChecklistEntry = index => {
   if (index === -1 || index === props.checklist.length - 1) {
     emit('add-item', {
@@ -123,7 +136,8 @@ const addChecklistEntry = index => {
   })
 }
 
-const removeChecklistEntry = index => {
+const removeChecklistEntry = (index, event) => {
+  if (isComposingEvent(event)) return
   const entry = props.checklist[index]
   if (!entry.text) {
     emit('remove-task', entry)
@@ -131,7 +145,8 @@ const removeChecklistEntry = index => {
   }
 }
 
-const focusPrevious = index => {
+const focusPrevious = (index, event) => {
+  if (isComposingEvent(event)) return
   if (props.checklist.length > 0) {
     if (index === 0) index = props.checklist.length
     index--
@@ -140,7 +155,8 @@ const focusPrevious = index => {
   }
 }
 
-const focusNext = index => {
+const focusNext = (index, event) => {
+  if (isComposingEvent(event)) return
   if (props.checklist.length > 0) {
     if (index === props.checklist.length - 1) index = -1
     index++
