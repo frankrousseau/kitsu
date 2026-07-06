@@ -18,7 +18,7 @@ import 'moment/locale/ru'
 import 'moment/locale/zh-cn'
 import 'moment/locale/zh-tw'
 
-import i18n from '@/lib/i18n'
+import i18n, { loadLocaleMessages } from '@/lib/i18n'
 
 // Importing a locale file activates it; default back to English.
 moment.locale('en')
@@ -31,9 +31,15 @@ const LOCALE_MAP = {
 // Reactive, Intl-safe formatting code for the active language ('en', 'zh-tw', …).
 export const localeCode = ref('en')
 
+// Latest language asked for; guards against an older locale chunk landing
+// after a newer switch and flipping the UI back.
+let pendingLanguage = null
+
 export default {
   /**
-   * Set the locale for the application (vue-i18n + moment.js)
+   * Set the locale for the application (vue-i18n + moment.js). Translation
+   * chunks load on demand, so the vue-i18n locale flips once the messages
+   * are registered; the returned promise resolves at that point.
    * @param {string} locale
    */
   setLocale(locale) {
@@ -44,8 +50,13 @@ export default {
     }
 
     moment.locale(code)
-
-    i18n.global.locale = language
     localeCode.value = code
+
+    pendingLanguage = language
+    return loadLocaleMessages(language).then(() => {
+      if (pendingLanguage === language) {
+        i18n.global.locale = language
+      }
+    })
   }
 }

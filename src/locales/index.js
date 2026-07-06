@@ -1,39 +1,30 @@
 import en from '@/locales/en'
 import en_nft from '@/locales/en_nft'
 import en_video_game from '@/locales/en_video-game'
-import da from '@/locales/da.json'
-import de from '@/locales/de.json'
-import nl from '@/locales/nl.json'
-import es from '@/locales/es.json'
-import fa from '@/locales/fa.json'
-import fr from '@/locales/fr.json'
-import hu from '@/locales/hu.json'
-import it from '@/locales/it.json'
-import ja from '@/locales/ja.json'
-import ko from '@/locales/ko.json'
-import pl from '@/locales/pl.json'
-import pt from '@/locales/pt.json'
-import ru from '@/locales/ru.json'
-import zh from '@/locales/zh.json'
-import zh_tw from '@/locales/zh_tw.json'
 
+// English and its production-style overlays stay in the main bundle: en is
+// the i18n fallback and App.vue switches to the overlays synchronously.
+// Translations load on demand through localeLoaders, one chunk per locale.
 export default {
-  da: da.default,
-  de: de.default,
-  en: en,
-  en_nft: en_nft,
-  "en_video-game": en_video_game,
-  es: es.default,
-  fa: fa.default,
-  fr: fr.default,
-  hu: hu.default,
-  it: it.default,
-  ja: ja.default,
-  ko: ko.default,
-  nl: nl.default,
-  pl: pl.default,
-  pt: pt.default,
-  ru: ru.default,
-  zh: zh.default,
-  zh_tw: zh_tw.default
+  en,
+  en_nft,
+  'en_video-game': en_video_game
+}
+
+export const localeLoaders = {
+  da: () => import('@/locales/da.json'),
+  de: () => import('@/locales/de.json'),
+  es: () => import('@/locales/es.json'),
+  fa: () => import('@/locales/fa.json'),
+  fr: () => import('@/locales/fr.json'),
+  hu: () => import('@/locales/hu.json'),
+  it: () => import('@/locales/it.json'),
+  ja: () => import('@/locales/ja.json'),
+  ko: () => import('@/locales/ko.json'),
+  nl: () => import('@/locales/nl.json'),
+  pl: () => import('@/locales/pl.json'),
+  pt: () => import('@/locales/pt.json'),
+  ru: () => import('@/locales/ru.json'),
+  zh: () => import('@/locales/zh.json'),
+  zh_tw: () => import('@/locales/zh_tw.json')
 }
