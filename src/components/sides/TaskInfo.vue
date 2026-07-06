@@ -48,7 +48,11 @@
             <span class="flexrow-item">{{ task.entity_name }}</span>
             <span
               class="flexrow-item pointer"
+              role="button"
+              tabindex="0"
               @click="removeTaskFromSelection(task)"
+              @keydown.enter.prevent="removeTaskFromSelection(task)"
+              @keydown.space.prevent="removeTaskFromSelection(task)"
             >
               <x-icon :size="12" />
             </span>
