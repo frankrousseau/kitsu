@@ -11,6 +11,7 @@ import hu from '@/locales/hu.json'
 import it from '@/locales/it.json'
 import ja from '@/locales/ja.json'
 import ko from '@/locales/ko.json'
+import pl from '@/locales/pl.json'
 import pt from '@/locales/pt.json'
 import ru from '@/locales/ru.json'
 import zh from '@/locales/zh.json'
@@ -30,6 +31,7 @@ export default {
   ja: ja.default,
   ko: ko.default,
   nl: nl.default,
+  pl: pl.default,
   pt: pt.default,
   ru: ru.default,
   zh: zh.default,

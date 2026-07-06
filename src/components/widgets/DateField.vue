@@ -35,6 +35,7 @@ import {
   ja,
   ko,
   nl,
+  pl,
   pt,
   ru,
   zhCN,
@@ -56,6 +57,7 @@ const DATE_FNS_LOCALES = {
   ja,
   ko,
   nl,
+  pl,
   pt,
   ru,
   zh: zhCN
