@@ -802,21 +802,21 @@ export default {
 
     async reloadEntities() {
       this.isLoading = true
-      if (!this.isTVShow || this.currentEpisode?.id !== 'main') {
-        await this.loadSequences()
-        await this.loadShots()
-      }
-      if (this.isTVShow) {
-        if (this.currentEpisode) {
-          this.episodeId = this.currentEpisode.id
+      try {
+        if (!this.isTVShow || this.currentEpisode?.id !== 'main') {
+          await this.loadSequences()
+          await this.loadShots()
         }
-        this.setCastingEpisode(this.episodeId)
-        this.setCastingForProductionEpisodes()
-      } else {
-        this.setCastingEpisode(null)
-      }
-      this.loadAssets({ all: true, withTasks: true }).then(() => {
-        this.isLoading = false
+        if (this.isTVShow) {
+          if (this.currentEpisode) {
+            this.episodeId = this.currentEpisode.id
+          }
+          this.setCastingEpisode(this.episodeId)
+          this.setCastingForProductionEpisodes()
+        } else {
+          this.setCastingEpisode(null)
+        }
+        await this.loadAssets({ all: true, withTasks: true })
         this.displayMoreAssets()
         this.setCastingAssetTypes()
         if (this.assetTypeId) {
@@ -835,7 +835,11 @@ export default {
         ) {
           this.castingType = 'asset'
         }
-      })
+      } catch (err) {
+        console.error(err)
+      } finally {
+        this.isLoading = false
+      }
     },
 
     resetSequenceOption() {
