@@ -7,7 +7,10 @@
       validation: selectable
     }"
     :style="cellStyle"
+    role="button"
+    tabindex="0"
     @click="onClick"
+    @keydown.enter.prevent="onClick"
   >
     <div class="wrapper full-wrapper" :style="wrapperStyle" v-if="!minimized">
       <div class="filler" v-if="contactSheet"></div>

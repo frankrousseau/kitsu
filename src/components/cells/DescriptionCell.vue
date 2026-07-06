@@ -1,5 +1,12 @@
 <template>
-  <td class="description-cell" @keyup.esc="onClick" @click="onClick">
+  <td
+    class="description-cell"
+    role="button"
+    tabindex="0"
+    @keyup.esc="onClick"
+    @click="onClick"
+    @keydown.enter.prevent="onClick"
+  >
     <template v-if="full">
       <div
         class="description-shorten-text"

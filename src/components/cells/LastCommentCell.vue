@@ -1,5 +1,10 @@
 <template>
-  <td @click="$emit('click')">
+  <td
+    role="button"
+    tabindex="0"
+    @click="$emit('click')"
+    @keydown.enter.prevent="$emit('click')"
+  >
     <div class="flexrow">
       <people-avatar
         class="flexrow-item avatar-wrapper"

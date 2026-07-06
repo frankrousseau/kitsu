@@ -9,7 +9,15 @@
           class="email nowrap"
         >
           {{ person.email }}
-          <span class="copy-icon" :title="$t('main.copy')" @click="copyEmail">
+          <span
+            class="copy-icon"
+            :title="$t('main.copy')"
+            role="button"
+            tabindex="0"
+            @click="copyEmail"
+            @keydown.enter.prevent="copyEmail"
+            @keydown.space.prevent="copyEmail"
+          >
             <copy-icon :size="12" />
           </span>
         </div>

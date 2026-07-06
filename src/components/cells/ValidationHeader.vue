@@ -33,7 +33,11 @@
       </span>
       <span
         class="metadata-menu-button header-icon pointer"
+        role="button"
+        tabindex="0"
         @click="$emit('show-header-menu', $event)"
+        @keydown.enter.prevent="$emit('show-header-menu', $event)"
+        @keydown.space.prevent="$emit('show-header-menu', $event)"
       >
         <chevron-down-icon :size="14" />
       </span>
