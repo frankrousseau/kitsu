@@ -470,7 +470,7 @@ const play = () => {
     entity = props.entities[currentIndex.value]
     if (entity.preview_file_id) {
       if (currentPlayer.value) {
-        currentPlayer.value.play()
+        currentPlayer.value.play()?.catch(() => {})
       }
       isPlaying.value = true
     }
@@ -484,7 +484,7 @@ const playNext = handleIn => {
     currentPlayer.value.currentTime = props.handleIn
       ? props.handleIn * frameDuration.value
       : frameDuration.value
-    currentPlayer.value.play()
+    currentPlayer.value.play()?.catch(() => {})
     emit('repeat')
   } else {
     const nextIndex = getNextIndex(currentIndex.value)
@@ -495,7 +495,7 @@ const playNext = handleIn => {
       nextPlayer.value.currentTime = handleIn
         ? handleIn * frameDuration.value
         : 0
-      nextPlayer.value.play()
+      nextPlayer.value.play()?.catch(() => {})
     }
 
     switchPlayers()

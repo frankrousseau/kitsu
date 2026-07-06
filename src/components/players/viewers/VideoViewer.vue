@@ -442,7 +442,7 @@ const play = () => {
   ) {
     setCurrentTime(0)
   }
-  video.value.play()
+  video.value.play()?.catch(() => {})
 }
 
 const pause = () => {
