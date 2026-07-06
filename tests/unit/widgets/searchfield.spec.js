@@ -24,12 +24,17 @@ describe('SearchField', () => {
     expect(wrapper.find('.search-input').exists()).toBe(true)
   })
 
-  it('emits change event on input', async () => {
+  it('emits change event on input, debounced', async () => {
+    vi.useFakeTimers()
     const input = wrapper.find('.search-input')
     await input.setValue('hello')
     await input.trigger('input')
+    // Nothing yet: keystrokes are debounced (PERF-6).
+    expect(wrapper.emitted('change')).toBeFalsy()
+    vi.advanceTimersByTime(150)
     expect(wrapper.emitted('change')).toBeTruthy()
     expect(wrapper.emitted('change')[0]).toEqual(['hello'])
+    vi.useRealTimers()
   })
 
   it('emits enter event on keyup.enter', async () => {

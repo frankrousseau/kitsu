@@ -35,6 +35,8 @@
 import { ref } from 'vue'
 import { SaveIcon, SearchIcon } from 'lucide-vue-next'
 
+import func from '@/lib/func'
+
 const props = defineProps({
   placeholder: {
     type: String,
@@ -55,8 +57,12 @@ const search = ref('')
 const focused = ref(false)
 const inputRef = ref(null)
 
+// Debounced: every keystroke otherwise replays the full filter + sort
+// pipeline of the list pages.
+const emitChange = func.debounce(() => emit('change', search.value), 150)
+
 const onSearchChange = () => {
-  emit('change', search.value)
+  emitChange()
 }
 
 const onEnterPressed = () => {
@@ -83,7 +89,8 @@ const focus = options => {
 
 const clearSearch = () => {
   search.value = ''
-  onSearchChange()
+  // Immediate: clearing must not wait for the typing debounce.
+  emit('change', '')
 }
 
 defineExpose({ getValue, setValue, focus, clearSearch })
