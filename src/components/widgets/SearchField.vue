@@ -5,7 +5,9 @@
     </div>
 
     <div class="flexrow-item search-field">
-      <label class="sr-only" :for="fieldId">{{ t('main.search_query') }}</label>
+      <label class="visuallyhidden" :for="fieldId">
+        {{ t('main.search_query') }}
+      </label>
       <input
         :id="fieldId"
         ref="inputRef"
@@ -112,18 +114,6 @@ defineExpose({ getValue, setValue, focus, clearSearch })
 </script>
 
 <style lang="scss" scoped>
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
 .dark {
   .button.save-button:hover {
     color: $white-grey;

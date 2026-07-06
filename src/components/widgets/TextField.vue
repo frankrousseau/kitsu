@@ -1,7 +1,7 @@
 <template>
   <div class="field" :class="{ 'is-inline': isInline }">
     <label class="label" :for="fieldId" v-if="label">{{ label }}</label>
-    <label class="sr-only" :for="fieldId" v-else-if="placeholder">
+    <label class="visuallyhidden" :for="fieldId" v-else-if="placeholder">
       {{ placeholder }}
     </label>
     <label class="label empty-label" v-if="emptyLabel">&nbsp;</label>
@@ -165,18 +165,6 @@ const checkValidity = () => {
 defineExpose({ focus, checkValidity })
 </script>
 <style lang="scss" scoped>
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
 .input.is-size-2 {
   width: 3rem;
 }
