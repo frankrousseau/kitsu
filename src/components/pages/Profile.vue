@@ -244,7 +244,7 @@ const errors = reactive({ info: false, notifications: false })
 const localeOptions = [
   { label: 'Chinese (简体中文)', value: 'zh_Hans_CN' },
   { label: 'Chinese TC (繁體中文)', value: 'zh_Hant_TW' },
-  { label: 'Danish (Dansk)', value: 'da_DA' },
+  { label: 'Danish (Dansk)', value: 'da_DK' },
   { label: 'Dutch (Nederlands)', value: 'nl_NL' },
   { label: 'English', value: 'en_US' },
   { label: 'French (Français)', value: 'fr_FR' },
@@ -253,10 +253,11 @@ const localeOptions = [
   { label: 'Italian (Italiano)', value: 'it_IT' },
   { label: 'Japanese (日本語)', value: 'ja_JP' },
   { label: 'Korean (한국어)', value: 'ko_KR' },
-  { label: 'Portuguese Brazilian (Português)', value: 'pt_BR' },
   { label: 'Persian (فارسی)', value: 'fa_IR' },
-  { label: 'Spanish (Español)', value: 'es_ES' },
-  { label: 'Russian (Русский)', value: 'ru_RU' }
+  { label: 'Polish (Polski)', value: 'pl_PL' },
+  { label: 'Portuguese Brazilian (Português)', value: 'pt_BR' },
+  { label: 'Russian (Русский)', value: 'ru_RU' },
+  { label: 'Spanish (Español)', value: 'es_ES' }
 ]
 
 // Computed

@@ -52,6 +52,10 @@ The source strings live in `src/locales/en.js`. The other locale files in
 translation, open an issue or a pull request editing the relevant file in
 `src/locales/`.
 
+See [docs/translation.md](docs/translation.md) for the step-by-step guide to
+adding a new language, adding a translation key, and the rules translators
+must follow.
+
 
 ## Improve the documentation
 

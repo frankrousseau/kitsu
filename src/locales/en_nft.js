@@ -44,7 +44,7 @@ export default {
   entities: {
     nb_selected_shots: '{nbSelectedShots} NFT selected | {nbSelectedShots} NFTs selected',
     thumbnails: {
-      shots_pattern: '"SequenceName NFTName" eg. SQ01_LV01.'
+      shots_pattern: '"SequenceName NFTName" eg. SQ01_NFT01.'
     }
   },
 
@@ -91,13 +91,13 @@ export default {
       'shots': 'NFTs'
     },
     type: {
-      shots: 'Only NFTS'
+      shots: 'Only NFTs'
     }
   },
 
   task_status: {
     help: {
-      entities: 'Assets, NFTs, Sequences, ...'
+      entities: 'Assets, NFTs, sequences, ...'
     }
   },
 
