@@ -41,14 +41,14 @@
               isPinnable || isEditable || canToggleForClient || canMoveComment
             "
           >
-            <chevron-down-icon
-              class="menu-icon"
-              role="button"
-              tabindex="0"
+            <button
+              type="button"
+              class="menu-icon-button"
+              aria-label="Comment options"
               @click="toggleCommentMenu"
-              @keydown.enter.prevent="toggleCommentMenu"
-              @keydown.space.prevent="toggleCommentMenu"
-            />
+            >
+              <chevron-down-icon class="menu-icon" />
+            </button>
             <comment-menu
               :is-pinnable="isPinnable"
               :is-pinned="comment.pinned"
@@ -500,7 +500,14 @@
           {{ shortDate }}
         </span>
         <div class="flexrow-item menu-wrapper" v-if="isPinnable || isEditable">
-          <chevron-down-icon class="menu-icon" @click="toggleCommentMenu" />
+          <button
+            type="button"
+            class="menu-icon-button"
+            aria-label="Comment options"
+            @click="toggleCommentMenu"
+          >
+            <chevron-down-icon class="menu-icon" />
+          </button>
           <comment-menu
             :is-pinnable="isPinnable"
             :is-editable="isEditable"
@@ -1125,9 +1132,15 @@ article.comment {
   margin-top: 0.5em;
 }
 
+.menu-icon-button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
 .menu-icon {
   width: 20px;
-  cursor: pointer;
   color: $light-grey;
 }
 

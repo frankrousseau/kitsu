@@ -53,24 +53,15 @@
               :type="visible ? 'text' : 'password'"
               :model-value="person.access_token"
             />
-            <eye-off-icon
-              v-if="visible"
-              class="icon"
-              role="button"
-              tabindex="0"
-              @click="visible = false"
-              @keydown.enter.prevent="visible = false"
-              @keydown.space.prevent="visible = false"
-            />
-            <eye-icon
-              v-else
-              class="icon"
-              role="button"
-              tabindex="0"
-              @click="visible = true"
-              @keydown.enter.prevent="visible = true"
-              @keydown.space.prevent="visible = true"
-            />
+            <button
+              type="button"
+              class="visibility-toggle"
+              :aria-label="visible ? 'Hide token' : 'Show token'"
+              @click="visible = !visible"
+            >
+              <eye-off-icon v-if="visible" class="icon" />
+              <eye-icon v-else class="icon" />
+            </button>
           </div>
           <div class="flexrow right">
             <Transition name="fade">
@@ -174,7 +165,10 @@ watch(
     }
   }
 
-  .icon {
+  .visibility-toggle {
+    background: none;
+    border: none;
+    padding: 0;
     cursor: pointer;
     opacity: 0.5;
     position: absolute;
