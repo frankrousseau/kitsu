@@ -972,11 +972,14 @@ const setVideoFrameContext = frame => {
   }
 }
 
-// Continuous player time → smooth progress bar during playback. The +1 mirrors
-// getFrameFromPlayer's convention so the bar doesn't jump when pausing.
+// Player time → progress bar during playback. `time` carries the
+// mediaTime + frameDuration/2 convention offset, so a raw division parks the
+// fill at half-frame positions; quantize with the same ceil(...)+1 convention
+// as getFrameFromPlayer so the bar fills whole frames and doesn't jump when
+// pausing.
 const onVideoTimeUpdate = time => {
   if (!isPlaying.value) return
-  progress.value?.updateProgressBar(time / frameDuration.value + 1)
+  progress.value?.updateProgressBar(Math.ceil(time / frameDuration.value) + 1)
 }
 
 const onSubPreviewsWheel = event => {
