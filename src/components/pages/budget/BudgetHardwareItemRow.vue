@@ -14,14 +14,14 @@
         {{
           convertedExpenses[departmentEntry.id]?.['hardware-items']?.[
             month.format('YYYY-MM')
-          ]?.toLocaleString()
+          ]?.toLocaleString(localeCode)
         }}
       </td>
       <td class="total-cost remaining-previsional" v-if="isShowingExpenses">
-        {{ departmentHardwareItemExpense.toLocaleString() }}
+        {{ departmentHardwareItemExpense.toLocaleString(localeCode) }}
       </td>
       <td class="total-cost" v-if="isShowingExpenses">
-        {{ departmentHardwareItemDonePrevisional.toLocaleString() }}
+        {{ departmentHardwareItemDonePrevisional.toLocaleString(localeCode) }}
       </td>
       <td
         class="total-cost gap"
@@ -39,7 +39,7 @@
           (
             departmentHardwareItemDonePrevisional -
             departmentHardwareItemExpense
-          ).toLocaleString()
+          ).toLocaleString(localeCode)
         }}
       </td>
     </template>
@@ -55,14 +55,16 @@
       }}
     </td>
     <td class="total-cost remaining-previsional" v-if="isShowingExpenses">
-      {{ departmentHardwareItemRemainingPrevisional.toLocaleString() }}
+      {{
+        departmentHardwareItemRemainingPrevisional.toLocaleString(localeCode)
+      }}
     </td>
     <td class="total-cost expense-and-remaining" v-if="isShowingExpenses">
       {{
         (
           departmentHardwareItemExpense +
           departmentHardwareItemRemainingPrevisional
-        ).toLocaleString()
+        ).toLocaleString(localeCode)
       }}
     </td>
     <td class="total-cost">
@@ -76,13 +78,14 @@
       }"
       v-if="isShowingExpenses"
     >
-      {{ departmentHardwareItemTotalGap.toLocaleString() }}
+      {{ departmentHardwareItemTotalGap.toLocaleString(localeCode) }}
     </td>
     <td class="actions"></td>
   </tr>
 </template>
 
 <script setup>
+import { localeCode } from '@/lib/lang'
 import { computed } from 'vue'
 
 const props = defineProps({

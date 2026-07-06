@@ -9,13 +9,15 @@
     <td class="month"></td>
     <template v-if="isShowingExpenses">
       <td :key="month" class="month" v-for="month in monthsBetweenStartAndNow">
-        {{ convertedExpenses[month.format('YYYY-MM')]?.toLocaleString() }}
+        {{
+          convertedExpenses[month.format('YYYY-MM')]?.toLocaleString(localeCode)
+        }}
       </td>
       <td class="total-cost costs expenses" v-if="isShowingExpenses">
-        {{ convertedExpenses.total?.toLocaleString() }}
+        {{ convertedExpenses.total?.toLocaleString(localeCode) }}
       </td>
       <td class="total-cost" v-if="isShowingExpenses">
-        {{ donePrevisional.total?.toLocaleString() }}
+        {{ donePrevisional.total?.toLocaleString(localeCode) }}
       </td>
       <td
         class="total-cost gap"
@@ -25,7 +27,11 @@
         }"
         v-if="isShowingExpenses"
       >
-        {{ (donePrevisional.total - convertedExpenses.total).toLocaleString() }}
+        {{
+          (donePrevisional.total - convertedExpenses.total).toLocaleString(
+            localeCode
+          )
+        }}
       </td>
     </template>
 
@@ -40,11 +46,13 @@
     </td>
 
     <td class="total-cost remaining-previsional" v-if="isShowingExpenses">
-      {{ remainingPrevisional.total?.toLocaleString() }}
+      {{ remainingPrevisional.total?.toLocaleString(localeCode) }}
     </td>
     <td class="total-cost expense-and-remaining" v-if="isShowingExpenses">
       {{
-        (convertedExpenses.total + remainingPrevisional.total).toLocaleString()
+        (convertedExpenses.total + remainingPrevisional.total).toLocaleString(
+          localeCode
+        )
       }}
     </td>
     <td class="total-cost">
@@ -58,13 +66,14 @@
       }"
       v-if="isShowingExpenses"
     >
-      {{ totalGap.toLocaleString() }}
+      {{ totalGap.toLocaleString(localeCode) }}
     </td>
     <td class="actions"></td>
   </tr>
 </template>
 
 <script setup>
+import { localeCode } from '@/lib/lang'
 import { computed } from 'vue'
 
 const props = defineProps({
@@ -141,7 +150,7 @@ const getTotalMonthCost = month => {
       : props.totalEntry?.monthCosts?.[monthKey]
 
   const cost = Number(rawCost) || 0
-  return cost > 0 ? cost.toLocaleString() : ''
+  return cost > 0 ? cost.toLocaleString(localeCode.value) : ''
 }
 </script>
 
