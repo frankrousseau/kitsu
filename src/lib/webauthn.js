@@ -132,6 +132,7 @@ export const coerceCredentialInfoToJSON = publicKeyCredential => {
 }
 
 export const coerceTwoFactorPayload = twoFactorPayload => {
+  if (!twoFactorPayload) return undefined
   if ('fido_authentication_response' in twoFactorPayload) {
     twoFactorPayload.fido_authentication_response = coerceCredentialInfoToJSON(
       twoFactorPayload.fido_authentication_response

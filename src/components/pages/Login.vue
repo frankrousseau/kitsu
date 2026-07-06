@@ -35,7 +35,7 @@
                 autocomplete="username"
                 :placeholder="$t('login.fields.email')"
                 @input="updateEmail"
-                @keyup.enter="confirmLogIn"
+                @keyup.enter="confirmLogIn()"
                 v-model="email"
                 v-focus
               />
@@ -52,7 +52,7 @@
                 autocomplete="current-password"
                 :placeholder="$t('login.fields.password')"
                 @input="updatePassword"
-                @keyup.enter="confirmLogIn"
+                @keyup.enter="confirmLogIn()"
                 v-model="password"
               />
               <span class="icon">
@@ -77,7 +77,7 @@
             :class="{
               'is-loading': isLoginLoading
             }"
-            @click="confirmLogIn"
+            @click="confirmLogIn()"
           >
             {{ $t('login.login') }}
           </a>

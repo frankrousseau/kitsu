@@ -17,7 +17,8 @@ describe('Login store', () => {
       const commit = vi.fn()
       const state = { email: 'user@studio.com', password: 'secret' }
 
-      await loginStore.actions.logIn({ commit, state }, {})
+      // No payload = plain login without 2FA (the common case).
+      await loginStore.actions.logIn({ commit, state }, undefined)
 
       expect(auth.logIn).toHaveBeenCalledWith(
         expect.objectContaining({ email: 'user@studio.com' })
