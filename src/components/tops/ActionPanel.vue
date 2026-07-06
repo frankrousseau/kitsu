@@ -343,7 +343,7 @@
               @click="confirmTaskStatusChange"
             >
               {{
-                $tc('tasks.change_task_status', nbSelectedTasks, {
+                $t('tasks.change_task_status', nbSelectedTasks, {
                   nbSelectedTasks
                 })
               }}
@@ -356,7 +356,7 @@
           v-if="selectedBar === 'assignation'"
         >
           <div class="mb05" v-if="isCurrentUserArtist">
-            {{ $tc('tasks.to_myself') }}
+            {{ $t('tasks.to_myself') }}
           </div>
           <div
             class="mb05"
@@ -380,7 +380,7 @@
               class="button confirm-button is-wide"
               @click="confirmAssign"
             >
-              {{ $tc('tasks.assign', nbSelectedTasks, { nbSelectedTasks }) }}
+              {{ $t('tasks.assign', nbSelectedTasks, { nbSelectedTasks }) }}
             </button>
           </div>
           <div class="flexrow-item mb05 disclaimer">
@@ -464,7 +464,7 @@
               @click="confirmPriorityChange"
             >
               {{
-                $tc('tasks.change_priority', nbSelectedTasks, {
+                $t('tasks.change_priority', nbSelectedTasks, {
                   nbSelectedTasks
                 })
               }}
@@ -495,7 +495,7 @@
             v-if="nbSelectedTasks > 1"
           >
             {{
-              $tc('tasks.set_thumbnails_from_tasks', nbSelectedTasks, {
+              $t('tasks.set_thumbnails_from_tasks', nbSelectedTasks, {
                 nbSelectedTasks
               })
             }}
@@ -532,7 +532,7 @@
               @click="confirmTasksSubscription"
             >
               {{
-                $tc('tasks.subscribe_to_tasks', nbSelectedTasks, {
+                $t('tasks.subscribe_to_tasks', nbSelectedTasks, {
                   nbSelectedTasks
                 })
               }}
@@ -590,7 +590,7 @@
             "
             :hard-delete-text="$t('tasks.delete_for_selection_hard_text')"
             :text="
-              $tc('tasks.delete_for_selection', nbSelectedTasks, {
+              $t('tasks.delete_for_selection', nbSelectedTasks, {
                 nbSelectedTasks
               })
             "
@@ -657,7 +657,7 @@
                 />
                 <button class="button is-wide" type="submit">
                   {{
-                    $tc('custom_actions.run_for_selection', nbSelectedTasks, {
+                    $t('custom_actions.run_for_selection', nbSelectedTasks, {
                       nbSelectedTasks
                     })
                   }}
@@ -667,7 +667,7 @@
             <div class="flexrow-item is-wide" v-else>
               <button class="button is-wide" @click="runCustomAction">
                 {{
-                  $tc('custom_actions.run_for_selection', nbSelectedTasks, {
+                  $t('custom_actions.run_for_selection', nbSelectedTasks, {
                     nbSelectedTasks
                   })
                 }}
@@ -685,15 +685,15 @@
             :is-loading="loading.assetDeletion"
             :is-error="errors.assetDeletion"
             :text="
-              $tc('assets.delete_for_selection', nbSelectedAssets, {
+              $t('assets.delete_for_selection', nbSelectedAssets, {
                 nbSelectedAssets
               })
             "
             :require-hard-delete-confirmation="allAssetsCanceled"
             :hard-delete-lock-text="
-              $tc('assets.delete_for_selection_hard_lock_text')
+              $t('assets.delete_for_selection_hard_lock_text')
             "
-            :hard-delete-text="$tc('assets.delete_for_selection_hard_text')"
+            :hard-delete-text="$t('assets.delete_for_selection_hard_text')"
             @confirm="confirmAssetDeletion"
           />
         </div>
@@ -704,7 +704,7 @@
             :is-loading="loading.shotDeletion"
             :is-error="errors.deleteShot"
             :text="
-              $tc('shots.delete_for_selection', nbSelectedShots, {
+              $t('shots.delete_for_selection', nbSelectedShots, {
                 nbSelectedShots
               })
             "
@@ -723,7 +723,7 @@
             :is-loading="loading.editDeletion"
             :is-error="errors.deleteEdit"
             :text="
-              $tc('edits.delete_for_selection', nbSelectedEdits, {
+              $t('edits.delete_for_selection', nbSelectedEdits, {
                 nbSelectedEdits
               })
             "
@@ -745,7 +745,7 @@
             :is-loading="loading.episodeDeletion"
             :is-error="errors.deleteEpisode"
             :text="
-              $tc('episodes.delete_for_selection', nbSelectedEpisodes, {
+              $t('episodes.delete_for_selection', nbSelectedEpisodes, {
                 nbSelectedEpisodes
               })
             "
@@ -763,7 +763,7 @@
             :is-loading="loading.episodeDeletion"
             :is-error="errors.deleteEpisode"
             :text="
-              $tc('concepts.delete_for_selection', nbSelectedConcepts, {
+              $t('concepts.delete_for_selection', nbSelectedConcepts, {
                 nbSelectedConcepts
               })
             "

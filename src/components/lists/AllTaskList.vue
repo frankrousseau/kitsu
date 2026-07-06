@@ -151,22 +151,22 @@
     </div>
     <p class="has-text-centered nb-tasks" v-if="!isLoading">
       {{ stats.total }}
-      {{ $tc('tasks.number', stats.total) }}
+      {{ $t('tasks.number', stats.total) }}
       ({{ formatDuration(stats.total_duration) }}
       {{
         isDurationInHours
-          ? $tc('main.hours_spent', formatDuration(stats.total_duration, false))
-          : $tc('main.days_spent', formatDuration(stats.total_duration, false))
+          ? $t('main.hours_spent', formatDuration(stats.total_duration, false))
+          : $t('main.days_spent', formatDuration(stats.total_duration, false))
       }}
       /
       {{ formatDuration(stats.total_estimation) }}
       {{
         isDurationInHours
-          ? $tc(
+          ? $t(
               'main.hours_estimated',
               formatDuration(stats.total_estimation, false)
             )
-          : $tc(
+          : $t(
               'main.days_estimated',
               formatDuration(stats.total_estimatio, false)
             )

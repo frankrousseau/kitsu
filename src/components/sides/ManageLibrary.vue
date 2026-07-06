@@ -8,7 +8,7 @@
           :is-loading="loading"
           :is-error="error"
           :text="
-            $tc('library.remove_selected_assets', selectedEntities.length, {
+            $t('library.remove_selected_assets', selectedEntities.length, {
               nbSelectedAssets: selectedEntities.length
             })
           "
@@ -17,7 +17,7 @@
         <div class="has-text-centered pa1">
           <a @click="clearSelectedAssets()">{{ $t('main.clear_selection') }}</a>
         </div>
-        <!--h1 class="title mt05">{{ $tc('tasks.selected_entities') }}</h1>
+        <!--h1 class="title mt05">{{ $t('tasks.selected_entities') }}</h1>
         <div class="pa2 mt1">
           <div
             class="entity-line"

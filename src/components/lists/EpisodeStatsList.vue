@@ -209,7 +209,7 @@
 
     <p class="has-text-centered nb-episodes" v-if="!isEmptyList">
       {{ displayedEpisodesLength }}
-      {{ $tc('episodes.number', displayedEpisodesLength) }}
+      {{ $t('episodes.number', displayedEpisodesLength) }}
     </p>
   </div>
 </template>

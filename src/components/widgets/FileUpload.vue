@@ -24,7 +24,7 @@
           class="file-upload-status"
           v-if="uploadedFiles.length > 1 && !hideFileNames"
         >
-          {{ uploadedFiles.length }} {{ $tc('main.files_selected') }}
+          {{ uploadedFiles.length }} {{ $t('main.files_selected') }}
         </span>
         <span
           class="file-upload-status"

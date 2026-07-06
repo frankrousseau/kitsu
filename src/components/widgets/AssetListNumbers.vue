@@ -1,19 +1,19 @@
 <template>
   <div class="has-text-centered pa05">
     {{ activeAssets.length }}
-    {{ $tc('assets.number', activeAssets.length) }}
+    {{ $t('assets.number', activeAssets.length) }}
     <template v-if="timeSpent > 0 || estimation > 0">
       ({{ formatDuration(timeSpent) }}
       {{
         isDurationInHours
-          ? $tc('main.hours_spent', formatDuration(timeSpent, false))
-          : $tc('main.days_spent', formatDuration(timeSpent, false))
+          ? $t('main.hours_spent', formatDuration(timeSpent, false))
+          : $t('main.days_spent', formatDuration(timeSpent, false))
       }},
       {{ formatDuration(estimation) }}
       {{
         isDurationInHours
-          ? $tc('main.hours_estimated', formatDuration(estimation, false))
-          : $tc('main.man_days', formatDuration(estimation, false))
+          ? $t('main.hours_estimated', formatDuration(estimation, false))
+          : $t('main.man_days', formatDuration(estimation, false))
       }})
     </template>
   </div>

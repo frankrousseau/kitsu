@@ -354,8 +354,8 @@ export default {
           name: 'guests',
           label:
             guestCount === null
-              ? this.$tc('people.guests', 2)
-              : `${this.$tc('people.guests', 2)} (${guestCount})`
+              ? this.$t('people.guests', 2)
+              : `${this.$t('people.guests', 2)} (${guestCount})`
         },
         {
           name: 'archived-guests',
