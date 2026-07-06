@@ -320,9 +320,27 @@
               :data-index="flatIndex"
               v-if="isHeader"
             >
-              <th scope="rowgroup">
-                <div
-                  class="datatable-row-header pointer"
+              <th scope="rowgroup" class="datatable-row-header">
+                <span
+                  class="collapse-toggle"
+                  role="button"
+                  tabindex="0"
+                  :title="
+                    isSequenceCollapsed(group)
+                      ? $t('shots.expand_sequence')
+                      : $t('shots.collapse_sequence')
+                  "
+                  @click="toggleSequenceCollapse(group)"
+                  @keydown.enter.prevent="toggleSequenceCollapse(group)"
+                >
+                  <chevron-right-icon
+                    :size="16"
+                    v-if="isSequenceCollapsed(group)"
+                  />
+                  <chevron-down-icon :size="16" v-else />
+                </span>
+                <span
+                  class="pointer"
                   role="button"
                   tabindex="0"
                   @click="$emit('sequence-clicked', group[0].sequence_name)"
@@ -331,8 +349,148 @@
                   "
                 >
                   {{ group[0] ? group[0].sequence_name : '' }}
-                </div>
+                </span>
               </th>
+
+              <td
+                class="metadata-descriptor datatable-row-header"
+                :style="{
+                  left: offsets['editor-' + j]
+                    ? `${offsets['editor-' + j]}px`
+                    : '0'
+                }"
+                :key="'summary-' + descriptor.id"
+                v-for="(descriptor, j) in stickedVisibleMetadataDescriptors"
+              ></td>
+
+              <td
+                :class="{
+                  'validation-cell': !hiddenColumns[columnId],
+                  'hidden-validation-cell': hiddenColumns[columnId],
+                  'datatable-row-header': true
+                }"
+                :style="{
+                  left: offsets['validation-' + j]
+                    ? `${offsets['validation-' + j]}px`
+                    : '0'
+                }"
+                :key="'summary-' + columnId"
+                v-for="(columnId, j) in stickedDisplayedValidationColumns"
+              >
+                <div class="summary-content" v-if="!hiddenColumns[columnId]">
+                  <span
+                    class="status-count"
+                    :key="statusCount.taskStatus.id"
+                    :style="{
+                      background: statusBgColor(statusCount.taskStatus),
+                      color: statusTextColor(statusCount.taskStatus)
+                    }"
+                    :title="`${statusCount.taskStatus.name}: ${statusCount.count}`"
+                    v-for="statusCount in sequenceSummaries[k].statusCounts[
+                      columnId
+                    ] || []"
+                  >
+                    {{ statusCount.count }}
+                  </span>
+                </div>
+              </td>
+
+              <td
+                class="description"
+                v-if="
+                  !isCurrentUserClient &&
+                  displaySettings.showInfos &&
+                  isShotDescription
+                "
+              ></td>
+
+              <td
+                class="time-spent number-cell"
+                v-if="
+                  !isCurrentUserClient &&
+                  displaySettings.showInfos &&
+                  isShotTime &&
+                  metadataDisplayHeaders.timeSpent
+                "
+              >
+                {{
+                  sequenceSummaries[k].timeSpent
+                    ? formatDuration(sequenceSummaries[k].timeSpent)
+                    : ''
+                }}
+              </td>
+
+              <td
+                class="estimation number-cell"
+                v-if="
+                  !isCurrentUserClient &&
+                  displaySettings.showInfos &&
+                  isShotEstimation &&
+                  metadataDisplayHeaders.estimation
+                "
+              >
+                {{
+                  sequenceSummaries[k].estimation
+                    ? formatDuration(sequenceSummaries[k].estimation)
+                    : ''
+                }}
+              </td>
+
+              <td
+                class="drawings number-cell"
+                v-if="
+                  displaySettings.showInfos &&
+                  isPaperProduction &&
+                  metadataDisplayHeaders.drawings
+                "
+              >
+                {{ sequenceSummaries[k].drawings || '' }}
+              </td>
+
+              <td
+                class="frames number-cell"
+                v-if="
+                  isFrames &&
+                  !isPaperProduction &&
+                  displaySettings.showInfos &&
+                  metadataDisplayHeaders.frames
+                "
+              >
+                {{ sequenceSummaries[k].frames || '' }}
+              </td>
+
+              <td
+                :colspan="summarySpacerColspan"
+                v-if="summarySpacerColspan > 0"
+              ></td>
+
+              <td
+                :class="{
+                  'validation-cell': !hiddenColumns[columnId],
+                  'hidden-validation-cell': hiddenColumns[columnId]
+                }"
+                :key="'summary-' + columnId"
+                v-for="columnId in nonStickedDisplayedValidationColumns"
+              >
+                <div class="summary-content" v-if="!hiddenColumns[columnId]">
+                  <span
+                    class="status-count"
+                    :key="statusCount.taskStatus.id"
+                    :style="{
+                      background: statusBgColor(statusCount.taskStatus),
+                      color: statusTextColor(statusCount.taskStatus)
+                    }"
+                    :title="`${statusCount.taskStatus.name}: ${statusCount.count}`"
+                    v-for="statusCount in sequenceSummaries[k].statusCounts[
+                      columnId
+                    ] || []"
+                  >
+                    {{ statusCount.count }}
+                  </span>
+                </div>
+              </td>
+
+              <td class="actions"></td>
             </tr>
             <tr
               class="datatable-row"
@@ -870,10 +1028,13 @@
 
 <script>
 import { useVirtualizer } from '@tanstack/vue-virtual'
+import { ChevronDownIcon, ChevronRightIcon } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { mapGetters, mapActions } from 'vuex'
 
+import { useTaskStatusStyle } from '@/composables/taskStatus'
 import preferences from '@/lib/preferences'
+import { computeGroupSummary } from '@/lib/stats'
 import { range } from '@/lib/time'
 import { formatToTimecode } from '@/lib/video'
 
@@ -925,6 +1086,8 @@ export default {
 
   components: {
     ButtonSimple,
+    ChevronDownIcon,
+    ChevronRightIcon,
     DescriptionCell,
     EntityThumbnail,
     MetadataHeader,
@@ -988,6 +1151,14 @@ export default {
   setup(props) {
     const body = ref(null)
 
+    const { backgroundColor: statusBgColor, color: statusTextColor } =
+      useTaskStatusStyle()
+
+    // Collapse state lives here rather than in data(): the virtualizer
+    // windows over flattenedItems, so collapsing a sequence removes its
+    // shot items from the flat list instead of filtering in the template.
+    const collapsedSequences = ref({})
+
     // The per-sequence tbodys, linearized into one flat list of
     // sequence-header items and shot items (display order preserved) so a
     // single virtualizer can window over the whole grid. `i` and `k` keep
@@ -1003,9 +1174,11 @@ export default {
             k,
             key: `header-${group[0].sequence_id}`
           })
-          group.forEach((shot, i) => {
-            items.push({ isHeader: false, shot, i, k, key: shot.id })
-          })
+          if (!collapsedSequences.value[group[0].sequence_id]) {
+            group.forEach((shot, i) => {
+              items.push({ isHeader: false, shot, i, k, key: shot.id })
+            })
+          }
         }
       })
       return items
@@ -1034,7 +1207,14 @@ export default {
       }))
     )
 
-    return { body, flattenedItems, rowVirtualizer }
+    return {
+      body,
+      collapsedSequences,
+      flattenedItems,
+      rowVirtualizer,
+      statusBgColor,
+      statusTextColor
+    }
   },
 
   data() {
@@ -1115,6 +1295,7 @@ export default {
       'shotSearchText',
       'shotSelectionGrid',
       'taskMap',
+      'taskStatusMap',
       'taskTypeMap',
       'user'
     ]),
@@ -1153,6 +1334,29 @@ export default {
 
     metadataDescriptors() {
       return this.shotMetadataDescriptors
+    },
+
+    sequenceSummaries() {
+      return this.displayedShots.map(group =>
+        computeGroupSummary(group, this.taskMap, this.taskStatusMap)
+      )
+    },
+
+    summarySpacerColspan() {
+      if (!this.displaySettings.showInfos) {
+        return 0
+      }
+      const columns = [
+        this.isFrameIn && this.metadataDisplayHeaders.frameIn,
+        this.isFrameOut && this.metadataDisplayHeaders.frameOut,
+        this.isFps && this.metadataDisplayHeaders.fps,
+        this.isMaxRetakes && this.metadataDisplayHeaders.maxRetakes,
+        this.isResolution && this.metadataDisplayHeaders.resolution
+      ]
+      return (
+        columns.filter(Boolean).length +
+        this.nonStickedVisibleMetadataDescriptors.length
+      )
     },
 
     localStorageStickKey() {
@@ -1301,6 +1505,17 @@ export default {
     // Hook for entity_list.js's data-driven shift-rectangle selection.
     entityForRow(lineIndex) {
       return this.rowIndexToShot.get(lineIndex)
+    },
+
+    isSequenceCollapsed(group) {
+      return Boolean(group[0] && this.collapsedSequences[group[0].sequence_id])
+    },
+
+    toggleSequenceCollapse(group) {
+      if (group[0]) {
+        this.collapsedSequences[group[0].sequence_id] =
+          !this.collapsedSequences[group[0].sequence_id]
+      }
     },
 
     isCastingReady(shot, columnId) {
@@ -1683,5 +1898,43 @@ td.metadata-descriptor {
 
 .metadata-value {
   padding: 0.5rem 0.75rem;
+}
+
+// Sequence summary row
+
+.datatable-type-header {
+  th,
+  td {
+    background: var(--background);
+  }
+
+  td {
+    padding: 1.5rem 0.5rem 0.3rem;
+    vertical-align: bottom;
+  }
+}
+
+.collapse-toggle {
+  cursor: pointer;
+  user-select: none;
+
+  svg {
+    vertical-align: middle;
+  }
+}
+
+.summary-content {
+  padding: 0 0.25rem;
+}
+
+.status-count {
+  border-radius: 4px;
+  display: inline-block;
+  font-size: 0.8em;
+  font-weight: bold;
+  margin: 0 0.3em 0.2em 0;
+  min-width: 1.8em;
+  padding: 0.1em 0.4em;
+  text-align: center;
 }
 </style>
