@@ -207,12 +207,27 @@
         </thead>
         <tbody class="datatable-body">
           <template v-if="!isLoading && isListVisible">
+            <!--
+              PERF-1 pilot: virtualized rows (@tanstack/vue-virtual). Only
+              the rows near the viewport are actually rendered below; these
+              two spacer rows reproduce the true scroll height of the
+              rows above/below them so the scrollbar and column widths
+              behave like a fully-rendered table.
+            -->
+            <tr class="virtual-spacer-row" v-if="topSpacerHeight > 0">
+              <td
+                :colspan="totalColumnsCount"
+                :style="{ height: `${topSpacerHeight}px` }"
+              ></td>
+            </tr>
             <tr
               class="datatable-row"
               scope="row"
               :key="edit.id"
+              :ref="el => rowVirtualizer.measureElement(el)"
+              :data-index="i"
               :class="{ canceled: edit.canceled }"
-              v-for="(edit, i) in displayedEdits"
+              v-for="{ edit, i } in visibleRows"
             >
               <td class="episode" v-if="isTVShow">
                 <div class="flexrow">
@@ -448,6 +463,12 @@
               />
               <td class="actions" v-else></td>
             </tr>
+            <tr class="virtual-spacer-row" v-if="bottomSpacerHeight > 0">
+              <td
+                :colspan="totalColumnsCount"
+                :style="{ height: `${bottomSpacerHeight}px` }"
+              ></td>
+            </tr>
           </template>
         </tbody>
       </table>
@@ -513,6 +534,8 @@
 </template>
 
 <script>
+import { useVirtualizer } from '@tanstack/vue-virtual'
+import { computed, ref } from 'vue'
 import { mapGetters, mapActions } from 'vuex'
 
 import preferences from '@/lib/preferences'
@@ -536,6 +559,12 @@ import TableHeaderMenu from '@/components/widgets/TableHeaderMenu.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
 import ValidationCell from '@/components/cells/ValidationCell.vue'
 import ValidationHeader from '@/components/cells/ValidationHeader.vue'
+
+// PERF-1 pilot: rough row-height estimates used before a row is measured;
+// actual heights are then tracked precisely via rowVirtualizer.measureElement
+// (rows aren't fixed-height: big thumbnails and wrapped descriptions vary it).
+const ROW_HEIGHT_ESTIMATE = 52
+const ROW_HEIGHT_ESTIMATE_BIG_THUMBNAILS = 116
 
 export default {
   name: 'edit-list',
@@ -581,10 +610,34 @@ export default {
     'delete-clicked',
     'edit-clicked',
     'edit-history',
+    'keep-task-panel-open',
     'metadata-changed',
     'restore-clicked',
     'scroll'
   ],
+
+  // PERF-1 pilot: useVirtualizer is a composable, so it needs a setup()
+  // hook even though this component is otherwise Options API. `body` is
+  // returned so it doubles as `this.$refs.body` for the existing mixin
+  // methods (setScrollPosition, onBodyScroll's scrollHeight check, ...)
+  // and as the virtualizer's scroll element.
+  setup(props) {
+    const body = ref(null)
+    const rowVirtualizer = useVirtualizer(
+      computed(() => ({
+        count: props.displayedEdits.length,
+        getScrollElement: () => body.value,
+        estimateSize: () =>
+          props.displaySettings.bigThumbnails
+            ? ROW_HEIGHT_ESTIMATE_BIG_THUMBNAILS
+            : ROW_HEIGHT_ESTIMATE,
+        getItemKey: index => props.displayedEdits[index]?.id ?? index,
+        overscan: 10
+      }))
+    )
+
+    return { body, rowVirtualizer }
+  },
 
   data() {
     return {
@@ -691,6 +744,93 @@ export default {
 
     localStorageStickKey() {
       return `stick-edits-${this.currentProduction?.id}`
+    },
+
+    // PERF-1 pilot: row virtualization. Only the rows tanstack decides are
+    // near the viewport are ever mounted; everything below reasons in terms
+    // of `displayedEdits` indexes (never DOM order), so filtering/sorting/
+    // real-time updates keep working exactly as before virtualization.
+    virtualRows() {
+      return this.rowVirtualizer.getVirtualItems()
+    },
+
+    totalRowsSize() {
+      return this.rowVirtualizer.getTotalSize()
+    },
+
+    topSpacerHeight() {
+      return this.virtualRows.length > 0 ? this.virtualRows[0].start : 0
+    },
+
+    bottomSpacerHeight() {
+      if (this.virtualRows.length === 0) return 0
+      const lastRow = this.virtualRows[this.virtualRows.length - 1]
+      return this.totalRowsSize - lastRow.end
+    },
+
+    // { edit, i } pairs for the rows tanstack currently renders, `i` being
+    // the row's real index in `displayedEdits` (not its position among the
+    // rendered subset) so every existing i-based computation (isSelected,
+    // z-index, editor/validation refs, ...) stays correct unchanged.
+    visibleRows() {
+      return this.virtualRows
+        .filter(
+          virtualRow => this.displayedEdits[virtualRow.index] !== undefined
+        )
+        .map(virtualRow => ({
+          edit: this.displayedEdits[virtualRow.index],
+          i: virtualRow.index
+        }))
+    },
+
+    // Sticked + non-sticked validation columns in the same order as the x/y
+    // grid coordinates used by isSelected()/onTaskSelected() below.
+    allDisplayedValidationColumns() {
+      return [
+        ...this.stickedDisplayedValidationColumns,
+        ...this.nonStickedDisplayedValidationColumns
+      ]
+    },
+
+    // Spans the spacer rows across every column currently in the header,
+    // so they don't leave a jagged one-column-wide row in the table.
+    totalColumnsCount() {
+      let count = 1 // edit name column, always present
+      if (this.isTVShow) count++
+      if (this.displaySettings.showInfos) {
+        count++ // resolution
+        count += this.stickedVisibleMetadataDescriptors.length
+        count += this.nonStickedVisibleMetadataDescriptors.length
+      }
+      if (!this.isLoading) {
+        count += this.stickedDisplayedValidationColumns.length
+        count += this.nonStickedDisplayedValidationColumns.length
+      }
+      if (
+        !this.isCurrentUserClient &&
+        this.displaySettings.showInfos &&
+        this.isEditDescription
+      ) {
+        count++
+      }
+      if (
+        !this.isCurrentUserClient &&
+        this.displaySettings.showInfos &&
+        this.isEditTime &&
+        this.metadataDisplayHeaders.timeSpent
+      ) {
+        count++
+      }
+      if (
+        !this.isCurrentUserClient &&
+        this.displaySettings.showInfos &&
+        this.isEditEstimation &&
+        this.metadataDisplayHeaders.estimation
+      ) {
+        count++
+      }
+      count++ // actions column, always present
+      return count
     }
   },
 
@@ -699,6 +839,96 @@ export default {
 
     isSelected(lineIndex, columnIndex) {
       return this.editSelectionGrid.has(`${lineIndex}-${columnIndex}`)
+    },
+
+    // PERF-1 pilot: overrides entity_list.js's onTaskSelected(). The shared
+    // version rebuilds a shift-click range selection by reading
+    // `this.$refs['validation-i-j']` for every cell in the rectangle, which
+    // only works when every row is in the DOM. With rows virtualized, cells
+    // outside the rendered window have no ref and get silently dropped from
+    // the range. This override resolves the same range from
+    // displayedEdits/taskTypeMap/taskMap instead, so shift-click still
+    // selects the full range regardless of what is currently scrolled into
+    // view. Everything outside the double loop is unchanged from the mixin.
+    onTaskSelected(validationInfo, sticked) {
+      const columnOffset = this.stickedDisplayedValidationColumns.length
+      const selection = []
+      if (!sticked) {
+        validationInfo = { ...validationInfo }
+        validationInfo.y += columnOffset
+      }
+      this.$emit('keep-task-panel-open', true)
+      if (validationInfo.isShiftKey) {
+        if (this.lastSelection) {
+          let startX = this.lastSelection.x
+          let endX = validationInfo.x
+          let startY = this.lastSelection.y
+          if (!sticked) startY += columnOffset
+          let endY = validationInfo.y
+          const grid = this.editSelectionGrid
+          if (validationInfo.x < this.lastSelection.x) {
+            startX = validationInfo.x
+            endX = this.lastSelection.x
+          }
+          if (validationInfo.y < this.lastSelection.y) {
+            startY = validationInfo.y
+            endY = this.lastSelection.y
+            if (!sticked) endY += columnOffset
+          }
+
+          for (let i = startX; i <= endX; i++) {
+            const edit = this.displayedEdits[i]
+            if (edit) {
+              for (let j = startY; j <= endY; j++) {
+                const columnId = this.allDisplayedValidationColumns[j]
+                const isSelectedCell = grid?.has(`${i}-${j}`)
+                // ValidationCell's `selectable` prop defaults to true and is
+                // never bound in this list's template, so every column in
+                // range is selectable here (unlike the generic mixin
+                // version, which supports lists that do restrict it).
+                if (columnId && !isSelectedCell) {
+                  selection.push({
+                    entity: edit,
+                    column: this.taskTypeMap.get(columnId),
+                    task: this.taskMap.get(
+                      edit.validations ? edit.validations.get(columnId) : null
+                    ),
+                    x: i,
+                    y: j
+                  })
+                }
+              }
+            }
+          }
+          this.$store.commit('ADD_SELECTED_TASK', validationInfo)
+        }
+      } else if (!validationInfo.isCtrlKey) {
+        this.$store.commit('CLEAR_SELECTED_TASKS')
+      }
+      if (selection.length === 0) {
+        this.$store.commit('ADD_SELECTED_TASK', validationInfo)
+      } else {
+        this.$store.commit('ADD_SELECTED_TASKS', selection)
+      }
+      this.updateTaskInQuery()
+
+      if (!validationInfo.isShiftKey && validationInfo.isUserClick) {
+        const x = validationInfo.x
+        let y = validationInfo.y
+        if (!sticked) y -= columnOffset
+        this.lastSelection = { x, y }
+        // The clicked cell was necessarily visible to be clicked, so it is
+        // always currently rendered: this ref lookup stays safe unchanged.
+        const ref = `validation-${x}-${y}`
+        const validationCell = this.$refs[ref][0]
+        this.$nextTick(() => {
+          this.scrollToValidationCell(validationCell)
+        })
+      }
+
+      this.$nextTick(() => {
+        this.$emit('keep-task-panel-open', false)
+      })
     },
 
     toggleLine(edit, event) {
@@ -853,6 +1083,13 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// PERF-1 pilot: spacer rows standing in for the off-screen virtualized
+// rows above/below the rendered window (see the datatable-body template).
+.virtual-spacer-row td {
+  padding: 0;
+  border: none;
+}
+
 .project {
   min-width: 60px;
   width: 60px;
