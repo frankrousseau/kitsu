@@ -244,7 +244,7 @@ const errors = reactive({ info: false, notifications: false })
 const localeOptions = [
   { label: 'Chinese (简体中文)', value: 'zh_Hans_CN' },
   { label: 'Chinese TC (繁體中文)', value: 'zh_Hant_TW' },
-  { label: 'Danish (Dansk)', value: 'da_DA' },
+  { label: 'Danish (Dansk)', value: 'da_DK' },
   { label: 'Dutch (Nederlands)', value: 'nl_NL' },
   { label: 'English', value: 'en_US' },
   { label: 'French (Français)', value: 'fr_FR' },
