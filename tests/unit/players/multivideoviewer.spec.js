@@ -146,6 +146,45 @@ describe('players/MultiVideoViewer (canvas pipeline)', () => {
     wrapper.unmount()
   })
 
+  it('loads the video sub-element of a picture-main revision (#2095)', async () => {
+    const store = createStore({
+      getters: { currentProduction: () => ({ fps: '25' }) }
+    })
+    const wrapper = mount(MultiVideoViewer, {
+      props: {
+        currentPreviewIndex: 0,
+        entities: [
+          {
+            id: 'e1',
+            preview_file_id: 'p1',
+            preview_file_extension: 'png',
+            preview_file_previews: [{ id: 'p1b', extension: 'mp4' }],
+            fps: 25
+          }
+        ],
+        name: 'main'
+      },
+      global: {
+        mocks: { $t: key => key },
+        plugins: [store]
+      }
+    })
+
+    // Main preview is a picture: no movie source (jsdom resolves an empty
+    // src to the document base URL, hence the negative assertion)
+    wrapper.vm.loadEntity(0)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.currentPlayer.src).not.toContain('.mp4')
+
+    // Switching to the video sub-element must load its movie path
+    await wrapper.setProps({ currentPreviewIndex: 1 })
+    expect(wrapper.vm.currentPlayer.src).toContain(
+      '/movies/low/preview-files/p1b.mp4'
+    )
+
+    wrapper.unmount()
+  })
+
   it('does not emit frame-update from ticks while paused', async () => {
     const wrapper = mountViewer()
     wrapper.vm.loadEntity(0)
