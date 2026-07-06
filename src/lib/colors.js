@@ -1,5 +1,5 @@
 import ColorHash from 'color-hash'
-import Color from '@/lib/color2'
+import Color from 'color'
 // import localStorage from 'localStorage'
 
 const darkenColorIndex = {}
