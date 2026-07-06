@@ -599,8 +599,8 @@ export default {
 
   keyboard: {
     altdown: 'Move task selection down',
-    altj: 'Go to the previous shot',
-    altk: 'Go to the next shot',
+    altj: 'Select the previous preview',
+    altk: 'Select the next preview',
     altleft: 'Move task selection left',
     altright: 'Move task selection right',
     altup: 'Move task selection up',
