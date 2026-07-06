@@ -381,6 +381,7 @@ import {
 } from '@/lib/path'
 import preferences from '@/lib/preferences'
 import { formatRevision } from '@/lib/preview'
+import { getTaskTypeWithUrl } from '@/lib/productions'
 import { getTaskTypeStyle } from '@/lib/render'
 import { sortPeople, sortTaskNames } from '@/lib/sorting'
 import stringHelpers from '@/lib/string'
@@ -665,12 +666,13 @@ export default {
         .filter(taskType => entity_tasks[taskType.id])
 
         // add a url that points to the task
-        .map(taskType => {
-          const task = entity_tasks[taskType.id]
-          if (task)
-            taskType.url = `/productions/${task.project_id}/episodes/${task.episode_id || 'all'}/${task_type_entity_slug}/tasks/${task.id}`
-          return taskType
-        })
+        .map(taskType =>
+          getTaskTypeWithUrl(
+            taskType,
+            entity_tasks[taskType.id],
+            task_type_entity_slug
+          )
+        )
       return filtered
     },
 
