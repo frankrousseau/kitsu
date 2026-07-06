@@ -1,3 +1,4 @@
+import drafts from '@/lib/drafts'
 import router from '@/router'
 import store from '@/store'
 
@@ -10,6 +11,9 @@ import { DATA_LOADING_START, DATA_LOADING_END } from '@/store/mutation-types'
  */
 const init = () => {
   store.commit(DATA_LOADING_START)
+  // Scope comment drafts to the logged-in user: on a shared workstation
+  // the next user must not see them.
+  drafts.setUserScope(store.state.user.user?.id)
   return store
     .dispatch('loadContext')
     .then(() => {

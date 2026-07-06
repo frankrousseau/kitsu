@@ -3840,7 +3840,11 @@ const loadWaveForm = () => {
       }
     }
   } else {
-    if (wavesurfer) wavesurfer.destroy()
+    if (wavesurfer) {
+      wavesurfer.destroy()
+      // Null it so the playback seek sync cannot touch a destroyed instance.
+      wavesurfer = null
+    }
   }
 }
 
@@ -4649,7 +4653,10 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', onFocusToggle, true)
   leaveRoom()
   $socket.off('preview-file:annotation-update', onPreviewFileAnnotationUpdate)
-  if (wavesurfer) wavesurfer.destroy()
+  if (wavesurfer) {
+    wavesurfer.destroy()
+    wavesurfer = null
+  }
 })
 
 // Public API for the parent's `$refs['playlist-player']` and for the

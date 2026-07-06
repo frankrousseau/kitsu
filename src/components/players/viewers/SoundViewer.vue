@@ -47,7 +47,7 @@ const isLoading = ref(false)
 let wavesurfer = null
 
 const play = () => {
-  wavesurfer.play()
+  wavesurfer.play()?.catch(() => {})
 }
 
 const pause = () => {

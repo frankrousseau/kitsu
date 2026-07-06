@@ -1492,7 +1492,7 @@ export default {
           comment.replies.forEach(reply =>
             commentLines.push([
               this.formatDate(reply.date),
-              'Reply', // FIXME: i18n
+              this.$t('main.reply'),
               this.personMap.get(reply.person_id).name,
               reply.text,
               null,

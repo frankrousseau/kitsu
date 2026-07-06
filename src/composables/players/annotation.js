@@ -1454,6 +1454,11 @@ export const useAnnotation = ({
   }
 
   const endAnnotationSaving = () => {
+    // A save is already in flight: keep accumulating in the active
+    // arrays instead of overwriting the in-flight buffer (which lost
+    // strokes on failure and duplicated them on success). The next batch
+    // is flushed by confirmAnnotationsSaved / restoreFailedAnnotations.
+    if (pendingSave) return
     if (notSaved.value) {
       const preview = annotatedPreview
       pendingSave = markRaw({

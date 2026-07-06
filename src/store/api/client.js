@@ -15,9 +15,15 @@ function handleError(err) {
   throw err
 }
 
+// Bound regular API calls so a hung request cannot leave a spinner
+// alive forever: 60s for the server to start answering, 5 min total.
+// File uploads (ppostFile) stay unbounded — multi-GB movies are legit.
+const REQUEST_TIMEOUT = { response: 60000, deadline: 300000 }
+
 const client = {
   request(method, path, data) {
     return superagent(method, path)
+      .timeout(REQUEST_TIMEOUT)
       .send(data)
       .then(handleResponse)
       .catch(handleError)
@@ -50,6 +56,7 @@ const client = {
 
   getText(path) {
     return superagent('GET', path)
+      .timeout(REQUEST_TIMEOUT)
       .then(res => res.text)
       .catch(handleError)
   },

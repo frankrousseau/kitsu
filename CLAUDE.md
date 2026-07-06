@@ -186,7 +186,7 @@ Composables live in `src/composables/`. Existing ones:
 
 ### `useModal(active, emit)`
 
-Replaces the legacy `modalMixin` from `src/components/modals/base_modal.js`. Handles Escape key to close modal, manages event listener lifecycle.
+Handles Escape key to close modal, manages event listener lifecycle. (It replaced the legacy `modalMixin`, now removed.)
 
 ```js
 import { toRef } from 'vue'
@@ -330,14 +330,14 @@ method and action instead.
 
 The codebase is migrating from Options API to Composition API. Many components (especially pages and modals) still use Options API with mixins. When touching these files, convert them to `<script setup>`.
 
-The `modalMixin` in `src/components/modals/base_modal.js` is being replaced by the `useModal` composable. When converting a modal:
+The `modalMixin` migration is done (the mixin has been removed). When converting a modal:
 1. Use `BaseModal` component if possible (handles markup + Escape key)
 2. Otherwise use `useModal(toRef(props, 'active'), emit)` directly
-3. Remove the `mixins: [modalMixin]` and secondary `<script>` block
 
 ## Key dependencies
 
-- **fabric.js** v5.1.0 (cgwire fork) — annotation canvas, wrapped by `src/composables/players/annotation.js` and `src/components/players/annotations/AnnotationCanvas.vue`
+- **fabric.js** v7 (official npm package) — annotation canvas, wrapped by `src/composables/players/annotation.js` and `src/components/players/annotations/AnnotationCanvas.vue`
+- **fabricjs-psbrush** (cgwire fork) — pressure-sensitive brush on top of fabric
 - **socket.io-client** — real-time events via `vue-websocket-next`
 - **moment / moment-timezone** — date handling (used throughout schedule and timesheet components)
 - **vue-multiselect** — people/entity selection dropdowns

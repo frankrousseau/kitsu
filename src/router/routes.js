@@ -203,7 +203,7 @@ export const routes = [
           } else {
             store.commit('DATA_LOADING_END')
             if (isProhibited) {
-              next({ name: 'server-down' })
+              next({ name: 'not-found' })
             } else {
               next()
             }

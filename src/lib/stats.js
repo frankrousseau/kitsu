@@ -59,9 +59,13 @@ export const getRetakeChartData = (
   delete statusData.max_retake_count
   const valueField = dataType
   return [
-    ['retake', statusData.retake[valueField] || 0, RETAKE_CHART_COLORS.retake],
-    ['other', statusData.other[valueField] || 0, RETAKE_CHART_COLORS.other],
-    ['done', statusData.done[valueField] || 0, RETAKE_CHART_COLORS.done]
+    [
+      'retake',
+      statusData.retake?.[valueField] || 0,
+      RETAKE_CHART_COLORS.retake
+    ],
+    ['other', statusData.other?.[valueField] || 0, RETAKE_CHART_COLORS.other],
+    ['done', statusData.done?.[valueField] || 0, RETAKE_CHART_COLORS.done]
   ]
 }
 

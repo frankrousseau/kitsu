@@ -171,6 +171,9 @@ export default {
       if (auth.getBroadcastChannel()) {
         auth.getBroadcastChannel().onmessage = event => {
           if (this.$route.name !== 'login' && event.data === 'logout') {
+            // Another tab logged out: purge this tab's session too,
+            // otherwise store and socket keep the previous user's data.
+            this.$store.dispatch('logoutLocal')
             this.$router.push({
               name: 'login',
               query: { redirect: this.$route.fullPath }
