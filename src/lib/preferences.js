@@ -1,6 +1,16 @@
+// Quota exceeded or storage disabled must not crash the calling feature:
+// losing a preference is fine.
+const safeSetItem = (key, item) => {
+  try {
+    localStorage.setItem(key, item)
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 export default {
   setPreference(key, item) {
-    localStorage.setItem(key, item)
+    safeSetItem(key, item)
   },
 
   getPreference(key) {
@@ -8,7 +18,7 @@ export default {
   },
 
   setBoolPreference(key, value) {
-    localStorage.setItem(key, value ? 'true' : 'false')
+    safeSetItem(key, value ? 'true' : 'false')
   },
 
   getBoolPreference(key, defaultValue = false) {
@@ -23,7 +33,7 @@ export default {
   },
 
   setObjectPreference(key, data) {
-    localStorage.setItem(key, JSON.stringify(data))
+    safeSetItem(key, JSON.stringify(data))
   },
 
   getObjectPreference(key) {

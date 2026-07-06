@@ -372,8 +372,14 @@ const sortByMetadata = sortInfo => {
       if (dataA === dataB) return 0
       if (!dataB) return -1
       if (!dataA) return 1
-      const checklistA = JSON.parse(dataA)
-      const checklistB = JSON.parse(dataB)
+      let checklistA, checklistB
+      try {
+        checklistA = JSON.parse(dataA)
+        checklistB = JSON.parse(dataB)
+      } catch {
+        // Malformed checklist metadata must not break the whole sort.
+        return 0
+      }
       let resultA = 0
       let resultB = 0
       const length = Object.keys(checklistA).length
@@ -408,8 +414,8 @@ const sortByTaskType = (taskMap, sortInfo) => (a, b) => {
   const taskB = b.validations.get(sortInfo.column)
   if (!taskA) return -1
   if (!taskB) return 1
-  const taskStatusA = taskMap.get(taskA).task_status_short_name
-  const taskStatusB = taskMap.get(taskB).task_status_short_name
+  const taskStatusA = taskMap.get(taskA)?.task_status_short_name || ''
+  const taskStatusB = taskMap.get(taskB)?.task_status_short_name || ''
   return taskStatusA.localeCompare(taskStatusB, undefined, { numeric: true })
 }
 

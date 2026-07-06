@@ -76,6 +76,9 @@ export const renderComment = (
         `<a class="mention" href="/people/${person.id}">@${fullName}</a>`
       )
     }
+  }
+
+  if (departmentMentions) {
     for (const departmentId of departmentMentions) {
       const department = departmentMap.get(departmentId)
       if (!department) continue
