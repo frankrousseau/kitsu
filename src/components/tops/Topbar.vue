@@ -4,7 +4,11 @@
       <div class="nav-left">
         <a
           class="studio-logo-wrapper nav-item"
+          role="button"
+          tabindex="0"
           @click="toggleSidebar()"
+          @keydown.enter.prevent="toggleSidebar()"
+          @keydown.space.prevent="toggleSidebar()"
           v-if="!isCurrentUserClient"
         >
           <img
@@ -126,7 +130,14 @@
             <help-circle-icon />
           </a>
         </div>
-        <div class="nav-item pointer" @click="toggleUserMenu">
+        <div
+          class="nav-item pointer"
+          role="button"
+          tabindex="0"
+          @click="toggleUserMenu"
+          @keydown.enter.prevent="toggleUserMenu"
+          @keydown.space.prevent="toggleUserMenu"
+        >
           <people-avatar
             class="avatar"
             :is-lazy="false"
@@ -151,11 +162,21 @@
             {{ $t('main.profile') }}
           </router-link>
         </li>
-        <li @click="toggleDarkTheme">
+        <li
+          role="button"
+          tabindex="0"
+          @click="toggleDarkTheme"
+          @keydown.enter.prevent="toggleDarkTheme"
+          @keydown.space.prevent="toggleDarkTheme"
+        >
           {{ !isDarkTheme ? $t('main.dark_theme') : $t('main.white_theme') }}
         </li>
         <li
+          role="button"
+          tabindex="0"
           @click="toggleDesktopNotifications"
+          @keydown.enter.prevent="toggleDesktopNotifications"
+          @keydown.space.prevent="toggleDesktopNotifications"
           :class="{ disabled: desktopNotificationsPermission === 'denied' }"
           :title="
             desktopNotificationsPermission === 'denied'
@@ -181,7 +202,13 @@
             </span>
           </span>
         </li>
-        <li @click="setSupportChat(!isSupportChat)">
+        <li
+          role="button"
+          tabindex="0"
+          @click="setSupportChat(!isSupportChat)"
+          @keydown.enter.prevent="setSupportChat(!isSupportChat)"
+          @keydown.space.prevent="setSupportChat(!isSupportChat)"
+        >
           {{
             isSupportChat
               ? $t('main.hide_support_chat')
@@ -198,7 +225,13 @@
           </a>
         </li>
         <li>
-          <a @click="display.shortcutModal = true">
+          <a
+            role="button"
+            tabindex="0"
+            @click="display.shortcutModal = true"
+            @keydown.enter.prevent="display.shortcutModal = true"
+            @keydown.space.prevent="display.shortcutModal = true"
+          >
             {{ $t('keyboard.shortcuts') }}
           </a>
         </li>
@@ -233,7 +266,14 @@
         <li class="version">Kitsu {{ kitsuVersion }}</li>
         <hr />
         <li>
-          <a @click="onLogout" class="flexrow">
+          <a
+            class="flexrow"
+            role="button"
+            tabindex="0"
+            @click="onLogout"
+            @keydown.enter.prevent="onLogout"
+            @keydown.space.prevent="onLogout"
+          >
             <log-out-icon class="flexrow-item icon-1x" />
             <span class="flexrow-item">{{ $t('main.logout') }}</span>
           </a>

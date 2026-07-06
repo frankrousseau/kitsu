@@ -6,7 +6,14 @@
     }"
   >
     <div class="production-menu">
-      <div class="flexrow" @click="toggleProductionList">
+      <div
+        class="flexrow"
+        role="button"
+        tabindex="0"
+        @click="toggleProductionList"
+        @keydown.enter.prevent="toggleProductionList"
+        @keydown.space.prevent="toggleProductionList"
+      >
         <div class="selected-production-line flexrow-item unselectable">
           <production-name
             :production="currentProduction"
