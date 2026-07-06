@@ -985,9 +985,9 @@ const FRAME_DELAY = 100
 const RESIZE_DELAY = 300
 
 const store = useStore()
+const $socket = store.$socket
 const { t } = useI18n()
 const instance = getCurrentInstance()
-const $socket = instance.appContext.config.globalProperties.$socket
 
 // Props
 
