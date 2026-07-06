@@ -16,6 +16,7 @@ import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import { minutesToDays } from '@/lib/time'
 import { PAGE_SIZE } from '@/lib/pagination'
 import {
+  insertSortedAsset,
   sortAssetResult,
   sortAssets,
   sortByName,
@@ -1061,8 +1062,7 @@ const mutations = {
       {},
       asset
     )
-    cache.assets.push(asset)
-    cache.assets = sortAssets(cache.assets)
+    insertSortedAsset(cache.assets, asset)
     cache.assetMap.set(asset.id, asset)
     updateEntryInIndex(cache.assetIndex, asset, getAssetIndexWords(asset))
 
@@ -1092,8 +1092,7 @@ const mutations = {
 
     if (result && result.length > 0) {
       cache.result.push(asset)
-      state.displayedAssets.push(asset)
-      state.displayedAssets = sortAssets(state.displayedAssets)
+      insertSortedAsset(state.displayedAssets, asset)
       helpers.setListStats(state, cache.assets)
       state.assetFilledColumns = getFilledColumns(state.displayedAssets)
 
@@ -1174,8 +1173,7 @@ const mutations = {
       newAsset.tasks = []
       newAsset.production_id = newAsset.project_id
       newAsset.episode_id = newAsset.source_id
-      cache.assets.push(newAsset)
-      cache.assets = sortAssets(cache.assets)
+      insertSortedAsset(cache.assets, newAsset)
       cache.result.push(newAsset)
       state.displayedAssets.push(newAsset)
       state.assetFilledColumns = getFilledColumns(state.displayedAssets)

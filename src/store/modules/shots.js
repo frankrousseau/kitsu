@@ -15,6 +15,7 @@ import func from '@/lib/func'
 import { PAGE_SIZE } from '@/lib/pagination'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import {
+  insertSortedShot,
   sortByName,
   sortShotResult,
   sortShots,
@@ -664,6 +665,9 @@ const actions = {
     if (cache.result && cache.result.length > 0) {
       shots = cache.result
     }
+    const sortedDescriptors = sortByName([...production.descriptors]).filter(
+      d => d.entity_type === 'Shot'
+    )
     const lines = shots.map(shot => {
       let shotLine = []
       if (isTVShow) {
@@ -674,17 +678,15 @@ const actions = {
         shot.name,
         shot.description
       ])
-      sortByName([...production.descriptors])
-        .filter(d => d.entity_type === 'Shot')
-        .forEach(descriptor => {
-          if (descriptor.data_type === 'boolean') {
-            shotLine.push(
-              shot.data[descriptor.field_name]?.toLowerCase() === 'true'
-            )
-          } else {
-            shotLine.push(shot.data[descriptor.field_name])
-          }
-        })
+      sortedDescriptors.forEach(descriptor => {
+        if (descriptor.data_type === 'boolean') {
+          shotLine.push(
+            shot.data[descriptor.field_name]?.toLowerCase() === 'true'
+          )
+        } else {
+          shotLine.push(shot.data[descriptor.field_name])
+        }
+      })
       if (state.isShotTime) {
         shotLine.push(minutesToDays(organisation, shot.timeSpent).toFixed(2))
       }
@@ -1032,8 +1034,7 @@ const mutations = {
         return stateShot
       })
     } else {
-      cache.shots.push(newShot)
-      cache.shots = sortShots(cache.shots)
+      insertSortedShot(cache.shots, newShot)
       cache.shotMap.set(newShot.id, newShot)
       state.shotSelectionGrid = buildSelectionGrid()
     }
@@ -1096,8 +1097,7 @@ const mutations = {
     shot.validations = new Map()
     shot.data = {}
 
-    cache.shots.push(shot)
-    cache.shots = sortShots(cache.shots)
+    insertSortedShot(cache.shots, shot)
     state.displayedShots = cache.shots.slice(0, PAGE_SIZE)
     helpers.setListStats(state, cache.shots)
     state.shotFilledColumns = getFilledColumns(state.displayedShots)
@@ -1296,8 +1296,7 @@ const mutations = {
     shot.timeSpent = timeSpent
     shot.estimation = estimation
 
-    cache.shots.push(shot)
-    cache.shots = sortShots(cache.shots)
+    insertSortedShot(cache.shots, shot)
     cache.shotMap.set(shot.id, shot)
     updateEntryInIndex(cache.shotIndex, shot, getShotIndexWords(shot))
 
@@ -1327,8 +1326,7 @@ const mutations = {
 
     if (result && result.length > 0) {
       cache.result.push(shot)
-      state.displayedShots.push(shot)
-      state.displayedShots = sortShots(state.displayedShots)
+      insertSortedShot(state.displayedShots, shot)
       state.displayedShotsCount = cache.shots.length
       state.displayedShotsLength = cache.shots.filter(s => !s.canceled).length
       state.shotFilledColumns = getFilledColumns(state.displayedShots)

@@ -5,35 +5,63 @@ import {
   getTaskTypePriorityOfProd
 } from '@/lib/productions'
 
-export const sortAssets = assets => {
-  return assets.sort(
-    firstBy('canceled')
-      .thenBy((a, b) =>
-        a.asset_type_name.localeCompare(b.asset_type_name, undefined, {
-          numeric: true
-        })
-      )
-      .thenBy('shared')
-      .thenBy((a, b) =>
-        a.name.localeCompare(b.name, undefined, { numeric: true })
-      )
-  )
+const sortByEpisode = (a, b) => {
+  if (a.episode_name) {
+    return a.episode_name.localeCompare(b.episode_name, undefined, {
+      numeric: true
+    })
+  }
+  return 0
 }
 
-export const sortShots = shots => {
-  return shots.sort(
-    firstBy('canceled')
-      .thenBy(sortByEpisode)
-      .thenBy((a, b) =>
-        a.sequence_name.localeCompare(b.sequence_name, undefined, {
-          numeric: true
-        })
-      )
-      .thenBy((a, b) =>
-        a.name.localeCompare(b.name, undefined, { numeric: true })
-      )
+const assetComparator = firstBy('canceled')
+  .thenBy((a, b) =>
+    a.asset_type_name.localeCompare(b.asset_type_name, undefined, {
+      numeric: true
+    })
   )
+  .thenBy('shared')
+  .thenBy((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+
+export const sortAssets = assets => {
+  return assets.sort(assetComparator)
 }
+
+const shotComparator = firstBy('canceled')
+  .thenBy(sortByEpisode)
+  .thenBy((a, b) =>
+    a.sequence_name.localeCompare(b.sequence_name, undefined, {
+      numeric: true
+    })
+  )
+  .thenBy((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+
+export const sortShots = shots => {
+  return shots.sort(shotComparator)
+}
+
+// Insert one entity into an already-sorted list (binary search) instead of
+// re-sorting the whole array on every unit add.
+const insertSorted = (items, item, comparator) => {
+  let low = 0
+  let high = items.length
+  while (low < high) {
+    const middle = (low + high) >> 1
+    if (comparator(items[middle], item) <= 0) {
+      low = middle + 1
+    } else {
+      high = middle
+    }
+  }
+  items.splice(low, 0, item)
+  return items
+}
+
+export const insertSortedAsset = (assets, asset) =>
+  insertSorted(assets, asset, assetComparator)
+
+export const insertSortedShot = (shots, shot) =>
+  insertSorted(shots, shot, shotComparator)
 
 export const sortEdits = edits => {
   return edits.sort(
@@ -411,13 +439,4 @@ const sortByTaskType = (taskMap, sortInfo) => (a, b) => {
   const taskStatusA = taskMap.get(taskA).task_status_short_name
   const taskStatusB = taskMap.get(taskB).task_status_short_name
   return taskStatusA.localeCompare(taskStatusB, undefined, { numeric: true })
-}
-
-const sortByEpisode = (a, b) => {
-  if (a.episode_name) {
-    return a.episode_name.localeCompare(b.episode_name, undefined, {
-      numeric: true
-    })
-  }
-  return 0
 }
