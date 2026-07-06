@@ -413,18 +413,37 @@ const loadEntity = (index = 0, currentTime = 0, silentLoad = false) => {
     const nextEntity = props.entities[nextIndex]
 
     currentIndex.value = index
-    currentPlayer.value = player1Ref.value
-    nextPlayer.value = player2Ref.value
+    // Reuse the decoder that already holds the target movie (usually the
+    // one that preloaded the next entity): swapping keeps its buffer
+    // instead of re-downloading on every manual navigation.
+    const moviePath =
+      entity.preview_file_extension === 'mp4' ? getMoviePath(entity) : ''
+    const preloadedPlayer = [player1Ref.value, player2Ref.value].find(
+      player => moviePath && player?.src.endsWith(moviePath)
+    )
+    currentPlayer.value = preloadedPlayer || player1Ref.value
+    nextPlayer.value =
+      currentPlayer.value === player1Ref.value
+        ? player2Ref.value
+        : player1Ref.value
     currentPlayer.value.removeEventListener('loadedmetadata', updateMaxDuration)
     currentPlayer.value.addEventListener('loadedmetadata', updateMaxDuration)
 
-    if (entity.preview_file_extension === 'mp4' && currentPlayer.value) {
-      currentPlayer.value.src = getMoviePath(entity)
+    if (moviePath) {
+      if (!currentPlayer.value.src.endsWith(moviePath)) {
+        currentPlayer.value.src = moviePath
+      }
     } else if (currentPlayer.value) {
       currentPlayer.value.src = ''
     }
-    if (nextEntity?.preview_file_extension === 'mp4' && nextPlayer.value) {
-      nextPlayer.value.src = getMoviePath(nextEntity)
+    const nextMoviePath =
+      nextEntity?.preview_file_extension === 'mp4'
+        ? getMoviePath(nextEntity)
+        : ''
+    if (nextMoviePath) {
+      if (!nextPlayer.value.src.endsWith(nextMoviePath)) {
+        nextPlayer.value.src = nextMoviePath
+      }
     } else if (nextPlayer.value) {
       nextPlayer.value.src = ''
     }
@@ -438,6 +457,11 @@ const loadEntity = (index = 0, currentTime = 0, silentLoad = false) => {
       )
     }
     startRenderLoop()
+    // A reused decoder fires no loadedmetadata event: refresh the
+    // duration and renderer dimensions from what it already knows.
+    if (currentPlayer.value.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      updateMaxDuration()
+    }
     _setCurrentTime(currentTime)
     if (!silentLoad) {
       emit('entity-change', currentIndex.value)
