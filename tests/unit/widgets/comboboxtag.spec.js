@@ -111,4 +111,44 @@ describe('ComboboxTag', () => {
     })
     expect(w.find('.selected-line').text()).toBe('')
   })
+
+  it('exposes combobox/listbox ARIA roles with multiselectable', async () => {
+    const trigger = wrapper.find('.flexrow')
+    expect(trigger.attributes('role')).toBe('combobox')
+    expect(trigger.attributes('tabindex')).toBe('0')
+    await trigger.trigger('click')
+    const list = wrapper.find('.select-input')
+    expect(list.attributes('role')).toBe('listbox')
+    expect(list.attributes('aria-multiselectable')).toBe('true')
+    const optionLines = wrapper.findAll('.option-line')
+    expect(optionLines[0].attributes('role')).toBe('option')
+  })
+
+  it('toggles the active option on Enter via keyboard', async () => {
+    const trigger = wrapper.find('.flexrow')
+    // options sorted by value: apple, banana, cherry — 1st ArrowDown opens,
+    // the next two move the cursor to index 1 (banana).
+    await trigger.trigger('keydown', { key: 'ArrowDown' })
+    await trigger.trigger('keydown', { key: 'ArrowDown' })
+    await trigger.trigger('keydown', { key: 'ArrowDown' })
+    await trigger.trigger('keydown', { key: 'Enter' })
+    const emittedValue = wrapper.emitted('update:model-value')[0][0]
+    expect(emittedValue).toContain('banana')
+  })
+
+  it('keeps the list open after selecting via keyboard', async () => {
+    const trigger = wrapper.find('.flexrow')
+    await trigger.trigger('keydown', { key: 'ArrowDown' })
+    await trigger.trigger('keydown', { key: 'ArrowDown' })
+    await trigger.trigger('keydown', { key: 'Enter' })
+    expect(wrapper.find('.select-input').exists()).toBe(true)
+  })
+
+  it('closes the dropdown on Escape', async () => {
+    const trigger = wrapper.find('.flexrow')
+    await trigger.trigger('click')
+    expect(wrapper.find('.select-input').exists()).toBe(true)
+    await trigger.trigger('keydown', { key: 'Escape' })
+    expect(wrapper.find('.select-input').exists()).toBe(false)
+  })
 })

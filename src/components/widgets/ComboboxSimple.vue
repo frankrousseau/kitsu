@@ -3,16 +3,21 @@
     <label class="label" v-if="label.length > 0">
       {{ label }}
     </label>
-    <div class="flexrow">
+    <div class="flexrow" role="radiogroup" :aria-label="label || undefined">
       <span
+        :ref="el => (choiceRefs[index] = el)"
         :key="option.label"
         :class="{
           choice: true,
           'flexrow-item': true,
           selected: selectedOption.value === option.value
         }"
+        role="radio"
+        :aria-checked="selectedOption.value === option.value"
+        :tabindex="selectedOption.value === option.value ? 0 : -1"
         @click="selectOption(option)"
-        v-for="option in options"
+        @keydown="onChoiceKeydown($event, index)"
+        v-for="(option, index) in options"
       >
         {{ getOptionLabel(option) }}
       </span>
@@ -21,7 +26,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { nextTick, ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -55,6 +60,39 @@ const selectedOption = ref({
 const selectOption = option => {
   emit('update:model-value', option.value)
   selectedOption.value = option
+}
+
+// ComboboxSimple has no open/close popup (all choices are always visible),
+// so it uses a plain roving-tabindex radiogroup instead of
+// useComboboxKeyboard: arrow keys both move and select, like a native
+// <input type="radio"> group.
+const choiceRefs = ref([])
+
+const onChoiceKeydown = (event, index) => {
+  switch (event.key) {
+    case 'Enter':
+    case ' ':
+      event.preventDefault()
+      selectOption(props.options[index])
+      break
+    case 'ArrowRight':
+    case 'ArrowDown':
+      event.preventDefault()
+      focusChoiceAt(Math.min(index + 1, props.options.length - 1))
+      break
+    case 'ArrowLeft':
+    case 'ArrowUp':
+      event.preventDefault()
+      focusChoiceAt(Math.max(index - 1, 0))
+      break
+  }
+}
+
+const focusChoiceAt = index => {
+  const option = props.options[index]
+  if (!option) return
+  selectOption(option)
+  nextTick(() => choiceRefs.value[index]?.focus())
 }
 
 const getOptionLabel = option => {
