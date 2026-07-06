@@ -25,7 +25,7 @@ vi.mock('fabric', () => {
     set(props) { Object.assign(this, props); return this }
     calcTransformMatrix() { return [1, 0, 0, 1, 0, 0] }
     clone() { return Promise.resolve(new FakePath(this.path, { ...this })) }
-    getBoundingRect() { return { left: 0, top: 0, width: 10, height: 10 } }
+    getBoundingRect() { return { left: 0, top: 0, width: 10, height: 0 } }
     setCoords() {}
   }
   class FakePencilBrush {
@@ -237,6 +237,15 @@ describe('EraserBrush._finalizeAndAddPath', () => {
     eraser: undefined,
     group: undefined,
     getBoundingRect: () => bounds,
+    intersectsWithObject: path => {
+      const pathBounds = path.getBoundingRect()
+      return (
+        bounds.left <= pathBounds.left + pathBounds.width &&
+        bounds.left + bounds.width >= pathBounds.left &&
+        bounds.top <= pathBounds.top + pathBounds.height &&
+        bounds.top + bounds.height >= pathBounds.top
+      )
+    },
     calcTransformMatrix: () => [1, 0, 0, 1, 0, 0],
     set: vi.fn(),
     fire: vi.fn()
