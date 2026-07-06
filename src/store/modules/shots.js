@@ -426,7 +426,8 @@ const actions = {
     }
 
     if (state.isShotsLoading) {
-      if (callback) return callback()
+      if (callback) callback()
+      return
     }
 
     commit(LOAD_SHOTS_START)
@@ -435,10 +436,17 @@ const actions = {
         return shotsApi.getShots(production, episode)
       })
       .then(shots => {
+        // Ignore a response for a production the user already switched away
+        // from; the loading flag is owned by the newer load (reset via
+        // CLEAR_SHOTS on switch).
+        if (production.id !== rootGetters.currentProduction?.id) {
+          if (callback) callback()
+          return
+        }
         if (
           !isTVShow ||
           shots.length === 0 ||
-          shots[0].episode_id === rootGetters.currentEpisode.id
+          shots[0].episode_id === rootGetters.currentEpisode?.id
         ) {
           const sequenceMap = sequenceStore.cache.sequenceMap
           const taskMap = rootGetters.taskMap
@@ -806,6 +814,8 @@ const mutations = {
     cache.shotIndex = {}
     cache.shotMap = new Map()
 
+    state.isShotsLoading = false
+    state.isShotsLoadingError = false
     state.displayedShots = []
     state.displayedShotsCount = 0
     state.displayedShotsLength = 0
