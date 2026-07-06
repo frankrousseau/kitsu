@@ -1413,7 +1413,8 @@ export default {
           updates
         })
         previewPlayer?.confirmAnnotationsSaved()
-      } catch {
+      } catch (err) {
+        console.error('Failed to save annotations', err)
         previewPlayer?.restoreFailedAnnotations()
       }
     },

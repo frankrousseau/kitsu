@@ -1985,12 +1985,20 @@ export default {
       if (mode === 'file') {
         data = data.get('file')
       }
-      csv.processCSV(data).then(results => {
-        this.parsedCSV = results
-        this.hideImportModal()
-        this.loading.importing = false
-        this.showImportRenderModal()
-      })
+      csv
+        .processCSV(data)
+        .then(results => {
+          this.parsedCSV = results
+          this.hideImportModal()
+          this.showImportRenderModal()
+        })
+        .catch(err => {
+          console.error(err)
+          this.errors.importing = true
+        })
+        .finally(() => {
+          this.loading.importing = false
+        })
     },
 
     resetTaskTypeDates() {

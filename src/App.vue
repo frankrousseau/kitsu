@@ -2508,26 +2508,16 @@ th.validation-cell {
   }
 }
 
-#app .dp__active_date {
-  color: $black;
-  background: var(--background-selected);
-}
-
-#app .dp__today {
-  border-color: var(--background-selected);
-}
-
-#app .dp__date_hover:hover {
-  background: var(--background-selectable);
-}
-
-#app .dp__input {
+// Day-cell theming (selected/hover/today) lives in variables.scss on the
+// dp theme classes: the menu teleports to <body>, #app rules never
+// reach it. Only the input below renders in place.
+#app .dp--input {
   border-radius: 10px;
   height: 40px;
   width: 118px;
 }
 
-#app .datatable .dp__input {
+#app .datatable .dp--input {
   border-radius: 3px;
   height: 43px;
 }
@@ -2536,7 +2526,7 @@ th.validation-cell {
 // against the picker background. Bump it just enough to read as a
 // border without dominating, and keep the library defaults for
 // everything else (background, hover/focus stay untouched).
-.dp__theme_dark {
+.dp--theme-dark {
   --dp-border-color: #3a3a3a !important;
 }
 

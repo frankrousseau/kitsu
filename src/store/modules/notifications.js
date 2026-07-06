@@ -134,9 +134,9 @@ const mutations = {
   },
 
   [MARK_ALL_NOTIFICATIONS_AS_READ](state) {
-    let notificationCount = state.notificationCount - state.notifications.length
-    if (notificationCount < 0) notificationCount = 0
-    state.notificationCount = notificationCount
+    // The mark-all endpoint clears every notification server-side, not only
+    // the loaded page.
+    state.notificationCount = 0
     state.notifications.forEach(notification => {
       notification.read = true
     })

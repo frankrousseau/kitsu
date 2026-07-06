@@ -393,6 +393,16 @@ describe('lib/sorting', () => {
     expect(results[3].id).toEqual(2)
   })
 
+  it('sortPeople puts people without a first name first, consistently', () => {
+    const anna = { id: 1, first_name: 'Anna', last_name: 'Doe', active: true }
+    const bot = { id: 2, first_name: '', last_name: '', active: true }
+
+    // The comparator must be antisymmetric: the result cannot depend on the
+    // input order (the old comparator returned -1 for every empty name).
+    expect(sortPeople([anna, bot]).map(p => p.id)).toEqual([2, 1])
+    expect(sortPeople([bot, anna]).map(p => p.id)).toEqual([2, 1])
+  })
+
   it('sortTaskTypeScheduleTime', () => {
     const scheduleItems = [
       {

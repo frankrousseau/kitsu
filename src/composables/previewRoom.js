@@ -381,7 +381,7 @@ export const usePreviewRoom = options => {
 
     if (
       exists(eventData.current_preview_file_index) &&
-      eventData.current_preview_index !== unref(currentPreviewIndex) &&
+      eventData.current_preview_file_index !== unref(currentPreviewIndex) &&
       'value' in currentPreviewIndex
     ) {
       currentPreviewIndex.value = eventData.current_preview_file_index

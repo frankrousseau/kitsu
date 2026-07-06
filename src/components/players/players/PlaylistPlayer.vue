@@ -4625,6 +4625,7 @@ onBeforeUnmount(() => {
   endAnnotationSaving()
   cancelProgressiveRender()
   _stopPlaylistProgressUpdateLoop()
+  if (playingPictureTimeout) clearTimeout(playingPictureTimeout)
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('resize', onWindowResize)
   window.removeEventListener('beforeunload', onWindowsClosed)
