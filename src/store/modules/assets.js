@@ -419,7 +419,7 @@ const actions = {
     }
 
     if (state.isAssetsLoading) {
-      return cache.assets
+      return cache.assetsLoadingPromise || cache.assets
     }
 
     if (all || episode?.id === 'all') {
@@ -427,7 +427,7 @@ const actions = {
     }
 
     commit(LOAD_ASSETS_START)
-    return assetsApi
+    const loadingPromise = assetsApi
       .getAssets(production, episode, withTasks)
       .then(async assets => {
         if (!withShared) {
@@ -452,6 +452,11 @@ const actions = {
             asset.asset_type_name = assetType?.name || ''
           }
         })
+        // Ignore a response for a production the user already switched away
+        // from; committing would overwrite the current production's assets.
+        if (production.id !== rootGetters.currentProduction?.id) {
+          return assets
+        }
         commit(LOAD_ASSETS_END, {
           production,
           assets,
@@ -468,6 +473,8 @@ const actions = {
         commit(LOAD_ASSETS_ERROR)
         return []
       })
+    cache.assetsLoadingPromise = loadingPromise
+    return loadingPromise
   },
 
   getAsset({ commit, state, rootGetters }, assetId) {
