@@ -2176,6 +2176,12 @@ const playEntity = (entityIndex, updateFullPlaylist = true, frame = -1) => {
       }
     })
   } else {
+    // Keep the video decoder on the selected entity even when its main
+    // preview is not a movie: switching to a video sub-element of a
+    // multi-element revision reloads from the decoder's current index.
+    nextTick(() => {
+      rawPlayer.value?.loadEntity(entityIndex, 0, true)
+    })
     const ann = getAnnotation(0)
     if (!isPlaying.value) loadAnnotation(ann)
     if (wasDrawing) {

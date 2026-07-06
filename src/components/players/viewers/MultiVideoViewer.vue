@@ -304,27 +304,22 @@ const emitLoadedEvent = event => {
   emit('metadata-loaded', event)
 }
 
-const getMoviePath = entity => {
-  if (entity.preview_file_extension === 'mp4') {
-    let previewId
-    if (
-      props.currentPreviewIndex === 0 ||
-      !entity.preview_file_previews ||
-      props.currentPreviewIndex > entity.preview_file_previews.length
-    ) {
-      previewId = entity.preview_file_id
-    } else {
-      previewId = entity.preview_file_previews[props.currentPreviewIndex - 1].id
-    }
-    const base = props.urlPrefix || '/api'
-    // Originals for shared links or HD mode; the lighter low variant otherwise
-    if (props.urlPrefix || props.isHd) {
-      return `${base}/movies/originals/preview-files/${previewId}.mp4`
-    } else {
-      return `${base}/movies/low/preview-files/${previewId}.mp4`
-    }
+const getMoviePath = (entity, previewIndex = 0) => {
+  // Check the extension on the element actually selected (main preview or
+  // one of the additional previews): a revision whose main element is a
+  // picture can still carry video elements, and vice versa.
+  const subPreviews = entity.preview_file_previews || []
+  const preview =
+    previewIndex > 0 && previewIndex <= subPreviews.length
+      ? subPreviews[previewIndex - 1]
+      : { id: entity.preview_file_id, extension: entity.preview_file_extension }
+  if (preview.extension !== 'mp4') return ''
+  const base = props.urlPrefix || '/api'
+  // Originals for shared links or HD mode; the lighter low variant otherwise
+  if (props.urlPrefix || props.isHd) {
+    return `${base}/movies/originals/preview-files/${preview.id}.mp4`
   } else {
-    return ''
+    return `${base}/movies/low/preview-files/${preview.id}.mp4`
   }
 }
 
@@ -416,8 +411,7 @@ const loadEntity = (index = 0, currentTime = 0, silentLoad = false) => {
     // Reuse the decoder that already holds the target movie (usually the
     // one that preloaded the next entity): swapping keeps its buffer
     // instead of re-downloading on every manual navigation.
-    const moviePath =
-      entity.preview_file_extension === 'mp4' ? getMoviePath(entity) : ''
+    const moviePath = getMoviePath(entity, props.currentPreviewIndex)
     const preloadedPlayer = [player1Ref.value, player2Ref.value].find(
       player => moviePath && player?.src.endsWith(moviePath)
     )
@@ -436,10 +430,8 @@ const loadEntity = (index = 0, currentTime = 0, silentLoad = false) => {
     } else if (currentPlayer.value) {
       currentPlayer.value.src = ''
     }
-    const nextMoviePath =
-      nextEntity?.preview_file_extension === 'mp4'
-        ? getMoviePath(nextEntity)
-        : ''
+    // The next entity always starts on its main preview: preload index 0.
+    const nextMoviePath = nextEntity ? getMoviePath(nextEntity) : ''
     if (nextMoviePath) {
       if (!nextPlayer.value.src.endsWith(nextMoviePath)) {
         nextPlayer.value.src = nextMoviePath
