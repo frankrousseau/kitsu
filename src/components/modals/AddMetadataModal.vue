@@ -9,13 +9,13 @@
 
     <div class="modal-content">
       <div class="box content">
-        <h1 class="title">
+        <h2 class="title">
           {{
             isEditing
               ? $t('productions.metadata.edit_title')
               : $t('productions.metadata.title')
           }}
-        </h1>
+        </h2>
 
         <p
           class="explanation mb1"

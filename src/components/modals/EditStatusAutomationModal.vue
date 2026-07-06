@@ -9,12 +9,12 @@
 
     <div class="modal-content">
       <div class="box">
-        <h1 class="title" v-if="isEditing">
+        <h2 class="title" v-if="isEditing">
           {{ $t('status_automations.edit_title') }}
-        </h1>
-        <h1 class="title" v-else>
+        </h2>
+        <h2 class="title" v-else>
           {{ $t('status_automations.new_status_automation') }}
-        </h1>
+        </h2>
 
         <form @submit.prevent>
           <h3 class="subtitle">

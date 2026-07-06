@@ -9,9 +9,9 @@
 
     <div class="modal-content">
       <div class="box">
-        <h1 class="title" v-if="commentToEdit && commentToEdit.id">
+        <h2 class="title" v-if="commentToEdit && commentToEdit.id">
           {{ $t('comments.edit_title') }}
-        </h1>
+        </h2>
 
         <form @submit.prevent>
           <combobox-status

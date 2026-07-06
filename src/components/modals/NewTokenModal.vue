@@ -8,9 +8,9 @@
     <div class="modal-background"></div>
     <div class="modal-content">
       <div class="box">
-        <h1 class="title">
+        <h2 class="title">
           {{ $t('bots.new_token_title', { name: person.full_name }) }}
-        </h1>
+        </h2>
 
         <form class="form" @submit.prevent v-if="!person.access_token">
           <p class="mb2 warning-text">

@@ -431,7 +431,7 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-:deep(h1.title) {
+:deep(h2.title) {
   margin-bottom: 0em !important;
 }
 

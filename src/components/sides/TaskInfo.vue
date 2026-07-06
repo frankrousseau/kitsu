@@ -30,10 +30,10 @@
           ((nbSelectedTasks || 0) > 1 || nbSelectedValidations > 0)
         "
       >
-        <h1 class="title">
+        <h2 class="title">
           {{ $t('tasks.selected_tasks') }}
           ({{ nbSelectedTasks }})
-        </h1>
+        </h2>
         <div class="task-list mt1">
           <div
             class="selected-task-line flexrow"
@@ -339,7 +339,7 @@
         />
       </div>
       <div class="side task-info pa1" v-else-if="nbSelectedEntities > 0">
-        <h1 class="title mt2">{{ $t('tasks.selected_entities') }}</h1>
+        <h2 class="title mt2">{{ $t('tasks.selected_entities') }}</h2>
         <div class="pa2 mt1">
           <div
             class="entity-line"

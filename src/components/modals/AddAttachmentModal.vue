@@ -23,9 +23,9 @@
           {{ $t('main.drop_files_here') }}
         </div>
         <h2 class="subtitle">{{ title }}</h2>
-        <h1 class="title">
+        <h2 class="title">
           {{ $t('tasks.comment_image') }}
-        </h1>
+        </h2>
 
         <file-upload-zone
           ref="fileField"
@@ -314,7 +314,7 @@ defineExpose({
   text-transform: uppercase;
 }
 
-.content h1.title {
+.content h2.title {
   margin-bottom: 0.5em;
   margin-top: 0.5em;
 }
