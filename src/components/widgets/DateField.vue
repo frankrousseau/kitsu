@@ -4,19 +4,18 @@
     <vue-date-picker
       auto-apply
       class="datepicker"
-      :clearable="canDelete"
       :dark="isDark || isDarkTheme"
-      :disabled-week-days="weekDaysDisabled ? [6, 0] : []"
       :disabled="disabled"
-      :enable-time-picker="false"
-      :format="format"
-      hide-input-icon
-      :locale="user.locale.substring(0, 2)"
+      :filters="{ weekDays: weekDaysDisabled ? [6, 0] : [] }"
+      :formats="{ input: format }"
+      :input-attrs="{ clearable: canDelete, hideInputIcon: true }"
+      :locale="dateFnsLocale"
       :min-date="minDate"
       :max-date="maxDate"
       :placeholder="placeholder"
       :teleport="true"
-      :utc="utc ? 'preserve' : false"
+      :time-config="{ enableTimePicker: false }"
+      :timezone="utc ? 'utc' : undefined"
       v-model="localValue"
     >
     </vue-date-picker>
@@ -24,12 +23,53 @@
 </template>
 
 <script setup>
+import {
+  da,
+  de,
+  enUS,
+  es,
+  faIR,
+  fr,
+  hu,
+  it,
+  ja,
+  ko,
+  nl,
+  pt,
+  ru,
+  zhCN,
+  zhTW
+} from 'date-fns/locale'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
+
+// date-fns locales matching src/locales/, keyed by two-letter code.
+const DATE_FNS_LOCALES = {
+  da,
+  de,
+  en: enUS,
+  es,
+  fa: faIR,
+  fr,
+  hu,
+  it,
+  ja,
+  ko,
+  nl,
+  pt,
+  ru,
+  zh: zhCN
+}
 
 const store = useStore()
 const isDarkTheme = computed(() => store.getters.isDarkTheme)
 const user = computed(() => store.getters.user)
+
+const dateFnsLocale = computed(() => {
+  const locale = user.value.locale || 'en_US'
+  if (locale.startsWith('zh_Hant')) return zhTW
+  return DATE_FNS_LOCALES[locale.substring(0, 2)] || enUS
+})
 
 const props = defineProps({
   canDelete: {

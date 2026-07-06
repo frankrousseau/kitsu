@@ -21,7 +21,7 @@ import IO from 'socket.io-client'
 import VueAnimXYZ from '@animxyz/vue3'
 import '@animxyz/core'
 
-import VueDatePicker from '@vuepic/vue-datepicker'
+import { VueDatePicker } from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 
 const app = createApp(App)
