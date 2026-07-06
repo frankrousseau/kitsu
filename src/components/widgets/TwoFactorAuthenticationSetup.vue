@@ -12,17 +12,29 @@
       <x-circle-icon
         class="action-icon"
         :size="20"
+        role="button"
+        tabindex="0"
         @click="cancelCurrentTwoFactorAuthAction"
+        @keydown.enter.prevent="cancelCurrentTwoFactorAuthAction"
+        @keydown.space.prevent="cancelCurrentTwoFactorAuthAction"
       />
       <save-icon
         class="action-icon"
         :size="20"
+        role="button"
+        tabindex="0"
         @click="saveRecoveryCodesToFile"
+        @keydown.enter.prevent="saveRecoveryCodesToFile"
+        @keydown.space.prevent="saveRecoveryCodesToFile"
       />
       <copy-icon
         class="action-icon"
         :size="20"
+        role="button"
+        tabindex="0"
         @click="copyRecoveryCodesToClipboard"
+        @keydown.enter.prevent="copyRecoveryCodesToClipboard"
+        @keydown.space.prevent="copyRecoveryCodesToClipboard"
       />
       <textarea
         class="input recovery-codes"
@@ -388,7 +400,11 @@
         <trash-icon
           class="action-icon pull-right"
           :size="15"
+          role="button"
+          tabindex="0"
           @click="unregisterFIDORequested(device)"
+          @keydown.enter.prevent="unregisterFIDORequested(device)"
+          @keydown.space.prevent="unregisterFIDORequested(device)"
         />
       </li>
     </ul>

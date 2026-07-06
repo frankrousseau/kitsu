@@ -20,7 +20,16 @@
     </div>
 
     <div class="flexrow-item erase-search">
-      <span class="tag" @click="clearSearch"> x </span>
+      <span
+        class="tag"
+        role="button"
+        tabindex="0"
+        @click="clearSearch"
+        @keydown.enter.prevent="clearSearch"
+        @keydown.space.prevent="clearSearch"
+      >
+        x
+      </span>
     </div>
 
     <div class="flexrow-item save-search" v-if="canSave">

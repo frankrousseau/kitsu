@@ -31,7 +31,15 @@
     <span :title="title">
       {{ taskType.name }}
     </span>
-    <span class="delete-times" v-if="deletable" @click="$emit('delete')">
+    <span
+      class="delete-times"
+      role="button"
+      tabindex="0"
+      v-if="deletable"
+      @click="$emit('delete')"
+      @keydown.enter.prevent="$emit('delete')"
+      @keydown.space.prevent="$emit('delete')"
+    >
       ×
     </span>
   </div>

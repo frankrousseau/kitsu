@@ -1,5 +1,11 @@
 <template>
-  <div class="concept-item" @click="$emit('click')">
+  <div
+    class="concept-item"
+    role="button"
+    tabindex="0"
+    @click="$emit('click')"
+    @keydown.enter.prevent="$emit('click')"
+  >
     <entity-preview
       :entity="concept"
       :empty-height="200"

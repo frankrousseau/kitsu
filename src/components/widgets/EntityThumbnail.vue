@@ -8,7 +8,11 @@
       height: emptyHeight + 'px',
       cursor: noPreview ? 'default' : 'zoom-in'
     }"
+    role="button"
+    tabindex="0"
     @click="onClicked"
+    @keydown.enter.prevent="onClicked"
+    @keydown.space.prevent="onClicked"
     v-if="isPreview && withLink"
   >
     <img

@@ -29,7 +29,11 @@
       </multiselect>
       <span
         class="clear-button"
+        role="button"
+        tabindex="0"
         @click="clear"
+        @keydown.enter.prevent="clear"
+        @keydown.space.prevent="clear"
         v-if="item && clearable && !disabled"
       >
         <x-icon :size="12" />
