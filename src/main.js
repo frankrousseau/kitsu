@@ -55,6 +55,15 @@ store.$socket = app.config.globalProperties.$socket
 
 app.config.compilerOptions.whitespace = 'preserve'
 
+// Last-resort error logging: Sentry only runs in production builds, and
+// without these handlers dev/self-hosted errors vanish silently.
+app.config.errorHandler = (err, instance, info) => {
+  console.error(`Vue error in ${info}:`, err)
+}
+window.addEventListener('unhandledrejection', event => {
+  console.error('Unhandled promise rejection:', event.reason)
+})
+
 setupChunkErrorHandler(router)
 
 app.mount('#app')
