@@ -33,7 +33,7 @@
     <div class="asset-picture" v-if="asset.preview_file_id">
       <img
         loading="lazy"
-        alt=""
+        :alt="asset.name"
         :src="`/api/pictures/thumbnails-square/preview-files/${asset.preview_file_id}.png`"
       />
     </div>

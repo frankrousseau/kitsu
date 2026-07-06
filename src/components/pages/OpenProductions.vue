@@ -8,6 +8,7 @@
         <img
           class="flexrow-item kitsu-with-body"
           src="../../assets/illustrations/kitsu-band.png"
+          alt=""
         />
         <div class="filler">
           <span
@@ -67,7 +68,7 @@
       class="flexrow open-productions-header"
       v-if="!isOpenProductionsLoading && openProductions.length > 0"
     >
-      <img class="logo" src="../../assets/kitsu.png" width="23" />
+      <img class="logo" src="../../assets/kitsu.png" width="23" alt="Kitsu" />
       <h1 class="title filler">
         {{ $t('productions.home.title') }}
       </h1>
@@ -119,7 +120,11 @@
               <template v-if="!production.has_avatar">
                 {{ generateAvatar(production) }}
               </template>
-              <img :src="getThumbnailPath(production)" v-else />
+              <img
+                :src="getThumbnailPath(production)"
+                :alt="production.name"
+                v-else
+              />
             </div>
             <div class="production-name">
               {{ production.name }}
@@ -131,7 +136,7 @@
 
     <div class="has-text-centered welcome" v-else>
       <p class="kitsu-logo info">
-        <img src="../../assets/illustrations/empty_production.png" />
+        <img src="../../assets/illustrations/empty_production.png" alt="" />
       </p>
       <div v-if="isCurrentUserAdmin">
         <p class="has-text-centered info">

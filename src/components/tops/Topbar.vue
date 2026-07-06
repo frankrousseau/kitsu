@@ -14,9 +14,15 @@
           <img
             class="studio-logo"
             :src="logoPath"
+            :alt="organisation.name"
             v-if="organisation?.has_avatar"
           />
-          <img class="studio-logo" src="@/assets/kitsu.png" v-else />
+          <img
+            class="studio-logo"
+            src="@/assets/kitsu.png"
+            alt="Kitsu"
+            v-else
+          />
         </a>
 
         <router-link
@@ -27,9 +33,15 @@
           <img
             class="studio-logo"
             :src="logoPath"
+            :alt="organisation.name"
             v-if="organisation?.has_avatar"
           />
-          <img class="studio-logo" src="@/assets/kitsu.png" v-else />
+          <img
+            class="studio-logo"
+            src="@/assets/kitsu.png"
+            alt="Kitsu"
+            v-else
+          />
         </router-link>
 
         <div class="flexrow topbar-menu" v-if="isProductionContext">

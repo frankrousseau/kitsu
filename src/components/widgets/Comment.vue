@@ -149,6 +149,7 @@
                 <img
                   class="attachment"
                   :src="getDownloadAttachmentPath(attachment)"
+                  :alt="attachment.name"
                 />
               </a>
               <attachment-audio-player
@@ -248,6 +249,7 @@
                     <img
                       class="attachment"
                       :src="getDownloadAttachmentPath(attachment)"
+                      :alt="attachment.name"
                     />
                   </a>
                   <attachment-audio-player

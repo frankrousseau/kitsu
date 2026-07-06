@@ -50,6 +50,7 @@
                 :src="getAttachmentThumbnailPath(attachment)"
                 role="button"
                 tabindex="0"
+                :alt="attachment.name"
                 @click="currentAttachment = attachment"
                 @keydown.enter.prevent="currentAttachment = attachment"
                 v-for="attachment in pictureAttachments(

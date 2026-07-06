@@ -47,7 +47,7 @@
           'max-height': `${emptyHeight}px`
         }"
         :width="width || ''"
-        alt=""
+        :alt="entity?.name"
       />
       <a
         class="view-icon"

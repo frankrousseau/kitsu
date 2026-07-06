@@ -8,7 +8,7 @@
     >
       <img
         :loading="isLazy ? 'lazy' : undefined"
-        alt=""
+        :alt="person.full_name"
         :src="person.avatarPath"
         v-if="person.has_avatar"
       />

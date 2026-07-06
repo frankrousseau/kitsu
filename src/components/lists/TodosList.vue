@@ -290,7 +290,7 @@
       v-if="tasks.length === 0 && !isLoading"
     >
       <p>
-        <img src="../../assets/illustrations/empty_todo.png" />
+        <img src="../../assets/illustrations/empty_todo.png" alt="" />
       </p>
       <p>
         {{ emptyText }}
