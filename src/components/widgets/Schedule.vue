@@ -2332,15 +2332,17 @@ onMounted(() => {
     ['mouseup', stopBrowsing],
     ['mouseleave', stopBrowsing],
     ['touchend', stopBrowsing],
-    ['touchcancel', stopBrowsing],
-    ['resize', resetScheduleSize]
+    ['touchcancel', stopBrowsing]
   ]
   resetScheduleSize()
   addEvents(domEvents)
+  // `resize` only fires on window, never on document.
+  window.addEventListener('resize', resetScheduleSize)
 })
 
 onBeforeUnmount(() => {
   removeEvents(domEvents)
+  window.removeEventListener('resize', resetScheduleSize)
   document.body.style.cursor = 'default'
 })
 
