@@ -28,7 +28,13 @@ import {
   removeModelFromList
 } from '@/lib/models'
 import { minutesToDays } from '@/lib/time'
-import { buildShotIndex, indexSearch } from '@/lib/indexing'
+import {
+  buildShotIndex,
+  getShotIndexWords,
+  indexSearch,
+  removeEntryFromIndex,
+  updateEntryInIndex
+} from '@/lib/indexing'
 import { applyFilters, getFilters, getKeyWords } from '@/lib/filtering'
 
 import {
@@ -1031,7 +1037,12 @@ const mutations = {
       cache.shotMap.set(newShot.id, newShot)
       state.shotSelectionGrid = buildSelectionGrid()
     }
-    cache.shotIndex = buildShotIndex(cache.shots)
+    const indexedShot = shot || newShot
+    updateEntryInIndex(
+      cache.shotIndex,
+      indexedShot,
+      getShotIndexWords(indexedShot)
+    )
     state.shotCreated = newShot.name
 
     if (state.shotSearchText) {
@@ -1060,7 +1071,8 @@ const mutations = {
   [RESTORE_SHOT_END](state, shotToRestore) {
     const shot = cache.shotMap.get(shotToRestore.id)
     shot.canceled = false
-    cache.shotIndex = buildShotIndex(cache.shots)
+    // No index update needed: restoring only flips `canceled`, none of the
+    // indexed words change.
     state.displayedShotsLength = cache.result.filter(s => !s.canceled).length
   },
 
@@ -1090,7 +1102,7 @@ const mutations = {
     helpers.setListStats(state, cache.shots)
     state.shotFilledColumns = getFilledColumns(state.displayedShots)
     cache.shotMap.set(shot.id, shot)
-    cache.shotIndex = buildShotIndex(cache.shots)
+    updateEntryInIndex(cache.shotIndex, shot, getShotIndexWords(shot))
 
     state.shotSelectionGrid = buildSelectionGrid()
 
@@ -1287,7 +1299,7 @@ const mutations = {
     cache.shots.push(shot)
     cache.shots = sortShots(cache.shots)
     cache.shotMap.set(shot.id, shot)
-    cache.shotIndex = buildShotIndex(cache.shots)
+    updateEntryInIndex(cache.shotIndex, shot, getShotIndexWords(shot))
 
     // Test the new shot only against existing filters
     const taskTypes = Array.from(taskTypeMap.values())
@@ -1326,15 +1338,22 @@ const mutations = {
   },
 
   [UPDATE_SHOT](state, shot) {
-    Object.assign(cache.shotMap.get(shot.id), shot)
-    cache.shotIndex = buildShotIndex(cache.shots)
+    const cachedShot = cache.shotMap.get(shot.id)
+    if (cachedShot) {
+      Object.assign(cachedShot, shot)
+      updateEntryInIndex(
+        cache.shotIndex,
+        cachedShot,
+        getShotIndexWords(cachedShot)
+      )
+    }
   },
 
   [REMOVE_SHOT](state, shotToDelete) {
     cache.shotMap.delete(shotToDelete.id)
     cache.shots = removeModelFromList(cache.shots, shotToDelete)
     cache.result = removeModelFromList(cache.result, shotToDelete)
-    cache.shotIndex = buildShotIndex(cache.shots)
+    removeEntryFromIndex(cache.shotIndex, shotToDelete)
     state.displayedShots = removeModelFromList(
       state.displayedShots,
       shotToDelete
