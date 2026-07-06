@@ -91,16 +91,16 @@ describe('BuildFilterModal', () => {
       getters: {
         isCurrentUserVendor: () => false,
         people: () => [
-          { id: 'person-1', name: 'John', active: true },
-          { id: 'person-2', name: 'James', active: true },
-          { id: 'person-3', name: 'Ema', active: true }
+          { id: 'person-1', name: 'John', first_name: 'John', active: true },
+          { id: 'person-2', name: 'James', first_name: 'James', active: true },
+          { id: 'person-3', name: 'Ema', first_name: 'Ema', active: true }
         ],
         personMap: () =>
           new Map(
             Object.entries({
-              'person-1': { id: 'person-1', name: 'John', active: true },
-              'person-2': { id: 'person-2', name: 'James', active: true },
-              'person-3': { id: 'person-3', name: 'Ema', active: true }
+              'person-1': { id: 'person-1', name: 'John', first_name: 'John', active: true },
+              'person-2': { id: 'person-2', name: 'James', first_name: 'James', active: true },
+              'person-3': { id: 'person-3', name: 'Ema', first_name: 'Ema', active: true }
             })
           )
       },
