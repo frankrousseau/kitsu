@@ -3,12 +3,14 @@ import {
   addBusinessDays,
   daysToMinutes,
   formatDate,
+  formatDuration,
   formatFullDate,
   formatFullDateWithTimezone,
   formatFullDateWithRevertedTimezone,
   formatSimpleDate,
   hoursToDays,
   getBusinessDays,
+  getDayOffRange,
   getDayRange,
   getDatesFromEndDate,
   getDatesFromStartDate,
@@ -27,6 +29,17 @@ import {
 } from '@/lib/time'
 
 describe('time', () => {
+  // Several helpers read the real clock (moment().week(), moment().date());
+  // freeze it so expectations are literals instead of clock-dependent.
+  beforeAll(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2019-09-10T12:00:00Z'))
+  })
+
+  afterAll(() => {
+    vi.useRealTimers()
+  })
+
   test('range', () => {
     expect(range(1, 10)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     expect(range(1, -1)).toEqual([])
@@ -41,12 +54,8 @@ describe('time', () => {
     expect(date.toString()).toEqual(
       moment.tz('2019-09-01', 'UTC').toString()
     )
-    /*
     date = parseSimpleDate(null)
-    expect(formatSimpleDate(date)).toEqual(
-      formatSimpleDate(new Date())
-    )
-    */
+    expect(formatSimpleDate(date)).toEqual('2019-09-10')
   })
 
   test('formatSimpleDate', () => {
@@ -103,13 +112,14 @@ describe('time', () => {
 
   test('getWeekRange', () => {
     expect(getWeekRange(2018, 2019)).toEqual(range(1, 52))
-    expect(getWeekRange(2019, 2019)).toEqual(range(1, moment().week()))
+    // 2019-09-10 (frozen clock) falls in week 37.
+    expect(getWeekRange(2019, 2019)).toEqual(range(1, 37))
   })
 
   test('getDayRange', () => {
     expect(getDayRange(2018, 8, 2019, 9)).toEqual(range(1, 31))
     expect(getDayRange(2019, 7, 2019, 9)).toEqual(range(1, 31))
-    expect(getDayRange(2019, 9, 2019, 9)).toEqual(range(1, moment().date()))
+    expect(getDayRange(2019, 9, 2019, 9)).toEqual(range(1, 10))
   })
 
   test('getFirstStartDate', () => {
@@ -277,5 +287,41 @@ describe('time', () => {
     expect(hoursToDays({ hours_by_day: 8 }, 16)).toEqual(2)
     expect(hoursToDays({ hours_by_day: 7 }, 21)).toEqual(3)
     expect(hoursToDays({ hours_by_day: 7 }, undefined)).toEqual(0)
+  })
+
+  test('formatDuration', () => {
+    const organisation = { hours_by_day: 8 }
+    const hoursOrganisation = { format_duration_in_hours: true, hours_by_day: 8 }
+
+    expect(formatDuration(organisation, 0)).toEqual(0)
+    expect(formatDuration(organisation, null)).toEqual(0)
+
+    // toLocale=false returns plain numbers, rounded to 2 decimals.
+    expect(formatDuration(organisation, 480, false)).toEqual(1)
+    expect(formatDuration(organisation, 100, false)).toEqual(0.21)
+    expect(formatDuration(hoursOrganisation, 90, false)).toEqual(1.5)
+
+    // toLocale=true formats through toLocaleString; the decimal separator
+    // depends on the environment locale, so only integers are asserted.
+    expect(formatDuration(organisation, 480)).toEqual('1')
+    expect(formatDuration(organisation, 960)).toEqual('2')
+    expect(formatDuration(hoursOrganisation, 120)).toEqual('2')
+  })
+
+  test('getDayOffRange', () => {
+    expect(getDayOffRange()).toEqual([])
+    expect(getDayOffRange([])).toEqual([])
+
+    const singleDay = { id: 'off-1', date: '2023-05-01' }
+    expect(getDayOffRange([singleDay])).toEqual([
+      { id: 'off-1', date: '2023-05-01' }
+    ])
+
+    const multiDay = { id: 'off-2', date: '2023-05-01', end_date: '2023-05-03' }
+    expect(getDayOffRange([multiDay])).toEqual([
+      { id: 'off-2', date: '2023-05-01', end_date: '2023-05-03' },
+      { id: 'off-2', date: '2023-05-02', end_date: '2023-05-03' },
+      { id: 'off-2', date: '2023-05-03', end_date: '2023-05-03' }
+    ])
   })
 })
