@@ -575,6 +575,12 @@ export default {
 :focus {
   outline: none;
 }
+// Keyboard navigation must stay visible even though mouse focus is
+// outline-free above.
+:focus-visible {
+  outline: 2px solid var(--text-selected);
+  outline-offset: 1px;
+}
 ::-moz-focus-inner {
   border: 0;
 }
