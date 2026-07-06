@@ -1105,7 +1105,7 @@ abbr {
 }
 
 .z300 {
-  z-index: 300000;
+  z-index: $z-tooltip;
 }
 
 label.label {

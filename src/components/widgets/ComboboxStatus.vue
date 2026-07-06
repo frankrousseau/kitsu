@@ -241,7 +241,7 @@ const comboStyles = computed(() => {
   border: 1px solid $light-grey-light;
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
-  z-index: 300;
+  z-index: $z-dropdown;
   margin-left: -1px;
   max-height: 180px;
   top: 38px;
