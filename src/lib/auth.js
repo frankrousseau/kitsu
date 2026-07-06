@@ -88,28 +88,29 @@ const auth = {
     return client.pput('/api/auth/reset-password', data)
   },
 
-  isServerLoggedIn(callback) {
-    superagent
-      .get('/api/auth/authenticated')
-      .timeout(AUTHENTICATED_REQUEST_TIMEOUT_MS)
-      .end((err, res) => {
-        if (err && res && [401, 422].includes(res.statusCode)) {
-          store.commit(USER_LOGIN_FAIL)
-          callback(null)
-        } else if (err) {
-          store.commit(USER_LOGIN_FAIL)
-          callback(err)
-        } else if (res && res.body === null) {
-          store.commit(USER_LOGIN_FAIL)
-          callback(err)
-        } else {
-          const user = res.body.user
-          const organisation = res.body.organisation || {}
-          store.commit(SET_ORGANISATION, organisation)
-          store.commit(USER_LOGIN, user)
-          callback(null)
-        }
-      })
+  // Resolves when the server answered (authenticated or not), rejects when
+  // the server is unreachable.
+  async isServerLoggedIn() {
+    let res
+    try {
+      res = await superagent
+        .get('/api/auth/authenticated')
+        .timeout(AUTHENTICATED_REQUEST_TIMEOUT_MS)
+    } catch (err) {
+      store.commit(USER_LOGIN_FAIL)
+      if ([401, 422].includes(err.status)) return
+      throw err
+    }
+
+    if (res.body === null) {
+      store.commit(USER_LOGIN_FAIL)
+      return
+    }
+
+    const user = res.body.user
+    const organisation = res.body.organisation || {}
+    store.commit(SET_ORGANISATION, organisation)
+    store.commit(USER_LOGIN, user)
   },
 
   // Needed for router to know if a redirection to login page is required or
@@ -130,16 +131,15 @@ const auth = {
     store.commit(DATA_LOADING_START)
 
     if (store.state.user.user === null) {
-      auth.isServerLoggedIn(err => {
-        if (err) {
+      auth
+        .isServerLoggedIn()
+        .then(finalize)
+        .catch(() => {
           next({
             name: 'server-down',
             query: { redirect: to.fullPath }
           })
-        } else {
-          finalize()
-        }
-      })
+        })
     } else {
       finalize()
     }

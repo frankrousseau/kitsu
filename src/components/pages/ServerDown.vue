@@ -20,12 +20,15 @@ export default {
     ...mapGetters(['isAuthenticated', 'user'])
   },
   mounted() {
-    auth.isServerLoggedIn(err => {
-      if (!err) {
+    auth
+      .isServerLoggedIn()
+      .then(() => {
         const target = this.$store.state.route.query.redirect || '/'
         this.$router.push(target)
-      }
-    })
+      })
+      .catch(() => {
+        // Server still down: stay on this page.
+      })
   }
 }
 </script>
