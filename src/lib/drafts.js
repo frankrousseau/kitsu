@@ -1,5 +1,15 @@
 const DRAFT_PREFIX = 'draft-'
 
+// Set at app init: drafts are private to the logged-in user, so on a
+// shared workstation the next user must not see them.
+let userScope = ''
+
+const draftKey = taskId =>
+  userScope ? `${DRAFT_PREFIX}${userScope}-${taskId}` : DRAFT_PREFIX + taskId
+
+// Pre-scoping drafts were stored under the bare task id.
+const legacyKey = taskId => DRAFT_PREFIX + taskId
+
 const EMPTY_DRAFT = { text: '', checklist: [] }
 
 const normalize = draft => {
@@ -22,16 +32,18 @@ const isEmpty = draft => {
 }
 
 const drafts = {
+  setUserScope(userId) {
+    userScope = userId || ''
+  },
+
   setTaskDraft(taskId, draft) {
     try {
       const normalized = normalize(draft) || EMPTY_DRAFT
       if (isEmpty(normalized)) {
-        return localStorage.removeItem(DRAFT_PREFIX + taskId)
+        return drafts.clearTaskDraft(taskId)
       }
-      return localStorage.setItem(
-        DRAFT_PREFIX + taskId,
-        JSON.stringify(normalized)
-      )
+      localStorage.removeItem(legacyKey(taskId))
+      return localStorage.setItem(draftKey(taskId), JSON.stringify(normalized))
     } catch (e) {
       console.warn('Failed to save draft:', e)
     }
@@ -39,7 +51,11 @@ const drafts = {
 
   getTaskDraft(taskId) {
     try {
-      const raw = localStorage.getItem(DRAFT_PREFIX + taskId)
+      // Fall back to the pre-scoping key so in-flight drafts survive the
+      // upgrade; they get rewritten scoped on the next save.
+      const raw =
+        localStorage.getItem(draftKey(taskId)) ??
+        localStorage.getItem(legacyKey(taskId))
       if (raw === null) return null
       // Legacy drafts were plain text strings. Try JSON first; on parse
       // failure fall back to treating the value as the draft text.
@@ -56,7 +72,8 @@ const drafts = {
 
   clearTaskDraft(taskId) {
     try {
-      return localStorage.removeItem(DRAFT_PREFIX + taskId)
+      localStorage.removeItem(legacyKey(taskId))
+      return localStorage.removeItem(draftKey(taskId))
     } catch (e) {
       console.warn('Failed to clear draft:', e)
     }
