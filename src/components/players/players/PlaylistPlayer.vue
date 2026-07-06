@@ -662,7 +662,7 @@
         :pencil-palette="pencilPalette"
         :pencil-width="pencilWidth"
         :production-backgrounds="productionBackgrounds"
-        :read-only="isCurrentUserArtist"
+        :read-only="readOnly"
         :show-comments-button="true"
         :text-color="textColor"
         v-model:current-background="currentBackground"
@@ -1170,6 +1170,9 @@ const currentProduction = computed(() => store.getters.currentProduction)
 const editMap = computed(() => store.getters.editMap)
 const episodeMap = computed(() => store.getters.episodeMap)
 const isCurrentUserArtist = computed(() => store.getters.isCurrentUserArtist)
+// Same intent as PreviewPlayer's readOnly prop: artists may watch
+// playlists but must not annotate or save.
+const readOnly = computed(() => isCurrentUserArtist.value)
 const isCurrentUserClient = computed(() => store.getters.isCurrentUserClient)
 const isCurrentUserManager = computed(() => store.getters.isCurrentUserManager)
 const isCurrentUserSupervisor = computed(
@@ -2949,7 +2952,7 @@ const saveAnnotations = () => {
     }
   }
 
-  if (!isCurrentUserArtist.value) {
+  if (!readOnly.value) {
     if (!notSaved.value) {
       startAnnotationSaving(preview, newAnnotations)
     }
