@@ -135,6 +135,7 @@
           :is-hd="isHd"
           :is-repeating="isRepeating"
           :muted="true"
+          :next-handle-in="nextEntityHandleIn"
           :panzoom="true"
           :handle-in="
             ['shot', 'edit', 'episode'].includes(playlist.for_entity)
@@ -258,6 +259,7 @@
           :is-repeating="isRepeating"
           :current-preview-index="currentPreviewIndex"
           :muted="isMuted"
+          :next-handle-in="nextEntityHandleIn"
           :panzoom="true"
           @entity-change="onPlayerPlayingEntityChange"
           @frame-update="onRawPlayerFrameUpdate"
@@ -1303,6 +1305,12 @@ const nextEntityIndex = computed(() => {
   if (index > entityList.value.length - 1) index = 0
   return index
 })
+
+// Next entity's handle-in, so the viewers can park their preloaded decoder
+// past the slate before the players switch (#1019).
+const nextEntityHandleIn = computed(
+  () => getEntityHandles(entityList.value[nextEntityIndex.value]).handleIn
+)
 
 const picturePreviews = computed(() =>
   entityList.value.flatMap(e => [
