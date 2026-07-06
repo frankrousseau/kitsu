@@ -905,7 +905,6 @@
  * This modules manages all the options available while playing a playlist.
  * It is made to work with a single playlist.
  */
-import { PSBrush } from 'fabricjs-psbrush'
 import { ArrowUpRightIcon, DownloadIcon, PlayIcon } from 'lucide-vue-next'
 import moment from 'moment-timezone'
 import { v4 as uuidv4 } from 'uuid'
@@ -4019,20 +4018,13 @@ const resetPlaylist = () => {
 const onAnnotateClicked = () => {
   showCanvas()
   if (isDrawing.value) {
-    if (fabricCanvas.value) fabricCanvas.value.isDrawingMode = false
     isDrawing.value = false
   } else {
+    _resetColor()
+    _resetPencil()
     isShapeMode.value = false
     isTyping.value = false
     isEraserModeOn.value = false
-    if (fabricCanvas.value) {
-      fabricCanvas.value.isDrawingMode = true
-      const brush = new PSBrush(fabricCanvas.value)
-      fabricCanvas.value.freeDrawingBrush = brush
-      brush.pressureManager.fallback = 0.5
-    }
-    _resetColor()
-    _resetPencil()
     isDrawing.value = true
   }
 }
@@ -4252,6 +4244,7 @@ watch(isAnnotationsDisplayed, () => {
 })
 
 watch(isDrawing, () => {
+  setAnnotationDrawingMode(isDrawing.value)
   if (!isDrawing.value && isLaserModeOn.value) isLaserModeOn.value = false
   if (isDrawing.value && !isAnnotationsDisplayed.value) {
     isAnnotationsDisplayed.value = true
