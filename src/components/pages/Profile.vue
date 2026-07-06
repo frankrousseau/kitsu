@@ -253,11 +253,11 @@ const localeOptions = [
   { label: 'Italian (Italiano)', value: 'it_IT' },
   { label: 'Japanese (日本語)', value: 'ja_JP' },
   { label: 'Korean (한국어)', value: 'ko_KR' },
+  { label: 'Persian (فارسی)', value: 'fa_IR' },
   { label: 'Polish (Polski)', value: 'pl_PL' },
   { label: 'Portuguese Brazilian (Português)', value: 'pt_BR' },
-  { label: 'Persian (فارسی)', value: 'fa_IR' },
-  { label: 'Spanish (Español)', value: 'es_ES' },
-  { label: 'Russian (Русский)', value: 'ru_RU' }
+  { label: 'Russian (Русский)', value: 'ru_RU' },
+  { label: 'Spanish (Español)', value: 'es_ES' }
 ]
 
 // Computed
