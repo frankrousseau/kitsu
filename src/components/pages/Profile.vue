@@ -66,6 +66,11 @@
             v-model="form.country"
             v-if="user.role !== 'client' && !user.is_guest"
           />
+          <combobox
+            :label="$t('profile.date_format')"
+            :options="dateFormatOptions"
+            v-model="form.display_date_format"
+          />
         </div>
         <div class="toggle-row">
           <checkbox
@@ -198,6 +203,7 @@ import { useStore } from 'vuex'
 
 import { getCountryOptions } from '@/lib/countries'
 import lang, { localeCode } from '@/lib/lang'
+import { DATE_DISPLAY_FORMATS } from '@/lib/time'
 
 import ChangeAvatarModal from '@/components/modals/ChangeAvatarModal.vue'
 import Card from '@/components/widgets/Card.vue'
@@ -227,7 +233,8 @@ const form = ref({
   country: null,
   timezone: 'Europe/Paris',
   locale: 'en_US',
-  use_12_hour_clock: false
+  use_12_hour_clock: false,
+  display_date_format: 'YYYY-MM-DD'
 })
 
 const passwordForm = ref({
@@ -282,11 +289,18 @@ const timezoneOptions = computed(() =>
 
 const countryOptions = computed(() => getCountryOptions(localeCode.value))
 
+const dateFormatOptions = DATE_DISPLAY_FORMATS.map(format => ({
+  label: `${format} (${moment().format(format)})`,
+  value: format
+}))
+
 // Functions
 
 const syncFormFromUser = () => {
   Object.assign(form.value, user.value)
   form.value.use_12_hour_clock = Boolean(user.value.use_12_hour_clock)
+  form.value.display_date_format =
+    user.value.display_date_format || 'YYYY-MM-DD'
   form.value.notifications_enabled = Boolean(user.value.notifications_enabled)
   form.value.notifications_slack_enabled = Boolean(
     user.value.notifications_slack_enabled

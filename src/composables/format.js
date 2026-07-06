@@ -11,6 +11,7 @@ import { useStore } from 'vuex'
 
 import {
   formatDate,
+  formatDisplayDate as libFormatDisplayDate,
   formatDuration as libFormatDuration,
   formatFullDate,
   formatSimpleDate
@@ -48,7 +49,11 @@ export const useFormat = () => {
     () => organisation.value.format_duration_in_hours
   )
 
+  const dateFormat = computed(() => store.getters.dateFormat)
+
   const formatBoolean = value => (value ? t('main.yes') : t('main.no'))
+
+  const formatDisplayDate = date => libFormatDisplayDate(date, dateFormat.value)
 
   const formatDuration = (minutes, toLocale = true) =>
     libFormatDuration(organisation.value, minutes, toLocale)
@@ -64,8 +69,10 @@ export const useFormat = () => {
   return {
     organisation,
     isDurationInHours,
+    dateFormat,
     formatBoolean,
     formatDate,
+    formatDisplayDate,
     formatFullDate,
     formatSimpleDate,
     formatDuration,

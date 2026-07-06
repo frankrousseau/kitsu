@@ -574,7 +574,7 @@ import { remove } from '@/lib/models'
 import { getDownloadAttachmentPath, pluralizeEntityType } from '@/lib/path'
 import { renderComment, replaceTimeWithTimecode, safeUrl } from '@/lib/render'
 import { sortByName } from '@/lib/sorting'
-import { formatTimeOfDay, parseDate } from '@/lib/time'
+import { formatShortDate, formatTimeOfDay, parseDate } from '@/lib/time'
 import stringHelpers from '@/lib/string'
 
 import { useAtMentionsMembers } from '@/composables/atMentions'
@@ -686,6 +686,7 @@ const uniqueClassName = (Math.random() + 1).toString(36).substring(2)
 let silent = false
 let lastCall = 0
 
+const dateFormat = computed(() => store.getters.dateFormat)
 const departmentMap = computed(() => store.getters.departmentMap)
 const isCurrentUserAdmin = computed(() => store.getters.isCurrentUserAdmin)
 const isCurrentUserArtist = computed(() => store.getters.isCurrentUserArtist)
@@ -872,7 +873,7 @@ const renderDate = date => {
   if (moment().isSame(date, 'd')) {
     return formatTimeOfDay(date.tz(user.value.timezone), use12HourClock.value)
   } else {
-    return date.tz(user.value.timezone).format('MM/DD')
+    return formatShortDate(date.tz(user.value.timezone), dateFormat.value)
   }
 }
 

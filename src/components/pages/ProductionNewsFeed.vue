@@ -93,7 +93,6 @@
  */
 import { useHead } from '@unhead/vue'
 import { NewspaperIcon, XIcon } from 'lucide-vue-next'
-import moment from 'moment-timezone'
 import {
   computed,
   getCurrentInstance,
@@ -119,7 +118,7 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const store = useStore()
-const { timezone } = useTime()
+const { formatDay, timezone } = useTime()
 
 const instance = getCurrentInstance()
 const socket = instance.appContext.config.globalProperties.$socket
@@ -185,8 +184,6 @@ const params = computed(() => ({
 }))
 
 // Functions
-
-const formatDay = date => moment.tz(date, 'UTC').tz(timezone.value).format('LL')
 
 const setScrollPosition = scrollPosition => {
   if (body.value) {
