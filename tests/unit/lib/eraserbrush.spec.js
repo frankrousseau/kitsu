@@ -25,6 +25,7 @@ vi.mock('fabric', () => {
     set(props) { Object.assign(this, props); return this }
     calcTransformMatrix() { return [1, 0, 0, 1, 0, 0] }
     clone() { return Promise.resolve(new FakePath(this.path, { ...this })) }
+    getBoundingRect() { return { left: 0, top: 0, width: 10, height: 10 } }
     setCoords() {}
   }
   class FakePencilBrush {
