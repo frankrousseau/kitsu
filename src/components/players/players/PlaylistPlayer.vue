@@ -927,6 +927,7 @@ import { useFullScreen } from '@/composables/fullScreen'
 import { useAnnotation } from '@/composables/players/annotation'
 import { useAnnotationBroadcast } from '@/composables/players/annotationBroadcast'
 import { useAnnotationCursor } from '@/composables/players/annotationCursor'
+import { useMediaKind } from '@/composables/players/mediaKind'
 import { useOnionSkin } from '@/composables/players/onionSkin'
 import { usePlaylistComparison } from '@/composables/players/playlistComparison'
 import { usePreviewShortcuts } from '@/composables/players/previewShortcuts'
@@ -937,13 +938,8 @@ import {
   buildAnnotationSnapshotFilename,
   buildAnnotationSnapshotTitle,
   drawSnapshotTitle,
-  isDiffPreview,
-  isMarkdownPreview,
-  isModelPreview,
   isMoviePreview,
-  isPdfPreview,
-  isPicturePreview,
-  isSoundPreview
+  isPicturePreview
 } from '@/lib/preview'
 import {
   ceilToFrame,
@@ -1210,27 +1206,16 @@ const userId = computed(() => store.getters.user?.id)
 // Computed — file type helpers
 
 const extension = computed(() => currentPreview.value?.extension || '')
-const isCurrentPreviewMovie = computed(() => isMoviePreview(extension.value))
-const isCurrentPreviewPicture = computed(() =>
-  isPicturePreview(extension.value)
-)
-const isCurrentPreviewModel = computed(() => isModelPreview(extension.value))
-const isCurrentPreviewSound = computed(() => isSoundPreview(extension.value))
-const isCurrentPreviewPdf = computed(() => isPdfPreview(extension.value))
-const isCurrentPreviewMarkdown = computed(() =>
-  isMarkdownPreview(extension.value)
-)
-const isCurrentPreviewDiff = computed(() => isDiffPreview(extension.value))
-const isCurrentPreviewFile = computed(
-  () =>
-    !isCurrentPreviewMovie.value &&
-    !isCurrentPreviewPicture.value &&
-    !isCurrentPreviewSound.value &&
-    !isCurrentPreviewModel.value &&
-    !isCurrentPreviewPdf.value &&
-    !isCurrentPreviewMarkdown.value &&
-    !isCurrentPreviewDiff.value
-)
+const {
+  isDiff: isCurrentPreviewDiff,
+  isFile: isCurrentPreviewFile,
+  isMarkdown: isCurrentPreviewMarkdown,
+  isModel: isCurrentPreviewModel,
+  isMovie: isCurrentPreviewMovie,
+  isPdf: isCurrentPreviewPdf,
+  isPicture: isCurrentPreviewPicture,
+  isSound: isCurrentPreviewSound
+} = useMediaKind(extension)
 
 // Computed — entity & preview state
 
