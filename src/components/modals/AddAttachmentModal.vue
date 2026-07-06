@@ -85,7 +85,14 @@
           <template v-for="(form, index) in forms" :key="`attachment-${index}`">
             <p class="attachment-name">
               {{ form.get('file').name }}
-              <span @click="removeAttachment(form)">x</span>
+              <span
+                role="button"
+                tabindex="0"
+                @click="removeAttachment(form)"
+                @keydown.enter.prevent="removeAttachment(form)"
+                @keydown.space.prevent="removeAttachment(form)"
+                >x</span
+              >
             </p>
             <img alt="uploaded file" :src="getURL(form)" v-if="isImage(form)" />
             <attachment-video-player
@@ -119,7 +126,11 @@
               'is-loading': isLoading,
               'is-disabled': forms.length === 0
             }"
+            role="button"
+            tabindex="0"
             @click="confirm()"
+            @keydown.enter.prevent="confirm()"
+            @keydown.space.prevent="confirm()"
           >
             {{ $t('tasks.confirm_attachments') }}
           </a>

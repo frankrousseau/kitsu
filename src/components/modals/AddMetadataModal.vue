@@ -52,7 +52,11 @@
               <span>{{ value }}</span>
               <span
                 class="remove-button pull-right"
+                role="button"
+                tabindex="0"
                 @click="removeValue(value)"
+                @keydown.enter.prevent="removeValue(value)"
+                @keydown.space.prevent="removeValue(value)"
               >
                 x
               </span>
@@ -102,7 +106,11 @@
           <div
             class="department-element mb1"
             :key="departmentId"
+            role="button"
+            tabindex="0"
             @click="removeDepartment(departmentId)"
+            @keydown.enter.prevent="removeDepartment(departmentId)"
+            @keydown.space.prevent="removeDepartment(departmentId)"
             v-for="departmentId in form.departments"
           >
             <department-name :department="departmentMap.get(departmentId)" />

@@ -56,9 +56,21 @@
             <eye-off-icon
               v-if="visible"
               class="icon"
+              role="button"
+              tabindex="0"
               @click="visible = false"
+              @keydown.enter.prevent="visible = false"
+              @keydown.space.prevent="visible = false"
             />
-            <eye-icon v-else class="icon" @click="visible = true" />
+            <eye-icon
+              v-else
+              class="icon"
+              role="button"
+              tabindex="0"
+              @click="visible = true"
+              @keydown.enter.prevent="visible = true"
+              @keydown.space.prevent="visible = true"
+            />
           </div>
           <div class="flexrow right">
             <Transition name="fade">

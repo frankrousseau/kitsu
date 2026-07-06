@@ -57,7 +57,14 @@
           <template v-for="(form, index) in forms" :key="`preview-${index}`">
             <p class="preview-name">
               {{ form.get('file').name }}
-              <span @click="removePreview(form)">x</span>
+              <span
+                role="button"
+                tabindex="0"
+                @click="removePreview(form)"
+                @keydown.enter.prevent="removePreview(form)"
+                @keydown.space.prevent="removePreview(form)"
+                >x</span
+              >
             </p>
             <img alt="uploaded file" :src="getURL(form)" v-if="isImage(form)" />
             <video
@@ -100,7 +107,11 @@
               'is-loading': isLoading,
               'is-disabled': forms.length === 0
             }"
+            role="button"
+            tabindex="0"
             @click="$emit('confirm', forms)"
+            @keydown.enter.prevent="$emit('confirm', forms)"
+            @keydown.space.prevent="$emit('confirm', forms)"
           >
             {{
               confirmLabel?.length

@@ -119,7 +119,13 @@
               v-for="(attachment, index) in form.attachment_files"
             >
               {{ attachment.name }}
-              <span @click="removeAttachment(attachment)">
+              <span
+                role="button"
+                tabindex="0"
+                @click="removeAttachment(attachment)"
+                @keydown.enter.prevent="removeAttachment(attachment)"
+                @keydown.space.prevent="removeAttachment(attachment)"
+              >
                 <x-icon :size="12" />
               </span>
             </div>
@@ -138,7 +144,14 @@
             v-for="(attachment, index) in attachmentFiles"
           >
             {{ attachment.get('file').name }}
-            <span @click="removeNewAttachment(attachment)">x</span>
+            <span
+              role="button"
+              tabindex="0"
+              @click="removeNewAttachment(attachment)"
+              @keydown.enter.prevent="removeNewAttachment(attachment)"
+              @keydown.space.prevent="removeNewAttachment(attachment)"
+              >x</span
+            >
           </div>
         </div>
 
