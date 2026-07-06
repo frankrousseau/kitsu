@@ -230,7 +230,9 @@ describe('composables/previewRoom', () => {
         'preview-room:room-updated',
         expect.objectContaining({
           user_id: 'user-1',
-          local_id: 'local-abc',
+          // The room sequence rides inside local_id (see lib/players/roomSync)
+          local_id: expect.stringMatching(/^local-abc#\d+$/),
+          room_seq: expect.any(Number),
           playlist_id: 'playlist-1',
           previous_preview_file_id: 'prev-preview-id',
           is_playing: false,
@@ -624,6 +626,113 @@ describe('composables/previewRoom', () => {
       handler({ people: ['user-1', 'user-2'] })
       expect(room.people).toEqual(['user-1', 'user-2'])
       expect(room.newComer).toBe(false)
+      wrapper.unmount()
+    })
+  })
+
+  describe('event storm guards (#1574)', () => {
+    const handlerFor = (socket, event) => {
+      const call = socket.on.mock.calls.find(([name]) => name === event)
+      return call?.[1]
+    }
+
+    const roomUpdateCount = socket =>
+      socket.emit.mock.calls.filter(
+        ([event]) => event === 'preview-room:room-updated'
+      ).length
+
+    const mountPlayer = (extra = {}) => {
+      const socket = makeSocket()
+      const playEntity = vi.fn()
+      const mounted = mountWithRoom({
+        room: makeRoom({ people: ['user-1'] }),
+        userId: 'user-1',
+        socket,
+        playEntity,
+        ...extra
+      })
+      const handler = handlerFor(socket, 'preview-room:room-updated')
+      return { ...mounted, socket, playEntity, handler }
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('drops stale incoming updates (sequence behind the last applied)', () => {
+      const { wrapper, playEntity, handler } = mountPlayer()
+      handler({
+        local_id: 'other#2000',
+        is_playing: false,
+        current_entity_index: 2
+      })
+      expect(playEntity).toHaveBeenCalledTimes(1)
+      handler({
+        local_id: 'other#1000',
+        is_playing: false,
+        current_entity_index: 5
+      })
+      expect(playEntity).toHaveBeenCalledTimes(1)
+      wrapper.unmount()
+    })
+
+    it('applies updates without a sequence (older clients)', () => {
+      const { wrapper, playEntity, handler } = mountPlayer()
+      handler({ local_id: 'other', is_playing: false, current_entity_index: 2 })
+      handler({ local_id: 'other', is_playing: false, current_entity_index: 5 })
+      expect(playEntity).toHaveBeenCalledTimes(2)
+      wrapper.unmount()
+    })
+
+    it("drops incoming updates older than the user's own last action", () => {
+      const { wrapper, api, playEntity, handler } = mountPlayer()
+      api.updateRoomStatus()
+      handler({
+        local_id: `other#${Date.now() - 1000}`,
+        is_playing: false,
+        current_entity_index: 2
+      })
+      expect(playEntity).not.toHaveBeenCalled()
+      handler({
+        local_id: `other#${Date.now() + 1000}`,
+        is_playing: false,
+        current_entity_index: 3
+      })
+      expect(playEntity).toHaveBeenCalledTimes(1)
+      wrapper.unmount()
+    })
+
+    it('never re-broadcasts a state just applied from the network', () => {
+      const { wrapper, api, socket, handler } = mountPlayer()
+      handler({
+        local_id: `other#${Date.now()}`,
+        is_playing: false,
+        current_entity_index: 2
+      })
+      socket.emit.mockClear()
+      // A watcher on an applied ref echoing the state back
+      api.updateRoomStatus()
+      expect(roomUpdateCount(socket)).toBe(0)
+      vi.advanceTimersByTime(600)
+      api.updateRoomStatus()
+      expect(roomUpdateCount(socket)).toBe(1)
+      wrapper.unmount()
+    })
+
+    it('collapses a burst of updates into a leading and a trailing emit', () => {
+      const { wrapper, api, socket } = mountPlayer()
+      api.updateRoomStatus()
+      api.updateRoomStatus()
+      api.updateRoomStatus()
+      expect(roomUpdateCount(socket)).toBe(1)
+      vi.advanceTimersByTime(250)
+      expect(roomUpdateCount(socket)).toBe(2)
+      vi.advanceTimersByTime(1000)
+      expect(roomUpdateCount(socket)).toBe(2)
       wrapper.unmount()
     })
   })
