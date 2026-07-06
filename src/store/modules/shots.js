@@ -387,7 +387,7 @@ const actions = {
     return shots
   },
 
-  loadShots({ commit, dispatch, state, rootGetters }, callback) {
+  loadShots({ commit, dispatch, state, rootGetters }) {
     const production = rootGetters.currentProduction
     const episodes = rootGetters.episodes
     const userFilters = rootGetters.userFilters
@@ -398,37 +398,27 @@ const actions = {
     const isTVShow = rootGetters.isTVShow
     let episode = isTVShow ? rootGetters.currentEpisode : null
 
-    if (!production) {
-      if (callback) return callback()
-      return
-    }
+    if (!production) return Promise.resolve()
 
     if (episode && ['all', 'main'].includes(episode.id)) {
       // If it's a wide episode, we just store it. There isn't anything to
       // load because we don't have episode defined.
       commit(SET_CURRENT_EPISODE, episode.id)
-      if (callback) return callback()
-    } else if (isTVShow && !episode) {
+      return Promise.resolve()
+    }
+    if (isTVShow && !episode) {
       // If it's tv show and if we don't have any episode set, we use the first
       // one.
       episode = episodes.length > 0 ? episodes[0] : null
-      if (!episode && callback) return callback()
-      if (!episode) return
+      if (!episode) return Promise.resolve()
       commit(SET_CURRENT_EPISODE, episode.id)
-    }
-
-    if (isTVShow && !episode && episodes.length === 0) {
-      if (callback) return callback()
     }
 
     if (!isTVShow && episode) {
       commit(SET_CURRENT_EPISODE, null)
     }
 
-    if (state.isShotsLoading) {
-      if (callback) callback()
-      return
-    }
+    if (state.isShotsLoading) return Promise.resolve()
 
     commit(LOAD_SHOTS_START)
     return dispatch('loadSequencesWithTasks')
@@ -440,7 +430,6 @@ const actions = {
         // from; the loading flag is owned by the newer load (reset via
         // CLEAR_SHOTS on switch).
         if (production.id !== rootGetters.currentProduction?.id) {
-          if (callback) callback()
           return
         }
         if (
@@ -464,12 +453,10 @@ const actions = {
         } else {
           commit(END_SHOTS_LOADING)
         }
-        if (callback) callback()
       })
       .catch(err => {
         commit(LOAD_SHOTS_ERROR)
         console.error(err)
-        if (callback) callback(err)
       })
   },
 

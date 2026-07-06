@@ -284,10 +284,8 @@ export default {
     if (this.shotMap.size < 2) {
       this.isLoading = true
       setTimeout(() => {
-        this.loadShots(err => {
-          if (!err) {
-            this.loadData()
-          }
+        this.loadShots().then(() => {
+          this.loadData()
         })
       }, 100)
     } else {
@@ -395,21 +393,17 @@ export default {
     },
 
     loadDetails(personId, dateString) {
-      this.loadShots(err => {
+      this.loadShots().then(() => {
         this.isLoading = true
-        if (err) {
-          console.error(err)
-        } else {
-          if (this.taskTypeId) {
-            this.getPeriodDetails({
-              taskTypeId: this.taskTypeId,
-              detailLevel: this.detailLevel,
-              personId,
-              dateString
-            }).then(shots => {
-              this.detailsMap = shots
-            })
-          }
+        if (this.taskTypeId) {
+          this.getPeriodDetails({
+            taskTypeId: this.taskTypeId,
+            detailLevel: this.detailLevel,
+            personId,
+            dateString
+          }).then(shots => {
+            this.detailsMap = shots
+          })
         }
       })
     },
