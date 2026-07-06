@@ -1697,6 +1697,7 @@
       "hours": "timer",
       "month": "Måned",
       "time_spents": "Tid brugt (timer)",
+      "timelog_title": "Timelog",
       "title": "Tidsregistreringer",
       "year": "År",
       "confirm_day_off": "Hvis du markerer denne dag som en fridag, vil al registreret tid for den aktuelle dag blive slettet. Er du sikker på, at du vil fortsætte?",

@@ -1697,6 +1697,7 @@
       "hours": "小时",
       "month": "月",
       "time_spents": "已用时长(小时)",
+      "timelog_title": "时间日志",
       "title": "时间表",
       "year": "年",
       "confirm_day_off": "将这一天设置为休息日将清除当天填写的所有时间。你确定你要继续吗？",

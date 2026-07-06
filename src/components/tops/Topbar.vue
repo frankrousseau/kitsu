@@ -100,7 +100,7 @@
           }"
           v-if="!isCurrentUserAdmin && !isCurrentUserClient"
         >
-          {{ $t('timesheets.title') }}
+          {{ $t('timesheets.timelog_title') }}
         </router-link>
         <global-search-field
           class="flexrow-item mr0"

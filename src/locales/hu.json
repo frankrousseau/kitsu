@@ -1697,6 +1697,7 @@
       "hours": "óra",
       "month": "Hónap",
       "time_spents": "Eltöltött idő (óra)",
+      "timelog_title": "Munkaidő-napló",
       "title": "Időtáblák",
       "year": "Év",
       "confirm_day_off": "A nap szabadnapra állítása kitöröl minden beírt munkaórát ezen a napon. Biztosan folytatod?",

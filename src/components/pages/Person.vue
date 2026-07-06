@@ -488,7 +488,7 @@ export default {
           name: 'done'
         },
         {
-          label: this.$t('timesheets.title'),
+          label: this.$t('timesheets.timelog_title'),
           name: 'timesheets'
         }
       ].filter(Boolean)

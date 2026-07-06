@@ -1697,6 +1697,7 @@
       "hours": "Horas",
       "month": "Mês",
       "time_spents": "Tempo gasto (horas)",
+      "timelog_title": "Registro de tempo",
       "title": "Quadro de Horários",
       "year": "Ano",
       "confirm_day_off": "Definir esse dia como um dia de folga apagará todo o tempo registrado no dia atual. Tem certeza de que deseja continuar?",
