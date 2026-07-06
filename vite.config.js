@@ -97,11 +97,29 @@ export default defineConfig({
     setupFiles: ['vitest-localstorage-mock', 'tests/unit.setup.js'],
     mockReset: false,
     isolate: true,
+    // Agent worktrees under .claude/ carry their own copy of the suite;
+    // without this exclude `vitest tests/unit` picks them up too.
+    exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'],
     deps: {
       optimizer: {
         client: {
           include: ['vue', 'vuex', 'vue-router', '@vue/test-utils']
         }
+      }
+    },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'lcov'],
+      // Components are exercised through the dev app, not unit tests;
+      // thresholds only guard the layers the suite actually covers.
+      include: ['src/lib/**/*.js', 'src/store/**/*.js'],
+      // Floors set just under the measured baseline (2026-07): raise them
+      // as coverage grows, never lower them.
+      thresholds: {
+        lines: 28,
+        functions: 17,
+        branches: 25,
+        statements: 28
       }
     }
   }

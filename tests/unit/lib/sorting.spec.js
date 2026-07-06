@@ -551,31 +551,32 @@ describe('lib/sorting', () => {
       }
     ]
     const sortingMetadata = [
-      { type: 'metadata', column: 'valid' }
+      { type: 'metadata', column: 'metadata1', data_type: 'string' }
     ]
     const sortingTaskType = [
-      { type: 'task_type', column: 'metadata1' }
+      { type: 'task_type', column: 'valid' }
     ]
+    // task2 sorts before task1 so the task-type order differs from the
+    // metadata one: a comparator mix-up cannot pass both assertions.
     const taskMap = new Map()
-    taskMap.set('task1', { task_status_short_name: 'status A' })
-    taskMap.set('task2', { task_status_short_name: 'status B' })
-    sortAssetResult(entries, sortingMetadata, taskTypeMap, taskMap)
-    sortAssetResult(entries, sortingTaskType, taskTypeMap, taskMap)
-    /*
-    expect(resultsMetadata).toHaveLength(5)
-    expect(resultsMetadata[0].id).toEqual(5)
-    expect(resultsMetadata[1].id).toEqual(4)
-    expect(resultsMetadata[2].id).toEqual(3)
-    expect(resultsMetadata[3].id).toEqual(2)
-    expect(resultsMetadata[4].id).toEqual(1)
+    taskMap.set('task1', { task_status_short_name: 'status Z' })
+    taskMap.set('task2', { task_status_short_name: 'status A' })
 
-    expect(resultsTaskTypes).toHaveLength(5)
-    expect(resultsTaskTypes[0].id).toEqual(5)
-    expect(resultsTaskTypes[1].id).toEqual(4)
-    expect(resultsTaskTypes[2].id).toEqual(3)
-    expect(resultsTaskTypes[3].id).toEqual(2)
-    expect(resultsTaskTypes[4].id).toEqual(1)
-    */
+    const resultsMetadata = sortAssetResult(
+      entries,
+      sortingMetadata,
+      taskTypeMap,
+      taskMap
+    )
+    expect(resultsMetadata.map(entry => entry.id)).toEqual([5, 4, 3, 2, 1])
+
+    const resultsTaskTypes = sortAssetResult(
+      entries,
+      sortingTaskType,
+      taskTypeMap,
+      taskMap
+    )
+    expect(resultsTaskTypes.map(entry => entry.id)).toEqual([5, 3, 2, 1, 4])
   })
 
   it('sortShotResult', () => {
@@ -645,19 +646,20 @@ describe('lib/sorting', () => {
       ['task1', { task_status_short_name: 'status A' }],
       ['task2', { task_status_short_name: 'status B' }]
     ])
-    sortShotResult(entries, sortingMetadata, taskTypeMap, taskMap)
-    const resultsTaskTypes =
-      sortShotResult(entries, sortingTaskType, taskTypeMap, taskMap)
-    /*
-    expect(resultsMetadata).toHaveLength(6)
-    expect(resultsMetadata[0].id).toEqual(5)
-    expect(resultsMetadata[1].id).toEqual(4)
-    expect(resultsMetadata[2].id).toEqual(6)
-    expect(resultsMetadata[3].id).toEqual(3)
-    expect(resultsMetadata[4].id).toEqual(1)
-    expect(resultsMetadata[5].id).toEqual(3)
-    */
+    const resultsMetadata = sortShotResult(
+      entries,
+      sortingMetadata,
+      taskTypeMap,
+      taskMap
+    )
+    expect(resultsMetadata.map(entry => entry.id)).toEqual([5, 4, 6, 1, 3, 2])
 
+    const resultsTaskTypes = sortShotResult(
+      entries,
+      sortingTaskType,
+      taskTypeMap,
+      taskMap
+    )
     expect(resultsTaskTypes).toHaveLength(6)
     expect(resultsTaskTypes[0].id).toEqual(5)
     expect(resultsTaskTypes[1].id).toEqual(4)

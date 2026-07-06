@@ -1,0 +1,126 @@
+import { vi } from 'vitest'
+
+const h = vi.hoisted(() => ({
+  isAdmin: false
+}))
+
+// Stub everything the route guards touch so importing the route table does
+// not drag the real store, auth flow or page components into jsdom.
+vi.mock('@/lib/auth', () => ({
+  default: { requireAuth: (to, from, callback) => callback(null) }
+}))
+vi.mock('@/lib/init', () => ({ default: vi.fn() }))
+vi.mock('@/lib/lang', () => ({ default: { setLocale: vi.fn() } }))
+vi.mock('@/lib/sentry', () => ({ default: { setContext: vi.fn() } }))
+vi.mock('@/lib/timezone', () => ({ default: { setTimezone: vi.fn() } }))
+vi.mock('@/store', () => ({
+  default: {
+    commit: vi.fn(),
+    state: { productions: { openProductions: [] } }
+  }
+}))
+vi.mock('@/store/modules/people', () => ({
+  default: { state: { organisation: {} } }
+}))
+vi.mock('@/store/modules/tasktypes', () => ({
+  default: { state: { taskTypes: [] } }
+}))
+vi.mock('@/store/modules/user', () => ({
+  default: {
+    state: { user: { locale: 'en' } },
+    getters: {
+      isCurrentUserAdmin: () => h.isAdmin,
+      isCurrentUserArtist: () => false
+    }
+  }
+}))
+vi.mock('@/components/Main.vue', () => ({ default: {} }))
+vi.mock('@/components/pages/Login.vue', () => ({ default: {} }))
+
+import init from '@/lib/init'
+import taskTypeStore from '@/store/modules/tasktypes'
+import { routes } from '@/router/routes'
+
+const mainRoute = routes.find(route => route.path === '/')
+
+// The admin-only pages: removing the requiresAdmin flag from any of them
+// would silently expose the page to every logged-in user.
+const ADMIN_ONLY_ROUTES = [
+  'asset-types',
+  'backgrounds',
+  'bots',
+  'custom-actions',
+  'departments',
+  'logs',
+  'main-schedule',
+  'newsfeed',
+  'people',
+  'productions',
+  'project-templates',
+  'project-template-settings',
+  'salary-scale',
+  'settings',
+  'status-automations',
+  'studios',
+  'task-status',
+  'task-types',
+  'team-schedule'
+]
+
+describe('router/routes', () => {
+  beforeEach(() => {
+    h.isAdmin = false
+    taskTypeStore.state.taskTypes = [{ id: 'task-type-1' }]
+    vi.clearAllMocks()
+  })
+
+  describe('admin route table', () => {
+    test.each(ADMIN_ONLY_ROUTES)('%s requires admin', name => {
+      const route = mainRoute.children.find(child => child.name === name)
+      expect(route).toBeDefined()
+      expect(route.meta?.requiresAdmin).toBe(true)
+    })
+  })
+
+  describe('main guard', () => {
+    const runGuard = to => {
+      const next = vi.fn()
+      mainRoute.beforeEnter(to, {}, next)
+      return next
+    }
+
+    test('redirects a non-admin to not-found on an admin route', () => {
+      const next = runGuard({ matched: [{ meta: { requiresAdmin: true } }] })
+      expect(next).toHaveBeenCalledWith({ name: 'not-found' })
+    })
+
+    test('lets an admin through on an admin route', () => {
+      h.isAdmin = true
+      const next = runGuard({ matched: [{ meta: { requiresAdmin: true } }] })
+      expect(next).toHaveBeenCalledWith()
+    })
+
+    test('lets a non-admin through on a regular route', () => {
+      const next = runGuard({ matched: [{ meta: {} }] })
+      expect(next).toHaveBeenCalledWith()
+    })
+
+    test('still blocks admin routes when data loads first', async () => {
+      taskTypeStore.state.taskTypes = []
+      init.mockResolvedValue(true)
+      const next = runGuard({ matched: [{ meta: { requiresAdmin: true } }] })
+      await vi.waitFor(() =>
+        expect(next).toHaveBeenCalledWith({ name: 'not-found' })
+      )
+    })
+
+    test('redirects to server-down when the initial load fails', async () => {
+      taskTypeStore.state.taskTypes = []
+      init.mockRejectedValue(new Error('api down'))
+      const next = runGuard({ matched: [{ meta: {} }] })
+      await vi.waitFor(() =>
+        expect(next).toHaveBeenCalledWith({ name: 'server-down' })
+      )
+    })
+  })
+})

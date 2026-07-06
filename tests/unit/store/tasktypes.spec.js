@@ -1,4 +1,5 @@
 import store from '@/store/modules/tasktypes'
+import taskTypesApi from '@/store/api/tasktypes'
 
 const taskTypes = [
   {
@@ -107,17 +108,78 @@ describe('Task types store', () => {
   })
 
   describe('Actions', () => {
-    test('loadTaskType', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
     })
-    test('loadTaskTypes', () => {
+
+    test('loadTaskType', async () => {
+      const taskType = { id: 'task-type-9', name: 'Rigging' }
+      vi.spyOn(taskTypesApi, 'getTaskType').mockResolvedValue(taskType)
+      const commit = vi.fn()
+      await store.actions.loadTaskType({ commit }, 'task-type-9')
+      expect(taskTypesApi.getTaskType).toHaveBeenCalledWith('task-type-9')
+      expect(commit).toHaveBeenCalledWith('EDIT_TASK_TYPE_END', taskType)
     })
-    test('newTaskType', () => {
+
+    test('loadTaskTypes', async () => {
+      vi.spyOn(taskTypesApi, 'getTaskTypes').mockResolvedValue([...taskTypes])
+      const commit = vi.fn()
+      await store.actions.loadTaskTypes({ commit })
+      expect(commit).toHaveBeenCalledWith('LOAD_TASK_TYPES_START')
+      expect(commit).toHaveBeenCalledWith('LOAD_TASK_TYPES_END', taskTypes)
     })
-    test('editTaskType', () => {
+
+    test('newTaskType', async () => {
+      const data = { name: 'Rigging' }
+      const taskType = { id: 'task-type-9', name: 'Rigging' }
+      vi.spyOn(taskTypesApi, 'newTaskType').mockResolvedValue(taskType)
+      const commit = vi.fn()
+      await store.actions.newTaskType({ commit }, data)
+      expect(commit).toHaveBeenCalledWith('EDIT_TASK_TYPE_START', data)
+      expect(commit).toHaveBeenCalledWith('EDIT_TASK_TYPE_END', taskType)
     })
-    test('deleteTaskType', () => {
+
+    test('editTaskType', async () => {
+      const taskType = { id: 'task-type-1', name: 'Modeling edited' }
+      vi.spyOn(taskTypesApi, 'updateTaskType').mockResolvedValue(taskType)
+      const commit = vi.fn()
+      await store.actions.editTaskType({ commit }, taskType)
+      expect(taskTypesApi.updateTaskType).toHaveBeenCalledWith(taskType)
+      expect(commit).toHaveBeenCalledWith('EDIT_TASK_TYPE_END', taskType)
     })
-    test('initTaskType', () => {
+
+    test('deleteTaskType', async () => {
+      const taskType = taskTypes[0]
+      vi.spyOn(taskTypesApi, 'deleteTaskType').mockResolvedValue()
+      const commit = vi.fn()
+      await store.actions.deleteTaskType({ commit }, taskType)
+      expect(commit).toHaveBeenCalledWith('DELETE_TASK_TYPE_START')
+      expect(commit).toHaveBeenCalledWith('DELETE_TASK_TYPE_END', taskType)
+    })
+
+    test('initTaskType resolves without loading when shots are cached', async () => {
+      const dispatch = vi.fn()
+      const rootGetters = {
+        currentTaskType: { for_entity: 'Shot' },
+        shotMap: new Map([
+          ['shot-1', {}],
+          ['shot-2', {}]
+        ])
+      }
+      await store.actions.initTaskType({ dispatch, rootGetters }, false)
+      expect(dispatch).not.toHaveBeenCalled()
+    })
+
+    test('initTaskType loads shots when the shot map is empty', async () => {
+      const dispatch = vi.fn().mockResolvedValue()
+      const rootGetters = {
+        currentTaskType: { for_entity: 'Shot' },
+        shotMap: new Map(),
+        episodes: [],
+        isTVShow: false
+      }
+      await store.actions.initTaskType({ dispatch, rootGetters }, false)
+      expect(dispatch).toHaveBeenCalledWith('loadShots')
     })
   })
 
