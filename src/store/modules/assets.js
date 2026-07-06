@@ -1084,6 +1084,7 @@ const mutations = {
     result = applyFilters(result, filters, taskMap)
 
     if (result && result.length > 0) {
+      cache.result.push(asset)
       state.displayedAssets.push(asset)
       state.displayedAssets = sortAssets(state.displayedAssets)
       helpers.setListStats(state, cache.assets)
@@ -1110,6 +1111,7 @@ const mutations = {
     if (cache.assetMap.get(assetToDelete.id)) {
       cache.assetMap.delete(assetToDelete.id)
       cache.assets = removeModelFromList(cache.assets, assetToDelete)
+      cache.result = removeModelFromList(cache.result, assetToDelete)
       state.displayedAssets = removeModelFromList(
         state.displayedAssets,
         assetToDelete
@@ -1163,6 +1165,7 @@ const mutations = {
       newAsset.episode_id = newAsset.source_id
       cache.assets.push(newAsset)
       cache.assets = sortAssets(cache.assets)
+      cache.result.push(newAsset)
       state.displayedAssets.push(newAsset)
       state.assetFilledColumns = getFilledColumns(state.displayedAssets)
       state.displayedAssetsLength = cache.assets.filter(a => !a.canceled).length
