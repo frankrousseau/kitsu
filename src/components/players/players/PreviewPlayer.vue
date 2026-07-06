@@ -153,6 +153,7 @@
         :annotations="annotations"
         :comparison-annotations="comparisonAnnotations"
         :frame-duration="frameDuration"
+        :frame-start="frameStart"
         :is-full-screen="fullScreen"
         :movie-dimensions="movieDimensions"
         :nb-frames="nbFrames"
@@ -171,6 +172,7 @@
           :available-3-d-animations="available3DAnimations"
           :current-frame-label="currentFrameLabel"
           :current-time="currentTime"
+          :frame-start="frameStart"
           :full-screen="fullScreen"
           :is-3-d-animation="is3DAnimation"
           :is-3-d-model="is3DModel"
@@ -468,6 +470,7 @@ import {
   floorToFrame,
   formatFrame,
   formatTime,
+  getEntityFrameStart,
   roundToFrame
 } from '@/lib/video'
 
@@ -642,6 +645,7 @@ const isTVShow = computed(() => store.getters.isTVShow)
 const organisation = computed(() => store.getters.organisation)
 const productionMap = computed(() => store.getters.productionMap)
 const selectedConcepts = computed(() => store.getters.selectedConcepts)
+const shotMap = computed(() => store.getters.shotMap)
 const userId = computed(() => store.getters.user?.id)
 
 // Panzoom transform sync — the main viewer drives both the
@@ -849,6 +853,12 @@ const fps = computed(
 
 const frameDuration = computed(
   () => Math.round((1 / fps.value) * 10000) / 10000
+)
+
+// Production start frame of the displayed shot (data.frame_in, e.g. 1001).
+// Forwarded to the playback bar / progress bar as a display-only offset.
+const frameStart = computed(() =>
+  getEntityFrameStart(shotMap.value.get(props.task?.entity_id))
 )
 
 const extension = computed(() =>

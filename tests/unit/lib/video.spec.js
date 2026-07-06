@@ -5,6 +5,7 @@ import {
   formatTime,
   formatToTimecode,
   frameToSeconds,
+  getEntityFrameStart,
   roundToFrame
 } from '@/lib/video'
 
@@ -79,5 +80,17 @@ describe('video', () => {
 
   it('formatTime with negative time', () => {
     expect(formatTime(-1, 25)).toBe('00:00:00:00')
+  })
+
+  it('getEntityFrameStart', () => {
+    expect(getEntityFrameStart({ data: { frame_in: 1001 } })).toBe(1001)
+    expect(getEntityFrameStart({ data: { frame_in: '1001' } })).toBe(1001)
+    expect(getEntityFrameStart({ data: { frame_in: 1 } })).toBe(1)
+    expect(getEntityFrameStart({ data: { frame_in: 0 } })).toBeUndefined()
+    expect(getEntityFrameStart({ data: { frame_in: -5 } })).toBeUndefined()
+    expect(getEntityFrameStart({ data: { frame_in: 'abc' } })).toBeUndefined()
+    expect(getEntityFrameStart({ data: {} })).toBeUndefined()
+    expect(getEntityFrameStart({})).toBeUndefined()
+    expect(getEntityFrameStart(undefined)).toBeUndefined()
   })
 })

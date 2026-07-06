@@ -40,7 +40,7 @@
         v-if="handleIn >= 0 && !isFullMode && !empty"
       >
         <span class="handle-frame" v-if="handleIn !== 0">
-          {{ handleIn + 1 }}
+          {{ handleIn + 1 + frameStartOffset }}
         </span>
       </span>
 
@@ -53,7 +53,7 @@
         v-if="handleOut >= 0 && !isFullMode && !empty"
       >
         <span class="handle-frame">
-          {{ handleOut + 1 }}
+          {{ handleOut + 1 + frameStartOffset }}
         </span>
       </span>
 
@@ -109,7 +109,7 @@
           isFrameNumberVisible && hoverFrame > 0 && !empty && !progressDragging
         "
       >
-        {{ hoverFrame }}
+        {{ hoverFrame + frameStartOffset }}
         <span
           class="frame-tile"
           :style="getFrameBackgroundStyle(hoverFrame)"
@@ -148,6 +148,10 @@ const props = defineProps({
   },
   frameDuration: {
     default: 0,
+    type: Number
+  },
+  frameStart: {
+    default: undefined,
     type: Number
   },
   handleIn: {
@@ -211,6 +215,12 @@ const getClientX = event =>
   event.clientX
 
 const videoDuration = computed(() => props.nbFrames * props.frameDuration)
+
+// Display-only shift so the first frame reads as `frameStart` (e.g. a shot
+// with data.frame_in = 1001) instead of 1. Internal frame math is untouched.
+const frameStartOffset = computed(() =>
+  props.frameStart > 0 ? props.frameStart - 1 : 0
+)
 
 const backgroundSize = computed(() => {
   if (videoDuration.value) {
