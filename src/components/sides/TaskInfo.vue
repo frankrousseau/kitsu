@@ -1768,13 +1768,13 @@ export default {
   .add-comment,
   .comment,
   .no-comment {
-    background: #46494f;
+    background: var(--background-alt);
     border-color: $dark-grey;
     box-shadow: 0 0 6px #333;
   }
 
   .extend-bar {
-    background: #46494f;
+    background: var(--background-alt);
   }
 
   .no-preview {
@@ -1782,7 +1782,7 @@ export default {
   }
 
   .side {
-    background: #36393f;
+    background: var(--background);
   }
 
   .task-info {
