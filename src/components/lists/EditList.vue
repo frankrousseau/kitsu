@@ -626,8 +626,8 @@ export default {
     'edit-history',
     'keep-task-panel-open',
     'metadata-changed',
-    'restore-clicked',
-    'scroll'
+    'restore-clicked'
+    // 'scroll' comes from entityListMixin's emits + onBodyScroll
   ],
 
   // PERF-1 pilot: useVirtualizer is a composable, so it needs a setup()
@@ -860,7 +860,7 @@ export default {
   },
 
   methods: {
-    ...mapActions(['displayMoreEdits', 'setEditSelection']),
+    ...mapActions(['setEditSelection']),
 
     isSelected(lineIndex, columnIndex) {
       return this.editSelectionGrid.has(`${lineIndex}-${columnIndex}`)
@@ -984,20 +984,10 @@ export default {
       })
     },
 
-    onBodyScroll(event) {
-      if (!this.$refs.body) return
-      const position = event.target
-      this.$emit('scroll', position.scrollTop)
-      const maxHeight =
-        this.$refs.body.scrollHeight - this.$refs.body.offsetHeight
-      if (maxHeight < position.scrollTop + 100) {
-        this.loadMoreEdits()
-      }
-    },
-
-    loadMoreEdits() {
-      this.displayMoreEdits()
-    },
+    // PERF-1: no local onBodyScroll anymore. The store now displays the
+    // full result at once (rows are virtualized), so the old
+    // scroll-to-bottom -> displayMoreEdits wiring is gone and the mixin's
+    // onBodyScroll (scroll-position emit only) takes over.
 
     editPath(editId) {
       return this.getPath('edit', editId)

@@ -739,8 +739,8 @@ export default {
     'keep-task-panel-open',
     'metadata-changed',
     'new-clicked',
-    'restore-clicked',
-    'scroll'
+    'restore-clicked'
+    // 'scroll' comes from entityListMixin's emits + onBodyScroll
   ],
 
   // PERF-1: virtualized rows, ported from the EditList pilot. useVirtualizer
@@ -1142,7 +1142,7 @@ export default {
   },
 
   methods: {
-    ...mapActions(['displayMoreAssets', 'editAsset', 'setAssetSelection']),
+    ...mapActions(['editAsset', 'setAssetSelection']),
 
     assetEpisodes(asset, full) {
       if (!this.episodeMap) return ''
@@ -1306,16 +1306,10 @@ export default {
       })
     },
 
-    onBodyScroll(event) {
-      if (!this.$refs.body) return
-      const position = event.target
-      this.$emit('scroll', position.scrollTop)
-      const maxHeight =
-        this.$refs.body.scrollHeight - this.$refs.body.offsetHeight
-      if (maxHeight < position.scrollTop + 100) {
-        this.loadMoreAssets()
-      }
-    },
+    // PERF-1: no local onBodyScroll anymore. The store now displays the
+    // full result at once (rows are virtualized), so the old
+    // scroll-to-bottom -> displayMoreAssets wiring is gone and the mixin's
+    // onBodyScroll (scroll-position emit only) takes over.
 
     onReadyForChanged(asset, taskTypeId) {
       if (this.selectedAssets.has(asset.id)) {
@@ -1327,10 +1321,6 @@ export default {
         const data = { id: asset.id, ready_for: taskTypeId }
         this.$emit('asset-changed', data)
       }
-    },
-
-    loadMoreAssets() {
-      this.displayMoreAssets()
     },
 
     getIndex(i, k) {
