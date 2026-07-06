@@ -54,6 +54,13 @@ const client = {
       .catch(handleError)
   },
 
+  getBlob(path) {
+    return superagent('GET', path)
+      .responseType('blob')
+      .then(res => res.body)
+      .catch(handleError)
+  },
+
   getConfig() {
     const path = '/api/config'
     return client.pget(path)
