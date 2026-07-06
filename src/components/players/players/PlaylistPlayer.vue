@@ -4483,6 +4483,13 @@ watch(
       if (room.value?.people?.includes(user.value?.id)) leaveRoom()
       closeRoom(oldPlaylist.id)
     }
+    // Leave the previous playlist's build playback, otherwise its movie
+    // keeps playing over the newly selected playlist.
+    if (isFullMode.value) {
+      fullPlaylistPlayer.value?.pause()
+      isFullMode.value = false
+    }
+    fullPlayingPath = ''
     endAnnotationSaving()
     room.value.id = props.playlist?.id
     room.value.localId = uuidv4()
