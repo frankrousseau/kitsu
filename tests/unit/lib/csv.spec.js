@@ -33,4 +33,75 @@ describe('lib/csv', () => {
       expect(result).toBe('"a";"b"')
     })
   })
+
+  describe('getNewEntityNames', () => {
+    const parsedCsv = [
+      ['Sequence', 'Name', 'Description'],
+      ['SEQ01', 'SH001', 'A shot'],
+      ['SEQ01', 'SH002', 'Another shot'],
+      ['SEQ02', 'SH001', 'Yet another shot']
+    ]
+    const indexMatchers = [0, 1]
+
+    test('returns lines that do not match any existing entity', () => {
+      const database = { SEQ01SH001: true }
+      expect(csv.getNewEntityNames(parsedCsv, indexMatchers, database)).toEqual(
+        ['SEQ01 / SH002', 'SEQ02 / SH001']
+      )
+    })
+
+    test('returns no name when every line matches', () => {
+      const database = {
+        SEQ01SH001: true,
+        SEQ01SH002: true,
+        SEQ02SH001: true
+      }
+      expect(csv.getNewEntityNames(parsedCsv, indexMatchers, database)).toEqual(
+        []
+      )
+    })
+
+    test('detects names altered by the spreadsheet (issue #771)', () => {
+      const database = { SEQ01SH001: true, SEQ01SH002: true }
+      const alteredCsv = [
+        ['Sequence', 'Name'],
+        ['SEQ01', 'SH1'],
+        ['SEQ01', 'SH002']
+      ]
+      expect(
+        csv.getNewEntityNames(alteredCsv, indexMatchers, database)
+      ).toEqual(['SEQ01 / SH1'])
+    })
+
+    test('deduplicates lines sharing the same matcher key', () => {
+      const duplicatedCsv = [
+        ['Sequence', 'Name'],
+        ['SEQ01', 'SH001'],
+        ['SEQ01', 'SH001']
+      ]
+      expect(csv.getNewEntityNames(duplicatedCsv, indexMatchers, {})).toEqual([
+        'SEQ01 / SH001'
+      ])
+    })
+
+    test('ignores empty and single-cell lines', () => {
+      const sparseCsv = [
+        ['Sequence', 'Name'],
+        [''],
+        ['SEQ01', 'SH001'],
+        ['', '']
+      ]
+      expect(csv.getNewEntityNames(sparseCsv, indexMatchers, {})).toEqual([
+        'SEQ01 / SH001'
+      ])
+    })
+
+    test('handles matcher columns missing from the line', () => {
+      const shortCsv = [
+        ['Sequence', 'Name', 'Description'],
+        ['SEQ01', 'SH001']
+      ]
+      expect(csv.getNewEntityNames(shortCsv, [0, 5], {})).toEqual(['SEQ01'])
+    })
+  })
 })

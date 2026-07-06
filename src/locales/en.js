@@ -945,6 +945,8 @@ export default {
       legend_missing_optional: 'Optional column that was not found',
       legend_disabled: 'Line that will not be updated or created',
       legend_overwrite: 'Line that will be updated',
+      new_entities_confirmation: 'I confirm that I want to create this new entry | I confirm that I want to create these {count} new entries',
+      new_entities_to_create: '{count} line does not match any existing entry and will be created as a new entry: | {count} lines do not match any existing entries and will be created as new entries:',
       paste: 'Paste',
       paste_code: 'Please paste your CSV data here:',
       preview: 'Preview',

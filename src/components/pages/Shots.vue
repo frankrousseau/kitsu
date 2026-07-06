@@ -560,15 +560,18 @@ export default {
     },
 
     filteredShots() {
+      // Build the lookup from the full shot cache, not the filtered display
+      // list, so the import creation check sees every shot.
+      // The cache Map is not reactive: depend on displayedShots (updated
+      // by the same mutations) to invalidate this computed.
+      this.displayedShots // eslint-disable-line no-unused-expressions
       const shots = {}
-      this.displayedShotsBySequence.forEach(sequence => {
-        sequence.forEach(item => {
-          let shotKey = `${item.sequence_name}${item.name}`
-          if (this.isTVShow) {
-            shotKey = item.episode_name + shotKey
-          }
-          shots[shotKey] = true
-        })
+      this.shotMap.forEach(item => {
+        let shotKey = `${item.sequence_name}${item.name}`
+        if (this.isTVShow) {
+          shotKey = item.episode_name + shotKey
+        }
+        shots[shotKey] = true
       })
       return shots
     },

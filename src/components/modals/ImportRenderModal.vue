@@ -131,6 +131,19 @@
       </table>
     </div>
 
+    <div class="new-entities" v-if="updateData && newEntityNames.length > 0">
+      <p class="new-entities-text">
+        {{ $t('main.csv.new_entities_to_create', newEntityNames.length) }}
+      </p>
+      <p class="new-entities-names">
+        {{ newEntityNames.join(', ') }}
+      </p>
+      <checkbox
+        :label="$t('main.csv.new_entities_confirmation', newEntityNames.length)"
+        v-model="newEntitiesConfirmed"
+      />
+    </div>
+
     <div class="render-footer">
       <button-simple
         :text="$t('main.csv.preview_reupload')"
@@ -139,7 +152,7 @@
       <modal-footer
         :error-text="errorText"
         :is-loading="isLoading"
-        :is-disabled="formData === undefined"
+        :is-disabled="isConfirmDisabled"
         :is-error="isError"
         @confirm="$emit('confirm', parsedCsv, updateData)"
         @cancel="$emit('cancel')"
@@ -149,10 +162,12 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useStore } from 'vuex'
+
+import csv from '@/lib/csv'
 
 import BaseModal from '@/components/modals/BaseModal.vue'
 import ModalFooter from '@/components/modals/ModalFooter.vue'
@@ -179,7 +194,7 @@ const props = defineProps({
 defineEmits(['cancel', 'confirm', 'reupload'])
 
 const duplicates = ref([])
-const formData = ref(null)
+const newEntitiesConfirmed = ref(false)
 const updateData = ref(false)
 
 const assetMetadataDescriptors = computed(
@@ -243,6 +258,22 @@ const indexMatchers = computed(() =>
   props.dataMatchers.map(item => props.parsedCsv[0].indexOf(item))
 )
 
+const newEntityNames = computed(() => {
+  if (props.parsedCsv.length === 0) return []
+  return csv.getNewEntityNames(
+    props.parsedCsv,
+    indexMatchers.value,
+    props.database
+  )
+})
+
+const isConfirmDisabled = computed(
+  () =>
+    updateData.value &&
+    newEntityNames.value.length > 0 &&
+    !newEntitiesConfirmed.value
+)
+
 const errorText = computed(() => {
   let text = t('main.csv.error_upload')
   if (props.importError?.status === 400) {
@@ -266,13 +297,20 @@ const isDuplicated = index =>
   duplicates.value.includes(columnSelect.value[index])
 
 const existingData = index => {
-  const csv = props.parsedCsv[index + 1]
+  const line = props.parsedCsv[index + 1]
   let itemName = ''
   indexMatchers.value.forEach(col => {
-    itemName += csv[col]
+    itemName += line[col]
   })
   return props.database[itemName]
 }
+
+watch(
+  () => props.active,
+  () => {
+    newEntitiesConfirmed.value = false
+  }
+)
 </script>
 
 <style lang="scss" scoped>
@@ -357,6 +395,26 @@ const existingData = index => {
   margin-bottom: 0.75rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid $light-grey-light;
+}
+
+.new-entities {
+  border: 1px solid $orange-carrot;
+  border-radius: 4px;
+  margin-top: 1em;
+  padding: 1em;
+
+  .new-entities-text {
+    color: var(--text);
+    font-weight: bold;
+    margin-bottom: 0.5em;
+  }
+
+  .new-entities-names {
+    color: var(--text);
+    margin-bottom: 1em;
+    max-height: 100px;
+    overflow: auto;
+  }
 }
 
 .render-footer {
