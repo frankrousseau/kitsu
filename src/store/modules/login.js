@@ -40,22 +40,20 @@ const actions = {
     commit(CHANGE_PASSWORD, password)
   },
 
-  logIn({ commit, state }, { twoFactorPayload, callback }) {
+  async logIn({ commit, state }, twoFactorPayload) {
     commit(LOGIN_RUN)
     const payload = {
       email: state.email,
       password: state.password,
       ...coerceTwoFactorPayload(twoFactorPayload)
     }
-    auth.logIn(payload, err => {
-      if (err) {
-        commit(LOGIN_FAILURE)
-        callback(err, false)
-      } else {
-        commit(LOGIN_SUCCESS)
-        callback(null, true)
-      }
-    })
+    try {
+      await auth.logIn(payload)
+      commit(LOGIN_SUCCESS)
+    } catch (err) {
+      commit(LOGIN_FAILURE)
+      throw err
+    }
   },
 
   async logout({ commit }) {

@@ -539,7 +539,7 @@ export default {
     currentProduction() {
       this.setCountModeOptions()
       this.isLoading = true
-      this.loadShots(() => {
+      this.loadShots().then(() => {
         this.resetRouteQuery()
         this.loadRoute()
         this.isLoading = false
@@ -548,7 +548,7 @@ export default {
 
     currentEpisode() {
       this.isLoading = true
-      this.loadShots(() => {
+      this.loadShots().then(() => {
         this.resetRouteQuery()
         this.loadRoute()
         this.isLoading = false

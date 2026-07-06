@@ -15,55 +15,53 @@ let channel
 const AUTHENTICATED_REQUEST_TIMEOUT_MS = 20000
 
 const auth = {
-  logIn(payload, callback) {
-    superagent
-      .post('/api/auth/login')
-      .send(payload)
-      .end((err, res) => {
-        if (err) {
-          if (res?.body) {
-            if (res.body.default_password) {
-              err.default_password = res.body.default_password
-              err.token = res.body.token
-            }
-            if (res.body.too_many_failed_login_attemps) {
-              err.too_many_failed_login_attemps = true
-            }
-            if (res.body.wrong_OTP) {
-              err.wrong_OTP = true
-            }
-            if (res.body.missing_OTP) {
-              err.missing_OTP = true
-              err.preferred_two_factor_authentication =
-                res.body.preferred_two_factor_authentication
-              err.two_factor_authentication_enabled =
-                res.body.two_factor_authentication_enabled
-            }
-          }
-          if (!res || err.status >= 500) {
-            err.server_error = true
-          }
-          callback(err)
-        } else {
-          if (res.body.login) {
-            const user = res.body.user
-            store.commit(USER_LOGIN, user)
-
-            if (res.body.two_factor_authentication_required) {
-              const err = new Error('Two-factor authentication required')
-              err.two_factor_authentication_required = true
-              callback(err)
-              return
-            }
-
-            store.commit(DATA_LOADING_START)
-            callback(null, user)
-          } else {
-            store.commit(USER_LOGIN_FAIL)
-            callback(new Error('Login failed'))
-          }
+  async logIn(payload) {
+    let res
+    try {
+      res = await superagent.post('/api/auth/login').send(payload)
+    } catch (err) {
+      const body = err.response?.body
+      if (body) {
+        if (body.default_password) {
+          err.default_password = body.default_password
+          err.token = body.token
         }
-      })
+        if (body.too_many_failed_login_attemps) {
+          err.too_many_failed_login_attemps = true
+        }
+        if (body.wrong_OTP) {
+          err.wrong_OTP = true
+        }
+        if (body.missing_OTP) {
+          err.missing_OTP = true
+          err.preferred_two_factor_authentication =
+            body.preferred_two_factor_authentication
+          err.two_factor_authentication_enabled =
+            body.two_factor_authentication_enabled
+        }
+      }
+      if (!err.response || err.status >= 500) {
+        err.server_error = true
+      }
+      throw err
+    }
+
+    if (!res.body.login) {
+      store.commit(USER_LOGIN_FAIL)
+      throw new Error('Login failed')
+    }
+
+    const user = res.body.user
+    store.commit(USER_LOGIN, user)
+
+    if (res.body.two_factor_authentication_required) {
+      const err = new Error('Two-factor authentication required')
+      err.two_factor_authentication_required = true
+      throw err
+    }
+
+    store.commit(DATA_LOADING_START)
+    return user
   },
 
   async logout() {
@@ -90,28 +88,29 @@ const auth = {
     return client.pput('/api/auth/reset-password', data)
   },
 
-  isServerLoggedIn(callback) {
-    superagent
-      .get('/api/auth/authenticated')
-      .timeout(AUTHENTICATED_REQUEST_TIMEOUT_MS)
-      .end((err, res) => {
-        if (err && res && [401, 422].includes(res.statusCode)) {
-          store.commit(USER_LOGIN_FAIL)
-          callback(null)
-        } else if (err) {
-          store.commit(USER_LOGIN_FAIL)
-          callback(err)
-        } else if (res && res.body === null) {
-          store.commit(USER_LOGIN_FAIL)
-          callback(err)
-        } else {
-          const user = res.body.user
-          const organisation = res.body.organisation || {}
-          store.commit(SET_ORGANISATION, organisation)
-          store.commit(USER_LOGIN, user)
-          callback(null)
-        }
-      })
+  // Resolves when the server answered (authenticated or not), rejects when
+  // the server is unreachable.
+  async isServerLoggedIn() {
+    let res
+    try {
+      res = await superagent
+        .get('/api/auth/authenticated')
+        .timeout(AUTHENTICATED_REQUEST_TIMEOUT_MS)
+    } catch (err) {
+      store.commit(USER_LOGIN_FAIL)
+      if ([401, 422].includes(err.status)) return
+      throw err
+    }
+
+    if (res.body === null) {
+      store.commit(USER_LOGIN_FAIL)
+      return
+    }
+
+    const user = res.body.user
+    const organisation = res.body.organisation || {}
+    store.commit(SET_ORGANISATION, organisation)
+    store.commit(USER_LOGIN, user)
   },
 
   // Needed for router to know if a redirection to login page is required or
@@ -132,16 +131,15 @@ const auth = {
     store.commit(DATA_LOADING_START)
 
     if (store.state.user.user === null) {
-      auth.isServerLoggedIn(err => {
-        if (err) {
+      auth
+        .isServerLoggedIn()
+        .then(finalize)
+        .catch(() => {
           next({
             name: 'server-down',
             query: { redirect: to.fullPath }
           })
-        } else {
-          finalize()
-        }
-      })
+        })
     } else {
       finalize()
     }

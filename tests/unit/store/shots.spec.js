@@ -15,11 +15,10 @@ describe('Shots store', () => {
       expect(state.isShotsLoadingError).toBe(false)
     })
 
-    test('loadShots does not start a second load while one is in flight (BUG-4)', () => {
+    test('loadShots does not start a second load while one is in flight (BUG-4)', async () => {
       const state = { isShotsLoading: true }
       const commit = vi.fn()
       const dispatch = vi.fn()
-      const callback = vi.fn()
       const rootGetters = {
         currentProduction: { id: 'p1' },
         episodes: [],
@@ -32,10 +31,9 @@ describe('Shots store', () => {
         currentEpisode: null
       }
 
-      shotsStore.actions.loadShots({ commit, dispatch, state, rootGetters }, callback)
+      // Guard resolves immediately without kicking off another load.
+      await shotsStore.actions.loadShots({ commit, dispatch, state, rootGetters })
 
-      // Guard fires the callback and bails without kicking off another load.
-      expect(callback).toHaveBeenCalledTimes(1)
       expect(dispatch).not.toHaveBeenCalled()
       expect(commit.mock.calls.map(c => c[0])).not.toContain('LOAD_SHOTS_START')
     })

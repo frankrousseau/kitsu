@@ -143,17 +143,16 @@ export const routes = [
             userStore.state.user
           )
           if (store.state.productions.openProductions.length === 0) {
-            init(err => {
-              if (err) {
-                next({ name: 'server-down' })
-              } else {
+            init()
+              .then(ready => {
+                if (!ready) return
                 if (!userStore.getters.isCurrentUserArtist(userStore.state)) {
                   next({ name: 'open-productions' })
                 } else {
                   next({ name: 'todos' })
                 }
-              }
-            })
+              })
+              .catch(() => next({ name: 'server-down' }))
           } else {
             store.commit('DATA_LOADING_END')
             if (!userStore.getters.isCurrentUserArtist(userStore.state)) {
@@ -187,16 +186,20 @@ export const routes = [
             to &&
             ADMIN_PAGES.includes(to.name)
           if (taskTypeStore.state.taskTypes.length === 0) {
-            init(err => {
-              store.commit('DATA_LOADING_END')
-              if (err) {
+            init()
+              .then(ready => {
+                store.commit('DATA_LOADING_END')
+                if (!ready) return
+                if (isProhibited) {
+                  next({ name: 'not-found' })
+                } else {
+                  next()
+                }
+              })
+              .catch(() => {
+                store.commit('DATA_LOADING_END')
                 next({ name: 'server-down' })
-              } else if (isProhibited) {
-                next({ name: 'not-found' })
-              } else {
-                next()
-              }
-            })
+              })
           } else {
             store.commit('DATA_LOADING_END')
             if (isProhibited) {

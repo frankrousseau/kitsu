@@ -456,7 +456,7 @@ export default {
     const finalize = () => {
       this.$nextTick(() => {
         // Needed to be sure the current production is set
-        this.loadShots(() => {
+        this.loadShots().then(() => {
           this.initialLoading = false
         })
       })
@@ -635,7 +635,7 @@ export default {
         this.$refs['shot-search-field']?.setValue('')
         this.$store.commit('SET_SHOT_LIST_SCROLL_POSITION', 0)
         this.initialLoading = true
-        this.loadShots(() => {
+        this.loadShots().then(() => {
           this.initialLoading = false
           this.applySearchFromUrl()
         })
@@ -718,8 +718,7 @@ export default {
 
     reset() {
       this.initialLoading = true
-      this.loadShots(err => {
-        if (err) console.error(err)
+      this.loadShots().then(() => {
         this.initialLoading = false
       })
     },

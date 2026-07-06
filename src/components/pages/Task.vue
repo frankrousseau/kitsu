@@ -1018,23 +1018,20 @@ export default {
         this.taskLoading = { isLoading: true, isError: false }
         return this.loadTask({ taskId: this.route.params.task_id })
           .then(task => {
-            let loadingFunction = callback => {
-              this.loadAssets().then(callback)
-            }
+            let loadingFunction = () => this.loadAssets()
 
             if (task.entity_type_name === 'Shot') {
-              loadingFunction = callback => {
+              loadingFunction = () =>
                 this.loadEpisodes()
                   .then(() => {
                     if (this.isTVShow) {
                       this.setCurrentEpisode(task.episode.id)
                     }
-                    this.loadShots(callback)
+                    return this.loadShots()
                   })
-                  .catch(callback)
-              }
+                  .catch(err => console.error(err))
             }
-            return loadingFunction(() => {
+            return loadingFunction().then(() => {
               this.task = task
               return this.loadTaskComments({
                 taskId: task.id,

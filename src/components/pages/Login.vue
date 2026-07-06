@@ -35,7 +35,7 @@
                 autocomplete="username"
                 :placeholder="$t('login.fields.email')"
                 @input="updateEmail"
-                @keyup.enter="confirmLogIn"
+                @keyup.enter="confirmLogIn()"
                 v-model="email"
                 v-focus
               />
@@ -52,7 +52,7 @@
                 autocomplete="current-password"
                 :placeholder="$t('login.fields.password')"
                 @input="updatePassword"
-                @keyup.enter="confirmLogIn"
+                @keyup.enter="confirmLogIn()"
                 v-model="password"
               />
               <span class="icon">
@@ -77,7 +77,7 @@
             :class="{
               'is-loading': isLoginLoading
             }"
-            @click="confirmLogIn"
+            @click="confirmLogIn()"
           >
             {{ $t('login.login') }}
           </a>
@@ -186,45 +186,41 @@ export default {
       this.isWrongOTP = false
       this.isMissingOTP = false
       this.isServerError = false
-      this.logIn({
-        twoFactorPayload,
-        callback: (err, success) => {
-          if (err) {
-            if (err.default_password) {
-              this.$router.push({
-                name: 'reset-change-password',
-                query: { email: this.email, token: err.token }
-              })
-            } else if (err.too_many_failed_login_attemps) {
-              this.isTooMuchLoginFailedAttemps = true
-            } else if (err.wrong_OTP) {
-              this.isWrongOTP = true
-            } else if (err.missing_OTP) {
-              this.isMissingOTP = true
-              this.preferredTwoFA = err.preferred_two_factor_authentication
-              this.TwoFAsEnabled = err.two_factor_authentication_enabled
-            } else if (err.two_factor_authentication_required) {
-              this.$router.push({
-                name: 'login-2fa'
-              })
-            } else if (err.server_error) {
-              this.isServerError = true
+      this.logIn(twoFactorPayload)
+        .then(() => {
+          this.fadeAway = true
+          setTimeout(() => {
+            if (this.$route.query.redirect) {
+              this.$router.push(this.$route.query.redirect)
             } else {
-              console.error(err)
+              this.$router.push('/')
             }
+          }, 500)
+        })
+        .catch(err => {
+          if (err.default_password) {
+            this.$router.push({
+              name: 'reset-change-password',
+              query: { email: this.email, token: err.token }
+            })
+          } else if (err.too_many_failed_login_attemps) {
+            this.isTooMuchLoginFailedAttemps = true
+          } else if (err.wrong_OTP) {
+            this.isWrongOTP = true
+          } else if (err.missing_OTP) {
+            this.isMissingOTP = true
+            this.preferredTwoFA = err.preferred_two_factor_authentication
+            this.TwoFAsEnabled = err.two_factor_authentication_enabled
+          } else if (err.two_factor_authentication_required) {
+            this.$router.push({
+              name: 'login-2fa'
+            })
+          } else if (err.server_error) {
+            this.isServerError = true
+          } else {
+            console.error(err)
           }
-          if (success) {
-            this.fadeAway = true
-            setTimeout(() => {
-              if (this.$route.query.redirect) {
-                this.$router.push(this.$route.query.redirect)
-              } else {
-                this.$router.push('/')
-              }
-            }, 500)
-          }
-        }
-      })
+        })
     },
 
     changedTwoFA(twoFA) {
