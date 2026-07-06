@@ -92,7 +92,7 @@
     "prettier": "3.9.4",
     "sass": "1.101.0",
     "vite": "8.1.3",
-    "vitest": "4.1.9",
+    "vitest": "4.1.10",
     "vitest-localstorage-mock": "0.1.2",
     "vue-eslint-parser": "10.4.1"
   },
