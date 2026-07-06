@@ -1301,7 +1301,7 @@ export default {
 
     // Addition Helpers
 
-    addCurrentSelection() {
+    async addCurrentSelection() {
       this.setSilent()
       let entities
       if (this.isAssetPlaylist) {
@@ -1313,88 +1313,91 @@ export default {
       } else {
         entities = this.displayedShots
       }
-      this.addEntities([...entities].reverse(), () => {
+      try {
+        await this.addEntities(entities)
+      } finally {
         this.clearSilent()
-      })
+      }
     },
 
-    addSequence(sequenceShots) {
+    async addSequence(sequenceShots) {
       if (sequenceShots.length > 0) {
         const sequenceId = sequenceShots[0].sequence_id
         const shots = Array.from(shotStore.cache.shotMap.values())
           .filter(s => s.sequence_id === sequenceId)
           .sort(firstBy('name'))
-          .reverse()
         this.setSilent()
-        this.addEntities(shots, () => {
+        try {
+          await this.addEntities(shots)
+        } finally {
           this.clearSilent()
-        })
+        }
       }
     },
 
     async addAllPending() {
       this.setSilent()
       this.loading.addWeekly = true
-      const getPending = this.isAssetPlaylist
-        ? this.getPendingAssets
-        : this.getPendingShots
-      const sortEntities = this.isAssetPlaylist ? sortAssets : sortShots
-      let entities = await getPending(false)
-      entities = sortEntities(entities).reverse()
-      this.addEntities(entities, () => {
+      try {
+        const getPending = this.isAssetPlaylist
+          ? this.getPendingAssets
+          : this.getPendingShots
+        const sortEntities = this.isAssetPlaylist ? sortAssets : sortShots
+        const entities = await getPending(false)
+        await this.addEntities(sortEntities(entities))
+      } finally {
         this.loading.addWeekly = false
         this.clearSilent()
-      })
+      }
     },
 
     async addDailyPending() {
       this.loading.addDaily = true
       this.setSilent()
-      const getPending = this.isAssetPlaylist
-        ? this.getPendingAssets
-        : this.getPendingShots
-      const sortEntities = this.isAssetPlaylist ? sortAssets : sortShots
-      let entities = await getPending(true)
-      entities = sortEntities(entities).reverse()
-      this.addEntities(entities, () => {
+      try {
+        const getPending = this.isAssetPlaylist
+          ? this.getPendingAssets
+          : this.getPendingShots
+        const sortEntities = this.isAssetPlaylist ? sortAssets : sortShots
+        const entities = await getPending(true)
+        await this.addEntities(sortEntities(entities))
+      } finally {
         this.loading.addDaily = false
         this.clearSilent()
-      })
+      }
     },
 
-    addEpisodePending() {
+    async addEpisodePending() {
       this.loading.addEpisode = true
       this.setSilent()
-      let shots = [].concat(...this.shotsByEpisode)
-      shots = sortShots(shots).reverse()
-      this.addEntities(shots, () => {
+      try {
+        const shots = [].concat(...this.shotsByEpisode)
+        await this.addEntities(sortShots(shots))
+      } finally {
         this.loading.addEpisode = false
         this.clearSilent()
-      })
+      }
     },
 
-    addMovie() {
+    async addMovie() {
       this.loading.addMovie = true
       this.setSilent()
-      const shots = sortShots(Array.from(shotStore.cache.shotMap.values()))
-      this.addEntities(shots.reverse(), () => {
+      try {
+        const shots = sortShots(Array.from(shotStore.cache.shotMap.values()))
+        await this.addEntities(shots)
+      } finally {
         this.loading.addMovie = false
         this.clearSilent()
-      })
+      }
     },
 
-    addEntities(entities, callback, playlist = undefined) {
-      if (!playlist) {
-        playlist = this.currentPlaylist
-      }
-      if (entities && entities.length > 0) {
+    async addEntities(entities) {
+      // Captured once: keep adding to the playlist the user started from,
+      // even if they switch playlists mid-sequence.
+      const playlist = this.currentPlaylist
+      for (const entity of entities || []) {
         this.entitiesAddedWhilePanelOpen = true
-        const entity = entities.pop()
-        this.addEntity(entity, playlist).then(() => {
-          this.addEntities(entities, callback, playlist)
-        })
-      } else {
-        callback()
+        await this.addEntity(entity, playlist)
       }
     },
 
