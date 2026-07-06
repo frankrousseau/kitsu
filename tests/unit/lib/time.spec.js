@@ -36,6 +36,10 @@ describe('time', () => {
     vi.setSystemTime(new Date('2019-09-10T12:00:00Z'))
   })
 
+  afterEach(() => {
+    vi.setSystemTime(new Date('2019-09-10T12:00:00Z'))
+  })
+
   afterAll(() => {
     vi.useRealTimers()
   })
@@ -114,6 +118,16 @@ describe('time', () => {
     expect(getWeekRange(2018, 2019)).toEqual(range(1, 52))
     // 2019-09-10 (frozen clock) falls in week 37.
     expect(getWeekRange(2019, 2019)).toEqual(range(1, 37))
+    // 2020 has 53 ISO weeks.
+    expect(getWeekRange(2020, 2026)).toEqual(range(1, 53))
+    // Regression #1928: 2025-12-30 belongs to ISO week 1 of 2026, all the
+    // weeks of 2025 must stay visible.
+    vi.setSystemTime(new Date('2025-12-30T12:00:00Z'))
+    expect(getWeekRange(2025, 2025)).toEqual(range(1, 52))
+    // 2027-01-01 belongs to ISO week 53 of 2026, where the backend files
+    // its hours in the 2027 table.
+    vi.setSystemTime(new Date('2027-01-01T12:00:00Z'))
+    expect(getWeekRange(2027, 2027)).toEqual(range(1, 53))
   })
 
   test('getDayRange', () => {

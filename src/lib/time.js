@@ -112,8 +112,12 @@ export const getDayRange = (year, month, currentYear, currentMonth) => {
 }
 
 export const getWeekRange = (year, currentYear) => {
-  if (currentYear === year) {
-    return range(1, moment().week())
+  const now = moment()
+  // Late December days can belong to ISO week 1 of the next year: only
+  // truncate the range at the current week when today's ISO week still
+  // belongs to the displayed year.
+  if (currentYear === year && now.isoWeekYear() <= year) {
+    return range(1, now.isoWeek())
   } else {
     return range(1, moment(String(year), 'YYYY').isoWeeksInYear())
   }

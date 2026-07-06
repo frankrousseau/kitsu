@@ -107,25 +107,21 @@ export default {
   emits: ['close'],
 
   computed: {
+    // Monday of the displayed ISO week, as aggregated by the backend.
+    weekStartDate() {
+      return moment(this.year + '-' + this.week, 'YYYY-W')
+    },
+
     startDay() {
-      return moment().day('Monday').year(this.year).week(this.week).date()
+      return this.weekStartDate.date()
     },
 
     endDay() {
-      return moment()
-        .day('Monday')
-        .year(this.year)
-        .week(this.week)
-        .add(6, 'days')
-        .date()
+      return this.weekStartDate.clone().add(6, 'days').date()
     },
 
     weekMonth() {
-      return moment()
-        .day('Monday')
-        .year(this.year)
-        .week(this.week)
-        .format('MMM')
+      return this.weekStartDate.format('MMM')
     },
 
     monthString() {
