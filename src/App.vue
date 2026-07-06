@@ -144,6 +144,9 @@ export default {
     },
 
     setupCrisp(config) {
+      // Never load Crisp on the guest share page: the widget reports the
+      // page URL, which contains the share token.
+      if (window.location.pathname.startsWith('/playlists/shared/')) return
       if (config.crisp_token?.length) {
         crisp.init(config.crisp_token)
         const supportChat = localPreferences.getBoolPreference(
