@@ -82,7 +82,10 @@
             :class="{
               selected: selectionGrid[entry.id]
             }"
+            role="button"
+            tabindex="0"
             @click="selectTask($event, i, entry)"
+            @keydown.enter.prevent="selectTask($event, i, entry)"
             v-for="(entry, i) in displayedTasks"
           >
             <td

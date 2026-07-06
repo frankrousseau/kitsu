@@ -47,7 +47,11 @@
             }"
             draggable="true"
             :key="task.id"
+            role="button"
             @click="onSelectTask(task, $event.ctrlKey || $event.metaKey)"
+            @keydown.enter.prevent="
+              onSelectTask(task, $event.ctrlKey || $event.metaKey)
+            "
             @dragstart="onCardDragStart($event, task, column.status)"
             @drag="onCardDrag"
             @dragend="onCardDragEnd"

@@ -293,7 +293,12 @@
               <th scope="rowgroup">
                 <div
                   class="datatable-row-header pointer"
+                  role="button"
+                  tabindex="0"
                   @click="$emit('sequence-clicked', group[0].sequence_name)"
+                  @keydown.enter.prevent="
+                    $emit('sequence-clicked', group[0].sequence_name)
+                  "
                 >
                   {{ group[0] ? group[0].sequence_name : '' }}
                 </div>

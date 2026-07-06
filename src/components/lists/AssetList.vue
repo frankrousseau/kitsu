@@ -252,7 +252,12 @@
               <th scope="rowgroup">
                 <span
                   class="datatable-row-header pointer"
+                  role="button"
+                  tabindex="0"
                   @click="$emit('asset-type-clicked', group[0].asset_type_name)"
+                  @keydown.enter.prevent="
+                    $emit('asset-type-clicked', group[0].asset_type_name)
+                  "
                 >
                   {{ group[0] ? group[0].asset_type_name : '' }}
                 </span>

@@ -73,7 +73,13 @@
 
           <template v-for="entry in entries" :key="entry.id">
             <tr class="datatable-row">
-              <td class="expander" @click="toggleExpanded(entry.id)">
+              <td
+                class="expander"
+                role="button"
+                tabindex="0"
+                @click="toggleExpanded(entry.id)"
+                @keydown.enter.prevent="toggleExpanded(entry.id)"
+              >
                 <chevron-right-icon
                   v-if="isRetakes && expanded[entry.id] !== true"
                 />
