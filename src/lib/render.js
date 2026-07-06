@@ -70,17 +70,20 @@ export const renderComment = (
     for (const personId of mentions) {
       const person = personMap.get(personId)
       if (!person) continue
+      const fullName = encodeHtmlEntities(person.full_name)
       replacements.set(
-        `@${person.full_name}`,
-        `<a class="mention" href="/people/${person.id}">@${person.full_name}</a>`
+        `@${fullName}`,
+        `<a class="mention" href="/people/${person.id}">@${fullName}</a>`
       )
     }
     for (const departmentId of departmentMentions) {
       const department = departmentMap.get(departmentId)
       if (!department) continue
+      const departmentName = encodeHtmlEntities(department.name)
+      const departmentColor = encodeHtmlEntities(department.color)
       replacements.set(
-        `@${department.name}`,
-        `<span style="color: ${department.color}">@${department.name}</span>`
+        `@${departmentName}`,
+        `<span style="color: ${departmentColor}">@${departmentName}</span>`
       )
     }
   }
@@ -88,10 +91,10 @@ export const renderComment = (
   if (taskTypes) {
     taskTypes.forEach(taskType => {
       const task_name = encodeHtmlEntities(taskType.name)
-      if (taskType.url) {
+      if (taskType.url && isSafeHref(taskType.url)) {
         replacements.set(
           `#${task_name}`,
-          `<a class="mention mention-task" href="${taskType.url}">#${task_name}</a>`
+          `<a class="mention mention-task" href="${encodeHtmlEntities(taskType.url)}">#${task_name}</a>`
         )
       }
     })
@@ -148,12 +151,12 @@ const encodeHtmlEntities = str => {
         '"': '&quot;'
       })[tag]
   )
+}
 
-  // // -- more complex version if needed --
-  // var el = document.createElement("div");
-  // el.innerText = el.textContent = str;
-  // str = el.innerHTML;
-  // return str;
+// Allow relative URLs and http(s) only; block javascript:, data:, vbscript:…
+const isSafeHref = url => {
+  const scheme = /^\s*([a-z][a-z0-9+.-]*):/i.exec(url)
+  return !scheme || ['http', 'https'].includes(scheme[1].toLowerCase())
 }
 
 export const replaceTimeWithTimecode = (

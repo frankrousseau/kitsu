@@ -124,7 +124,8 @@ const shortcutGroups = computed(() => [
       { keys: ['Ctrl', 'c'], text: t('keyboard.copy_annotation') },
       { keys: ['Ctrl', 'v'], text: t('keyboard.paste_annotation') },
       { keys: ['Suppr'], text: t('keyboard.remove_annotation') },
-      { keys: ['Alt', 'Mouse Drag'], text: t('keyboard.pan_image') }
+      { keys: ['Alt', 'Mouse Drag'], text: t('keyboard.pan_image') },
+      { keys: ['Ctrl', 'Mouse Wheel'], text: t('keyboard.zoom_image') }
     ]
   },
   {

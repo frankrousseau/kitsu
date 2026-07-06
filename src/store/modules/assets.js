@@ -419,7 +419,7 @@ const actions = {
     }
 
     if (state.isAssetsLoading) {
-      return cache.assets
+      return cache.assetsLoadingPromise || cache.assets
     }
 
     if (all || episode?.id === 'all') {
@@ -427,7 +427,7 @@ const actions = {
     }
 
     commit(LOAD_ASSETS_START)
-    return assetsApi
+    const loadingPromise = assetsApi
       .getAssets(production, episode, withTasks)
       .then(async assets => {
         if (!withShared) {
@@ -452,6 +452,11 @@ const actions = {
             asset.asset_type_name = assetType?.name || ''
           }
         })
+        // Ignore a response for a production the user already switched away
+        // from; committing would overwrite the current production's assets.
+        if (production.id !== rootGetters.currentProduction?.id) {
+          return assets
+        }
         commit(LOAD_ASSETS_END, {
           production,
           assets,
@@ -468,6 +473,8 @@ const actions = {
         commit(LOAD_ASSETS_ERROR)
         return []
       })
+    cache.assetsLoadingPromise = loadingPromise
+    return loadingPromise
   },
 
   getAsset({ commit, state, rootGetters }, assetId) {
@@ -1077,6 +1084,7 @@ const mutations = {
     result = applyFilters(result, filters, taskMap)
 
     if (result && result.length > 0) {
+      cache.result.push(asset)
       state.displayedAssets.push(asset)
       state.displayedAssets = sortAssets(state.displayedAssets)
       helpers.setListStats(state, cache.assets)
@@ -1103,6 +1111,7 @@ const mutations = {
     if (cache.assetMap.get(assetToDelete.id)) {
       cache.assetMap.delete(assetToDelete.id)
       cache.assets = removeModelFromList(cache.assets, assetToDelete)
+      cache.result = removeModelFromList(cache.result, assetToDelete)
       state.displayedAssets = removeModelFromList(
         state.displayedAssets,
         assetToDelete
@@ -1156,6 +1165,7 @@ const mutations = {
       newAsset.episode_id = newAsset.source_id
       cache.assets.push(newAsset)
       cache.assets = sortAssets(cache.assets)
+      cache.result.push(newAsset)
       state.displayedAssets.push(newAsset)
       state.assetFilledColumns = getFilledColumns(state.displayedAssets)
       state.displayedAssetsLength = cache.assets.filter(a => !a.canceled).length

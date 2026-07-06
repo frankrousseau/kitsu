@@ -935,6 +935,7 @@ export default {
       if (!this.$options.lockTimeout) {
         this.$options.lockTimeout = setTimeout(() => {
           this.isLocked = false
+          this.$options.lockTimeout = null
         }, 3000)
       }
     },

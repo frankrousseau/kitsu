@@ -104,6 +104,11 @@ td.datatable-row-header.name {
   flex: 1;
   min-width: 0;
   text-align: right;
+  // The global `td .input-editor` sets z-index: 100, which (because this is a
+  // flex item, so z-index applies without position) makes the monthly value
+  // inputs paint over the sticky frozen columns when scrolling. Drop it so the
+  // frozen Position/Seniority/Name columns stay on top.
+  z-index: auto;
 
   &.has-exception {
     font-weight: bold;

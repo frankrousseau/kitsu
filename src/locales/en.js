@@ -599,8 +599,8 @@ export default {
 
   keyboard: {
     altdown: 'Move task selection down',
-    altj: 'Select the previous preview',
-    altk: 'Select the next preview',
+    altj: 'Go to the previous shot',
+    altk: 'Go to the next shot',
     altleft: 'Move task selection left',
     altright: 'Move task selection right',
     altup: 'Move task selection up',
@@ -635,6 +635,7 @@ export default {
     copy_annotation: 'Copy selected annotation',
     paste_annotation: 'Paste annotation',
     pan_image: 'Pan the image',
+    zoom_image: 'Zoom the image',
     straight_line: 'Draw a straight line',
     constant_width: 'Draw at a constant width (no pressure)',
     move_entity_left: 'Move selected entity to the left',

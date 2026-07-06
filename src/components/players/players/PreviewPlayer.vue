@@ -2265,6 +2265,8 @@ const playerApi = computed(() => ({
 
 // Expose
 
+const resize = () => previewViewer.value?.resize()
+
 defineExpose({
   currentPreview,
   extractAnnotationSnapshots,
@@ -2278,6 +2280,7 @@ defineExpose({
   pause,
   play,
   reloadAnnotations,
+  resize,
   saveAnnotations,
   loadAnnotation,
   onCanvasMouseMoved,

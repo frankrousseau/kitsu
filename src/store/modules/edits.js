@@ -346,13 +346,18 @@ const actions = {
     }
 
     if (state.isEditsLoading) {
-      return Promise.resolve([])
+      return cache.editsLoadingPromise || Promise.resolve([])
     }
 
     commit(LOAD_EDITS_START)
-    return editsApi
+    const loadingPromise = editsApi
       .getEdits(production, episode)
       .then(edits => {
+        // Ignore a response for a production the user already switched away
+        // from; committing would overwrite the current production's edits.
+        if (production.id !== rootGetters.currentProduction?.id) {
+          return edits
+        }
         commit(LOAD_EDITS_END, {
           production,
           edits,
@@ -368,6 +373,8 @@ const actions = {
         commit(LOAD_EDITS_ERROR)
         return []
       })
+    cache.editsLoadingPromise = loadingPromise
+    return loadingPromise
   },
 
   /*

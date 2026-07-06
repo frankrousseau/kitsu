@@ -1,0 +1,107 @@
+import { vi } from 'vitest'
+
+// Importing the assets module transitively pulls in the root store
+// (lib/models → timezone → @/store); stub it so no Vuex store is built.
+vi.mock('@/store', () => ({ default: {} }))
+
+import assetsStore from '@/store/modules/assets'
+import assetsApi from '@/store/api/assets'
+
+const baseRootGetters = () => ({
+  assetTypeMap: new Map(),
+  currentProduction: { id: 'p1' },
+  currentEpisode: null,
+  isTVShow: false,
+  userFilters: {},
+  userFilterGroups: {},
+  personMap: new Map(),
+  taskTypeMap: new Map(),
+  taskMap: new Map(),
+  episodes: []
+})
+
+// Run the real mutation against the shared state so the loading flag actually
+// flips, reproducing what a live concurrent dispatch would see.
+const realCommit = state =>
+  vi.fn((type, payload) => assetsStore.mutations[type]?.(state, payload))
+
+describe('Assets store', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    assetsStore.cache.assetsLoadingPromise = null
+  })
+
+  describe('loadAssets race conditions', () => {
+    test('dedups concurrent calls: the second call resolves to the in-flight assets, not the cleared cache (BUG-2)', async () => {
+      const sentinel = [{ id: 'a1', asset_type_id: 't1', name: 'A1' }]
+      const getAssets = vi
+        .spyOn(assetsApi, 'getAssets')
+        .mockResolvedValue(sentinel)
+      const state = { isAssetsLoading: false, isAssetsLoadingError: false }
+      const commit = realCommit(state)
+      const rootGetters = baseRootGetters()
+      const ctx = { commit, dispatch: vi.fn(), state, rootGetters }
+
+      const p1 = assetsStore.actions.loadAssets(ctx, { withShared: false })
+      expect(state.isAssetsLoading).toBe(true)
+      expect(assetsStore.cache.assetsLoadingPromise).toBeTruthy()
+
+      // Second concurrent dispatch while the first is still loading. The guard
+      // must hand back the in-flight promise (yielding the real assets), not
+      // refetch and not return the freshly-cleared cache — the historical
+      // `loadAssets → []` bug returned the emptied cache here.
+      const p2 = assetsStore.actions.loadAssets(ctx, { withShared: false })
+      // Switch away so the response short-circuits before the heavy
+      // LOAD_ASSETS_END commit; both calls still resolve to the loaded assets.
+      rootGetters.currentProduction = { id: 'p2' }
+
+      const [r1, r2] = await Promise.all([p1, p2])
+      expect(getAssets).toHaveBeenCalledTimes(1)
+      expect(r1).toEqual(sentinel)
+      expect(r2).toEqual(sentinel) // buggy guard resolved to [] instead
+    })
+
+    test('ignores a response for a production the user already switched away from (BUG-3)', async () => {
+      const sentinel = [{ id: 'a1', asset_type_id: 't1', name: 'A1' }]
+      vi.spyOn(assetsApi, 'getAssets').mockResolvedValue(sentinel)
+      const state = { isAssetsLoading: false, isAssetsLoadingError: false }
+      const commit = realCommit(state)
+      const rootGetters = baseRootGetters()
+      const ctx = { commit, dispatch: vi.fn(), state, rootGetters }
+
+      const promise = assetsStore.actions.loadAssets(ctx, { withShared: false })
+      // User navigates to another production before the response lands.
+      rootGetters.currentProduction = { id: 'p2' }
+      const result = await promise
+
+      expect(result).toEqual(sentinel)
+      // Stale response must NOT overwrite the current production's assets...
+      expect(commit.mock.calls.map(c => c[0])).not.toContain('LOAD_ASSETS_END')
+      // ...and must leave the loading flag to the newer load (reset by CLEAR).
+      expect(state.isAssetsLoading).toBe(true)
+    })
+  })
+
+  describe('cache.result maintenance', () => {
+    test('REMOVE_ASSET drops the asset from cache.result so it cannot reappear on "show more" (BUG-10)', () => {
+      const asset = { id: 'a1', name: 'A1', asset_type_name: 'Char', tasks: [] }
+      const other = { id: 'a2', name: 'A2', asset_type_name: 'Char', tasks: [] }
+      assetsStore.cache.assetMap = new Map([
+        ['a1', asset],
+        ['a2', other]
+      ])
+      assetsStore.cache.assets = [asset, other]
+      assetsStore.cache.result = [asset, other]
+      const state = {
+        displayedAssets: [asset, other],
+        displayedAssetsTimeSpent: 0,
+        displayedAssetsEstimation: 0
+      }
+
+      assetsStore.mutations.REMOVE_ASSET(state, asset)
+
+      expect(assetsStore.cache.result.map(a => a.id)).toEqual(['a2'])
+      expect(assetsStore.cache.assets.map(a => a.id)).toEqual(['a2'])
+    })
+  })
+})

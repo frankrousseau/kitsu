@@ -2312,7 +2312,10 @@ const goPreviousDrawing = () => {
     clearCanvas()
     const previous = getPreviousAnnotationTime(currentTimeRaw.value)
     if (!previous) return
-    const annotationTime = Number(previous.frame) - 1
+    // Seek by the annotation's time, not its stored frame: .frame can be
+    // stale (off by one, or a zero-padded string) and lands on the wrong
+    // frame. See PreviewPlayer.jumpToAnnotationFrame.
+    const annotationTime = Math.round(previous.time / frameDuration.value)
     if (isFullMode.value) {
       setFullPlayerTime(annotationTime / fps.value)
     } else {
@@ -2330,7 +2333,8 @@ const goNextDrawing = () => {
     clearCanvas()
     const next = getNextAnnotationTime(currentTimeRaw.value)
     if (!next) return
-    const annotationTime = Number(next.frame) - 1
+    // Seek by time, not the stale .frame — see goPreviousDrawing.
+    const annotationTime = Math.round(next.time / frameDuration.value)
     if (isFullMode.value) {
       setFullPlayerTime(annotationTime / fps.value)
     } else {
@@ -2378,10 +2382,14 @@ const onProgressChanged = (frame, updatePlaylistProgress = true) => {
   }
   sendUpdatePlayingStatus()
   onFrameUpdate(frame)
-  if (isFullMode.value && updatePlaylistProgress) {
+  if (updatePlaylistProgress && currentEntity.value) {
     const start = currentEntity.value.start_duration
     const time = (frame - 1) / fps.value + start
-    fullPlaylistPlayer.value.currentTime = time
+    // Keep the playlist cursor in sync on scrub/seek in every mode, not only
+    // full mode; the concatenated player only exists in full mode.
+    if (isFullMode.value) {
+      fullPlaylistPlayer.value.currentTime = time
+    }
     playlistProgress.value = time
   }
 }

@@ -91,6 +91,7 @@ const mutations = {
   [LOGIN_SUCCESS](state) {
     state.isLoginLoading = false
     state.isLoginError = false
+    state.password = ''
   },
 
   [LOGIN_FAILURE](state) {

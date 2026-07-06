@@ -396,6 +396,9 @@ const actions = {
     const routeEpisodeId = rootGetters.route.params.episode_id
     const userFilters = rootGetters.userFilters
     return shotsApi.getEpisodes(currentProduction).then(episodes => {
+      if (currentProduction?.id !== rootGetters.currentProduction?.id) {
+        return episodes
+      }
       commit(LOAD_EPISODES_END, { episodes, routeEpisodeId, userFilters })
       return episodes
     })
@@ -410,6 +413,9 @@ const actions = {
     const taskStatusMap = rootGetters.taskStatusMap
     const taskTypeMap = rootGetters.taskTypeMap
     return shotsApi.getEpisodesWithTasks(production).then(episodes => {
+      if (production?.id !== rootGetters.currentProduction?.id) {
+        return episodes
+      }
       commit(SET_EPISODES_WITH_TASKS, {
         episodes,
         routeEpisodeId,
