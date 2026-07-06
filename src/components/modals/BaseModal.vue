@@ -7,7 +7,13 @@
   >
     <div class="modal-background" @click="onBackgroundClicked"></div>
 
-    <div class="modal-content">
+    <div
+      ref="contentRef"
+      class="modal-content"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="title"
+    >
       <div class="box">
         <h1 class="title">
           {{ title }}
@@ -19,7 +25,7 @@
 </template>
 
 <script setup>
-import { toRef } from 'vue'
+import { ref, toRef } from 'vue'
 
 import { useModal } from '@/composables/modal'
 
@@ -36,7 +42,9 @@ const props = defineProps({
 
 const emit = defineEmits(['cancel'])
 
-useModal(toRef(props, 'active'), emit)
+const contentRef = ref(null)
+
+useModal(toRef(props, 'active'), emit, contentRef)
 
 const onBackgroundClicked = () => {
   emit('cancel')
