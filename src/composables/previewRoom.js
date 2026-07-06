@@ -368,17 +368,25 @@ export const usePreviewRoom = options => {
       eventData.current_preview_file_id !== currentPreviewFileId &&
       eventData.current_preview_file_index === 0
     ) {
+      // The server relays room updates without previous_preview_file_id,
+      // so fall back to the local playing entity: on this side it still
+      // holds the preview file the sender switched away from.
       const previewFileId = eventData.current_preview_file_id
-      const entity = findEntity({
+      let entity = findEntity({
         entity_id: eventData.current_entity_id,
         preview_file_id: eventData.previous_preview_file_id
       })
-      const previewFile = getPreviewFileFromEntity(entity, previewFileId)
-      if (!previewFile) return
-      const tasks = unref(taskMap)
-      const task = tasks?.get?.(previewFile.task_id)
-      if (!task) return
-      changePreviewFile(entity, previewFile, task.task_type_id)
+      const localEntity = unref(currentEntity)
+      if (!entity && localEntity?.id === eventData.current_entity_id) {
+        entity = localEntity
+      }
+      if (entity && entity.preview_file_id !== previewFileId) {
+        const previewFile = getPreviewFileFromEntity(entity, previewFileId)
+        const task = previewFile
+          ? unref(taskMap)?.get?.(previewFile.task_id)
+          : null
+        if (task) changePreviewFile(entity, previewFile, task.task_type_id)
+      }
     }
 
     if (
