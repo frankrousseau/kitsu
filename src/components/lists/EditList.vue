@@ -226,7 +226,11 @@
               :key="edit.id"
               :ref="el => rowVirtualizer.measureElement(el)"
               :data-index="i"
-              :class="{ canceled: edit.canceled }"
+              :class="{
+                canceled: edit.canceled,
+                'stripe-even': i % 2 === 0,
+                'stripe-odd': i % 2 === 1
+              }"
               v-for="{ edit, i } in visibleRows"
             >
               <td class="episode" v-if="isTVShow">
@@ -1106,9 +1110,33 @@ export default {
 <style lang="scss" scoped>
 // PERF-1 pilot: spacer rows standing in for the off-screen virtualized
 // rows above/below the rendered window (see the datatable-body template).
-.virtual-spacer-row td {
+// Qualified with .datatable-body so it outranks shared.scss's
+// `.data-list .datatable-body td` padding by specificity, not by
+// stylesheet injection order.
+.datatable-body .virtual-spacer-row td {
   padding: 0;
   border: none;
+}
+
+// With virtualization the DOM only holds a window of rows, so the global
+// `.datatable-row:nth-child(even)` zebra rules (App.vue) re-anchor on
+// whatever row happens to be rendered first and every stripe flips each
+// time the window shifts by one row. Stripe from the data index instead
+// (stripe-even/stripe-odd bound in the row's :class). Hover is redeclared
+// after the stripes so it keeps winning over them.
+tr.datatable-row.stripe-even,
+tr.datatable-row.stripe-even .datatable-row-header {
+  background-color: var(--background);
+}
+
+tr.datatable-row.stripe-odd,
+tr.datatable-row.stripe-odd .datatable-row-header {
+  background-color: var(--background-alt);
+}
+
+tr.datatable-row:hover,
+tr.datatable-row:hover .datatable-row-header {
+  background-color: var(--background-hover);
 }
 
 .project {
