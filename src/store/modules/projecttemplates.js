@@ -191,9 +191,9 @@ const mutations = {
       Object.assign(existing, newTemplate)
     } else {
       state.projectTemplates.push(newTemplate)
-      state.projectTemplates = sortByName(state.projectTemplates)
     }
     cache.projectTemplateMap.set(newTemplate.id, newTemplate)
+    state.projectTemplates = sortByName(state.projectTemplates)
   },
 
   [DELETE_PROJECT_TEMPLATE_END](state, templateToDelete) {

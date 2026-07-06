@@ -177,9 +177,9 @@ const mutations = {
       cache.taskStatusMap.set(taskStatus.id, taskStatus)
     } else {
       state.taskStatuses.push(newTaskStatus)
-      state.taskStatuses = sortByName(state.taskStatuses)
       cache.taskStatusMap.set(newTaskStatus.id, newTaskStatus)
     }
+    state.taskStatuses = sortByName(state.taskStatuses)
   },
 
   [DELETE_TASK_STATUS_END](state, taskStatusToDelete) {
@@ -194,6 +194,7 @@ const mutations = {
 
   [RESET_ALL](state) {
     Object.assign(state, { ...initialState })
+    cache.taskStatusMap.clear()
   }
 }
 
