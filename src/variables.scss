@@ -64,7 +64,7 @@ $yellow: #ffc107;
   --box-shadow-alt: #eee;
   --text: #7a7a7a;
   --text-alt: #888;
-  --text-strong: $black;
+  --text-strong: #{$black};
   --text-selectable: #9fa2fb;
   --text-selected: #8f91eb;
   --poster-color: #000;
@@ -72,7 +72,11 @@ $yellow: #ffc107;
   --shared-color: #f9e04b;
 }
 
-.dark {
+// .dp--theme-dark also carries the dark values: datepicker menus teleport
+// to <body>, outside the .dark wrapper, and would otherwise resolve the
+// charte variables to their light values.
+.dark,
+.dp--theme-dark {
   --background: #36393f;
   --background-rgb: 54, 57, 63;
   --background-alt: #46494f;
@@ -103,6 +107,22 @@ $yellow: #ffc107;
   --purple: #5e60ba;
 }
 
+// Datepicker theming goes through vue-datepicker's own variables, set on
+// its theme classes (present on the teleported menu). #app-scoped rules
+// never reach the menu.
+.dp--theme-light,
 .dp--theme-dark {
+  --dp-primary-color: var(--background-selected);
+  --dp-hover-color: var(--background-selectable);
+  --dp-hover-text-color: var(--text-strong);
+  --dp-border-color-focus: var(--background-selected);
+}
+
+.dp--theme-light {
+  --dp-primary-text-color: #{$black};
+}
+
+.dp--theme-dark {
+  --dp-primary-text-color: #fefefe;
   --dp-background-color: #26292f;
 }

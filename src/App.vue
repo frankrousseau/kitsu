@@ -2505,19 +2505,9 @@ th.validation-cell {
   }
 }
 
-#app .dp--active {
-  color: $black;
-  background: var(--background-selected);
-}
-
-#app .dp--today {
-  border-color: var(--background-selected);
-}
-
-#app .dp--date-hoverable:hover {
-  background: var(--background-selectable);
-}
-
+// Day-cell theming (selected/hover/today) lives in variables.scss on the
+// dp theme classes: the menu teleports to <body>, #app rules never
+// reach it. Only the input below renders in place.
 #app .dp--input {
   border-radius: 10px;
   height: 40px;
