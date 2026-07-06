@@ -569,6 +569,7 @@ export default {
       'currentEpisode',
       'currentProduction',
       'departmentMap',
+      'displayedAssets',
       'displayedSequences',
       'displayedShots',
       'episodeMap',
@@ -818,6 +819,7 @@ export default {
       this.loadAssets({ all: true, withTasks: true }).then(() => {
         this.isLoading = false
         this.displayMoreAssets()
+        this.fillAssetList()
         this.setCastingAssetTypes()
         if (this.assetTypeId) {
           this.setCastingAssetType(this.assetTypeId)
@@ -876,6 +878,7 @@ export default {
       this.setSearchInUrl(searchQuery)
       this.displayMoreAssets()
       this.displayMoreAssets()
+      this.fillAssetList()
     },
 
     selectEntity(entityId, event) {
@@ -1029,6 +1032,25 @@ export default {
       if (maxHeight < position.scrollTop + 100) {
         this.displayMoreAssets()
       }
+    },
+
+    // On tall screens the first pages may not overflow the container, so
+    // scrolling can never trigger the next page: keep loading until the
+    // scrollbar shows up or every asset is displayed.
+    fillAssetList() {
+      this.$nextTick(() => {
+        const assetList = this.$refs['asset-list']
+        if (!assetList || assetList.scrollHeight > assetList.clientHeight) {
+          return
+        }
+        const displayedCountBefore = this.displayedAssets.length
+        this.displayMoreAssets()
+        this.$nextTick(() => {
+          if (this.displayedAssets.length > displayedCountBefore) {
+            this.fillAssetList()
+          }
+        })
+      })
     },
 
     showImportModal() {
