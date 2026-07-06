@@ -4,7 +4,7 @@
       class="kitsu-logo-link"
       href="https://www.cg-wire.com/kitsu"
       target="_blank"
-      rel="noopener"
+      rel="noopener noreferrer"
       :title="$t('share.kitsu_homepage')"
     >
       <img class="kitsu-logo" src="@/assets/kitsu.png" alt="Kitsu" />
