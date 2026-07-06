@@ -11,8 +11,26 @@
   >
     <div class="asset-wrapper">
       <template v-if="!readOnly && active">
-        <div class="asset-add-1" @click.stop="addOneAsset">+ 1</div>
-        <div class="asset-add" @click.stop="removeOneAsset">- 1</div>
+        <div
+          class="asset-add-1"
+          role="button"
+          tabindex="0"
+          @click.stop="addOneAsset"
+          @keydown.enter.prevent.stop="addOneAsset"
+          @keydown.space.prevent.stop="addOneAsset"
+        >
+          + 1
+        </div>
+        <div
+          class="asset-add"
+          role="button"
+          tabindex="0"
+          @click.stop="removeOneAsset"
+          @keydown.enter.prevent.stop="removeOneAsset"
+          @keydown.space.prevent.stop="removeOneAsset"
+        >
+          - 1
+        </div>
       </template>
       <div class="asset-picture" v-if="asset.preview_file_id">
         <img
@@ -30,7 +48,15 @@
         </span>
       </div>
     </div>
-    <div class="asset-label" :label="asset.label" @click="onEditLabelClicked">
+    <div
+      class="asset-label"
+      :label="asset.label"
+      role="button"
+      tabindex="0"
+      @click="onEditLabelClicked"
+      @keydown.enter.prevent="onEditLabelClicked"
+      @keydown.space.prevent="onEditLabelClicked"
+    >
       {{ asset.label || $t('breakdown.options.animate') }}
     </div>
   </div>
@@ -46,7 +72,11 @@
     </span>
     <span
       class="modify-asset flexrow-item"
+      role="button"
+      tabindex="0"
       @click.stop="removeOneAsset"
+      @keydown.enter.prevent.stop="removeOneAsset"
+      @keydown.space.prevent.stop="removeOneAsset"
       v-if="!readOnly && active"
     >
       - 1

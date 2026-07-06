@@ -49,7 +49,11 @@
               'is-fullwidth': true,
               'is-loading': isLoading
             }"
+            role="button"
+            tabindex="0"
             @click="confirmResetChangePassword"
+            @keydown.enter.prevent="confirmResetChangePassword"
+            @keydown.space.prevent="confirmResetChangePassword"
             v-if="!isSuccess"
           >
             {{

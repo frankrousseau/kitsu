@@ -41,7 +41,11 @@
             :class="{
               'is-loading': isLoading
             }"
+            role="button"
+            tabindex="0"
             @click="confirmResetPassword"
+            @keydown.enter.prevent="confirmResetPassword"
+            @keydown.space.prevent="confirmResetPassword"
             v-if="!isSuccess"
           >
             {{ $t('login.reset_password') }}

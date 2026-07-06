@@ -7,7 +7,10 @@
       stdby: entity ? entity.is_casting_standby : false,
       'text-mode': textMode
     }"
+    role="button"
+    tabindex="0"
     @click="onClicked($event)"
+    @keydown.enter.prevent="onClicked($event)"
   >
     <div
       class="flexrow-item sticky"

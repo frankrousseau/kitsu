@@ -10,7 +10,14 @@
           src="../../assets/illustrations/kitsu-band.png"
         />
         <div class="filler">
-          <span class="close-contributions" @click="hideContributions">
+          <span
+            class="close-contributions"
+            role="button"
+            tabindex="0"
+            @click="hideContributions"
+            @keydown.enter.prevent="hideContributions"
+            @keydown.space.prevent="hideContributions"
+          >
             <x-icon :size="14" />
           </span>
           <p>

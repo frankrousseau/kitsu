@@ -9,7 +9,10 @@
           selected: isSelected,
           'is-new': isNew
         }"
+        role="button"
+        tabindex="0"
         @click.prevent="$emit('select', news)"
+        @keydown.enter.prevent="$emit('select', news)"
       >
         <span
           :class="{
@@ -88,7 +91,10 @@
           selected: isSelected,
           'is-new': isNew
         }"
+        role="button"
+        tabindex="0"
         @click.prevent="$emit('select', news)"
+        @keydown.enter.prevent="$emit('select', news)"
       >
         <span
           :class="{

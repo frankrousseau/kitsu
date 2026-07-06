@@ -77,7 +77,11 @@
             :class="{
               'is-loading': isLoginLoading
             }"
+            role="button"
+            tabindex="0"
             @click="confirmLogIn()"
+            @keydown.enter.prevent="confirmLogIn()"
+            @keydown.space.prevent="confirmLogIn()"
           >
             {{ $t('login.login') }}
           </a>

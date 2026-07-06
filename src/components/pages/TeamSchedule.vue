@@ -102,7 +102,14 @@
 
     <div class="column side-column" v-if="isTaskSidePanelOpen">
       <task-info>
-        <a class="close-button" @click="toggleTaskSidePanel">
+        <a
+          class="close-button"
+          role="button"
+          tabindex="0"
+          @click="toggleTaskSidePanel"
+          @keydown.enter.prevent="toggleTaskSidePanel"
+          @keydown.space.prevent="toggleTaskSidePanel"
+        >
           <x-icon class="align-middle" :size="16" />
         </a>
         <h2 class="mt1">

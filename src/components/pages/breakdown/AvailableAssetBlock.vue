@@ -10,8 +10,26 @@
     :title="asset.name"
     v-if="!textMode"
   >
-    <div class="asset-add" @click="addOneAsset">+ 1</div>
-    <div class="asset-add-10" @click="addTenAssets">+ 10</div>
+    <div
+      class="asset-add"
+      role="button"
+      tabindex="0"
+      @click="addOneAsset"
+      @keydown.enter.prevent="addOneAsset"
+      @keydown.space.prevent="addOneAsset"
+    >
+      + 1
+    </div>
+    <div
+      class="asset-add-10"
+      role="button"
+      tabindex="0"
+      @click="addTenAssets"
+      @keydown.enter.prevent="addTenAssets"
+      @keydown.space.prevent="addTenAssets"
+    >
+      + 10
+    </div>
     <div class="asset-picture" v-if="asset.preview_file_id">
       <img
         loading="lazy"
@@ -35,7 +53,16 @@
     <span class="asset-text-name flexrow-item">
       {{ asset.name }}
     </span>
-    <span class="modify-asset flexrow-item" @click="addOneAsset"> + 1 </span>
+    <span
+      class="modify-asset flexrow-item"
+      role="button"
+      tabindex="0"
+      @click="addOneAsset"
+      @keydown.enter.prevent="addOneAsset"
+      @keydown.space.prevent="addOneAsset"
+    >
+      + 1
+    </span>
   </div>
 </template>
 

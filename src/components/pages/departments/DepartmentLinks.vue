@@ -9,7 +9,10 @@
           }"
           v-for="dept in departments"
           :key="dept.id"
+          role="button"
+          tabindex="0"
           @click="selectDepartment(dept)"
+          @keydown.enter.prevent="selectDepartment(dept)"
         >
           <department-name :department="dept" />
         </li>
@@ -30,7 +33,10 @@
           <li
             :key="item.id"
             v-for="item in departmentLinkedItems"
+            role="button"
+            tabindex="0"
             @click="removeItem(item)"
+            @keydown.enter.prevent="removeItem(item)"
           >
             <div class="item-info">
               {{ item.name }}
@@ -47,7 +53,10 @@
         <li
           :key="item.id"
           v-for="item in availableItems"
+          role="button"
+          tabindex="0"
           @click="selectItem(item)"
+          @keydown.enter.prevent="selectItem(item)"
         >
           {{ item.name }}
         </li>

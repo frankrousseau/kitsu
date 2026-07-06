@@ -128,7 +128,10 @@
             selected: isSelected(notification)
           }"
           :key="notification.id"
+          role="button"
+          tabindex="0"
           @click="onNotificationSelected($event, notification)"
+          @keydown.enter.prevent="onNotificationSelected($event, notification)"
           v-for="notification in notifications"
           v-show="!loading.notifications"
         >

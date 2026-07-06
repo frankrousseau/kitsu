@@ -30,7 +30,11 @@
             :class="{
               'is-loading': isLoading
             }"
+            role="button"
+            tabindex="0"
             @click="confirmResetPassword"
+            @keydown.enter.prevent="confirmResetPassword"
+            @keydown.space.prevent="confirmResetPassword"
           >
             {{ $t('login.reset_password') }}
           </a>

@@ -78,7 +78,13 @@
             v-for="attachment in attachments"
           >
             {{ attachment.get('file').name }}
-            <span @click="removeAttachment(attachment)">
+            <span
+              role="button"
+              tabindex="0"
+              @click="removeAttachment(attachment)"
+              @keydown.enter.prevent="removeAttachment(attachment)"
+              @keydown.space.prevent="removeAttachment(attachment)"
+            >
               <x-icon :size="8" />
             </span>
           </div>

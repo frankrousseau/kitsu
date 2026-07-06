@@ -7,7 +7,14 @@
           :key="tab.name"
           :class="{ 'is-active': entityTab === tab.name }"
         >
-          <a @click="entityTab = tab.name">{{ tab.label }}</a>
+          <a
+            role="button"
+            tabindex="0"
+            @click="entityTab = tab.name"
+            @keydown.enter.prevent="entityTab = tab.name"
+            @keydown.space.prevent="entityTab = tab.name"
+            >{{ tab.label }}</a
+          >
         </li>
       </ul>
     </div>
