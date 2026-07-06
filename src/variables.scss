@@ -109,20 +109,22 @@ $yellow: #ffc107;
 
 // Datepicker theming goes through vue-datepicker's own variables, set on
 // its theme classes (present on the teleported menu). #app-scoped rules
-// never reach the menu.
-.dp--theme-light,
-.dp--theme-dark {
+// never reach the menu, and the body prefix is required: the library CSS
+// lives in its own lazy chunk that can load after this one, so we must
+// win on specificity, not on order.
+body .dp--theme-light,
+body .dp--theme-dark {
   --dp-primary-color: var(--background-selected);
   --dp-hover-color: var(--background-selectable);
   --dp-hover-text-color: var(--text-strong);
   --dp-border-color-focus: var(--background-selected);
 }
 
-.dp--theme-light {
+body .dp--theme-light {
   --dp-primary-text-color: #{$black};
 }
 
-.dp--theme-dark {
+body .dp--theme-dark {
   --dp-primary-text-color: #fefefe;
   --dp-background-color: #26292f;
 }
