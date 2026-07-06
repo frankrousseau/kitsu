@@ -121,6 +121,9 @@ if (PSStroke) {
  *   local deletion is recorded. Receives `(currentTime, serializedObject)`.
  * @param {Function} [options.postAnnotationUpdate] - hook fired after a
  *   local update is recorded. Receives `(currentTime, serializedObject)`.
+ * @param {Function} [options.getAdditionalPreviews] - extra store previews
+ *   that mirror the current one and must receive the same annotations
+ *   (playlist revision copies). Returns `[{ taskId, preview }]` pairs.
  */
 export const useAnnotation = ({
   mainCanvasComponent,
@@ -141,7 +144,8 @@ export const useAnnotation = ({
   isEraserModeOn = ref(false),
   postAnnotationAddition = () => {},
   postAnnotationDeletion = () => {},
-  postAnnotationUpdate = () => {}
+  postAnnotationUpdate = () => {},
+  getAdditionalPreviews = () => []
 }) => {
   // Canvas instances are owned by AnnotationCanvas components; we
   // mirror them into local refs through watchers so internal code
@@ -511,10 +515,10 @@ export const useAnnotation = ({
   const updateAnnotationsInStore = () => {
     const preview = currentPreview()
     if (preview) {
-      store.commit('UPDATE_PREVIEW_ANNOTATION', {
-        taskId: preview.task_id,
-        preview: preview,
-        annotations: annotations.value
+      store.dispatch('updatePreviewAnnotations', {
+        preview,
+        annotations: annotations.value,
+        extraPreviews: getAdditionalPreviews()
       })
     }
   }

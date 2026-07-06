@@ -703,6 +703,27 @@ const actions = {
       })
   },
 
+  // Single entry point for pushing a preview's annotations into the store.
+  // `extraPreviews` carries store copies that mirror the main preview
+  // (playlist revision copies) and must receive the same annotations.
+  updatePreviewAnnotations(
+    { commit },
+    { preview, annotations, extraPreviews = [] }
+  ) {
+    commit(UPDATE_PREVIEW_ANNOTATION, {
+      taskId: preview.task_id,
+      preview,
+      annotations
+    })
+    extraPreviews.forEach(({ taskId, preview: extraPreview }) => {
+      commit(UPDATE_PREVIEW_ANNOTATION, {
+        taskId,
+        preview: extraPreview,
+        annotations
+      })
+    })
+  },
+
   refreshPreview({ commit }, { taskId, previewId }) {
     return tasksApi.getPreviewFile(previewId).then(preview => {
       commit(UPDATE_PREVIEW_ANNOTATION, {

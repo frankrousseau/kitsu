@@ -1586,7 +1586,8 @@ const annotation = useAnnotation({
   isLaserModeOn,
   postAnnotationAddition,
   postAnnotationDeletion,
-  postAnnotationUpdate
+  postAnnotationUpdate,
+  getAdditionalPreviews: () => getAdditionalPreviews()
 })
 
 annotation.setCurrentPreviewGetter(() => currentPreview.value)
@@ -2919,6 +2920,39 @@ const prefetchAnnotationsAround = index => {
   }
 }
 
+// Store copies of the current preview kept under entity.preview_files (one
+// group per task type in the playlist payload). The annotation composable
+// hands them to the updatePreviewAnnotations action so its store write also
+// refreshes the revision copies — saveAnnotations no longer commits itself.
+const getAdditionalPreviews = () => {
+  if (readOnly.value) return []
+  const entity = entityList.value[playingEntityIndex.value]
+  if (!entity) return []
+
+  let previewId = entity.preview_file_id
+  if (currentPreviewIndex.value > 0) {
+    const index = currentPreviewIndex.value - 1
+    const previewFile = currentEntity.value?.preview_file_previews?.[index]
+    if (previewFile) previewId = previewFile.id
+  }
+
+  const taskId = entity.preview_file_task_id
+  const pairs = []
+  Object.keys(entity.preview_files || {}).forEach(taskTypeId => {
+    let revPreview = null
+    entity.preview_files[taskTypeId].forEach(p => {
+      if (p.id === previewId) revPreview = p
+      if (!revPreview && p.previews) {
+        p.previews.forEach(sub => {
+          if (sub.id === previewId) revPreview = p
+        })
+      }
+    })
+    if (revPreview) pairs.push({ taskId, preview: revPreview })
+  })
+  return pairs
+}
+
 const saveAnnotations = () => {
   let time = roundToFrame(currentTimeRaw.value, fps.value) || 0
   if (time < 0) time = 0
@@ -2954,24 +2988,6 @@ const saveAnnotations = () => {
     }
 
     entity.preview_file_annotations = newAnnotations
-    Object.keys(entity.preview_files || {}).forEach(taskTypeId => {
-      let revPreview = null
-      entity.preview_files[taskTypeId].forEach(p => {
-        if (p.id === preview.id) revPreview = p
-        if (!revPreview && p.previews) {
-          p.previews.forEach(sub => {
-            if (sub.id === preview.id) revPreview = p
-          })
-        }
-      })
-      if (revPreview) {
-        store.commit('UPDATE_PREVIEW_ANNOTATION', {
-          taskId: preview.task_id,
-          preview: revPreview,
-          annotations: newAnnotations
-        })
-      }
-    })
   }
 }
 

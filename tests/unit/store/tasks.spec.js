@@ -127,4 +127,56 @@ describe('Tasks store', () => {
       expect(comment.replies[0].person.initials).toEqual('GA')
     })
   })
+
+  describe('updatePreviewAnnotations action', () => {
+    const annotations = [{ time: 0, drawing: { objects: [] } }]
+    const preview = { id: 'preview-1', task_id: 'task-1' }
+
+    test('commits one UPDATE_PREVIEW_ANNOTATION for the main preview', () => {
+      const commit = vi.fn()
+      tasksStore.actions.updatePreviewAnnotations(
+        { commit },
+        { preview, annotations }
+      )
+      expect(commit).toHaveBeenCalledTimes(1)
+      expect(commit).toHaveBeenCalledWith('UPDATE_PREVIEW_ANNOTATION', {
+        taskId: 'task-1',
+        preview,
+        annotations
+      })
+    })
+
+    test('commits once per extra preview with the same annotations', () => {
+      const commit = vi.fn()
+      const revisionCopy = { id: 'preview-1', revision: 2 }
+      const subPreviewParent = { id: 'preview-parent', revision: 1 }
+      tasksStore.actions.updatePreviewAnnotations(
+        { commit },
+        {
+          preview,
+          annotations,
+          extraPreviews: [
+            { taskId: 'task-1', preview: revisionCopy },
+            { taskId: 'task-1', preview: subPreviewParent }
+          ]
+        }
+      )
+      expect(commit).toHaveBeenCalledTimes(3)
+      expect(commit).toHaveBeenNthCalledWith(1, 'UPDATE_PREVIEW_ANNOTATION', {
+        taskId: 'task-1',
+        preview,
+        annotations
+      })
+      expect(commit).toHaveBeenNthCalledWith(2, 'UPDATE_PREVIEW_ANNOTATION', {
+        taskId: 'task-1',
+        preview: revisionCopy,
+        annotations
+      })
+      expect(commit).toHaveBeenNthCalledWith(3, 'UPDATE_PREVIEW_ANNOTATION', {
+        taskId: 'task-1',
+        preview: subPreviewParent,
+        annotations
+      })
+    })
+  })
 })
