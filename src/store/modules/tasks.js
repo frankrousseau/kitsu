@@ -409,9 +409,17 @@ const actions = {
     }
   },
 
-  updateTask({ commit }, { taskId, data }) {
+  updateTask({ commit, state }, { taskId, data }) {
+    const task = state.taskMap.get(taskId)
+    // Capture the overwritten fields so a failed save can be rolled back.
+    const previousData = task
+      ? Object.fromEntries(Object.keys(data).map(key => [key, task[key]]))
+      : null
     commit(EDIT_TASK_DATES, { taskId, data })
-    return tasksApi.updateTask(taskId, data)
+    return tasksApi.updateTask(taskId, data).catch(err => {
+      if (previousData) commit(EDIT_TASK_DATES, { taskId, data: previousData })
+      throw err
+    })
   },
 
   editTaskComment({ commit }, { taskId, comment }) {
@@ -804,7 +812,11 @@ const actions = {
   ackComment({ commit, rootGetters }, comment) {
     const user = rootGetters.user
     commit(ACK_COMMENT, { comment, user })
-    return tasksApi.ackComment(comment)
+    return tasksApi.ackComment(comment).catch(err => {
+      // ACK_COMMENT toggles: re-committing restores the previous state.
+      commit(ACK_COMMENT, { comment, user })
+      throw err
+    })
   },
 
   async replyToComment({ commit }, { comment, text, attachments }) {
