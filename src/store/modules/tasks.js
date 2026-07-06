@@ -328,13 +328,24 @@ const actions = {
   },
 
   async deleteSelectedTasks({ commit, state }) {
-    const selectedTaskIds = Array.from(state.selectedTasks.keys())
-    for (const taskId of selectedTaskIds) {
-      const task = state.taskMap.get(taskId)
-      if (task) {
-        await tasksApi.deleteTask(task)
-        commit(DELETE_TASK_END, task)
+    const selectedTasks = Array.from(state.selectedTasks.keys())
+      .map(taskId => state.taskMap.get(taskId))
+      .filter(task => task)
+    // One batch call per production instead of one request per task.
+    const tasksByProject = new Map()
+    selectedTasks.forEach(task => {
+      if (!tasksByProject.has(task.project_id)) {
+        tasksByProject.set(task.project_id, [])
       }
+      tasksByProject.get(task.project_id).push(task)
+    })
+    for (const tasks of tasksByProject.values()) {
+      await tasksApi.deleteAllTasks(
+        tasks[0].project_id,
+        null,
+        tasks.map(task => task.id)
+      )
+      tasks.forEach(task => commit(DELETE_TASK_END, task))
     }
   },
 
@@ -398,14 +409,15 @@ const actions = {
   },
 
   async changeSelectedPriorities({ commit, state, rootGetters }, { priority }) {
-    const selectedTaskIds = Array.from(state.selectedTasks.keys())
-    for (const taskId of selectedTaskIds) {
-      const task = state.taskMap.get(taskId)
-      if (task && task.priority !== priority) {
-        const taskType = rootGetters.taskTypeMap.get(task.task_type_id)
-        const updatedTask = await tasksApi.updateTask(taskId, { priority })
-        commit(EDIT_TASK_END, { task: updatedTask, taskType })
-      }
+    const tasksToUpdate = Array.from(state.selectedTasks.keys())
+      .map(taskId => state.taskMap.get(taskId))
+      .filter(task => task && task.priority !== priority)
+    // No batch endpoint for priorities: keep the requests serial to avoid
+    // hammering the server with parallel writes.
+    for (const task of tasksToUpdate) {
+      const taskType = rootGetters.taskTypeMap.get(task.task_type_id)
+      const updatedTask = await tasksApi.updateTask(task.id, { priority })
+      commit(EDIT_TASK_END, { task: updatedTask, taskType })
     }
   },
 

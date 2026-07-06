@@ -16,6 +16,7 @@ import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import { minutesToDays } from '@/lib/time'
 import { PAGE_SIZE } from '@/lib/pagination'
 import {
+  insertSortedAsset,
   sortAssetResult,
   sortAssets,
   sortByName,
@@ -29,7 +30,14 @@ import {
   removeModelFromList
 } from '@/lib/models'
 import { computeStats } from '@/lib/stats'
-import { buildAssetIndex, buildNameIndex, indexSearch } from '@/lib/indexing'
+import {
+  buildAssetIndex,
+  buildNameIndex,
+  getAssetIndexWords,
+  indexSearch,
+  removeEntryFromIndex,
+  updateEntryInIndex
+} from '@/lib/indexing'
 import { applyFilters, getKeyWords, getFilters } from '@/lib/filtering'
 
 import {
@@ -1054,10 +1062,9 @@ const mutations = {
       {},
       asset
     )
-    cache.assets.push(asset)
-    cache.assets = sortAssets(cache.assets)
+    insertSortedAsset(cache.assets, asset)
     cache.assetMap.set(asset.id, asset)
-    cache.assetIndex = buildAssetIndex(cache.assets)
+    updateEntryInIndex(cache.assetIndex, asset, getAssetIndexWords(asset))
 
     // Test the new asset only against existing filters
     const taskTypes = Array.from(taskTypeMap.values())
@@ -1085,8 +1092,7 @@ const mutations = {
 
     if (result && result.length > 0) {
       cache.result.push(asset)
-      state.displayedAssets.push(asset)
-      state.displayedAssets = sortAssets(state.displayedAssets)
+      insertSortedAsset(state.displayedAssets, asset)
       helpers.setListStats(state, cache.assets)
       state.assetFilledColumns = getFilledColumns(state.displayedAssets)
 
@@ -1098,13 +1104,17 @@ const mutations = {
     const cachedAsset = cache.assetMap.get(asset.id)
     if (cachedAsset) {
       Object.assign(cachedAsset, asset)
+      updateEntryInIndex(
+        cache.assetIndex,
+        cachedAsset,
+        getAssetIndexWords(cachedAsset)
+      )
     }
     const displayedAsset = state.displayedAssets.find(a => a.id === asset.id)
     if (displayedAsset) {
       Object.assign(displayedAsset, asset)
     }
     state.displayedAssets = [...state.displayedAssets]
-    cache.assetIndex = buildAssetIndex(cache.assets)
   },
 
   [REMOVE_ASSET](state, assetToDelete) {
@@ -1124,7 +1134,7 @@ const mutations = {
       }
       state.assetFilledColumns = getFilledColumns(state.displayedAssets)
       helpers.setListStats(state, cache.assets)
-      cache.assetIndex = buildAssetIndex(cache.assets)
+      removeEntryFromIndex(cache.assetIndex, assetToDelete)
     }
   },
 
@@ -1163,8 +1173,7 @@ const mutations = {
       newAsset.tasks = []
       newAsset.production_id = newAsset.project_id
       newAsset.episode_id = newAsset.source_id
-      cache.assets.push(newAsset)
-      cache.assets = sortAssets(cache.assets)
+      insertSortedAsset(cache.assets, newAsset)
       cache.result.push(newAsset)
       state.displayedAssets.push(newAsset)
       state.assetFilledColumns = getFilledColumns(state.displayedAssets)
@@ -1177,7 +1186,12 @@ const mutations = {
     if (newAsset.description && !state.isAssetDescription) {
       state.isAssetDescription = true
     }
-    cache.assetIndex = buildAssetIndex(cache.assets)
+    const indexedAsset = asset || newAsset
+    updateEntryInIndex(
+      cache.assetIndex,
+      indexedAsset,
+      getAssetIndexWords(indexedAsset)
+    )
   },
 
   [CANCEL_ASSET](state, asset) {
@@ -1188,7 +1202,8 @@ const mutations = {
   [RESTORE_ASSET_END](state, assetToRestore) {
     const asset = cache.assetMap.get(assetToRestore.id)
     asset.canceled = false
-    cache.assetIndex = buildAssetIndex(cache.assets)
+    // No index update needed: restoring only flips `canceled`, none of the
+    // indexed words change.
     state.displayedAssetsLength = cache.result.filter(a => !a.canceled).length
   },
 

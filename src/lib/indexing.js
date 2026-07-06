@@ -1,7 +1,15 @@
-const createIndexPair = () => ({
-  index: Object.create(null),
-  entryIndex: Object.create(null)
-})
+// Bookkeeping kept on every index so single entries can be added, updated
+// or removed without a full O(N × L²) rebuild. Symbol keys stay invisible
+// to the string-keyed substring lookups and to Object.keys/for-in.
+const ENTRY_IDS = Symbol('entryIds') // substr → { entryId: true }
+const ENTRY_WORDS = Symbol('entryWords') // Map<entryId, lowercased words>
+
+const createIndexPair = () => {
+  const index = Object.create(null)
+  index[ENTRY_IDS] = Object.create(null)
+  index[ENTRY_WORDS] = new Map()
+  return { index, entryIndex: index[ENTRY_IDS] }
+}
 
 /*
  * Build a simple index based on entry names.
@@ -128,18 +136,21 @@ export const buildSupervisorTaskIndex = (tasks, personMap, taskStatusMap) => {
  * type name, and words appearing in the asset name.
  * Results are arrays of assets.
  */
+export const getAssetIndexWords = asset => {
+  const stringToIndex = asset.name.replace(/_/g, ' ').replace(/-/g, ' ')
+  let words = []
+    .concat(asset.asset_type_name.split(' '))
+    .concat(stringToIndex.split(' '))
+    .concat([asset.name])
+  const camelWords = stringToIndex.match(/[A-Z]+[a-z0-9]*/g)
+  if (camelWords) words = words.concat(camelWords)
+  return [...new Set(words.map(word => word.toLowerCase()))]
+}
+
 export const buildAssetIndex = entries => {
   const { index, entryIndex } = createIndexPair()
   entries.forEach(asset => {
-    const stringToIndex = asset.name.replace(/_/g, ' ').replace(/-/g, ' ')
-    let words = []
-      .concat(asset.asset_type_name.split(' '))
-      .concat(stringToIndex.split(' '))
-      .concat([asset.name])
-    const camelWords = stringToIndex.match(/[A-Z]+[a-z0-9]*/g)
-    if (camelWords) words = words.concat(camelWords)
-    words = [...new Set(words.map(word => word.toLowerCase()))]
-    indexWords(index, entryIndex, asset, words)
+    indexWords(index, entryIndex, asset, getAssetIndexWords(asset))
   })
   return index
 }
@@ -149,11 +160,16 @@ export const buildAssetIndex = entries => {
  * sequence and shot names at the same time.
  * Results are arrays of shots.
  */
+export const getShotIndexWords = shot => [
+  shot.name,
+  shot.sequence_name,
+  shot.episode_name
+]
+
 export const buildShotIndex = shots => {
   const { index, entryIndex } = createIndexPair()
   shots.forEach(shot => {
-    const words = [shot.name, shot.sequence_name, shot.episode_name]
-    indexWords(index, entryIndex, shot, words)
+    indexWords(index, entryIndex, shot, getShotIndexWords(shot))
   })
   return index
 }
@@ -248,9 +264,11 @@ const indexSearchWord = (index, word) => {
  * with current key).
  */
 const indexWords = (index, entryIndex, entry, words) => {
+  const lowerWords = []
   for (const word of words) {
     if (word) {
       const lowerWord = word.toLowerCase()
+      lowerWords.push(lowerWord)
       for (let start = 0; start < lowerWord.length; start++) {
         for (let len = 1; len <= lowerWord.length - start; len++) {
           const substr = lowerWord.substring(start, start + len)
@@ -267,5 +285,46 @@ const indexWords = (index, entryIndex, entry, words) => {
       }
     }
   }
+  index[ENTRY_WORDS]?.set(entry.id, lowerWords)
   return index
+}
+
+/*
+ * Remove a single entry from an index built by one of the build functions
+ * above. The words it was indexed under are stored on the index, so this
+ * works even after the entry was renamed.
+ */
+export const removeEntryFromIndex = (index, entry) => {
+  const words = index?.[ENTRY_WORDS]?.get(entry.id)
+  if (!words) return
+  const entryIds = index[ENTRY_IDS]
+  const seen = new Set()
+  for (const word of words) {
+    for (let start = 0; start < word.length; start++) {
+      for (let len = 1; len <= word.length - start; len++) {
+        const substr = word.substring(start, start + len)
+        if (!seen.has(substr)) {
+          seen.add(substr)
+          const bucket = index[substr]
+          if (bucket) {
+            const bucketIndex = bucket.findIndex(item => item.id === entry.id)
+            if (bucketIndex !== -1) bucket.splice(bucketIndex, 1)
+            if (entryIds[substr]) delete entryIds[substr][entry.id]
+          }
+        }
+      }
+    }
+  }
+  index[ENTRY_WORDS].delete(entry.id)
+}
+
+/*
+ * Add or refresh a single entry in an index without a full rebuild. The
+ * words must come from the extractor matching the index type
+ * (getShotIndexWords, getAssetIndexWords, …).
+ */
+export const updateEntryInIndex = (index, entry, words) => {
+  if (!index?.[ENTRY_IDS]) return
+  removeEntryFromIndex(index, entry)
+  indexWords(index, index[ENTRY_IDS], entry, words)
 }

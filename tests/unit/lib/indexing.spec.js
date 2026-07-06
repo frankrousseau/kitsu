@@ -4,10 +4,91 @@ import {
   buildNameIndex,
   buildShotIndex,
   buildTaskIndex,
-  indexSearch
+  getAssetIndexWords,
+  getShotIndexWords,
+  indexSearch,
+  removeEntryFromIndex,
+  updateEntryInIndex
 } from '@/lib/indexing'
 
 describe('lib/indexing', () => {
+  describe('incremental updates (PERF-2)', () => {
+    const buildShots = () => [
+      { id: 's1', name: 'SH010', sequence_name: 'SEQ01', episode_name: 'E01' },
+      { id: 's2', name: 'SH020', sequence_name: 'SEQ01', episode_name: 'E01' },
+      { id: 's3', name: 'SH030', sequence_name: 'SEQ02', episode_name: 'E02' }
+    ]
+
+    it('adds a new entry without a rebuild', () => {
+      const shots = buildShots()
+      const index = buildShotIndex(shots)
+      const shot = {
+        id: 's4',
+        name: 'SH040',
+        sequence_name: 'SEQ02',
+        episode_name: 'E02'
+      }
+      updateEntryInIndex(index, shot, getShotIndexWords(shot))
+
+      expect(indexSearch(index, ['sh040'])).toEqual([shot])
+      expect(indexSearch(index, ['seq02'])).toHaveLength(2)
+    })
+
+    it('drops the old words when an entry is renamed', () => {
+      const shots = buildShots()
+      const index = buildShotIndex(shots)
+      const shot = shots[0]
+      shot.name = 'SH999'
+      updateEntryInIndex(index, shot, getShotIndexWords(shot))
+
+      // The old name must not match anymore...
+      expect(indexSearch(index, ['sh010'])).toEqual([])
+      // ...the new one must, exactly once.
+      expect(indexSearch(index, ['sh999'])).toEqual([shot])
+      expect(indexSearch(index, ['sh'])).toHaveLength(3)
+    })
+
+    it('removes an entry from every bucket', () => {
+      const shots = buildShots()
+      const index = buildShotIndex(shots)
+      removeEntryFromIndex(index, shots[0])
+
+      expect(indexSearch(index, ['sh010'])).toEqual([])
+      expect(indexSearch(index, ['seq01'])).toHaveLength(1)
+      expect(indexSearch(index, ['sh'])).toHaveLength(2)
+    })
+
+    it('matches a full rebuild after a series of asset mutations', () => {
+      const assets = [
+        { id: 'a1', name: 'Big_Buck', asset_type_name: 'Character' },
+        { id: 'a2', name: 'Tree-House', asset_type_name: 'Environment' },
+        { id: 'a3', name: 'Lamp', asset_type_name: 'Props' }
+      ]
+      const index = buildAssetIndex(assets)
+
+      // Rename, add, remove — mirroring UPDATE / ADD / REMOVE mutations.
+      assets[0].name = 'BigChief'
+      updateEntryInIndex(index, assets[0], getAssetIndexWords(assets[0]))
+      const added = { id: 'a4', name: 'Chair', asset_type_name: 'Props' }
+      assets.push(added)
+      updateEntryInIndex(index, added, getAssetIndexWords(added))
+      const removed = assets.splice(1, 1)[0]
+      removeEntryFromIndex(index, removed)
+
+      const rebuilt = buildAssetIndex(assets)
+      const queries = ['big', 'chief', 'tree', 'house', 'props', 'ch', 'a']
+      queries.forEach(query => {
+        const incremental = (indexSearch(index, [query]) || [])
+          .map(entry => entry.id)
+          .sort()
+        const reference = (indexSearch(rebuilt, [query]) || [])
+          .map(entry => entry.id)
+          .sort()
+        expect(incremental, `query "${query}"`).toEqual(reference)
+      })
+    })
+  })
+
   it('buildNameIndex', () => {
     const entries = [
       { name: 'Agent327', id: 1 },
