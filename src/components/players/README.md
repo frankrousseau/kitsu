@@ -30,7 +30,7 @@ All three live in `bars/` and follow the **opt-in v-model + named slot** extensi
 
 | Bar | Owns | Consumers |
 |---|---|---|
-| `PlayerPlaybackBar` | play/pause, time/frame counter, repeat, HD/LD, speed, sound, 3D animation combo; optional `isWaveformDisplayed`, `isShowAnnotationsWhilePlaying`, `compact`, `isPicture`, `#extra-controls` slot | All three players |
+| `PlayerPlaybackBar` | play/pause, time/frame counter, repeat, HD/LD, speed, sound, 3D animation combo; optional `isWaveformDisplayed`, `isShowAnnotationsWhilePlaying`, `compact`, `isPicture`, `#extra-controls` slot | PreviewPlayer + PlaylistPlayer |
 | `PlayerComparisonBar` | compare toggle, task-type / revision / mode combos, prev/next preview navigation; `#missing` slot | PreviewPlayer + PlaylistPlayer |
 | `PlayerAnnotationBar` | undo/redo, delete, type, pencil, annotation-displayed (pen), zoom-pan (loupe), comment + 3D model controls; optional `isLaserModeOn` | PreviewPlayer + PlaylistPlayer |
 
@@ -43,13 +43,13 @@ Under `src/composables/players/`:
 | Composable | Owns | Used by |
 |---|---|---|
 | `annotation.js` | Fabric canvas, drawing tools, undo/redo stacks, annotation persistence | All three players |
-| `annotationBroadcast.js` | Socket relay of annotation events into a preview room | PreviewPlayer + PlaylistPlayer |
+| `annotationBroadcast.js` | Socket relay of annotation events into a preview room | PlaylistPlayer |
 | `comparison.js` | Single-entity comparison state (task-type selection, mode, overlay opacity) | PreviewPlayer |
 | `playlistComparison.js` | Multi-entity playlist comparison; composes `useComparison` for shared primitives | PlaylistPlayer |
 | `previewShortcuts.js` | Keyboard shortcuts (Alt-pan, undo, delete, next/prev annotation, etc.) | PreviewPlayer + PlaylistPlayer |
 | `sharedAnnotation.js` | Lightweight annotation state for the guest overlay | SharedPlaylistPlayer / SharedAnnotationOverlay |
 
-Other composables under `src/composables/` (not under `players/`) that the players also use: `panzoom.js`, `previewRoom.js`, `fullScreen.js`, `entity.js`. They're more generic.
+Other composables under `src/composables/` (not under `players/`) also used here: `panzoom.js` and `fullScreen.js` (PreviewPlayer + PlaylistPlayer), `previewRoom.js` (PlaylistPlayer only), `entity.js`. They're more generic.
 
 ## Conventions
 
