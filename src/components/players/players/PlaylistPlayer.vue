@@ -931,6 +931,7 @@ import { useMediaKind } from '@/composables/players/mediaKind'
 import { useOnionSkin } from '@/composables/players/onionSkin'
 import { usePlaylistComparison } from '@/composables/players/playlistComparison'
 import { usePreviewShortcuts } from '@/composables/players/previewShortcuts'
+import { usePlayerTransport } from '@/composables/players/transport'
 import { usePreviewRoom } from '@/composables/previewRoom'
 import { scrubFrame } from '@/lib/players/scrub'
 import preferences from '@/lib/preferences'
@@ -1101,7 +1102,8 @@ const framesSeenOfPicture = ref(1)
 const currentBackground = ref(null)
 const currentPreviewIndex = ref(0)
 const currentTime = ref('00:00.000')
-const currentTimeRaw = ref(0)
+const { currentTimeRaw, isHd, isMuted, isPlaying, isRepeating, speed, volume } =
+  usePlayerTransport()
 const handleIn = ref(0)
 const handleOut = ref(0)
 const hasActiveShareLinks = ref(false)
@@ -1113,12 +1115,8 @@ const isDrawing = ref(false)
 const isEntitiesHidden = ref(false)
 const isEnvironmentSkybox = ref(false)
 const isFullMode = ref(false)
-const isHd = ref(false)
 const isLaserModeOn = ref(false)
-const isMuted = ref(false)
 const isObjectBackground = ref(false)
-const isPlaying = ref(false)
-const isRepeating = ref(false)
 const isShowAnnotationsWhilePlaying = ref(false)
 const isTyping = ref(false)
 const isWaveformDisplayed = ref(false)
@@ -1143,8 +1141,6 @@ const room = ref({
   people: [],
   newComer: true
 })
-const speed = ref(3)
-const volume = ref(50)
 
 const modals = ref({
   delete: false,

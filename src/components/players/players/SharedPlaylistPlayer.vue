@@ -252,6 +252,7 @@ import darkTimesliderUrl from '@/assets/background/video-timeslider-dark.png'
 import { usePanzoomSync } from '@/composables/panzoom'
 import { useMediaKind } from '@/composables/players/mediaKind'
 import { isAltLetter } from '@/composables/players/previewShortcuts'
+import { usePlayerTransport } from '@/composables/players/transport'
 import { mergeAnnotationsByFrame } from '@/lib/players/annotation'
 import { DEFAULT_FPS, floorToFrame, formatTime } from '@/lib/video'
 
@@ -308,9 +309,7 @@ const isCommentsHidden = ref(
 const isEntitiesHidden = ref(false)
 const isFullScreen = ref(false)
 const isHd = ref(true)
-const isMuted = ref(false)
-const isPlaying = ref(false)
-const isRepeating = ref(false)
+const { isMuted, isPlaying, isRepeating } = usePlayerTransport()
 const maxDuration = ref(0)
 const movieDimensions = ref({ width: 0, height: 0 })
 const picturePlayer = ref(null)
