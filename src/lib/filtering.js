@@ -8,11 +8,10 @@ import {
 const UNION_REGEX = /\+\(.*\)/
 const EQUAL_REGEX =
   /\[([^[]*)\]=\[([^[]*)\]|([^ ]*)=\[([^[]*)\]|([^ ]*)=([^ ]*)|\[([^[]*)\]=([^ ]*)/g
-const EQUAL_ASSET_TYPE_REGEX = /type=\[([^[]*)\]|type=([^ ]*)|type=([^ ]*)/g
+const EQUAL_ASSET_TYPE_REGEX = /type=\[([^[]*)\]|type=([^ ]*)/g
 const EQUAL_PEOPLE_DEPARTMENT_REGEX =
-  /department=\[([^[]*)\]|department=([^ ]*)|department=([^ ]*)/g
-const EQUAL_READY_FOR_REGEX =
-  /readyfor=\[([^[]*)\]|readyfor=([^ ]*)|readyfor=([^ ]*)/g
+  /department=\[([^[]*)\]|department=([^ ]*)/g
+const EQUAL_READY_FOR_REGEX = /readyfor=\[([^[]*)\]|readyfor=([^ ]*)/g
 const EQUAL_PRIORITY_REGEX = /priority-\[([^[]*)\]=\d|priority-([^ ]*)=\d/g
 const EQUAL_ASSETS_READY_REGEX =
   /assetsready=\[([^[]*)\]|assetsready=([^ ]*)|assetsready=([^ ]*)/g

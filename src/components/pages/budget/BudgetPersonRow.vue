@@ -26,7 +26,7 @@
       </div>
     </td>
     <td class="base-salary-header text-right entry-data">
-      {{ (personEntry.monthly_salary || 0).toLocaleString() }}
+      {{ (personEntry.monthly_salary || 0).toLocaleString(localeCode) }}
     </td>
     <td class="duration-header text-right entry-data">
       {{ personEntry.months_duration }}
@@ -39,13 +39,15 @@
         :class="{ negative: isOverEstimate(month) }"
         v-for="month in monthsBetweenStartAndNow"
       >
-        {{ personExpense?.[month.format('YYYY-MM')]?.toLocaleString() }}
+        {{
+          personExpense?.[month.format('YYYY-MM')]?.toLocaleString(localeCode)
+        }}
       </td>
       <td class="total-cost remaining-previsional" v-if="isShowingExpenses">
-        {{ personExpense.total.toLocaleString() }}
+        {{ personExpense.total.toLocaleString(localeCode) }}
       </td>
       <td class="total-cost" v-if="isShowingExpenses">
-        {{ personDonePrevisional.toLocaleString() }}
+        {{ personDonePrevisional.toLocaleString(localeCode) }}
       </td>
       <td
         class="total-cost gap"
@@ -55,7 +57,11 @@
         }"
         v-if="isShowingExpenses"
       >
-        {{ (personDonePrevisional - personExpense.total).toLocaleString() }}
+        {{
+          (personDonePrevisional - personExpense.total).toLocaleString(
+            localeCode
+          )
+        }}
       </td>
     </template>
     <td
@@ -99,13 +105,17 @@
       <span v-else>&nbsp;</span>
     </td>
     <td class="total-cost remaining-previsional" v-if="isShowingExpenses">
-      {{ personRemainingPrevisional.toLocaleString() }}
+      {{ personRemainingPrevisional.toLocaleString(localeCode) }}
     </td>
     <td class="total-cost expense-and-remaining" v-if="isShowingExpenses">
-      {{ (personExpense.total + personRemainingPrevisional).toLocaleString() }}
+      {{
+        (personExpense.total + personRemainingPrevisional).toLocaleString(
+          localeCode
+        )
+      }}
     </td>
     <td class="total-cost">
-      {{ personEntry.total.toLocaleString() }}
+      {{ personEntry.total.toLocaleString(localeCode) }}
     </td>
     <td
       class="total-cost gap"
@@ -115,7 +125,7 @@
       }"
       v-if="isShowingExpenses"
     >
-      {{ personTotalGap.toLocaleString() }}
+      {{ personTotalGap.toLocaleString(localeCode) }}
     </td>
     <row-actions-cell
       @delete-clicked="$emit('delete-budget-entry', personEntry)"
@@ -125,6 +135,7 @@
 </template>
 
 <script setup>
+import { localeCode } from '@/lib/lang'
 import { XIcon } from 'lucide-vue-next'
 import { computed } from 'vue'
 

@@ -463,7 +463,7 @@
 
     <p class="has-text-centered nb-sequences" v-if="!isEmptyList && !isLoading">
       {{ displayedSequencesLength }}
-      {{ $tc('sequences.number', displayedSequencesLength) }}
+      {{ $t('sequences.number', displayedSequencesLength) }}
       <span
         v-if="
           displayedSequencesTimeSpent > 0 || displayedSequencesEstimation > 0
@@ -472,11 +472,11 @@
         ({{ formatDuration(displayedSequencesTimeSpent) }}
         {{
           isDurationInHours
-            ? $tc(
+            ? $t(
                 'main.hours_spent',
                 formatDuration(displayedSequencesTimeSpent, false)
               )
-            : $tc(
+            : $t(
                 'main.days_spent',
                 formatDuration(displayedSequencesTimeSpent, false)
               )
@@ -484,11 +484,11 @@
         {{ formatDuration(displayedSequencesEstimation) }}
         {{
           isDurationInHours
-            ? $tc(
+            ? $t(
                 'main.hours_estimated',
                 formatDuration(displayedSequencesEstimation, false)
               )
-            : $tc(
+            : $t(
                 'main.man_days',
                 formatDuration(displayedSequencesEstimation, false)
               )

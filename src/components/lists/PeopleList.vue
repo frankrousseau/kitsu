@@ -252,9 +252,9 @@ export default {
         : this.isGuests
           ? 'people.guests'
           : 'people.persons'
-      const labelUsers = this.$tc(key, nbUsers)
+      const labelUsers = this.$t(key, nbUsers)
       if (!this.isBots && !this.isGuests && this.seatsRemaining !== null) {
-        const labelRemaining = this.$tc(
+        const labelRemaining = this.$t(
           'people.seats_remaining',
           this.seatsRemaining,
           { count: this.seatsRemaining }

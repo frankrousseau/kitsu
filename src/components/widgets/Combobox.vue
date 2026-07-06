@@ -1,11 +1,12 @@
 <template>
   <div :class="{ field: withMargin, 'is-inline': isInline }">
-    <label class="label" v-if="label.length > 0">
+    <label class="label" :for="fieldId" v-if="label.length > 0">
       {{ label }}
     </label>
     <p class="control" :class="{ 'is-inline': isInline }">
       <span class="select" :class="{ 'is-top': isTop }">
         <select
+          :id="fieldId"
           class="combobox select-input"
           :class="{
             thin,
@@ -43,10 +44,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, useId } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
+
+const fieldId = useId()
 
 const props = defineProps({
   label: {

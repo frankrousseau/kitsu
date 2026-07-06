@@ -6,7 +6,7 @@
 
     <div v-if="budgets.length > 0 && budgetDepartments.length > 0">
       <p class="has-text-centered mt1 strong total">
-        {{ amount.toLocaleString() }} {{ currency || 'USD' }}
+        {{ amount.toLocaleString(localeCode) }} {{ currency || 'USD' }}
       </p>
       <p class="has-text-centered mt1">
         {{ budgetDepartments.length }} {{ $t('budget.departments') }} -
@@ -39,6 +39,7 @@
 </template>
 
 <script setup>
+import { localeCode } from '@/lib/lang'
 defineProps({
   amount: {
     type: Number,

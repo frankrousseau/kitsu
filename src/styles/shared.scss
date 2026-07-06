@@ -10,11 +10,11 @@
   }
 
   .datatable-head th {
-    background-color: #f5f5f5;
+    background-color: var(--background-alt);
     font-weight: bold;
     text-align: left;
     padding: 1em;
-    border-bottom: 2px solid #ddd;
+    border-bottom: 2px solid var(--border);
 
     &:first-child {
       border-top-left-radius: 10px;
@@ -27,7 +27,7 @@
 
   .datatable-body td {
     padding: 1em;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-alt);
   }
 
   .datatable-body tr:last-child td {
@@ -43,7 +43,7 @@
   }
 
   .datatable-body tr:hover {
-    background-color: #f9f9f9;
+    background-color: var(--background-hover);
   }
 }
 
@@ -65,7 +65,7 @@
 }
 
 .negative-amount {
-  color: #dc3545;
+  color: $red;
   font-weight: bold;
 }
 

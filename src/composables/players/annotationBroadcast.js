@@ -17,6 +17,8 @@
  */
 import { unref } from 'vue'
 
+import { PREVIEW_ROOM_EVENTS } from '@/lib/players/events'
+
 const isValidRoomId = room => Boolean(room?.id) && room.id !== 'temp'
 
 /**
@@ -45,9 +47,9 @@ export const useAnnotationBroadcast = ({ room, userId, socket }) => {
 
   return {
     postAnnotationAddition: (time, obj) =>
-      emitAnnotationEvent('preview-room:add-annotation', time, obj),
+      emitAnnotationEvent(PREVIEW_ROOM_EVENTS.addAnnotation, time, obj),
     postAnnotationDeletion: (time, obj) =>
-      emitAnnotationEvent('preview-room:remove-annotation', time, obj),
+      emitAnnotationEvent(PREVIEW_ROOM_EVENTS.removeAnnotation, time, obj),
     postAnnotationUpdate: (time, obj) =>
       emitAnnotationEvent('preview-update-annotation', time, obj)
   }

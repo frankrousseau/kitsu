@@ -434,18 +434,6 @@ export const useAnnotation = ({
     deletions.value = []
   }
 
-  const printModificationStats = prefix => {
-    // eslint-disable-next-line no-console
-    console.log(
-      prefix,
-      additions.value.length > 0
-        ? additions.value[0].drawing.objects.length
-        : 0,
-      updates.value.length > 0 ? updates.value[0].drawing.objects.length : 0,
-      deletions.value.length > 0 ? deletions.value[0].objects.length : 0
-    )
-  }
-
   const isWriting = date => {
     return lastAnnotationTime.value >= date
   }
@@ -1638,7 +1626,6 @@ export const useAnnotation = ({
     addToUpdates,
     addToUpdatesSerializedObject,
     clearModifications,
-    printModificationStats,
     isWriting,
 
     // Annotations

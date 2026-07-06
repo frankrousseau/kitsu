@@ -18,5 +18,11 @@ export default {
     return client.getText(
       `${base}/pictures/originals/preview-files/${previewFileId}.${extension}`
     )
+  },
+
+  getAttachmentFileBlob(attachment) {
+    return client.getBlob(
+      `/api/data/attachment-files/${attachment.id}/file/${attachment.name}`
+    )
   }
 }

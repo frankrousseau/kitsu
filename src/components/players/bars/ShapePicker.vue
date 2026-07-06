@@ -17,7 +17,7 @@
         type="button"
         class="shape-option"
         :class="{ active: shape === 'rectangle' }"
-        title="Rectangle"
+        :title="$t('playlists.actions.annotation_shape_rectangle')"
         @click="onShapePicked('rectangle')"
       >
         <rectangle-horizontal-icon class="icon" />
@@ -26,7 +26,7 @@
         type="button"
         class="shape-option"
         :class="{ active: shape === 'circle' }"
-        title="Circle"
+        :title="$t('playlists.actions.annotation_shape_circle')"
         @click="onShapePicked('circle')"
       >
         <circle-icon class="icon" />
@@ -35,7 +35,7 @@
         type="button"
         class="shape-option"
         :class="{ active: shape === 'arrow' }"
-        title="Arrow"
+        :title="$t('playlists.actions.annotation_shape_arrow')"
         @click="onShapePicked('arrow')"
       >
         <arrow-up-right-icon class="icon" />
@@ -44,7 +44,7 @@
         type="button"
         class="shape-option"
         :class="{ active: shape === 'whiteboard' }"
-        title="Whiteboard"
+        :title="$t('playlists.actions.annotation_shape_whiteboard')"
         @click="onShapePicked('whiteboard')"
       >
         <sticky-note-icon class="icon" />

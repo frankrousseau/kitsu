@@ -86,4 +86,70 @@ describe('composables/modal', () => {
     )
     removeSpy.mockRestore()
   })
+
+  describe('focus management (CLEAN-4)', () => {
+    const buildHost = () => {
+      const active = ref(false)
+      const Host = defineComponent({
+        setup() {
+          const containerRef = ref(null)
+          useModal(active, vi.fn(), containerRef)
+          return { containerRef }
+        },
+        template: `
+          <div ref="containerRef">
+            <button id="first">first</button>
+            <button id="last">last</button>
+          </div>
+        `
+      })
+      const wrapper = mount(Host, { attachTo: document.body })
+      return { active, wrapper }
+    }
+
+    const pressTab = (options = {}) => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'Tab',
+        cancelable: true,
+        ...options
+      })
+      window.dispatchEvent(event)
+      return event
+    }
+
+    it('wraps Tab focus inside the container', async () => {
+      const { active, wrapper } = buildHost()
+      active.value = true
+      await nextTick()
+
+      document.getElementById('last').focus()
+      const forward = pressTab()
+      expect(forward.defaultPrevented).toBe(true)
+      expect(document.activeElement.id).toBe('first')
+
+      const backwards = pressTab({ shiftKey: true })
+      expect(backwards.defaultPrevented).toBe(true)
+      expect(document.activeElement.id).toBe('last')
+      wrapper.unmount()
+    })
+
+    it('restores the previously focused element on close', async () => {
+      const outside = document.createElement('button')
+      outside.id = 'outside'
+      document.body.appendChild(outside)
+      outside.focus()
+
+      const { active, wrapper } = buildHost()
+      active.value = true
+      await nextTick()
+      document.getElementById('first').focus()
+
+      active.value = false
+      await nextTick()
+      expect(document.activeElement.id).toBe('outside')
+
+      wrapper.unmount()
+      outside.remove()
+    })
+  })
 })

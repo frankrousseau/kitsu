@@ -595,7 +595,6 @@ import moment from 'moment-timezone'
 import { mapGetters, mapActions } from 'vuex'
 import { PlusIcon, XIcon } from 'lucide-vue-next'
 
-import playlistsApi from '@/store/api/playlists'
 import { DEFAULT_NB_FRAMES_PICTURE } from '@/lib/playlist'
 import { formatDate } from '@/lib/time'
 import { getPlaylistPath } from '@/lib/path'
@@ -976,7 +975,10 @@ export default {
     async loadShareLinksCount(playlistId) {
       if (!this.isCurrentUserManager || !playlistId) return
       try {
-        const links = await playlistsApi.getShareLinks(playlistId)
+        const links = await this.$store.dispatch(
+          'loadPlaylistShareLinks',
+          playlistId
+        )
         this.currentShareLinksCount = links.length
       } catch {
         this.currentShareLinksCount = 0

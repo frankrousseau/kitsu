@@ -140,7 +140,7 @@
 
     <p class="has-text-centered nb-sequences" v-if="!isEmptyList && !isLoading">
       {{ displayedSequencesLength }}
-      {{ $tc('sequences.number', displayedSequencesLength) }}
+      {{ $t('sequences.number', displayedSequencesLength) }}
     </p>
   </div>
 </template>

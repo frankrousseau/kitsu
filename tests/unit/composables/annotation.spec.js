@@ -756,29 +756,6 @@ describe('composables/annotation', () => {
     })
   })
 
-  describe('printModificationStats', () => {
-    it('does not throw with empty modifications', () => {
-      const { api, wrapper } = mountAnnotation()
-      const spy = vi.spyOn(console, 'log').mockImplementation(() => {})
-      expect(() => api.printModificationStats('test')).not.toThrow()
-      expect(spy).toHaveBeenCalledWith('test', 0, 0, 0)
-      spy.mockRestore()
-      wrapper.unmount()
-    })
-
-    it('counts objects across the modification buckets', () => {
-      const { api, wrapper } = mountAnnotation()
-      api.additions.value = [{ drawing: { objects: [{}, {}] } }]
-      api.updates.value = [{ drawing: { objects: [{}] } }]
-      api.deletions.value = [{ objects: ['id1', 'id2', 'id3'] }]
-      const spy = vi.spyOn(console, 'log').mockImplementation(() => {})
-      api.printModificationStats('prefix')
-      expect(spy).toHaveBeenCalledWith('prefix', 2, 1, 3)
-      spy.mockRestore()
-      wrapper.unmount()
-    })
-  })
-
   describe('endAnnotationSaving', () => {
     it('emits annotation-changed with the buffered modifications', () => {
       const { api, emitSpy, wrapper } = mountAnnotation()

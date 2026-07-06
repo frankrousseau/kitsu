@@ -54,7 +54,7 @@ import {
 import { useStore } from 'vuex'
 
 import { swallowBrowserZoom } from '@/lib/players/wheel'
-import { floorToFrame, roundToFrame } from '@/lib/video'
+import { DEFAULT_FPS, floorToFrame, roundToFrame } from '@/lib/video'
 import {
   createFrameRenderer,
   supportsVideoFrameCallback
@@ -173,7 +173,7 @@ const currentProduction = computed(() => store.getters.currentProduction)
 // as the playlist advances.
 const fps = computed(() => {
   const entityFps = parseFloat(props.entities[currentIndex.value]?.fps)
-  return entityFps || parseFloat(currentProduction.value?.fps) || 25
+  return entityFps || parseFloat(currentProduction.value?.fps) || DEFAULT_FPS
 })
 const frameDuration = computed(
   () => Math.round((1 / fps.value) * 10000) / 10000

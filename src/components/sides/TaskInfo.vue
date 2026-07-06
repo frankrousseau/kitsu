@@ -31,7 +31,7 @@
         "
       >
         <h1 class="title">
-          {{ $tc('tasks.selected_tasks') }}
+          {{ $t('tasks.selected_tasks') }}
           ({{ nbSelectedTasks }})
         </h1>
         <div class="task-list mt1">
@@ -56,7 +56,7 @@
           <div class="mt2 selected-task-line" v-if="nbSelectedValidations > 0">
             <span v-if="nbSelectedTasks > 0">+</span>
             {{ nbSelectedValidations }}
-            {{ $tc('tasks.empty_cells_selected', nbSelectedValidations) }}
+            {{ $t('tasks.empty_cells_selected', nbSelectedValidations) }}
           </div>
         </div>
       </div>
@@ -335,7 +335,7 @@
         />
       </div>
       <div class="side task-info pa1" v-else-if="nbSelectedEntities > 0">
-        <h1 class="title mt2">{{ $tc('tasks.selected_entities') }}</h1>
+        <h1 class="title mt2">{{ $t('tasks.selected_entities') }}</h1>
         <div class="pa2 mt1">
           <div
             class="entity-line"

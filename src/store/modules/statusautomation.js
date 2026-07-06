@@ -112,6 +112,7 @@ const mutations = {
 
   [RESET_ALL](state) {
     Object.assign(state, { ...initialState })
+    cache.statusAutomationMap.clear()
   }
 }
 

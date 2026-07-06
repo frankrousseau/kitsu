@@ -184,7 +184,7 @@
     />
 
     <p class="has-text-centered footer-info" v-if="!isLoading">
-      {{ tasks.length }} {{ $tc('tasks.tasks', tasks.length) }}
+      {{ tasks.length }} {{ $t('tasks.tasks', tasks.length) }}
     </p>
 
     <day-off-modal

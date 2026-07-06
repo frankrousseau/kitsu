@@ -1,8 +1,9 @@
 <template>
   <div class="field">
-    <label class="label" v-if="label">{{ label }}</label>
+    <label class="label" :for="fieldId" v-if="label">{{ label }}</label>
     <p class="control">
       <textarea
+        :id="fieldId"
         ref="inputRef"
         class="input"
         :class="`input ${inputClass}`"
@@ -18,7 +19,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, useId } from 'vue'
 
 defineProps({
   label: {
@@ -45,6 +46,7 @@ defineProps({
 
 const emit = defineEmits(['enter', 'keyup', 'update:model-value'])
 
+const fieldId = useId()
 const inputRef = ref(null)
 
 const emitEnter = () => {

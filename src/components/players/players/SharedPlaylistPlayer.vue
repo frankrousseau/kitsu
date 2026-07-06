@@ -261,7 +261,7 @@ import {
   isPicturePreview,
   isSoundPreview
 } from '@/lib/preview'
-import { floorToFrame, formatTime } from '@/lib/video'
+import { DEFAULT_FPS, floorToFrame, formatTime } from '@/lib/video'
 
 import SharedAnnotationOverlay from '@/components/players/annotations/SharedAnnotationOverlay.vue'
 import SharedPlaylistButtonBar from '@/components/players/bars/SharedPlaylistButtonBar.vue'
@@ -347,7 +347,9 @@ const sharedApiPrefix = computed(() =>
   props.token ? `/api/shared/playlists/${props.token}` : ''
 )
 
-const fps = computed(() => parseFloat(props.playlist?.project_fps) || 25)
+const fps = computed(
+  () => parseFloat(props.playlist?.project_fps) || DEFAULT_FPS
+)
 const frameDuration = computed(
   () => Math.round((1 / fps.value) * 10000) / 10000
 )
@@ -738,7 +740,7 @@ const onFrameUpdate = rawFrameNumber => {
     playlistFrameData.value.startDurationByIndex[playingEntityIndex.value]
   if (typeof startDuration === 'number' && playlistDuration.value > 0) {
     currentPlaylistProgress.value =
-      startDuration + frameNumber / (fps.value || 25)
+      startDuration + frameNumber / (fps.value || DEFAULT_FPS)
   }
 }
 

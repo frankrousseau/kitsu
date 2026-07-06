@@ -47,7 +47,7 @@ import {
   supportsVideoFrameCallback
 } from '@/lib/players/frameRenderer'
 import { swallowBrowserZoom } from '@/lib/players/wheel'
-import { formatFrame } from '@/lib/video'
+import { DEFAULT_FPS, formatFrame } from '@/lib/video'
 
 import Spinner from '@/components/widgets/Spinner.vue'
 
@@ -180,7 +180,7 @@ const video = computed(() => movie.value)
 const extension = computed(() => (props.preview ? props.preview.extension : ''))
 
 const fps = computed(
-  () => props.fps || parseFloat(currentProduction.value?.fps) || 25
+  () => props.fps || parseFloat(currentProduction.value?.fps) || DEFAULT_FPS
 )
 
 const frameDuration = computed(

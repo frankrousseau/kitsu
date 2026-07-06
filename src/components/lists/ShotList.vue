@@ -779,26 +779,26 @@
     </div>
 
     <p class="has-text-centered nb-shots" v-if="!isEmptyList && !isLoading">
-      {{ displayedShotsLength }} {{ $tc('shots.number', displayedShotsLength) }}
+      {{ displayedShotsLength }} {{ $t('shots.number', displayedShotsLength) }}
       <span v-if="displayedShotsFrames">
         -
         {{ displayedShotsFrames }}
-        {{ $tc('main.nb_frames', displayedShotsFrames) }}
+        {{ $t('main.nb_frames', displayedShotsFrames) }}
       </span>
       <span v-if="isPaperProduction">
         -
         {{ displayedShotsDrawings }}
-        {{ $tc('main.nb_drawings', displayedShotsDrawings) }}
+        {{ $t('main.nb_drawings', displayedShotsDrawings) }}
       </span>
       <span v-if="displayedShotsTimeSpent > 0 || displayedShotsEstimation > 0">
         ({{ formatDuration(displayedShotsTimeSpent) }}
         {{
           isDurationInHours
-            ? $tc(
+            ? $t(
                 'main.hours_spent',
                 formatDuration(displayedShotsTimeSpent, false)
               )
-            : $tc(
+            : $t(
                 'main.days_spent',
                 formatDuration(displayedShotsTimeSpent, false)
               )
@@ -806,11 +806,11 @@
         {{ formatDuration(displayedShotsEstimation) }}
         {{
           isDurationInHours
-            ? $tc(
+            ? $t(
                 'main.hours_estimated',
                 formatDuration(displayedShotsEstimation, false)
               )
-            : $tc(
+            : $t(
                 'main.man_days',
                 formatDuration(displayedShotsEstimation, false)
               )

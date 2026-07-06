@@ -69,6 +69,7 @@ const mutations = {
       state.studios.push(newStudio)
     }
     cache.studioMap.set(newStudio.id, newStudio)
+    state.studios = sortByName(state.studios)
   },
 
   [DELETE_STUDIOS_END](state, studioToDelete) {

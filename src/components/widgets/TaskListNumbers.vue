@@ -1,23 +1,23 @@
 <template>
   <p class="has-text-centered nb-tasks">
-    {{ tasks.length }} {{ $tc('tasks.number', tasks.length) }} ({{
+    {{ tasks.length }} {{ $t('tasks.number', tasks.length) }} ({{
       formatDuration(timeEstimated)
     }}
     {{
       isDurationInHours
-        ? $tc('main.hours_estimated', formatDuration(timeEstimated, false))
-        : $tc('main.days_estimated', formatDuration(timeEstimated, false))
+        ? $t('main.hours_estimated', formatDuration(timeEstimated, false))
+        : $t('main.days_estimated', formatDuration(timeEstimated, false))
     }},
     {{ formatDuration(timeSpent) }}
     {{
       isDurationInHours
-        ? $tc('main.hours_spent', formatDuration(timeSpent, false))
-        : $tc('main.days_spent', formatDuration(timeSpent, false))
+        ? $t('main.hours_spent', formatDuration(timeSpent, false))
+        : $t('main.days_spent', formatDuration(timeSpent, false))
     }}<span v-if="isShots && !isPaperProduction"
-      >, {{ nbFrames }} {{ $tc('main.nb_frames', nbFrames) }}</span
+      >, {{ nbFrames }} {{ $t('main.nb_frames', nbFrames) }}</span
     >
     <span v-if="isShots && isPaperProduction"
-      >, {{ nbDrawings }} {{ $tc('main.nb_drawings', nbDrawings) }}</span
+      >, {{ nbDrawings }} {{ $t('main.nb_drawings', nbDrawings) }}</span
     >)
   </p>
 </template>

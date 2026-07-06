@@ -331,7 +331,6 @@ import {
   PRODUCTION_STYLE_OPTIONS,
   HOME_PAGE_OPTIONS
 } from '@/lib/productions'
-import projectTemplatesApi from '@/store/api/projecttemplates'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -443,12 +442,12 @@ const loadTemplateData = async () => {
   const id = templateId.value
   const [tmpl, taskTypes, taskStatuses, assetTypes, automations, backgrounds] =
     await Promise.all([
-      projectTemplatesApi.getProjectTemplate(id),
-      projectTemplatesApi.getTemplateTaskTypes(id),
-      projectTemplatesApi.getTemplateTaskStatuses(id),
-      projectTemplatesApi.getTemplateAssetTypes(id),
-      projectTemplatesApi.getTemplateStatusAutomations(id),
-      projectTemplatesApi.getTemplateBackgrounds(id)
+      store.dispatch('loadProjectTemplate', id),
+      store.dispatch('loadTemplateTaskTypes', id),
+      store.dispatch('loadTemplateTaskStatuses', id),
+      store.dispatch('loadTemplateAssetTypes', id),
+      store.dispatch('loadTemplateStatusAutomations', id),
+      store.dispatch('loadTemplateBackgrounds', id)
     ])
   template.value = tmpl
   templateTaskTypes.value = taskTypes
@@ -510,7 +509,7 @@ const saveParameters = async () => {
   loading.parameters = true
   errors.parameters = false
   try {
-    await projectTemplatesApi.editProjectTemplate({
+    await store.dispatch('editProjectTemplate', {
       id: templateId.value,
       name: template.value.name,
       description: template.value.description,
@@ -544,118 +543,121 @@ watch(
 
 const onUpdateBoardRoles = async ({ taskStatusId, roles }) => {
   boardRoles.value = { ...boardRoles.value, [taskStatusId]: roles }
-  await projectTemplatesApi.addTaskStatusToTemplate(
-    templateId.value,
+  await store.dispatch('addTaskStatusToTemplate', {
+    templateId: templateId.value,
     taskStatusId,
-    null,
-    roles
-  )
+    priority: null,
+    rolesForBoard: roles
+  })
 }
 
 const addTaskType = async taskTypeId => {
-  await projectTemplatesApi.addTaskTypeToTemplate(templateId.value, taskTypeId)
+  await store.dispatch('addTaskTypeToTemplate', {
+    templateId: templateId.value,
+    taskTypeId
+  })
   await loadTemplateData()
 }
 
 const removeTaskType = async taskTypeId => {
-  await projectTemplatesApi.removeTaskTypeFromTemplate(
-    templateId.value,
+  await store.dispatch('removeTaskTypeFromTemplate', {
+    templateId: templateId.value,
     taskTypeId
-  )
+  })
   await loadTemplateData()
 }
 
 const reorderTaskTypes = async ordered => {
   for (const { taskTypeId, priority } of ordered) {
-    await projectTemplatesApi.addTaskTypeToTemplate(
-      templateId.value,
+    await store.dispatch('addTaskTypeToTemplate', {
+      templateId: templateId.value,
       taskTypeId,
       priority
-    )
+    })
   }
   await loadTemplateData()
 }
 
 const addTaskStatus = async taskStatusId => {
-  await projectTemplatesApi.addTaskStatusToTemplate(
-    templateId.value,
+  await store.dispatch('addTaskStatusToTemplate', {
+    templateId: templateId.value,
     taskStatusId
-  )
+  })
   await loadTemplateData()
 }
 
 const removeTaskStatus = async taskStatusId => {
-  await projectTemplatesApi.removeTaskStatusFromTemplate(
-    templateId.value,
+  await store.dispatch('removeTaskStatusFromTemplate', {
+    templateId: templateId.value,
     taskStatusId
-  )
+  })
   await loadTemplateData()
 }
 
 const reorderTaskStatuses = async ordered => {
   for (const { taskStatusId, priority } of ordered) {
-    await projectTemplatesApi.addTaskStatusToTemplate(
-      templateId.value,
+    await store.dispatch('addTaskStatusToTemplate', {
+      templateId: templateId.value,
       taskStatusId,
       priority
-    )
+    })
   }
   await loadTemplateData()
 }
 
 const addAssetType = async assetTypeId => {
-  await projectTemplatesApi.addAssetTypeToTemplate(
-    templateId.value,
+  await store.dispatch('addAssetTypeToTemplate', {
+    templateId: templateId.value,
     assetTypeId
-  )
+  })
   await loadTemplateData()
 }
 
 const removeAssetType = async assetTypeId => {
-  await projectTemplatesApi.removeAssetTypeFromTemplate(
-    templateId.value,
+  await store.dispatch('removeAssetTypeFromTemplate', {
+    templateId: templateId.value,
     assetTypeId
-  )
+  })
   await loadTemplateData()
 }
 
 const addAutomation = async automationId => {
-  await projectTemplatesApi.addStatusAutomationToTemplate(
-    templateId.value,
-    automationId
-  )
+  await store.dispatch('addStatusAutomationToTemplate', {
+    templateId: templateId.value,
+    statusAutomationId: automationId
+  })
   await loadTemplateData()
 }
 
 const removeAutomation = async automationId => {
-  await projectTemplatesApi.removeStatusAutomationFromTemplate(
-    templateId.value,
-    automationId
-  )
+  await store.dispatch('removeStatusAutomationFromTemplate', {
+    templateId: templateId.value,
+    statusAutomationId: automationId
+  })
   await loadTemplateData()
 }
 
 const addBackground = async backgroundId => {
-  await projectTemplatesApi.addBackgroundToTemplate(
-    templateId.value,
+  await store.dispatch('addBackgroundToTemplate', {
+    templateId: templateId.value,
     backgroundId
-  )
+  })
   await loadTemplateData()
 }
 
 const removeBackground = async backgroundId => {
-  await projectTemplatesApi.removeBackgroundFromTemplate(
-    templateId.value,
+  await store.dispatch('removeBackgroundFromTemplate', {
+    templateId: templateId.value,
     backgroundId
-  )
+  })
   await loadTemplateData()
 }
 
 const setDefaultBackground = async backgroundId => {
-  await projectTemplatesApi.setTemplateDefaultBackground(
-    templateId.value,
+  await store.dispatch('setTemplateDefaultBackground', {
+    templateId: templateId.value,
     backgroundId
-  )
+  })
   await loadTemplateData()
 }
 
@@ -672,10 +674,10 @@ const cleanDescriptors = () =>
   }))
 
 const persistDescriptors = async () => {
-  await projectTemplatesApi.setTemplateMetadataDescriptors(
-    templateId.value,
-    cleanDescriptors()
-  )
+  await store.dispatch('setTemplateMetadataDescriptors', {
+    templateId: templateId.value,
+    descriptors: cleanDescriptors()
+  })
   await loadTemplateData()
 }
 

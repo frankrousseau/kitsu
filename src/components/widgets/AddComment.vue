@@ -393,10 +393,10 @@ import { EyeIcon, EyeOffIcon } from 'lucide-vue-next'
 
 import drafts from '@/lib/drafts'
 import { remove } from '@/lib/models'
-import { getDownloadAttachmentPath } from '@/lib/path'
 import { replaceTimeWithTimecode } from '@/lib/render'
 import preferences from '@/lib/preferences'
 import strings from '@/lib/string'
+import filesApi from '@/store/api/files'
 
 import { useAtMentionsMembers } from '@/composables/atMentions'
 
@@ -854,13 +854,14 @@ const setValue = async comment => {
   attachments.value = (
     await Promise.all(
       comment.attachment_files.map(async attachment => {
-        const fileUrl = getDownloadAttachmentPath(attachment)
-        const response = await fetch(fileUrl)
-        if (!response.ok) return
-        const fileBlob = await response.blob()
-        const formData = new FormData()
-        formData.append('file', fileBlob, attachment.name)
-        return formData
+        try {
+          const fileBlob = await filesApi.getAttachmentFileBlob(attachment)
+          const formData = new FormData()
+          formData.append('file', fileBlob, attachment.name)
+          return formData
+        } catch {
+          return null
+        }
       })
     )
   ).filter(Boolean)
