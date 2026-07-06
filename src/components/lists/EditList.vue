@@ -354,6 +354,7 @@
                       ? `${offsets['validation-' + j]}px`
                       : '0'
                   "
+                  :max-assignees="maxAssigneesPerCell"
                   :minimized="hiddenColumns[columnId]"
                   :row-x="i"
                   :selected="isSelected(i, j)"
@@ -440,6 +441,7 @@
                       edit.validations ? edit.validations.get(columnId) : null
                     )
                   "
+                  :max-assignees="maxAssigneesPerCell"
                   :minimized="hiddenColumns[columnId]"
                   :selected="
                     isSelected(i, j + stickedDisplayedValidationColumns.length)
@@ -560,11 +562,19 @@ import TableInfo from '@/components/widgets/TableInfo.vue'
 import ValidationCell from '@/components/cells/ValidationCell.vue'
 import ValidationHeader from '@/components/cells/ValidationHeader.vue'
 
-// PERF-1 pilot: rough row-height estimates used before a row is measured;
-// actual heights are then tracked precisely via rowVirtualizer.measureElement
-// (rows aren't fixed-height: big thumbnails and wrapped descriptions vary it).
+// PERF-1 pilot: row-height estimates per display mode. Heights are meant to
+// be fixed within a mode (the assignee-avatar stack is capped via
+// maxAssignees below so it can never wrap the row taller);
+// rowVirtualizer.measureElement stays in place as a safety net for anything
+// still content-driven.
 const ROW_HEIGHT_ESTIMATE = 52
 const ROW_HEIGHT_ESTIMATE_BIG_THUMBNAILS = 116
+const ROW_HEIGHT_ESTIMATE_CONTACT_SHEET = 102
+
+// Cap on assignee avatars per validation cell (rest collapses into "+N"):
+// 3 avatars + status tag fit the 150px cell on one line, keeping row
+// heights constant for the virtualizer whatever the assignation count.
+const MAX_ASSIGNEES_PER_CELL = 3
 
 export default {
   name: 'edit-list',
@@ -627,10 +637,17 @@ export default {
       computed(() => ({
         count: props.displayedEdits.length,
         getScrollElement: () => body.value,
-        estimateSize: () =>
-          props.displaySettings.bigThumbnails
-            ? ROW_HEIGHT_ESTIMATE_BIG_THUMBNAILS
-            : ROW_HEIGHT_ESTIMATE,
+        // bigThumbnails first: when combined with contact sheet, the name
+        // column's 100px thumbnail + cell padding is the taller of the two.
+        estimateSize: () => {
+          if (props.displaySettings.bigThumbnails) {
+            return ROW_HEIGHT_ESTIMATE_BIG_THUMBNAILS
+          }
+          if (props.displaySettings.contactSheetMode) {
+            return ROW_HEIGHT_ESTIMATE_CONTACT_SHEET
+          }
+          return ROW_HEIGHT_ESTIMATE
+        },
         getItemKey: index => props.displayedEdits[index]?.id ?? index,
         overscan: 10
       }))
@@ -781,6 +798,10 @@ export default {
           edit: this.displayedEdits[virtualRow.index],
           i: virtualRow.index
         }))
+    },
+
+    maxAssigneesPerCell() {
+      return MAX_ASSIGNEES_PER_CELL
     },
 
     // Sticked + non-sticked validation columns in the same order as the x/y
