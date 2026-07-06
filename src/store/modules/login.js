@@ -6,7 +6,8 @@ import {
   LOGIN_FAILURE,
   DATA_LOADING_START,
   DATA_LOADING_END,
-  RESET_ALL
+  RESET_ALL,
+  USER_LOGOUT
 } from '@/store/mutation-types'
 import auth from '@/lib/auth'
 import { coerceTwoFactorPayload } from '@/lib/webauthn'
@@ -59,6 +60,14 @@ const actions = {
   async logout({ commit }) {
     this.$socket.disconnect()
     await auth.logout()
+    commit(RESET_ALL)
+  },
+
+  // Purge this tab's session state without calling the logout API or
+  // re-broadcasting (used when another tab already logged out).
+  logoutLocal({ commit }) {
+    this.$socket.disconnect()
+    commit(USER_LOGOUT)
     commit(RESET_ALL)
   },
 
