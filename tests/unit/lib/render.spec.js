@@ -2,10 +2,28 @@ import {
   getTaskTypeStyle,
   renderComment,
   renderFileSize,
-  renderMarkdown
+  renderMarkdown,
+  safeUrl
 } from '@/lib/render'
 
 describe('render', () => {
+  describe('safeUrl', () => {
+    test('keeps http(s) and relative URLs', () => {
+      expect(safeUrl('https://cg-wire.com')).toBe('https://cg-wire.com')
+      expect(safeUrl('http://intranet/page')).toBe('http://intranet/page')
+      expect(safeUrl('/productions/prod-1')).toBe('/productions/prod-1')
+    })
+
+    test('drops unsafe schemes and empty values (SEC-7)', () => {
+      expect(safeUrl('javascript:alert(1)')).toBe(null)
+      expect(safeUrl(' javascript:alert(1)')).toBe(null)
+      expect(safeUrl('data:text/html,<script>x</script>')).toBe(null)
+      expect(safeUrl('vbscript:msgbox')).toBe(null)
+      expect(safeUrl('')).toBe(null)
+      expect(safeUrl(undefined)).toBe(null)
+    })
+  })
+
   test('getTaskTypeStyle', () => {
     const task = { task_type_color: 'red' }
     expect(getTaskTypeStyle(task)).toEqual({

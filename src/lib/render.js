@@ -159,6 +159,10 @@ const isSafeHref = url => {
   return !scheme || ['http', 'https'].includes(scheme[1].toLowerCase())
 }
 
+// For :href bindings on user-provided URLs: null when the scheme is unsafe
+// (Vue drops the attribute entirely on null).
+export const safeUrl = url => (url && isSafeHref(url) ? url : null)
+
 export const replaceTimeWithTimecode = (
   comment,
   currentPreviewRevision,

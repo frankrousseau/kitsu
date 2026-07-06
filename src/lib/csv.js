@@ -195,6 +195,9 @@ const csv = {
   turnEntriesToCsvString(entries, config = {}) {
     return Papa.unparse(entries, {
       delimiter: ';',
+      // Neutralize spreadsheet formula injection: cells starting with
+      // = + - @ are prefixed with ' so Excel/Sheets treat them as text.
+      escapeFormulae: true,
       newline: '\n',
       quotes: true,
       skipEmptyLines: true,

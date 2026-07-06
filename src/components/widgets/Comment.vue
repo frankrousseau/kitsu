@@ -426,7 +426,7 @@
         </router-link>
         <a
           class="preview-link button"
-          :href="comment.links[0]"
+          :href="safeUrl(comment.links[0])"
           :title="$t('playlists.actions.open_link')"
           target="_blank"
           v-if="!isCurrentUserArtist && comment.links?.[0]?.length"
@@ -528,7 +528,7 @@ import {
 import files from '@/lib/files'
 import { remove } from '@/lib/models'
 import { getDownloadAttachmentPath, pluralizeEntityType } from '@/lib/path'
-import { renderComment, replaceTimeWithTimecode } from '@/lib/render'
+import { renderComment, replaceTimeWithTimecode, safeUrl } from '@/lib/render'
 import { sortByName } from '@/lib/sorting'
 import { parseDate } from '@/lib/time'
 import stringHelpers from '@/lib/string'

@@ -330,7 +330,7 @@
 
           <a
             class="button flexrow-item"
-            :href="link"
+            :href="safeUrl(link)"
             :title="$t('playlists.actions.open_link')"
             target="_blank"
             v-if="!isCurrentUserArtist && link?.length"
@@ -452,6 +452,7 @@ import { usePreviewShortcuts } from '@/composables/players/previewShortcuts'
 import { getEntityPath } from '@/lib/path'
 import { mergeAnnotationsByFrame } from '@/lib/players/annotation'
 import localPreferences from '@/lib/preferences'
+import { safeUrl } from '@/lib/render'
 import {
   buildAnnotationSnapshotFilename,
   buildAnnotationSnapshotTitle,
