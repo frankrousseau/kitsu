@@ -1,6 +1,9 @@
 <template>
   <div class="field" :class="{ 'is-inline': isInline }">
     <label class="label" :for="fieldId" v-if="label">{{ label }}</label>
+    <label class="sr-only" :for="fieldId" v-else-if="placeholder">
+      {{ placeholder }}
+    </label>
     <label class="label empty-label" v-if="emptyLabel">&nbsp;</label>
     <p
       class="control"
@@ -18,6 +21,8 @@
             : 'input flexrow-item' + inputClass
         "
         :autocomplete="autocomplete"
+        :aria-describedby="errored ? errorId : undefined"
+        :aria-invalid="errored"
         :disabled="disabled"
         :maxlength="maxlength"
         :min="type === 'number' ? min || 0 : undefined"
@@ -42,7 +47,7 @@
         {{ unitLabel }}
       </span>
     </p>
-    <p class="error" v-if="errored">
+    <p class="error" :id="errorId" v-if="errored">
       {{ errorText }}
     </p>
   </div>
@@ -126,6 +131,7 @@ const props = defineProps({
 const emit = defineEmits(['enter', 'update:model-value'])
 
 const fieldId = useId()
+const errorId = `${fieldId}-error`
 const inputRef = ref(null)
 
 const getInputValue = () => {
@@ -159,6 +165,18 @@ const checkValidity = () => {
 defineExpose({ focus, checkValidity })
 </script>
 <style lang="scss" scoped>
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .input.is-size-2 {
   width: 3rem;
 }

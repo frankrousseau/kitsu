@@ -5,7 +5,9 @@
     </div>
 
     <div class="flexrow-item search-field">
+      <label class="sr-only" :for="fieldId">{{ t('main.search_query') }}</label>
       <input
+        :id="fieldId"
         ref="inputRef"
         class="search-input"
         type="text"
@@ -41,10 +43,13 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, useId } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { SaveIcon, SearchIcon } from 'lucide-vue-next'
 
 import func from '@/lib/func'
+
+const { t } = useI18n()
 
 const props = defineProps({
   placeholder: {
@@ -65,6 +70,7 @@ const emit = defineEmits(['change', 'enter', 'save'])
 const search = ref('')
 const focused = ref(false)
 const inputRef = ref(null)
+const fieldId = useId()
 
 // Debounced: every keystroke otherwise replays the full filter + sort
 // pipeline of the list pages.
@@ -106,6 +112,18 @@ defineExpose({ getValue, setValue, focus, clearSearch })
 </script>
 
 <style lang="scss" scoped>
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .dark {
   .button.save-button:hover {
     color: $white-grey;
