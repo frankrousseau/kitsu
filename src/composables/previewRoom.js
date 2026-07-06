@@ -22,9 +22,7 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref, unref } from 'vue'
 
-import { PREVIEW_ROOM_EVENTS } from '@/lib/players/events'
-
-const isValidRoomId = room => Boolean(room?.id) && room.id !== 'temp'
+import { isValidRoomId, PREVIEW_ROOM_EVENTS } from '@/lib/players/events'
 
 const noop = () => {}
 
@@ -300,13 +298,8 @@ export const usePreviewRoom = options => {
 
   const getPreviewFileFromEntity = (entity, previewFileId) => {
     if (!entity) return null
-    const taskTypeIds = Object.keys(entity.preview_files || {})
-    for (const taskTypeId of taskTypeIds) {
-      const files = entity.preview_files[taskTypeId]
-      const found = files.find(file => file.id === previewFileId)
-      if (found) return found
-    }
-    return null
+    const files = Object.values(entity.preview_files || {}).flat()
+    return files.find(file => file.id === previewFileId) || null
   }
 
   const loadRoomCurrentFrame = eventData => {
