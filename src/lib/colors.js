@@ -2,9 +2,13 @@ import ColorHash from 'color-hash'
 import Color from 'color'
 // import localStorage from 'localStorage'
 
-const darkenColorIndex = {}
-const lightenColorIndex = {}
-const fadeColorIndex = {}
+// Capped and cleared, same pattern as _durationCache in lib/time.js: these
+// caches keyed by every color a studio might ever use and were never
+// bounded, so a studio with lots of distinct task/status colors would grow
+// them forever.
+const darkenColorIndex = new Map()
+const lightenColorIndex = new Map()
+const fadeColorIndex = new Map()
 
 let colorHashConstructor = ColorHash
 if (ColorHash.default) colorHashConstructor = ColorHash.default
@@ -18,10 +22,12 @@ export default {
    * is called.
    */
   darkenColor(colorHash) {
-    if (!darkenColorIndex[colorHash]) {
-      darkenColorIndex[colorHash] = Color(colorHash).darken(0.3).saturate(0.6)
-    }
-    return darkenColorIndex[colorHash]
+    const cached = darkenColorIndex.get(colorHash)
+    if (cached !== undefined) return cached
+    const result = Color(colorHash).darken(0.3).saturate(0.6)
+    if (darkenColorIndex.size > 10000) darkenColorIndex.clear()
+    darkenColorIndex.set(colorHash, result)
+    return result
   },
 
   /*
@@ -58,10 +64,13 @@ export default {
    * is called.
    */
   lightenColor(colorHash, level = 0.3) {
-    if (!lightenColorIndex[colorHash + level]) {
-      lightenColorIndex[colorHash + level] = Color(colorHash).lighten(level)
-    }
-    return lightenColorIndex[colorHash + level]
+    const cacheKey = colorHash + level
+    const cached = lightenColorIndex.get(cacheKey)
+    if (cached !== undefined) return cached
+    const result = Color(colorHash).lighten(level)
+    if (lightenColorIndex.size > 10000) lightenColorIndex.clear()
+    lightenColorIndex.set(cacheKey, result)
+    return result
   },
 
   /*
@@ -70,10 +79,13 @@ export default {
    * is called.
    */
   fadeColor(colorHash, level = 0.3) {
-    if (!fadeColorIndex[colorHash + level]) {
-      fadeColorIndex[colorHash + level] = Color(colorHash).fade(level)
-    }
-    return fadeColorIndex[colorHash + level]
+    const cacheKey = colorHash + level
+    const cached = fadeColorIndex.get(cacheKey)
+    if (cached !== undefined) return cached
+    const result = Color(colorHash).fade(level)
+    if (fadeColorIndex.size > 10000) fadeColorIndex.clear()
+    fadeColorIndex.set(cacheKey, result)
+    return result
   },
 
   /*
