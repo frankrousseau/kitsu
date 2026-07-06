@@ -22,6 +22,8 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref, unref } from 'vue'
 
+import { PREVIEW_ROOM_EVENTS } from '@/lib/players/events'
+
 const isValidRoomId = room => Boolean(room?.id) && room.id !== 'temp'
 
 const noop = () => {}
@@ -185,14 +187,14 @@ export const usePreviewRoom = options => {
 
   const openRoom = playlistId => {
     const r = unref(room)
-    socket.emit('preview-room:open-playlist', {
+    socket.emit(PREVIEW_ROOM_EVENTS.openPlaylist, {
       playlist_id: playlistId || r?.id,
       user_id: unref(userId)
     })
   }
 
   const closeRoom = playlistId => {
-    socket.emit('preview-room:close-playlist', {
+    socket.emit(PREVIEW_ROOM_EVENTS.closePlaylist, {
       playlist_id: playlistId,
       user_id: unref(userId)
     })
@@ -203,7 +205,7 @@ export const usePreviewRoom = options => {
     if (!isValidRoomId(r)) return
     const entity = unref(currentEntity)
     const preview = unref(currentPreview)
-    socket.emit('preview-room:join', {
+    socket.emit(PREVIEW_ROOM_EVENTS.join, {
       user_id: unref(userId),
       playlist_id: r.id,
       is_playing: unref(isPlaying),
@@ -234,7 +236,7 @@ export const usePreviewRoom = options => {
     const uid = unref(userId)
     if (!uid) return
     const r = unref(room)
-    socket.emit('preview-room:leave', {
+    socket.emit(PREVIEW_ROOM_EVENTS.leave, {
       user_id: uid,
       playlist_id: playlistId || r?.id
     })
@@ -247,7 +249,7 @@ export const usePreviewRoom = options => {
     if (!isValidRoomId(r) || !joinedRoom.value) return
     const entity = unref(currentEntity)
     const preview = unref(currentPreview)
-    socket.emit('preview-room:room-updated', {
+    socket.emit(PREVIEW_ROOM_EVENTS.roomUpdated, {
       user_id: unref(userId),
       local_id: r.localId,
       playlist_id: r.id,
@@ -279,7 +281,7 @@ export const usePreviewRoom = options => {
   const postPanZoomChanged = (x, y, zoom) => {
     const r = unref(room)
     if (!isValidRoomId(r) || !joinedRoom.value) return
-    socket.emit('preview-room:panzoom-changed', {
+    socket.emit(PREVIEW_ROOM_EVENTS.panzoomChanged, {
       playlist_id: r.id,
       data: { local_id: r.localId, user_id: unref(userId), x, y, zoom }
     })
@@ -288,7 +290,7 @@ export const usePreviewRoom = options => {
   const postComparisonPanZoomChanged = (x, y, zoom) => {
     const r = unref(room)
     if (!isValidRoomId(r) || !joinedRoom.value) return
-    socket.emit('preview-room:comparison-panzoom-changed', {
+    socket.emit(PREVIEW_ROOM_EVENTS.comparisonPanzoomChanged, {
       playlist_id: r.id,
       data: { local_id: r.localId, user_id: unref(userId), x, y, zoom }
     })
@@ -556,12 +558,12 @@ export const usePreviewRoom = options => {
   // Bound (event name, handler) pairs — stored so unmount can pass the
   // exact same function references to socket.off().
   const handlerPairs = [
-    ['preview-room:room-people-updated', onRoomPeopleUpdated],
-    ['preview-room:room-updated', onRoomUpdated],
-    ['preview-room:panzoom-changed', onPanzoomChanged],
-    ['preview-room:comparison-panzoom-changed', onComparisonPanzoomChanged],
-    ['preview-room:add-annotation', onAddAnnotation],
-    ['preview-room:remove-annotation', onRemoveAnnotation],
+    [PREVIEW_ROOM_EVENTS.roomPeopleUpdated, onRoomPeopleUpdated],
+    [PREVIEW_ROOM_EVENTS.roomUpdated, onRoomUpdated],
+    [PREVIEW_ROOM_EVENTS.panzoomChanged, onPanzoomChanged],
+    [PREVIEW_ROOM_EVENTS.comparisonPanzoomChanged, onComparisonPanzoomChanged],
+    [PREVIEW_ROOM_EVENTS.addAnnotation, onAddAnnotation],
+    [PREVIEW_ROOM_EVENTS.removeAnnotation, onRemoveAnnotation],
     ['preview-update-annotation', onUpdateAnnotation]
   ]
 
