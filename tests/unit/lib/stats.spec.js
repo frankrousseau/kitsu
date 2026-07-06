@@ -1,4 +1,6 @@
 import {
+  aggregateRetakeStats,
+  aggregateStats,
   computeStats,
   getChartData,
   getChartColors,
@@ -182,5 +184,49 @@ describe('lib/stats', () => {
     expect(getPercentage(1, 3)).toEqual('33.33')
     expect(getPercentage(0, 0)).toEqual('0.00')
     expect(getPercentage(0, 100)).toEqual('0.00')
+  })
+
+  it('aggregateStats', () => {
+    const aggregated = aggregateStats(expectedStatResult, ['sequence-1'])
+    expect(aggregated).toEqual(expectedStatResult['sequence-1'])
+    const all = aggregateStats(expectedStatResult, [
+      'sequence-1',
+      'sequence-2'
+    ])
+    expect(all.all).toEqual(expectedStatResult.all.all)
+    expect(aggregateStats(expectedStatResult, ['missing'])).toEqual({})
+  })
+
+  it('aggregateRetakeStats', () => {
+    const retakeStats = {
+      'episode-1': {
+        all: {
+          max_retake_count: 2,
+          retake: { count: 1, frames: 10, drawings: 0 },
+          done: { count: 2, frames: 20, drawings: 0 },
+          other: { count: 3, frames: 30, drawings: 0 },
+          evolution: {}
+        }
+      },
+      'episode-2': {
+        all: {
+          max_retake_count: 4,
+          retake: { count: 10, frames: 100, drawings: 0 },
+          done: { count: 20, frames: 200, drawings: 0 },
+          other: { count: 30, frames: 300, drawings: 0 },
+          evolution: {}
+        }
+      }
+    }
+    const aggregated = aggregateRetakeStats(retakeStats, [
+      'episode-1',
+      'episode-2'
+    ])
+    expect(aggregated.all.max_retake_count).toEqual(4)
+    expect(aggregated.all.retake).toEqual({ count: 11, frames: 110, drawings: 0 })
+    expect(aggregated.all.done).toEqual({ count: 22, frames: 220, drawings: 0 })
+    expect(aggregated.all.other).toEqual({ count: 33, frames: 330, drawings: 0 })
+    const partial = aggregateRetakeStats(retakeStats, ['episode-1'])
+    expect(partial.all.retake.count).toEqual(1)
   })
 })
