@@ -211,7 +211,6 @@ import 'vue-multiselect/dist/vue-multiselect.min.css'
 
 import { useTime } from '@/composables/time'
 import { formatSimpleDate } from '@/lib/time'
-import playlistsApi from '@/store/api/playlists'
 
 import BaseModal from '@/components/modals/BaseModal.vue'
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
@@ -326,11 +325,11 @@ const sendInvite = async token => {
   state.success = false
   state.feedback = ''
   try {
-    const response = await playlistsApi.sendShareInvitations(
-      props.playlist.id,
+    const response = await store.dispatch('sendPlaylistShareInvitations', {
+      playlistId: props.playlist.id,
       token,
       data
-    )
+    })
     state.success = true
     state.feedback = t('playlists.share_modal.invite_sent', {
       count: response?.sent?.length || 0
@@ -353,7 +352,10 @@ const buildShareUrl = token => {
 
 const loadLinks = async () => {
   try {
-    const links = await playlistsApi.getShareLinks(props.playlist.id)
+    const links = await store.dispatch(
+      'loadPlaylistShareLinks',
+      props.playlist.id
+    )
     shareLinks.value = links
     links.forEach(link => ensureInviteState(link.token))
     emit('links-updated', links.length)
@@ -381,9 +383,12 @@ const createLink = async () => {
     const expDate = expirationDate.value
       ? formatSimpleDate(expirationDate.value)
       : undefined
-    await playlistsApi.createShareLink(props.playlist.id, {
-      expiration_date: expDate,
-      can_comment: canComment.value
+    await store.dispatch('createPlaylistShareLink', {
+      playlistId: props.playlist.id,
+      data: {
+        expiration_date: expDate,
+        can_comment: canComment.value
+      }
     })
     await loadLinks()
     hideCreateForm()
@@ -400,7 +405,10 @@ const askRevoke = token => {
 
 const confirmRevoke = async token => {
   try {
-    await playlistsApi.revokeShareLink(props.playlist.id, token)
+    await store.dispatch('revokePlaylistShareLink', {
+      playlistId: props.playlist.id,
+      token
+    })
     confirmingRevoke.value = null
     await loadLinks()
   } catch (err) {

@@ -69,6 +69,110 @@ const actions = {
 
   async applyTemplateToProject(_, { projectId, templateId }) {
     return projectTemplatesApi.applyTemplateToProject(projectId, templateId)
+  },
+
+  loadTemplateTaskTypes(_, templateId) {
+    return projectTemplatesApi.getTemplateTaskTypes(templateId)
+  },
+
+  addTaskTypeToTemplate(_, { templateId, taskTypeId, priority }) {
+    return projectTemplatesApi.addTaskTypeToTemplate(
+      templateId,
+      taskTypeId,
+      priority
+    )
+  },
+
+  removeTaskTypeFromTemplate(_, { templateId, taskTypeId }) {
+    return projectTemplatesApi.removeTaskTypeFromTemplate(
+      templateId,
+      taskTypeId
+    )
+  },
+
+  loadTemplateTaskStatuses(_, templateId) {
+    return projectTemplatesApi.getTemplateTaskStatuses(templateId)
+  },
+
+  addTaskStatusToTemplate(
+    _,
+    { templateId, taskStatusId, priority, rolesForBoard }
+  ) {
+    return projectTemplatesApi.addTaskStatusToTemplate(
+      templateId,
+      taskStatusId,
+      priority,
+      rolesForBoard
+    )
+  },
+
+  removeTaskStatusFromTemplate(_, { templateId, taskStatusId }) {
+    return projectTemplatesApi.removeTaskStatusFromTemplate(
+      templateId,
+      taskStatusId
+    )
+  },
+
+  loadTemplateAssetTypes(_, templateId) {
+    return projectTemplatesApi.getTemplateAssetTypes(templateId)
+  },
+
+  addAssetTypeToTemplate(_, { templateId, assetTypeId }) {
+    return projectTemplatesApi.addAssetTypeToTemplate(templateId, assetTypeId)
+  },
+
+  removeAssetTypeFromTemplate(_, { templateId, assetTypeId }) {
+    return projectTemplatesApi.removeAssetTypeFromTemplate(
+      templateId,
+      assetTypeId
+    )
+  },
+
+  loadTemplateStatusAutomations(_, templateId) {
+    return projectTemplatesApi.getTemplateStatusAutomations(templateId)
+  },
+
+  addStatusAutomationToTemplate(_, { templateId, statusAutomationId }) {
+    return projectTemplatesApi.addStatusAutomationToTemplate(
+      templateId,
+      statusAutomationId
+    )
+  },
+
+  removeStatusAutomationFromTemplate(_, { templateId, statusAutomationId }) {
+    return projectTemplatesApi.removeStatusAutomationFromTemplate(
+      templateId,
+      statusAutomationId
+    )
+  },
+
+  loadTemplateBackgrounds(_, templateId) {
+    return projectTemplatesApi.getTemplateBackgrounds(templateId)
+  },
+
+  addBackgroundToTemplate(_, { templateId, backgroundId }) {
+    return projectTemplatesApi.addBackgroundToTemplate(templateId, backgroundId)
+  },
+
+  removeBackgroundFromTemplate(_, { templateId, backgroundId }) {
+    return projectTemplatesApi.removeBackgroundFromTemplate(
+      templateId,
+      backgroundId
+    )
+  },
+
+  setTemplateDefaultBackground(_, { templateId, backgroundId }) {
+    return projectTemplatesApi.setTemplateDefaultBackground(
+      templateId,
+      backgroundId
+    )
+  },
+
+  setTemplateMetadataDescriptors(_, { templateId, descriptors }) {
+    return projectTemplatesApi.setTemplateMetadataDescriptors(
+      templateId,
+      descriptors
+    )
   }
 }
 
