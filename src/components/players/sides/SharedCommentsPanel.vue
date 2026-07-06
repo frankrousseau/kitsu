@@ -189,6 +189,7 @@ import { useI18n } from 'vue-i18n'
 import { useStore } from 'vuex'
 
 import { replaceTimeWithTimecode } from '@/lib/render'
+import { DEFAULT_FPS } from '@/lib/video'
 import stringHelpers from '@/lib/string'
 import playlistsApi from '@/store/api/playlists'
 import { LOAD_PEOPLE_END } from '@/store/mutation-types'
@@ -252,7 +253,9 @@ const modals = reactive({ edit: false, delete: false, attachment: false })
 // Computed
 
 const currentProduction = computed(() => store.getters.currentProduction)
-const fps = computed(() => parseFloat(currentProduction.value?.fps) || 25)
+const fps = computed(
+  () => parseFloat(currentProduction.value?.fps) || DEFAULT_FPS
+)
 
 const availableStatuses = computed(() =>
   taskStatuses.value.filter(status => status.is_client_allowed)

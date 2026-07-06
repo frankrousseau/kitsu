@@ -1,3 +1,5 @@
+import { DEFAULT_FPS } from '@/lib/video'
+
 /*
  * Helpers to display task information
  */
@@ -13,7 +15,9 @@ export const taskMixin = {
       // in its own store map — task.entity is only { id } here.
       const entityFps = parseFloat(this.getTaskEntity(task)?.data?.fps)
       if (entityFps) return entityFps
-      return parseInt(this.productionMap.get(task.project_id)?.fps) || 25
+      return (
+        parseInt(this.productionMap.get(task.project_id)?.fps) || DEFAULT_FPS
+      )
     },
 
     entityFrames() {

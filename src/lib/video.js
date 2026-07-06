@@ -1,5 +1,5 @@
 const PRECISION_FACTOR = 10000
-const DEFAULT_FPS = 25
+export const DEFAULT_FPS = 25
 
 const roundPrecision = value =>
   Math.round(value * PRECISION_FACTOR) / PRECISION_FACTOR

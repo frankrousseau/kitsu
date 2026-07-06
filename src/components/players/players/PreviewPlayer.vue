@@ -464,6 +464,7 @@ import {
   isSoundPreview
 } from '@/lib/preview'
 import {
+  DEFAULT_FPS,
   floorToFrame,
   formatFrame,
   formatTime,
@@ -842,7 +843,7 @@ const defaultHeight = computed(() => {
 })
 
 const fps = computed(
-  () => props.fps || parseFloat(currentProduction.value?.fps) || 25
+  () => props.fps || parseFloat(currentProduction.value?.fps) || DEFAULT_FPS
 )
 
 const frameDuration = computed(
