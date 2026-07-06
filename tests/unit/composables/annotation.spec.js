@@ -806,6 +806,34 @@ describe('composables/annotation', () => {
       expect(emitSpy).not.toHaveBeenCalled()
       wrapper.unmount()
     })
+
+    it('never overwrites an in-flight save; flushes it after confirm', () => {
+      const { api, emitSpy, wrapper } = mountAnnotation()
+      const preview = { id: 'p-1' }
+      api.startAnnotationSaving(preview, [])
+      api.additions.value = [{ time: 1.0 }]
+      api.endAnnotationSaving()
+      expect(emitSpy).toHaveBeenCalledTimes(1)
+
+      // New strokes while the first save is in flight: no second emit —
+      // overwriting the buffer lost strokes on failure and duplicated
+      // them on success.
+      api.notSaved.value = true
+      api.additions.value = [{ time: 2.0 }]
+      api.endAnnotationSaving()
+      expect(emitSpy).toHaveBeenCalledTimes(1)
+
+      // Once the save resolves, the accumulated batch goes out.
+      api.confirmAnnotationsSaved()
+      expect(emitSpy).toHaveBeenCalledTimes(2)
+      expect(emitSpy).toHaveBeenLastCalledWith('annotation-changed', {
+        preview,
+        additions: [{ time: 2.0 }],
+        updates: [],
+        deletions: []
+      })
+      wrapper.unmount()
+    })
   })
 
   describe('startAnnotationSaving', () => {
