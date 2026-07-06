@@ -365,6 +365,9 @@ const actions = {
     const episode = isTVShow ? rootGetters.currentEpisode : null
     const episodeMap = rootGetters.episodeMap
     return shotsApi.getSequences(production, episode).then(sequences => {
+      if (production.id !== rootGetters.currentProduction?.id) {
+        return sequences
+      }
       commit(LOAD_SEQUENCES_END, {
         sequences,
         episodeMap,
@@ -412,10 +415,13 @@ const actions = {
     return shotsApi
       .getSequencesWithTasks(production, episode)
       .then(sequences => {
+        if (production.id !== rootGetters.currentProduction?.id) {
+          return sequences
+        }
         if (
           !isTVShow ||
           sequences.length === 0 ||
-          sequences[0].episode_id === rootGetters.currentEpisode.id
+          sequences[0].episode_id === rootGetters.currentEpisode?.id
         ) {
           commit(SET_SEQUENCES_WITH_TASKS, {
             sequences,
