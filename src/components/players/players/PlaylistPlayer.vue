@@ -1561,6 +1561,7 @@ const {
   currentComparisonPreviewLength,
   comparisonAnnotations,
   toggleComparison,
+  clampComparisonPreviewIndex,
   goToPreviousComparisonPicture,
   goToNextComparisonPicture
 } = usePlaylistComparison({
@@ -4377,6 +4378,7 @@ watch(isComparing, () => {
 })
 
 watch(currentRevisionToCompare, () => {
+  clampComparisonPreviewIndex()
   if (isComparing.value && !isComparisonOverlay.value) {
     loadComparisonAnnotation(currentTimeRaw.value)
   }

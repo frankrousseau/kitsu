@@ -38,21 +38,26 @@
         showPanel &&
         isComparing &&
         (!light || isComparisonEnabled) &&
-        comparisonPreviewLength > 0
+        comparisonPreviewLength > 1
       "
     >
       <button-simple
         class="button playlist-button flexrow-item"
         icon="left"
+        :title="$t('playlists.actions.files_previous')"
         @click="$emit('previous-comparison-clicked')"
       />
-      <span class="flexrow-item comparison-index">
+      <span
+        class="flexrow-item comparison-index"
+        :title="$t('playlists.actions.files_position')"
+      >
         {{ comparisonPreviewIndex + 1 }} /
         {{ comparisonPreviewLength }}
       </span>
       <button-simple
         class="button playlist-button flexrow-item"
         icon="right"
+        :title="$t('playlists.actions.files_next')"
         @click="$emit('next-comparison-clicked')"
       />
     </div>
