@@ -1,7 +1,9 @@
 import { vi } from 'vitest'
 
 const h = vi.hoisted(() => ({
-  isAdmin: false
+  isAdmin: false,
+  isManager: false,
+  isSupervisor: false
 }))
 
 // Stub everything the route guards touch so importing the route table does
@@ -30,7 +32,9 @@ vi.mock('@/store/modules/user', () => ({
     state: { user: { locale: 'en' } },
     getters: {
       isCurrentUserAdmin: () => h.isAdmin,
-      isCurrentUserArtist: () => false
+      isCurrentUserArtist: () => false,
+      isCurrentUserManager: () => h.isAdmin || h.isManager,
+      isCurrentUserSupervisor: () => h.isSupervisor
     }
   }
 }))
@@ -63,13 +67,19 @@ const ADMIN_ONLY_ROUTES = [
   'status-automations',
   'studios',
   'task-status',
-  'task-types',
-  'team-schedule'
+  'task-types'
 ]
+
+// Pages linked from the sidebar for supervisors and production managers:
+// their route meta must match that visibility, otherwise a page reload
+// sends those roles to not-found (#1933).
+const SUPERVISOR_OR_MANAGER_ROUTES = ['team-schedule']
 
 describe('router/routes', () => {
   beforeEach(() => {
     h.isAdmin = false
+    h.isManager = false
+    h.isSupervisor = false
     taskTypeStore.state.taskTypes = [{ id: 'task-type-1' }]
     vi.clearAllMocks()
   })
@@ -80,6 +90,18 @@ describe('router/routes', () => {
       expect(route).toBeDefined()
       expect(route.meta?.requiresAdmin).toBe(true)
     })
+  })
+
+  describe('supervisor or manager route table', () => {
+    test.each(SUPERVISOR_OR_MANAGER_ROUTES)(
+      '%s requires supervisor or manager',
+      name => {
+        const route = mainRoute.children.find(child => child.name === name)
+        expect(route).toBeDefined()
+        expect(route.meta?.requiresSupervisorOrManager).toBe(true)
+        expect(route.meta?.requiresAdmin).toBeUndefined()
+      }
+    )
   })
 
   describe('main guard', () => {
@@ -103,6 +125,25 @@ describe('router/routes', () => {
     test('lets a non-admin through on a regular route', () => {
       const next = runGuard({ matched: [{ meta: {} }] })
       expect(next).toHaveBeenCalledWith()
+    })
+
+    test.each([
+      ['production manager', 'isManager'],
+      ['supervisor', 'isSupervisor'],
+      ['admin', 'isAdmin']
+    ])('lets a %s through on a supervisor-or-manager route', (role, flag) => {
+      h[flag] = true
+      const next = runGuard({
+        matched: [{ meta: { requiresSupervisorOrManager: true } }]
+      })
+      expect(next).toHaveBeenCalledWith()
+    })
+
+    test('redirects an artist to not-found on a supervisor-or-manager route', () => {
+      const next = runGuard({
+        matched: [{ meta: { requiresSupervisorOrManager: true } }]
+      })
+      expect(next).toHaveBeenCalledWith({ name: 'not-found' })
     })
 
     test('still blocks admin routes when data loads first', async () => {
