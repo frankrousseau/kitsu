@@ -53,7 +53,9 @@ export default defineConfig({
     extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.vue'],
     alias: {
       '@': `${import.meta.dirname}/src/`,
-      vue: 'vue/dist/vue.esm-bundler.js',
+      // Runtime-only build: templates are precompiled by the SFC plugin,
+      // shipping the template compiler was dead weight.
+      vue: 'vue/dist/vue.runtime.esm-bundler.js',
       'fabricjs-psbrush': `${import.meta.dirname}/node_modules/fabricjs-psbrush/dist/index.mjs`,
       // Shield entry: keeps `moment/locale/*` imports out of the `moment` alias below (first match wins).
       'moment/locale': `${import.meta.dirname}/node_modules/moment/locale`,
