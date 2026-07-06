@@ -705,6 +705,7 @@ const {
   onWindowsClosed,
   undoLastAction,
   redoLastAction,
+  resetUndoStacks,
   clearCanvas,
   clearComparisonCanvas,
   loadOnionSkin,
@@ -2006,6 +2007,9 @@ watch(currentPreview, () => {
   // previews on the same task) leaves the previous task's strokes
   // visible until the new video reaches frame 0.
   clearCanvas()
+  // The undo/redo stacks belong to the previous preview: an undo after
+  // switching would re-inject a stroke onto the wrong preview.
+  resetUndoStacks()
   reloadAnnotations()
   isComparing.value = false
   // Reset the frame bookkeeping synchronously. onPreviewLoaded() also
