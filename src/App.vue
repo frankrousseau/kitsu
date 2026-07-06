@@ -862,6 +862,7 @@ h2 {
 .avatar {
   border-radius: 50%;
   color: $white;
+  overflow: hidden;
 
   a,
   a:hover {

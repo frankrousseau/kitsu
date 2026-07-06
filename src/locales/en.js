@@ -900,6 +900,7 @@ export default {
     select_file: 'Select files from your hard drive',
     show: 'Show',
     show_support_chat: 'Show support chat',
+    skip_to_content: 'Skip to content',
     sorted_by: 'Sorted by',
     sort_by: 'Sort by',
     start_date: 'Start date',
