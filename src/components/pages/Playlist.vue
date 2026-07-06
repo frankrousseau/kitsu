@@ -1433,7 +1433,8 @@ export default {
           updates
         })
         playlistPlayer?.confirmAnnotationsSaved()
-      } catch {
+      } catch (err) {
+        console.error('Failed to save annotations', err)
         playlistPlayer?.restoreFailedAnnotations()
       }
     },
