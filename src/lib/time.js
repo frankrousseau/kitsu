@@ -56,6 +56,10 @@ export const formatSimpleDate = date => {
   else return ''
 }
 
+export const formatTimeOfDay = (date, use12HourClock = false) => {
+  return moment(date).format(use12HourClock ? 'h:mm A' : 'HH:mm')
+}
+
 export const formatFullDate = date => {
   if (date) {
     const utcDate = moment.tz(date, 'UTC')

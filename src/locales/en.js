@@ -1548,6 +1548,7 @@ export default {
     password_title: 'Change password',
     timezone: 'Timezone',
     title: 'Your Profile',
+    use_12_hour_clock: '12-hour clock (AM/PM)',
     webhook_error: 'the webhook mattermost does not correspond to a hook',
     avatar: {
       title: 'Change avatar',

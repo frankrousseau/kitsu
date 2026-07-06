@@ -8,6 +8,7 @@ import {
   formatFullDateWithTimezone,
   formatFullDateWithRevertedTimezone,
   formatSimpleDate,
+  formatTimeOfDay,
   hoursToDays,
   getBusinessDays,
   getDayOffRange,
@@ -71,6 +72,26 @@ describe('time', () => {
   test('formatFullDate', () => {
     const dateString = formatFullDate(new Date('2019-09-01T08:23:12Z'))
     expect(dateString).toEqual('2019-09-01 08:23:12')
+  })
+
+  test('formatTimeOfDay', () => {
+    const afternoon = moment.tz('2019-09-01T14:05:00', 'UTC')
+    expect(formatTimeOfDay(afternoon)).toEqual('14:05')
+    expect(formatTimeOfDay(afternoon, false)).toEqual('14:05')
+    expect(formatTimeOfDay(afternoon, true)).toEqual('2:05 PM')
+
+    const midnight = moment.tz('2019-09-01T00:30:00', 'UTC')
+    expect(formatTimeOfDay(midnight)).toEqual('00:30')
+    expect(formatTimeOfDay(midnight, true)).toEqual('12:30 AM')
+
+    const noon = moment.tz('2019-09-01T12:00:00', 'UTC')
+    expect(formatTimeOfDay(noon)).toEqual('12:00')
+    expect(formatTimeOfDay(noon, true)).toEqual('12:00 PM')
+
+    // Keeps the timezone of an already tz-converted moment.
+    const paris = moment.tz('2019-09-01T14:05:00Z', 'UTC').tz('Europe/Paris')
+    expect(formatTimeOfDay(paris)).toEqual('16:05')
+    expect(formatTimeOfDay(paris, true)).toEqual('4:05 PM')
   })
 
   test('formatFullDateWithTimezone', () => {
