@@ -418,10 +418,15 @@ const actions = {
       commit(SET_CURRENT_EPISODE, null)
     }
 
-    if (state.isShotsLoading) return Promise.resolve()
+    // Hand concurrent callers the in-flight promise so they wait for the
+    // data instead of resolving against a still-empty cache (the Sequence
+    // Stats empty-on-first-load bug).
+    if (state.isShotsLoading) {
+      return cache.shotsLoadingPromise || Promise.resolve()
+    }
 
     commit(LOAD_SHOTS_START)
-    return dispatch('loadSequencesWithTasks')
+    const loadingPromise = dispatch('loadSequencesWithTasks')
       .then(() => {
         return shotsApi.getShots(production, episode)
       })
@@ -458,6 +463,8 @@ const actions = {
         commit(LOAD_SHOTS_ERROR)
         console.error(err)
       })
+    cache.shotsLoadingPromise = loadingPromise
+    return loadingPromise
   },
 
   /*

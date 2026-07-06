@@ -3,7 +3,9 @@ import { vi } from 'vitest'
 // Importing the shots module transitively pulls in the root store
 // (lib/models → timezone → @/store); stub it so no Vuex store is built.
 vi.mock('@/store', () => ({ default: {} }))
+vi.mock('@/store/api/shots', () => ({ default: { getShots: vi.fn() } }))
 
+import shotsApi from '@/store/api/shots'
 import shotsStore from '@/store/modules/shots'
 
 describe('Shots store', () => {
@@ -36,6 +38,54 @@ describe('Shots store', () => {
 
       expect(dispatch).not.toHaveBeenCalled()
       expect(commit.mock.calls.map(c => c[0])).not.toContain('LOAD_SHOTS_START')
+    })
+
+    test('concurrent callers share the in-flight load promise', async () => {
+      let resolveGetShots
+      shotsApi.getShots.mockReturnValue(
+        new Promise(resolve => {
+          resolveGetShots = resolve
+        })
+      )
+      const state = { isShotsLoading: false }
+      // Flip the loading flag like the real mutation would.
+      const commit = vi.fn(type => {
+        if (type === 'LOAD_SHOTS_START') state.isShotsLoading = true
+      })
+      const rootGetters = {
+        currentProduction: { id: 'p1' },
+        episodes: [],
+        userFilters: {},
+        userFilterGroups: {},
+        taskTypeMap: new Map(),
+        personMap: new Map(),
+        taskMap: new Map(),
+        isTVShow: false,
+        currentEpisode: null
+      }
+      const ctx = {
+        commit,
+        dispatch: vi.fn().mockResolvedValue(),
+        state,
+        rootGetters
+      }
+
+      const first = shotsStore.actions.loadShots(ctx)
+      const settled = vi.fn()
+      const second = shotsStore.actions.loadShots(ctx).then(settled)
+
+      // The second caller must wait for the data, not resolve against the
+      // still-empty cache (the Sequence Stats empty-on-first-load bug).
+      await Promise.resolve()
+      expect(settled).not.toHaveBeenCalled()
+      expect(shotsApi.getShots).toHaveBeenCalledTimes(1)
+
+      resolveGetShots([])
+      await first
+      await second
+      expect(settled).toHaveBeenCalled()
+
+      shotsStore.cache.shotsLoadingPromise = null
     })
   })
 })
