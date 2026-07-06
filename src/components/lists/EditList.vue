@@ -1098,6 +1098,14 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// Firefox scroll anchoring fights windowed updates: when the top spacer
+// row resizes it re-anchors the scroll position and produces micro-jumps
+// (standard TanStack Virtual mitigation). Scoped: only this virtualized
+// wrapper opts out, other datatables keep the default.
+.datatable-wrapper {
+  overflow-anchor: none;
+}
+
 // PERF-1 pilot: spacer rows standing in for the off-screen virtualized
 // rows above/below the rendered window (see the datatable-body template).
 // Qualified with .datatable-body so it outranks shared.scss's
