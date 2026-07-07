@@ -1,4 +1,4 @@
-## Recommandations
+## Recommendations
 
 Before coding on Kitsu we recommend to:
 
