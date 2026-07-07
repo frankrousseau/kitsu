@@ -34,7 +34,7 @@
       </span>
     </div>
     <div class="modal-content" @click="$emit('cancel')">
-      <img :src="previewPath" :alt="attachment.name" />
+      <img v-if="previewPath" :src="previewPath" :alt="attachment?.name" />
     </div>
   </div>
 </template>
