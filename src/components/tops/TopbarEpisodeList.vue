@@ -6,7 +6,14 @@
     }"
   >
     <div class="episode-menu">
-      <div class="flexrow unselectable" @click="toggleEpisodeList">
+      <div
+        class="flexrow unselectable"
+        role="button"
+        tabindex="0"
+        @click="toggleEpisodeList"
+        @keydown.enter.prevent="toggleEpisodeList"
+        @keydown.space.prevent="toggleEpisodeList"
+      >
         <div class="selected-production-line flexrow-item">
           {{ episodeLabel }}
         </div>
@@ -36,14 +43,22 @@
         </div>
         <div
           class="group-name episode-line has-text-centered more-button"
+          role="button"
+          tabindex="0"
           @click="showAllMode = true"
+          @keydown.enter.prevent="showAllMode = true"
+          @keydown.space.prevent="showAllMode = true"
           v-if="!showAllMode"
         >
           +
         </div>
         <div
           class="group-name episode-line has-text-centered more-button"
+          role="button"
+          tabindex="0"
           @click="showAllMode = false"
+          @keydown.enter.prevent="showAllMode = false"
+          @keydown.space.prevent="showAllMode = false"
           v-else
         >
           -

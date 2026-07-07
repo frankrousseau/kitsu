@@ -9,9 +9,9 @@
 
     <div class="modal-content">
       <div class="box">
-        <h1 class="title">
+        <h2 class="title">
           {{ $t('productions.edit_title') }} {{ productionToEdit.name }}
-        </h1>
+        </h2>
 
         <form @submit.prevent>
           <text-field

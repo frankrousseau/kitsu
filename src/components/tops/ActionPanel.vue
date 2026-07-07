@@ -8,7 +8,11 @@
             active: selectedBar === 'change-status'
           }"
           :title="$t('menu.change_status')"
+          role="button"
+          tabindex="0"
           @click="selectBar('change-status')"
+          @keydown.enter.prevent="selectBar('change-status')"
+          @keydown.space.prevent="selectBar('change-status')"
           v-if="
             (isCurrentUserManager ||
               isSupervisorInDepartment ||
@@ -28,7 +32,11 @@
             active: selectedBar === 'assignation'
           }"
           :title="$t('menu.assign_tasks')"
+          role="button"
+          tabindex="0"
           @click="selectBar('assignation')"
+          @keydown.enter.prevent="selectBar('assignation')"
+          @keydown.space.prevent="selectBar('assignation')"
           v-if="
             (isCurrentViewSingleEntity || isCurrentViewEntity) &&
             (isCurrentUserManager ||
@@ -62,7 +70,11 @@
             !isEntitySelection &&
             isTaskSelection
           "
+          role="button"
+          tabindex="0"
           @click="selectBar('priorities')"
+          @keydown.enter.prevent="selectBar('priorities')"
+          @keydown.space.prevent="selectBar('priorities')"
         >
           <kitsu-icon
             name="priority"
@@ -80,7 +92,11 @@
           v-if="
             isTaskSelection && !isCurrentUserArtist && !isCurrentViewConcept
           "
+          role="button"
+          tabindex="0"
           @click="selectBar('thumbnails')"
+          @keydown.enter.prevent="selectBar('thumbnails')"
+          @keydown.space.prevent="selectBar('thumbnails')"
         >
           <kitsu-icon
             name="add-thumbnail"
@@ -101,7 +117,11 @@
             !isCurrentViewTodos &&
             !isCurrentViewConcept
           "
+          role="button"
+          tabindex="0"
           @click="selectBar('subscribe')"
+          @keydown.enter.prevent="selectBar('subscribe')"
+          @keydown.space.prevent="selectBar('subscribe')"
         >
           <kitsu-icon
             name="watch"
@@ -116,7 +136,11 @@
             active: selectedBar === 'edit-concepts'
           }"
           :title="$t('menu.edit_concepts')"
+          role="button"
+          tabindex="0"
           @click="selectBar('edit-concepts')"
+          @keydown.enter.prevent="selectBar('edit-concepts')"
+          @keydown.space.prevent="selectBar('edit-concepts')"
           v-if="
             isCurrentViewConcept &&
             (isCurrentUserManager || isConceptPublisher) &&
@@ -148,7 +172,11 @@
             isTaskSelection &&
             nbSelectedTasks > 0
           "
+          role="button"
+          tabindex="0"
           @click="selectBar('playlists')"
+          @keydown.enter.prevent="selectBar('playlists')"
+          @keydown.space.prevent="selectBar('playlists')"
         >
           <kitsu-icon
             name="playlists"
@@ -176,7 +204,11 @@
             active: selectedBar === 'create-tasks'
           }"
           :title="$t('menu.create_tasks')"
+          role="button"
+          tabindex="0"
           @click="selectBar('create-tasks')"
+          @keydown.enter.prevent="selectBar('create-tasks')"
+          @keydown.space.prevent="selectBar('create-tasks')"
           v-if="
             isCurrentViewEntity &&
             !isCurrentViewTaskType &&
@@ -194,7 +226,11 @@
             active: selectedBar === 'delete-tasks'
           }"
           :title="$t('menu.delete_tasks')"
+          role="button"
+          tabindex="0"
           @click="selectBar('delete-tasks')"
+          @keydown.enter.prevent="selectBar('delete-tasks')"
+          @keydown.space.prevent="selectBar('delete-tasks')"
           v-if="
             isCurrentViewEntity &&
             isCurrentUserManager &&
@@ -226,7 +262,11 @@
             active: selectedBar === 'custom-actions'
           }"
           :title="$t('menu.run_custom_action')"
+          role="button"
+          tabindex="0"
           @click="selectBar('custom-actions')"
+          @keydown.enter.prevent="selectBar('custom-actions')"
+          @keydown.space.prevent="selectBar('custom-actions')"
           v-if="
             !isEntitySelection &&
             isTaskSelection &&
@@ -243,7 +283,11 @@
             active: selectedBar === 'delete-assets'
           }"
           :title="$t('menu.delete_assets')"
+          role="button"
+          tabindex="0"
           @click="selectBar('delete-assets')"
+          @keydown.enter.prevent="selectBar('delete-assets')"
+          @keydown.space.prevent="selectBar('delete-assets')"
           v-if="isCurrentViewAsset && isCurrentUserManager && !isTaskSelection"
         >
           <kitsu-icon name="trash" :title="$t('menu.delete_assets')" />
@@ -255,7 +299,11 @@
             active: selectedBar === 'delete-shots'
           }"
           :title="$t('menu.delete_shots')"
+          role="button"
+          tabindex="0"
           @click="selectBar('delete-shots')"
+          @keydown.enter.prevent="selectBar('delete-shots')"
+          @keydown.space.prevent="selectBar('delete-shots')"
           v-if="isCurrentViewShot && isCurrentUserManager && !isTaskSelection"
         >
           <kitsu-icon name="trash" :title="$t('menu.delete_shots')" />
@@ -267,7 +315,11 @@
             active: selectedBar === 'delete-edits'
           }"
           :title="$t('menu.delete_edits')"
+          role="button"
+          tabindex="0"
           @click="selectBar('delete-edits')"
+          @keydown.enter.prevent="selectBar('delete-edits')"
+          @keydown.space.prevent="selectBar('delete-edits')"
           v-if="isCurrentViewEdit && isCurrentUserManager && !isTaskSelection"
         >
           <kitsu-icon name="trash" :title="$t('menu.delete_edits')" />
@@ -279,7 +331,11 @@
             active: selectedBar === 'delete-concepts'
           }"
           :title="$t('menu.delete_concepts')"
+          role="button"
+          tabindex="0"
           @click="selectBar('delete-concepts')"
+          @keydown.enter.prevent="selectBar('delete-concepts')"
+          @keydown.space.prevent="selectBar('delete-concepts')"
           v-if="
             isCurrentViewConcept && (isCurrentUserManager || isConceptPublisher)
           "
@@ -292,7 +348,11 @@
         <div
           class="menu-item"
           :title="$t('main.csv.export_file')"
+          role="button"
+          tabindex="0"
           @click="$emit('export-task')"
+          @keydown.enter.prevent="$emit('export-task')"
+          @keydown.space.prevent="$emit('export-task')"
           v-if="
             isTaskSelection &&
             !isEntitySelection &&
@@ -306,7 +366,11 @@
         <div
           class="menu-item mr05"
           :title="$t('main.clear_selection')"
+          role="button"
+          tabindex="0"
           @click="clearSelection"
+          @keydown.enter.prevent="clearSelection"
+          @keydown.space.prevent="clearSelection"
         >
           <x-icon :size="16" />
         </div>
@@ -570,7 +634,11 @@
               <li
                 :key="entity.id"
                 class="tag"
+                role="button"
+                tabindex="0"
                 @click="onRemoveLink(entity)"
+                @keydown.enter.prevent="onRemoveLink(entity)"
+                @keydown.space.prevent="onRemoveLink(entity)"
                 v-for="entity in conceptLinkedEntities"
               >
                 {{ entity.name }}
@@ -811,7 +879,11 @@
                 <li
                   class="tag"
                   :key="link.id"
+                  role="button"
+                  tabindex="0"
                   @click="onSelectLink(link)"
+                  @keydown.enter.prevent="onSelectLink(link)"
+                  @keydown.space.prevent="onSelectLink(link)"
                   v-for="link in linkGroup.links"
                 >
                   {{ link.name }}

@@ -9,13 +9,34 @@
       :key="`comment-checklist-${index}`"
       v-for="(entry, index) in filteredChecklist"
     >
-      <span class="checklist-checkbox" @click="toggleEntryChecked(entry)">
+      <span
+        class="checklist-checkbox"
+        role="button"
+        tabindex="0"
+        @click="toggleEntryChecked(entry)"
+        @keydown.enter.prevent="toggleEntryChecked(entry)"
+        @keydown.space.prevent="toggleEntryChecked(entry)"
+      >
         <check-square-icon class="icon" v-if="entry.checked" />
         <square-icon class="icon" v-else />
       </span>
       <span
         class="frame"
+        role="button"
+        tabindex="0"
         @click="
+          $emit('time-code-clicked', {
+            frame: entry.frame,
+            revision: entry.revision
+          })
+        "
+        @keydown.enter.prevent="
+          $emit('time-code-clicked', {
+            frame: entry.frame,
+            revision: entry.revision
+          })
+        "
+        @keydown.space.prevent="
           $emit('time-code-clicked', {
             frame: entry.frame,
             revision: entry.revision
@@ -25,7 +46,14 @@
       >
         v{{ entry.revision }} - {{ formatFrame(entry.frame) }}
       </span>
-      <span @click="setFrame(entry)" v-if="isMoviePreview">
+      <span
+        role="button"
+        tabindex="0"
+        @click="setFrame(entry)"
+        @keydown.enter.prevent="setFrame(entry)"
+        @keydown.space.prevent="setFrame(entry)"
+        v-if="isMoviePreview"
+      >
         <clock-icon class="icon clock" />
       </span>
       <span class="checklist-label" v-if="disabled">{{ entry.text }}</span>

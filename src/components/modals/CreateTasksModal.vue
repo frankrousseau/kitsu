@@ -49,7 +49,11 @@
               'is-loading': isLoadingAll,
               'is-disabled': missingTaskTypes.length === 0
             }"
+            role="button"
+            tabindex="0"
             @click="confirmAllMissingClicked"
+            @keydown.enter.prevent="confirmAllMissingClicked"
+            @keydown.space.prevent="confirmAllMissingClicked"
           >
             {{
               missingTaskTypes.length > 0
@@ -66,7 +70,11 @@
               'is-primary': true,
               'is-loading': isLoadingStay
             }"
+            role="button"
+            tabindex="0"
             @click="confirmAndStayClicked"
+            @keydown.enter.prevent="confirmAndStayClicked"
+            @keydown.space.prevent="confirmAndStayClicked"
           >
             {{ $t('main.confirmation_and_stay') }}
           </a>
@@ -77,7 +85,11 @@
               'is-primary': true,
               'is-loading': isLoading
             }"
+            role="button"
+            tabindex="0"
             @click="confirmClicked"
+            @keydown.enter.prevent="confirmClicked"
+            @keydown.space.prevent="confirmClicked"
           >
             {{ $t('main.confirmation') }}
           </a>

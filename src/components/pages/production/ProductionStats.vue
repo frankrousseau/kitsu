@@ -1,5 +1,13 @@
 <template>
-  <div class="project-stats" :class="{ expandable }" @click="expandStats">
+  <div
+    class="project-stats"
+    :class="{ expandable }"
+    :role="expandable ? 'button' : undefined"
+    :tabindex="expandable ? 0 : undefined"
+    @click="expandStats"
+    @keydown.enter.prevent="expandStats"
+    @keydown.space.prevent="expandStats"
+  >
     <div class="nb-tasks">
       <span class="tag">
         {{ stats.amount_done || 0 }} {{ $t('tasks.done') }}

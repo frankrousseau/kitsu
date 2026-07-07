@@ -70,7 +70,12 @@
                 'selected-item': isSelected(concept)
               }"
               :key="concept.id"
+              role="button"
+              tabindex="0"
               @click="
+                onSelectConcept(concept, $event.ctrlKey || $event.metaKey)
+              "
+              @keydown.enter.prevent="
                 onSelectConcept(concept, $event.ctrlKey || $event.metaKey)
               "
               v-for="concept in filteredConcepts"

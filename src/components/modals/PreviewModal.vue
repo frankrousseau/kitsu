@@ -21,12 +21,20 @@
       >
         <arrow-up-right-icon />
       </a>
-      <span class="pointer" :title="$t('main.close')" @click="$emit('cancel')">
+      <span
+        class="pointer"
+        :title="$t('main.close')"
+        role="button"
+        tabindex="0"
+        @click="$emit('cancel')"
+        @keydown.enter.prevent="$emit('cancel')"
+        @keydown.space.prevent="$emit('cancel')"
+      >
         <x-icon />
       </span>
     </div>
     <div class="modal-content" @click="$emit('cancel')">
-      <img :src="previewPath" />
+      <img :src="previewPath" :alt="attachment.name" />
     </div>
   </div>
 </template>

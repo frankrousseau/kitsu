@@ -8,7 +8,11 @@
       height: emptyHeight + 'px',
       cursor: noPreview ? 'default' : 'zoom-in'
     }"
+    role="button"
+    tabindex="0"
     @click="onClicked"
+    @keydown.enter.prevent="onClicked"
+    @keydown.space.prevent="onClicked"
     v-if="isPreview && withLink"
   >
     <img
@@ -18,7 +22,7 @@
       :src="thumbnailPath"
       :style="imgStyle"
       :width="width || ''"
-      alt=""
+      :alt="entity?.name"
     />
   </a>
 
@@ -29,7 +33,7 @@
     :key="thumbnailKey"
     :src="thumbnailPath"
     :style="imgStyle"
-    alt=""
+    :alt="entity?.name"
   />
 
   <span

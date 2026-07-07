@@ -8,7 +8,18 @@
       {{ label }}
     </label>
     <div class="production-combo">
-      <div class="flexrow" @click="toggleProductionList">
+      <div
+        class="flexrow"
+        role="combobox"
+        tabindex="0"
+        aria-haspopup="listbox"
+        :aria-expanded="showProductionList"
+        :aria-activedescendant="
+          activeIndex > -1 ? optionId(activeIndex) : undefined
+        "
+        @click="toggleProductionList"
+        @keydown="onKeydown"
+      >
         <div class="selected-production-line flexrow-item">
           <production-name
             :production="currentProduction"
@@ -19,12 +30,20 @@
         </div>
         <chevron-down-icon class="down-icon flexrow-item" />
       </div>
-      <div class="select-input" v-if="showProductionList">
+      <div
+        class="select-input"
+        ref="listRef"
+        role="listbox"
+        v-if="showProductionList"
+      >
         <div
-          class="production-line"
+          :id="optionId(index)"
           :key="production.id"
+          class="production-line"
+          role="option"
+          :aria-selected="production.id === currentProduction?.id"
           @click="selectProduction(production)"
-          v-for="production in productionList"
+          v-for="(production, index) in productionList"
         >
           <production-name
             :size="25"
@@ -42,10 +61,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { ChevronDownIcon } from 'lucide-vue-next'
 
 import { useCombobox } from '@/composables/combobox'
+import { useComboboxKeyboard } from '@/composables/comboboxKeyboard'
 
 import ComboboxMask from '@/components/widgets/ComboboxMask.vue'
 import ProductionName from '@/components/widgets/ProductionName.vue'
@@ -76,6 +96,15 @@ const {
   toggle: toggleProductionList,
   select: selectProduction
 } = useCombobox(emit)
+
+const listRef = ref(null)
+const { activeIndex, onKeydown, optionId } = useComboboxKeyboard({
+  isOpen: showProductionList,
+  toggle: toggleProductionList,
+  optionsLength: () => props.productionList.length,
+  onSelect: index => selectProduction(props.productionList[index]),
+  listRef
+})
 
 const currentProduction = computed(() => {
   return (

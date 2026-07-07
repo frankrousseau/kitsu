@@ -82,7 +82,10 @@
             :class="{
               selected: selectionGrid[entry.id]
             }"
+            role="button"
+            tabindex="0"
             @click="selectTask($event, i, entry)"
+            @keydown.enter.prevent="selectTask($event, i, entry)"
             v-for="(entry, i) in displayedTasks"
           >
             <td
@@ -287,7 +290,7 @@
       v-if="tasks.length === 0 && !isLoading"
     >
       <p>
-        <img src="../../assets/illustrations/empty_todo.png" />
+        <img src="../../assets/illustrations/empty_todo.png" alt="" />
       </p>
       <p>
         {{ emptyText }}

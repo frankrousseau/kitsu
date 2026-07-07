@@ -25,7 +25,11 @@
             background: event.backgroundColor
           }"
           :title="event.title"
+          role="button"
+          tabindex="0"
           @click="onEventClicked(event)"
+          @keydown.enter.prevent="onEventClicked(event)"
+          @keydown.space.prevent="onEventClicked(event)"
           v-else
         >
           <production-name

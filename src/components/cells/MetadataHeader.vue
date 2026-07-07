@@ -22,7 +22,11 @@
 
       <span
         class="metadata-menu-button header-icon pointer"
+        role="button"
+        tabindex="0"
         @click="$emit('show-metadata-header-menu', $event)"
+        @keydown.enter.prevent="$emit('show-metadata-header-menu', $event)"
+        @keydown.space.prevent="$emit('show-metadata-header-menu', $event)"
         v-if="!noMenu"
       >
         <chevron-down-icon :size="14" />

@@ -662,7 +662,7 @@
         :pencil-palette="pencilPalette"
         :pencil-width="pencilWidth"
         :production-backgrounds="productionBackgrounds"
-        :read-only="isCurrentUserArtist"
+        :read-only="readOnly"
         :show-comments-button="true"
         :text-color="textColor"
         v-model:current-background="currentBackground"
@@ -905,7 +905,6 @@
  * This modules manages all the options available while playing a playlist.
  * It is made to work with a single playlist.
  */
-import { PSBrush } from 'fabricjs-psbrush'
 import { ArrowUpRightIcon, DownloadIcon, PlayIcon } from 'lucide-vue-next'
 import moment from 'moment-timezone'
 import { v4 as uuidv4 } from 'uuid'
@@ -928,9 +927,11 @@ import { useFullScreen } from '@/composables/fullScreen'
 import { useAnnotation } from '@/composables/players/annotation'
 import { useAnnotationBroadcast } from '@/composables/players/annotationBroadcast'
 import { useAnnotationCursor } from '@/composables/players/annotationCursor'
+import { useMediaKind } from '@/composables/players/mediaKind'
 import { useOnionSkin } from '@/composables/players/onionSkin'
 import { usePlaylistComparison } from '@/composables/players/playlistComparison'
 import { usePreviewShortcuts } from '@/composables/players/previewShortcuts'
+import { usePlayerTransport } from '@/composables/players/transport'
 import { usePreviewRoom } from '@/composables/previewRoom'
 import { scrubFrame } from '@/lib/players/scrub'
 import preferences from '@/lib/preferences'
@@ -938,13 +939,8 @@ import {
   buildAnnotationSnapshotFilename,
   buildAnnotationSnapshotTitle,
   drawSnapshotTitle,
-  isDiffPreview,
-  isMarkdownPreview,
-  isModelPreview,
   isMoviePreview,
-  isPdfPreview,
-  isPicturePreview,
-  isSoundPreview
+  isPicturePreview
 } from '@/lib/preview'
 import {
   ceilToFrame,
@@ -990,9 +986,9 @@ const FRAME_DELAY = 100
 const RESIZE_DELAY = 300
 
 const store = useStore()
+const $socket = store.$socket
 const { t } = useI18n()
 const instance = getCurrentInstance()
-const $socket = instance.appContext.config.globalProperties.$socket
 
 // Props
 
@@ -1106,7 +1102,8 @@ const framesSeenOfPicture = ref(1)
 const currentBackground = ref(null)
 const currentPreviewIndex = ref(0)
 const currentTime = ref('00:00.000')
-const currentTimeRaw = ref(0)
+const { currentTimeRaw, isHd, isMuted, isPlaying, isRepeating, speed, volume } =
+  usePlayerTransport()
 const handleIn = ref(0)
 const handleOut = ref(0)
 const hasActiveShareLinks = ref(false)
@@ -1118,12 +1115,8 @@ const isDrawing = ref(false)
 const isEntitiesHidden = ref(false)
 const isEnvironmentSkybox = ref(false)
 const isFullMode = ref(false)
-const isHd = ref(false)
 const isLaserModeOn = ref(false)
-const isMuted = ref(false)
 const isObjectBackground = ref(false)
-const isPlaying = ref(false)
-const isRepeating = ref(false)
 const isShowAnnotationsWhilePlaying = ref(false)
 const isTyping = ref(false)
 const isWaveformDisplayed = ref(false)
@@ -1148,8 +1141,6 @@ const room = ref({
   people: [],
   newComer: true
 })
-const speed = ref(3)
-const volume = ref(50)
 
 const modals = ref({
   delete: false,
@@ -1175,6 +1166,9 @@ const currentProduction = computed(() => store.getters.currentProduction)
 const editMap = computed(() => store.getters.editMap)
 const episodeMap = computed(() => store.getters.episodeMap)
 const isCurrentUserArtist = computed(() => store.getters.isCurrentUserArtist)
+// Same intent as PreviewPlayer's readOnly prop: artists may watch
+// playlists but must not annotate or save.
+const readOnly = computed(() => isCurrentUserArtist.value)
 const isCurrentUserClient = computed(() => store.getters.isCurrentUserClient)
 const isCurrentUserManager = computed(() => store.getters.isCurrentUserManager)
 const isCurrentUserSupervisor = computed(
@@ -1211,27 +1205,16 @@ const userId = computed(() => store.getters.user?.id)
 // Computed — file type helpers
 
 const extension = computed(() => currentPreview.value?.extension || '')
-const isCurrentPreviewMovie = computed(() => isMoviePreview(extension.value))
-const isCurrentPreviewPicture = computed(() =>
-  isPicturePreview(extension.value)
-)
-const isCurrentPreviewModel = computed(() => isModelPreview(extension.value))
-const isCurrentPreviewSound = computed(() => isSoundPreview(extension.value))
-const isCurrentPreviewPdf = computed(() => isPdfPreview(extension.value))
-const isCurrentPreviewMarkdown = computed(() =>
-  isMarkdownPreview(extension.value)
-)
-const isCurrentPreviewDiff = computed(() => isDiffPreview(extension.value))
-const isCurrentPreviewFile = computed(
-  () =>
-    !isCurrentPreviewMovie.value &&
-    !isCurrentPreviewPicture.value &&
-    !isCurrentPreviewSound.value &&
-    !isCurrentPreviewModel.value &&
-    !isCurrentPreviewPdf.value &&
-    !isCurrentPreviewMarkdown.value &&
-    !isCurrentPreviewDiff.value
-)
+const {
+  isDiff: isCurrentPreviewDiff,
+  isFile: isCurrentPreviewFile,
+  isMarkdown: isCurrentPreviewMarkdown,
+  isModel: isCurrentPreviewModel,
+  isMovie: isCurrentPreviewMovie,
+  isPdf: isCurrentPreviewPdf,
+  isPicture: isCurrentPreviewPicture,
+  isSound: isCurrentPreviewSound
+} = useMediaKind(extension)
 
 // Computed — entity & preview state
 
@@ -1603,7 +1586,8 @@ const annotation = useAnnotation({
   isLaserModeOn,
   postAnnotationAddition,
   postAnnotationDeletion,
-  postAnnotationUpdate
+  postAnnotationUpdate,
+  getAdditionalPreviews: () => getAdditionalPreviews()
 })
 
 annotation.setCurrentPreviewGetter(() => currentPreview.value)
@@ -2936,6 +2920,39 @@ const prefetchAnnotationsAround = index => {
   }
 }
 
+// Store copies of the current preview kept under entity.preview_files (one
+// group per task type in the playlist payload). The annotation composable
+// hands them to the updatePreviewAnnotations action so its store write also
+// refreshes the revision copies — saveAnnotations no longer commits itself.
+const getAdditionalPreviews = () => {
+  if (readOnly.value) return []
+  const entity = entityList.value[playingEntityIndex.value]
+  if (!entity) return []
+
+  let previewId = entity.preview_file_id
+  if (currentPreviewIndex.value > 0) {
+    const index = currentPreviewIndex.value - 1
+    const previewFile = currentEntity.value?.preview_file_previews?.[index]
+    if (previewFile) previewId = previewFile.id
+  }
+
+  const taskId = entity.preview_file_task_id
+  const pairs = []
+  Object.keys(entity.preview_files || {}).forEach(taskTypeId => {
+    let revPreview = null
+    entity.preview_files[taskTypeId].forEach(p => {
+      if (p.id === previewId) revPreview = p
+      if (!revPreview && p.previews) {
+        p.previews.forEach(sub => {
+          if (sub.id === previewId) revPreview = p
+        })
+      }
+    })
+    if (revPreview) pairs.push({ taskId, preview: revPreview })
+  })
+  return pairs
+}
+
 const saveAnnotations = () => {
   let time = roundToFrame(currentTimeRaw.value, fps.value) || 0
   if (time < 0) time = 0
@@ -2965,30 +2982,12 @@ const saveAnnotations = () => {
     }
   }
 
-  if (!isCurrentUserArtist.value) {
+  if (!readOnly.value) {
     if (!notSaved.value) {
       startAnnotationSaving(preview, newAnnotations)
     }
 
     entity.preview_file_annotations = newAnnotations
-    Object.keys(entity.preview_files || {}).forEach(taskTypeId => {
-      let revPreview = null
-      entity.preview_files[taskTypeId].forEach(p => {
-        if (p.id === preview.id) revPreview = p
-        if (!revPreview && p.previews) {
-          p.previews.forEach(sub => {
-            if (sub.id === preview.id) revPreview = p
-          })
-        }
-      })
-      if (revPreview) {
-        store.commit('UPDATE_PREVIEW_ANNOTATION', {
-          taskId: preview.task_id,
-          preview: revPreview,
-          annotations: newAnnotations
-        })
-      }
-    })
   }
 }
 
@@ -4019,20 +4018,13 @@ const resetPlaylist = () => {
 const onAnnotateClicked = () => {
   showCanvas()
   if (isDrawing.value) {
-    if (fabricCanvas.value) fabricCanvas.value.isDrawingMode = false
     isDrawing.value = false
   } else {
+    _resetColor()
+    _resetPencil()
     isShapeMode.value = false
     isTyping.value = false
     isEraserModeOn.value = false
-    if (fabricCanvas.value) {
-      fabricCanvas.value.isDrawingMode = true
-      const brush = new PSBrush(fabricCanvas.value)
-      fabricCanvas.value.freeDrawingBrush = brush
-      brush.pressureManager.fallback = 0.5
-    }
-    _resetColor()
-    _resetPencil()
     isDrawing.value = true
   }
 }
@@ -4252,6 +4244,7 @@ watch(isAnnotationsDisplayed, () => {
 })
 
 watch(isDrawing, () => {
+  setAnnotationDrawingMode(isDrawing.value)
   if (!isDrawing.value && isLaserModeOn.value) isLaserModeOn.value = false
   if (isDrawing.value && !isAnnotationsDisplayed.value) {
     isAnnotationsDisplayed.value = true

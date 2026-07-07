@@ -9,12 +9,12 @@
 
     <div class="modal-content">
       <div class="box">
-        <h1 class="title" v-if="isEditing">
+        <h2 class="title" v-if="isEditing">
           {{ $t('custom_actions.edit_title') }} {{ customActionToEdit.name }}
-        </h1>
-        <h1 class="title" v-else>
+        </h2>
+        <h2 class="title" v-else>
           {{ $t('custom_actions.new_custom_action') }}
-        </h1>
+        </h2>
 
         <form @submit.prevent>
           <text-field

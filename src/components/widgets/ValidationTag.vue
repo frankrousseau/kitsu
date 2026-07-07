@@ -15,7 +15,11 @@
         class="tag"
         :style="tagStyle"
         :title="taskStatus.name"
+        role="button"
+        tabindex="0"
         @click="$event => $emit('click', $event)"
+        @keydown.enter.prevent="$event => $emit('click', $event)"
+        @keydown.space.prevent="$event => $emit('click', $event)"
         v-else
       >
         {{ taskStatus.short_name }}

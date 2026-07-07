@@ -250,17 +250,10 @@ import { useStore } from 'vuex'
 
 import darkTimesliderUrl from '@/assets/background/video-timeslider-dark.png'
 import { usePanzoomSync } from '@/composables/panzoom'
+import { useMediaKind } from '@/composables/players/mediaKind'
 import { isAltLetter } from '@/composables/players/previewShortcuts'
+import { usePlayerTransport } from '@/composables/players/transport'
 import { mergeAnnotationsByFrame } from '@/lib/players/annotation'
-import {
-  isDiffPreview,
-  isMarkdownPreview,
-  isModelPreview,
-  isMoviePreview,
-  isPdfPreview,
-  isPicturePreview,
-  isSoundPreview
-} from '@/lib/preview'
 import { DEFAULT_FPS, floorToFrame, formatTime } from '@/lib/video'
 
 import SharedAnnotationOverlay from '@/components/players/annotations/SharedAnnotationOverlay.vue'
@@ -316,9 +309,7 @@ const isCommentsHidden = ref(
 const isEntitiesHidden = ref(false)
 const isFullScreen = ref(false)
 const isHd = ref(true)
-const isMuted = ref(false)
-const isPlaying = ref(false)
-const isRepeating = ref(false)
+const { isMuted, isPlaying, isRepeating } = usePlayerTransport()
 const maxDuration = ref(0)
 const movieDimensions = ref({ width: 0, height: 0 })
 const picturePlayer = ref(null)
@@ -416,24 +407,17 @@ const currentEntityPreviewLength = computed(() => {
 })
 
 const extension = computed(() => currentPreview.value?.extension || '')
-const isMovie = computed(() => isMoviePreview(extension.value))
-const isPicture = computed(() => isPicturePreview(extension.value))
-const isSound = computed(() => isSoundPreview(extension.value))
-const isModel = computed(() => isModelPreview(extension.value))
-const isPdf = computed(() => isPdfPreview(extension.value))
-const isMarkdown = computed(() => isMarkdownPreview(extension.value))
-const isDiff = computed(() => isDiffPreview(extension.value))
-const isOtherFile = computed(
-  () =>
-    !!currentPreview.value &&
-    !isMovie.value &&
-    !isPicture.value &&
-    !isSound.value &&
-    !isModel.value &&
-    !isPdf.value &&
-    !isMarkdown.value &&
-    !isDiff.value
-)
+const {
+  isDiff,
+  isFile,
+  isMarkdown,
+  isModel,
+  isMovie,
+  isPdf,
+  isPicture,
+  isSound
+} = useMediaKind(extension)
+const isOtherFile = computed(() => !!currentPreview.value && isFile.value)
 
 const downloadUrl = computed(() => {
   if (!currentPreview.value) return ''

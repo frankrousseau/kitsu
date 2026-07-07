@@ -862,6 +862,7 @@ h2 {
 .avatar {
   border-radius: 50%;
   color: $white;
+  overflow: hidden;
 
   a,
   a:hover {
@@ -1294,7 +1295,7 @@ textarea.input:focus {
     border-radius: 0.5em;
     padding: 2.8em 3em 3em 3em;
 
-    h1.title {
+    h2.title {
       font-family: Lato;
       font-weight: 400;
       font-size: 3em;
@@ -1323,7 +1324,7 @@ textarea.input:focus {
     .box {
       padding: 1.5em;
 
-      h1.title {
+      h2.title {
         font-size: 1.8em;
         margin-bottom: 0.5em;
       }

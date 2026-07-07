@@ -32,7 +32,10 @@
         <div
           :key="`unlisted-item-${item.id}`"
           class="flexrow item-to-add mb05"
+          role="button"
+          tabindex="0"
           @click="$emit('import-item', item)"
+          @keydown.enter.prevent="$emit('import-item', item)"
           v-for="item in items"
         >
           <slot name="item-line" :item="item" />

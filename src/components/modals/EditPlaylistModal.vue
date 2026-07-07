@@ -44,7 +44,14 @@
         {{ successText || $t('playlists.created') }}
       </span>
       <div class="filler"></div>
-      <a class="button is-primary flexrow-item" @click="$emit('view')">
+      <a
+        class="button is-primary flexrow-item"
+        role="button"
+        tabindex="0"
+        @click="$emit('view')"
+        @keydown.enter.prevent="$emit('view')"
+        @keydown.space.prevent="$emit('view')"
+      >
         {{ $t('playlists.view_created') }}
       </a>
       <button class="button is-link flexrow-item" @click="$emit('cancel')">

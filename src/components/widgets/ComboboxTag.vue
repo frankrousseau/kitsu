@@ -13,18 +13,39 @@
       }"
       ref="selectRef"
     >
-      <div class="flexrow" @click="toggleList" :title="renderedValue">
+      <div
+        class="flexrow"
+        :title="renderedValue"
+        role="combobox"
+        tabindex="0"
+        aria-haspopup="listbox"
+        :aria-expanded="showList"
+        :aria-activedescendant="
+          activeIndex > -1 ? optionId(activeIndex) : undefined
+        "
+        @click="toggleList"
+        @keydown="onKeydown"
+      >
         <div class="selected-line filler nowrap ellipsis">
           {{ renderedValue }}
         </div>
         <chevron-down-icon class="down-icon" />
       </div>
-      <div class="select-input" v-if="showList">
+      <div
+        class="select-input"
+        ref="listRef"
+        role="listbox"
+        aria-multiselectable="true"
+        v-if="showList"
+      >
         <div
+          :id="optionId(index)"
           :key="option.id"
           class="option-line flexrow"
+          role="option"
+          :aria-selected="isChecked(option)"
           @click="!disabled && selectOption(option)"
-          v-for="option in optionList"
+          v-for="(option, index) in optionList"
         >
           <input
             type="checkbox"
@@ -52,6 +73,7 @@ import { useI18n } from 'vue-i18n'
 import { ChevronDownIcon } from 'lucide-vue-next'
 
 import { sortByValue } from '@/lib/sorting'
+import { useComboboxKeyboard } from '@/composables/comboboxKeyboard'
 
 const { t } = useI18n()
 
@@ -157,6 +179,17 @@ const getOptionLabel = option => {
 const isChecked = option => {
   return selectedValues.value.includes(option.value)
 }
+
+const listRef = ref(null)
+const { activeIndex, onKeydown, optionId } = useComboboxKeyboard({
+  isOpen: showList,
+  toggle: toggleList,
+  optionsLength: () => optionList.value.length,
+  onSelect: index => {
+    if (!props.disabled) selectOption(optionList.value[index])
+  },
+  listRef
+})
 
 watch(showList, () => {
   if (showList.value) {

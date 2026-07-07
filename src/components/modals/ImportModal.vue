@@ -36,7 +36,14 @@
           :key="`tab-${tab.id}`"
           v-for="tab in tabs"
         >
-          <a @click="activeTab = tab.id">{{ tab.name }}</a>
+          <a
+            role="button"
+            tabindex="0"
+            @click="activeTab = tab.id"
+            @keydown.enter.prevent="activeTab = tab.id"
+            @keydown.space.prevent="activeTab = tab.id"
+            >{{ tab.name }}</a
+          >
         </li>
       </ul>
     </div>

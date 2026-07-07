@@ -33,7 +33,11 @@
                   selected: episode.id === selectedEpisodeId
                 }"
                 :key="episode.id"
+                role="button"
+                tabindex="0"
                 @click="selectEpisode(episode.id)"
+                @keydown.enter.prevent="selectEpisode(episode.id)"
+                @keydown.space.prevent="selectEpisode(episode.id)"
                 v-for="episode in displayedEpisodes"
               >
                 {{ episode.name }}
@@ -73,8 +77,12 @@
                   selected: sequence.id === selectedSequenceId
                 }"
                 :key="sequence.id"
+                role="button"
+                tabindex="0"
                 @keyup.tab="focusAddShot"
                 @click="selectSequence(sequence.id)"
+                @keydown.enter.prevent="selectSequence(sequence.id)"
+                @keydown.space.prevent="selectSequence(sequence.id)"
                 v-for="sequence in displayedSequences"
               >
                 {{ sequence.name }}

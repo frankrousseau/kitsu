@@ -11,7 +11,18 @@
       }"
       :style="{ width: `${width}px` }"
     >
-      <div class="flexrow" @click="toggleStudioList">
+      <div
+        class="flexrow"
+        role="combobox"
+        tabindex="0"
+        aria-haspopup="listbox"
+        :aria-expanded="showStudioList"
+        :aria-activedescendant="
+          activeIndex > -1 ? optionId(activeIndex) : undefined
+        "
+        @click="toggleStudioList"
+        @keydown="onKeydown"
+      >
         <div class="selected-studio-line flexrow-item">
           <studio-name :studio="currentStudio" v-if="currentStudio" />
         </div>
@@ -19,6 +30,8 @@
       </div>
       <div
         class="select-input"
+        ref="listRef"
+        role="listbox"
         :style="{
           'max-height': `${maxHeightSelectInput}px`,
           width: `${width}px`,
@@ -27,10 +40,13 @@
         v-if="showStudioList"
       >
         <div
-          class="studio-line"
+          :id="optionId(index)"
           :key="studio.id"
+          class="studio-line"
+          role="option"
+          :aria-selected="studio.id === currentStudio?.id"
           @click="selectStudio(studio)"
-          v-for="studio in studioList"
+          v-for="(studio, index) in studioList"
         >
           <studio-name :studio="studio" />
         </div>
@@ -41,12 +57,13 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useStore } from 'vuex'
 import { ChevronDownIcon } from 'lucide-vue-next'
 
 import { useCombobox } from '@/composables/combobox'
+import { useComboboxKeyboard } from '@/composables/comboboxKeyboard'
 
 import ComboboxMask from '@/components/widgets/ComboboxMask.vue'
 import StudioName from '@/components/widgets/StudioName.vue'
@@ -92,6 +109,15 @@ const {
   toggle: toggleStudioList,
   select: selectStudio
 } = useCombobox(emit)
+
+const listRef = ref(null)
+const { activeIndex, onKeydown, optionId } = useComboboxKeyboard({
+  isOpen: showStudioList,
+  toggle: toggleStudioList,
+  optionsLength: () => studioList.value.length,
+  onSelect: index => selectStudio(studioList.value[index]),
+  listRef
+})
 
 const studios = computed(() => store.getters.studios)
 const studioMap = computed(() => store.getters.studioMap)

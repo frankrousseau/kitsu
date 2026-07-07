@@ -9,7 +9,11 @@
         extension: entity.preview_file_extension
       }"
       :is-rounded-top-border="isRoundedTopBorder"
+      role="button"
+      tabindex="0"
       @click="onVideoClicked()"
+      @keydown.enter.prevent="onVideoClicked()"
+      @keydown.space.prevent="onVideoClicked()"
     />
     <button-simple
       class="button-play"
@@ -43,9 +47,16 @@
           'max-height': `${emptyHeight}px`
         }"
         :width="width || ''"
-        alt=""
+        :alt="entity?.name"
       />
-      <a class="view-icon" @click.stop="onPictureClicked()">
+      <a
+        class="view-icon"
+        role="button"
+        tabindex="0"
+        @click.stop="onPictureClicked()"
+        @keydown.enter.stop.prevent="onPictureClicked()"
+        @keydown.space.stop.prevent="onPictureClicked()"
+      >
         <eye-icon :size="18" />
       </a>
     </template>

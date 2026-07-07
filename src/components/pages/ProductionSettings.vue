@@ -4,42 +4,90 @@
       <div class="tabs">
         <ul>
           <li :class="{ 'is-active': isActiveTab('parameters') }">
-            <a @click="activeTab = 'parameters'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'parameters'"
+              @keydown.enter.prevent="activeTab = 'parameters'"
+              @keydown.space.prevent="activeTab = 'parameters'"
+            >
               {{ $t('productions.parameters.title') }}
             </a>
           </li>
           <li :class="{ 'is-active': isActiveTab('brief') }">
-            <a @click="activeTab = 'brief'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'brief'"
+              @keydown.enter.prevent="activeTab = 'brief'"
+              @keydown.space.prevent="activeTab = 'brief'"
+            >
               {{ $t('productions.brief.title') }}
             </a>
           </li>
           <li :class="{ 'is-active': isActiveTab('assetTypes') }">
-            <a @click="activeTab = 'assetTypes'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'assetTypes'"
+              @keydown.enter.prevent="activeTab = 'assetTypes'"
+              @keydown.space.prevent="activeTab = 'assetTypes'"
+            >
               {{ $t('asset_types.title') }}
             </a>
           </li>
           <li :class="{ 'is-active': isActiveTab('taskTypes') }">
-            <a @click="activeTab = 'taskTypes'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'taskTypes'"
+              @keydown.enter.prevent="activeTab = 'taskTypes'"
+              @keydown.space.prevent="activeTab = 'taskTypes'"
+            >
               {{ $t('task_types.title') }}
             </a>
           </li>
           <li :class="{ 'is-active': isActiveTab('taskStatus') }">
-            <a @click="activeTab = 'taskStatus'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'taskStatus'"
+              @keydown.enter.prevent="activeTab = 'taskStatus'"
+              @keydown.space.prevent="activeTab = 'taskStatus'"
+            >
               {{ $t('task_status.title') }}
             </a>
           </li>
           <li :class="{ 'is-active': isActiveTab('board') }">
-            <a @click="activeTab = 'board'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'board'"
+              @keydown.enter.prevent="activeTab = 'board'"
+              @keydown.space.prevent="activeTab = 'board'"
+            >
               {{ $t('board.settings.title') }}
             </a>
           </li>
           <li :class="{ 'is-active': isActiveTab('statusAutomations') }">
-            <a @click="activeTab = 'statusAutomations'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'statusAutomations'"
+              @keydown.enter.prevent="activeTab = 'statusAutomations'"
+              @keydown.space.prevent="activeTab = 'statusAutomations'"
+            >
               {{ $t('status_automations.title') }}
             </a>
           </li>
           <li :class="{ 'is-active': isActiveTab('backgrounds') }">
-            <a @click="activeTab = 'backgrounds'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'backgrounds'"
+              @keydown.enter.prevent="activeTab = 'backgrounds'"
+              @keydown.space.prevent="activeTab = 'backgrounds'"
+            >
               {{ $t('backgrounds.title') }}
             </a>
           </li>

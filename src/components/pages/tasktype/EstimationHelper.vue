@@ -87,7 +87,10 @@
                 {{ getSeconds(task) }}
               </td>
               <td
+                role="button"
+                tabindex="0"
                 @click="selectTask($event, task, index)"
+                @keydown.enter.prevent="selectTask($event, task, index)"
                 class="estimation numeric-cell"
               >
                 <input

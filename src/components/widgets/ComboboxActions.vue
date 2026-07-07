@@ -10,21 +10,35 @@
       }"
       ref="select"
     >
-      <div class="flexrow" :title="title" @click="toggleList">
+      <div
+        class="flexrow"
+        :title="title"
+        role="combobox"
+        tabindex="0"
+        aria-haspopup="listbox"
+        :aria-expanded="showList"
+        :aria-activedescendant="
+          activeIndex > -1 ? optionId(activeIndex) : undefined
+        "
+        @click="toggleList"
+        @keydown="onKeydown"
+      >
         <div class="selected-line mr05 ellipsis nowrap">
           {{ title }}
         </div>
         <chevron-down-icon class="down-icon flexrow-item" />
       </div>
-      <div class="select-input" v-if="showList">
+      <div class="select-input" ref="listRef" role="listbox" v-if="showList">
         <a
+          :id="optionId(index)"
           :key="action.label"
           class="option-line flexrow"
+          role="option"
           :href="action.href || null"
           :target="action.href ? '_blank' : null"
           :rel="action.href ? 'noopener noreferrer' : null"
           @click="onActionClick(action)"
-          v-for="action in actions"
+          v-for="(action, index) in actions"
         >
           <component
             :is="action.icon"
@@ -48,7 +62,9 @@
 import { ChevronDownIcon } from 'lucide-vue-next'
 import { ref } from 'vue'
 
-defineProps({
+import { useComboboxKeyboard } from '@/composables/comboboxKeyboard'
+
+const props = defineProps({
   actions: {
     type: Array,
     default: () => []
@@ -82,6 +98,27 @@ const onActionClick = action => {
   if (action.handler) action.handler()
   showList.value = false
 }
+
+// Mouse clicks navigate through the anchor's own href natively; a
+// keyboard-selected action (focus stays on the trigger, see
+// useComboboxKeyboard) has to replicate that navigation itself.
+const selectActionByIndex = index => {
+  const action = props.actions[index]
+  if (!action) return
+  onActionClick(action)
+  if (action.href) {
+    window.open(action.href, '_blank', 'noopener,noreferrer')
+  }
+}
+
+const listRef = ref(null)
+const { activeIndex, onKeydown, optionId } = useComboboxKeyboard({
+  isOpen: showList,
+  toggle: toggleList,
+  optionsLength: () => props.actions.length,
+  onSelect: selectActionByIndex,
+  listRef
+})
 </script>
 
 <style lang="scss" scoped>

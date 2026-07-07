@@ -366,7 +366,7 @@ const existingData = index => {
   margin-top: 2rem;
 }
 
-.modal-content .box h1.title {
+.modal-content .box h2.title {
   margin-bottom: 0;
 }
 

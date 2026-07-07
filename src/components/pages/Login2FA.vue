@@ -3,8 +3,12 @@
     <div class="container">
       <div class="box">
         <div class="has-text-centered login-header">
-          <img src="@/assets/kitsu-text-dark.svg" v-if="isDarkTheme" />
-          <img src="@/assets/kitsu-text.svg" v-else />
+          <img
+            src="@/assets/kitsu-text-dark.svg"
+            alt="Kitsu"
+            v-if="isDarkTheme"
+          />
+          <img src="@/assets/kitsu-text.svg" alt="Kitsu" v-else />
         </div>
         <p class="has-text-centered mandatory-message">
           {{ $t('profile.two_factor_authentication.mandatory') }}

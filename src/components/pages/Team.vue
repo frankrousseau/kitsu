@@ -68,7 +68,10 @@
           <div
             :key="`unlisted-person-${person.id}`"
             class="flexrow person-to-add mb05"
+            role="button"
+            tabindex="0"
             @click="addPersonToTeam(person)"
+            @keydown.enter.prevent="addPersonToTeam(person)"
             v-for="person in unlistedPeople"
           >
             <people-avatar

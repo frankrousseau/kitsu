@@ -293,7 +293,12 @@
               <th scope="rowgroup">
                 <div
                   class="datatable-row-header pointer"
+                  role="button"
+                  tabindex="0"
                   @click="$emit('sequence-clicked', group[0].sequence_name)"
+                  @keydown.enter.prevent="
+                    $emit('sequence-clicked', group[0].sequence_name)
+                  "
                 >
                   {{ group[0] ? group[0].sequence_name : '' }}
                 </div>
@@ -759,7 +764,7 @@
       v-if="isEmptyList && !isCurrentUserClient && !isLoading"
     >
       <p class="info">
-        <img src="../../assets/illustrations/empty_shot.png" />
+        <img src="../../assets/illustrations/empty_shot.png" alt="" />
       </p>
       <p class="info">{{ $t('shots.empty_list') }}</p>
       <button-simple
@@ -773,7 +778,7 @@
       v-if="isEmptyList && isCurrentUserClient && !isLoading"
     >
       <p class="info">
-        <img src="../../assets/illustrations/empty_shot.png" />
+        <img src="../../assets/illustrations/empty_shot.png" alt="" />
       </p>
       <p class="info">{{ $t('shots.empty_list_client') }}</p>
     </div>

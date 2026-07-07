@@ -48,7 +48,11 @@
                 class="attachment-thumbnail"
                 :key="attachment.id"
                 :src="getAttachmentThumbnailPath(attachment)"
+                role="button"
+                tabindex="0"
+                :alt="attachment.name"
                 @click="currentAttachment = attachment"
+                @keydown.enter.prevent="currentAttachment = attachment"
                 v-for="attachment in pictureAttachments(
                   messageText.attachment_files
                 )"
@@ -67,7 +71,15 @@
             </div>
             <div
               class="delete-message-button"
+              role="button"
+              tabindex="0"
               @click="$emit('delete-message', chatMessage.data.id)"
+              @keydown.enter.prevent="
+                $emit('delete-message', chatMessage.data.id)
+              "
+              @keydown.space.prevent="
+                $emit('delete-message', chatMessage.data.id)
+              "
               v-if="chatMessage.data.person_id === user.id"
             >
               <x-icon :size="12" />

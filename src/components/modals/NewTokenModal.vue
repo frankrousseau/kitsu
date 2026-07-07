@@ -8,9 +8,9 @@
     <div class="modal-background"></div>
     <div class="modal-content">
       <div class="box">
-        <h1 class="title">
+        <h2 class="title">
           {{ $t('bots.new_token_title', { name: person.full_name }) }}
-        </h1>
+        </h2>
 
         <form class="form" @submit.prevent v-if="!person.access_token">
           <p class="mb2 warning-text">
@@ -53,12 +53,15 @@
               :type="visible ? 'text' : 'password'"
               :model-value="person.access_token"
             />
-            <eye-off-icon
-              v-if="visible"
-              class="icon"
-              @click="visible = false"
-            />
-            <eye-icon v-else class="icon" @click="visible = true" />
+            <button
+              type="button"
+              class="visibility-toggle"
+              :aria-label="visible ? 'Hide token' : 'Show token'"
+              @click="visible = !visible"
+            >
+              <eye-off-icon v-if="visible" class="icon" />
+              <eye-icon v-else class="icon" />
+            </button>
           </div>
           <div class="flexrow right">
             <Transition name="fade">
@@ -162,7 +165,10 @@ watch(
     }
   }
 
-  .icon {
+  .visibility-toggle {
+    background: none;
+    border: none;
+    padding: 0;
     cursor: pointer;
     opacity: 0.5;
     position: absolute;

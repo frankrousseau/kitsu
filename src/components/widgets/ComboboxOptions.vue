@@ -9,18 +9,39 @@
       }"
       ref="select"
     >
-      <div class="flexrow" :title="title" @click="toggleList()">
+      <div
+        class="flexrow"
+        :title="title"
+        role="combobox"
+        tabindex="0"
+        aria-haspopup="listbox"
+        :aria-expanded="showList"
+        :aria-activedescendant="
+          activeIndex > -1 ? optionId(activeIndex) : undefined
+        "
+        @click="toggleList()"
+        @keydown="onKeydown"
+      >
         <div class="selected-line mr05 ellipsis nowrap">
           {{ title }}
         </div>
         <chevron-down-icon class="down-icon flexrow-item" />
       </div>
-      <div ref="list" class="select-input" v-if="showList">
+      <div
+        ref="list"
+        class="select-input"
+        role="listbox"
+        aria-multiselectable="true"
+        v-if="showList"
+      >
         <div
+          :id="optionId(index)"
           :key="option.value"
           class="option-line flexrow"
+          role="option"
+          :aria-selected="!!modelValue[option.value]"
           @click="onUpdateValue(option.value)"
-          v-for="option in optionList"
+          v-for="(option, index) in optionList"
         >
           <toggle-button
             :label="option.label"
@@ -42,6 +63,8 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue'
 import { ChevronDownIcon } from 'lucide-vue-next'
+
+import { useComboboxKeyboard } from '@/composables/comboboxKeyboard'
 
 import ToggleButton from '@/components/widgets/ToggleButton.vue'
 
@@ -103,6 +126,14 @@ const onUpdateValue = key => {
   })
   emit('change', { key, value })
 }
+
+const { activeIndex, onKeydown, optionId } = useComboboxKeyboard({
+  isOpen: showList,
+  toggle: toggleList,
+  optionsLength: () => optionList.value.length,
+  onSelect: index => onUpdateValue(optionList.value[index].value),
+  listRef: list
+})
 </script>
 
 <style lang="scss" scoped>

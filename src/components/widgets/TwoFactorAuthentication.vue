@@ -45,13 +45,25 @@
         {{ $t('login.error_sending_email') }}
       </p>
       <p v-if="chosenTwoFA === 'email_otp'">
-        <a @click="requestSendEmailOTP">
+        <a
+          role="button"
+          tabindex="0"
+          @click="requestSendEmailOTP"
+          @keydown.enter.prevent="requestSendEmailOTP"
+          @keydown.space.prevent="requestSendEmailOTP"
+        >
           {{ $t('login.send_email_otp') }}
         </a>
       </p>
 
       <p v-if="chosenTwoFA === 'fido'">
-        <a @click="requestGetFIDOChallenge">
+        <a
+          role="button"
+          tabindex="0"
+          @click="requestGetFIDOChallenge"
+          @keydown.enter.prevent="requestGetFIDOChallenge"
+          @keydown.space.prevent="requestGetFIDOChallenge"
+        >
           {{ $t('login.retry_fido_challenge') }}
         </a>
       </p>
@@ -65,7 +77,13 @@
         </p>
         <ul>
           <li :key="twoFA" v-for="twoFA in othersTwoFA">
-            <a @click="changeTwoFA(twoFA)">
+            <a
+              role="button"
+              tabindex="0"
+              @click="changeTwoFA(twoFA)"
+              @keydown.enter.prevent="changeTwoFA(twoFA)"
+              @keydown.space.prevent="changeTwoFA(twoFA)"
+            >
               {{ changeTwoFAText(twoFA) }}
             </a>
           </li>

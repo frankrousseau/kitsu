@@ -1,7 +1,11 @@
 <template>
   <tr
     class="datatable-row department-row pointer"
+    role="button"
+    tabindex="0"
     @click="toggleDepartment(departmentEntry.id)"
+    @keydown.enter.prevent="toggleDepartment(departmentEntry.id)"
+    @keydown.space.prevent="toggleDepartment(departmentEntry.id)"
   >
     <td class="datatable-row-header strong department-header" colspan="3">
       <div

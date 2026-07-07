@@ -1,9 +1,14 @@
 <template>
   <XyzTransition appear xyz="fade">
     <div class="main">
+      <a class="skip-link" href="#main-content">{{
+        $t('main.skip_to_content')
+      }}</a>
       <topbar />
       <sidebar />
-      <router-view />
+      <main id="main-content">
+        <router-view />
+      </main>
     </div>
   </XyzTransition>
 </template>
@@ -31,5 +36,19 @@ export default {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  z-index: 100;
+  padding: 0.5em 1em;
+  background: var(--background);
+  color: var(--text);
+}
+
+.skip-link:focus {
+  top: 0;
 }
 </style>

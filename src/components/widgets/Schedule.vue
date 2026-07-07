@@ -58,7 +58,11 @@
                   color: isDarkTheme ? '#EEE' : '#999',
                   'margin-top': '4px'
                 }"
+                role="button"
+                tabindex="0"
                 @click="expandRootElement(rootElement)"
+                @keydown.enter.prevent="expandRootElement(rootElement)"
+                @keydown.space.prevent="expandRootElement(rootElement)"
               >
                 <chevron-right-icon v-if="!rootElement.expanded" />
                 <chevron-down-icon v-else />
@@ -265,7 +269,15 @@
           >
             <div
               class="milestone pointer"
+              role="button"
+              tabindex="0"
               @click="showEditMilestoneModal(day, currentMilestones[day.text])"
+              @keydown.enter.prevent="
+                showEditMilestoneModal(day, currentMilestones[day.text])
+              "
+              @keydown.space.prevent="
+                showEditMilestoneModal(day, currentMilestones[day.text])
+              "
               v-if="currentMilestones[day.text] && withMilestones"
             >
               <div class="milestone-tooltip">
@@ -305,7 +317,15 @@
               <div
                 class="add-milestone"
                 :title="addMilestoneTitle(day)"
+                role="button"
+                tabindex="0"
                 @click="
+                  showEditMilestoneModal(day, currentMilestones[day.text])
+                "
+                @keydown.enter.prevent="
+                  showEditMilestoneModal(day, currentMilestones[day.text])
+                "
+                @keydown.space.prevent="
                   showEditMilestoneModal(day, currentMilestones[day.text])
                 "
                 v-if="withMilestones && isCurrentUserManager"
@@ -439,7 +459,12 @@
                   <div
                     class="timebar"
                     v-show="isVisible(rootElement)"
+                    role="button"
+                    tabindex="0"
                     @click="$emit('root-element-selected', rootElement)"
+                    @keydown.enter.prevent="
+                      $emit('root-element-selected', rootElement)
+                    "
                     v-if="rootElement.editable"
                   >
                     <div
@@ -616,7 +641,12 @@
                       )
                     "
                     v-show="subchildren || isVisible(childElement)"
+                    role="button"
+                    tabindex="0"
                     @click="$emit('item-selected', rootElement, childElement)"
+                    @keydown.enter.prevent="
+                      $emit('item-selected', rootElement, childElement)
+                    "
                     v-if="withEstimations"
                   >
                     <div
@@ -710,9 +740,20 @@
                         ></div>
                         <div
                           class="timebar-center ellipsis"
+                          role="button"
+                          tabindex="0"
                           @mousedown="moveTimebar(task, $event)"
                           @touchstart="moveTimebar(task, $event)"
                           @click="
+                            $emit(
+                              'task-selected',
+                              rootElement,
+                              childElement,
+                              task,
+                              selection
+                            )
+                          "
+                          @keydown.enter.prevent="
                             $emit(
                               'task-selected',
                               rootElement,

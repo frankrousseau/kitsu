@@ -86,4 +86,32 @@ describe('ComboboxSimple', () => {
   it('hides label when empty', () => {
     expect(wrapper.find('label').exists()).toBe(false)
   })
+
+  it('exposes a radiogroup with roving tabindex', () => {
+    expect(wrapper.find('.flexrow').attributes('role')).toBe('radiogroup')
+    const choices = wrapper.findAll('.choice')
+    expect(choices[0].attributes('role')).toBe('radio')
+    expect(choices[0].attributes('aria-checked')).toBe('true')
+    expect(choices[0].attributes('tabindex')).toBe('0')
+    expect(choices[1].attributes('aria-checked')).toBe('false')
+    expect(choices[1].attributes('tabindex')).toBe('-1')
+  })
+
+  it('selects the next option on ArrowRight', async () => {
+    const choices = wrapper.findAll('.choice')
+    await choices[0].trigger('keydown', { key: 'ArrowRight' })
+    expect(wrapper.emitted('update:model-value')[0]).toEqual(['month'])
+  })
+
+  it('clamps at the first option on ArrowLeft', async () => {
+    const choices = wrapper.findAll('.choice')
+    await choices[0].trigger('keydown', { key: 'ArrowLeft' })
+    expect(wrapper.emitted('update:model-value')[0]).toEqual(['week'])
+  })
+
+  it('selects an option on Enter/Space', async () => {
+    const choices = wrapper.findAll('.choice')
+    await choices[2].trigger('keydown', { key: ' ' })
+    expect(wrapper.emitted('update:model-value')[0]).toEqual(['day'])
+  })
 })

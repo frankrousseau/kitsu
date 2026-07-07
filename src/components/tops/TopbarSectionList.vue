@@ -6,7 +6,14 @@
     }"
   >
     <div class="section-menu">
-      <div class="flexrow unselectable" @click="toggleSectionList">
+      <div
+        class="flexrow unselectable"
+        role="button"
+        tabindex="0"
+        @click="toggleSectionList"
+        @keydown.enter.prevent="toggleSectionList"
+        @keydown.space.prevent="toggleSectionList"
+      >
         <div
           class="selected-section-line flexrow-item flexrow"
           v-if="currentSection"
