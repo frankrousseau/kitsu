@@ -14,7 +14,7 @@
   >
     <img
       :loading="isLazy ? 'lazy' : undefined"
-      :alt="person.full_name"
+      alt=""
       :src="person.avatarPath"
       v-if="person.has_avatar"
     />
@@ -30,7 +30,7 @@
   >
     <img
       :loading="isLazy ? 'lazy' : undefined"
-      :alt="person.full_name"
+      alt=""
       :src="person.avatarPath"
       v-if="person.has_avatar"
     />

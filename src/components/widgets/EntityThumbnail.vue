@@ -22,7 +22,7 @@
       :src="thumbnailPath"
       :style="imgStyle"
       :width="width || ''"
-      :alt="entity?.name"
+      alt=""
     />
   </a>
 
@@ -33,7 +33,7 @@
     :key="thumbnailKey"
     :src="thumbnailPath"
     :style="imgStyle"
-    :alt="entity?.name"
+    alt=""
   />
 
   <span
