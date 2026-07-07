@@ -202,6 +202,15 @@ const actions = {
     return playlist
   },
 
+  async addEntitiesToPlaylist({ commit }, { playlist, entityIds }) {
+    const updatedPlaylist = await playlistsApi.addEntitiesToPlaylist(
+      playlist,
+      entityIds
+    )
+    commit(EDIT_PLAYLIST_END, updatedPlaylist)
+    return updatedPlaylist
+  },
+
   async pushEntityToPlaylist(
     { commit, dispatch },
     { playlist, entity, previewFiles, task, entityMap }

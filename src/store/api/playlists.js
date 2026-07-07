@@ -24,6 +24,12 @@ export default {
     return client.pget(path)
   },
 
+  addEntitiesToPlaylist(playlist, entityIds) {
+    return client.ppost(`/api/actions/playlists/${playlist.id}/add-entities`, {
+      entity_ids: entityIds
+    })
+  },
+
   getPreviewFile(previewFileId) {
     return client.pget(`/api/data/preview-files/${previewFileId}`)
   },
