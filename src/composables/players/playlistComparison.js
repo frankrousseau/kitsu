@@ -126,6 +126,18 @@ export const usePlaylistComparison = ({
       : []
   )
 
+  // When the compared revision changes, a picture index picked on the
+  // previous revision can point past the new one's sub-previews, which
+  // blanks the comparison pane. Reset to the main picture in that case.
+  const clampComparisonPreviewIndex = () => {
+    if (
+      currentComparisonPreviewIndex.value >=
+      currentComparisonPreviewLength.value
+    ) {
+      currentComparisonPreviewIndex.value = 0
+    }
+  }
+
   const goToPreviousComparisonPicture = () => {
     const index = currentComparisonPreviewIndex.value - 1
     currentComparisonPreviewIndex.value =
@@ -188,6 +200,7 @@ export const usePlaylistComparison = ({
 
     // Playlist-specific actions
     toggleComparison,
+    clampComparisonPreviewIndex,
     goToPreviousComparisonPicture,
     goToNextComparisonPicture,
 
