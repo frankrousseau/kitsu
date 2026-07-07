@@ -13,3 +13,12 @@ export const PREVIEW_ROOM_EVENTS = {
   panzoomChanged: 'preview-room:panzoom-changed',
   comparisonPanzoomChanged: 'preview-room:comparison-panzoom-changed'
 }
+
+// 'temp' is the placeholder room id used before a real playlist id is
+// known. isValidRoomId() is shared the same way as the events above: it
+// used to be redeclared verbatim in previewRoom.js, annotationBroadcast.js
+// and PlaylistPlayer.vue.
+export const TEMP_ROOM_ID = 'temp'
+
+export const isValidRoomId = room =>
+  Boolean(room?.id) && room.id !== TEMP_ROOM_ID

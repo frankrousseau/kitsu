@@ -61,3 +61,13 @@ export function getTaskStatusPriorityOfProd(taskStatus, production) {
     production?.task_statuses_link?.[taskStatus.id]?.priority
   return productionPriority || taskStatus.priority
 }
+
+/*
+ * Return a copy of taskType with a `url` field pointing to the given task,
+ * without mutating the taskType object (which is often a store cache entry).
+ */
+export const getTaskTypeWithUrl = (taskType, task, entitySlug) => {
+  if (!task) return taskType
+  const url = `/productions/${task.project_id}/episodes/${task.episode_id || 'all'}/${entitySlug}/tasks/${task.id}`
+  return { ...taskType, url }
+}

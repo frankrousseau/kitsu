@@ -430,19 +430,19 @@ export default {
       const nameData = ['timesheet', this.detailLevel, this.currentYear]
       if (this.detailLevel === 'day') nameData.push(this.currentMonth)
       const name = stringHelpers.slugify(nameData.join('_'))
-      csv.generateTimesheet(
+      csv.generateTimesheet({
         name,
-        this.timesheet,
-        this.filteredPeople,
-        this.unit,
-        this.organisation,
-        this.detailLevel,
-        this.currentYear,
-        this.currentMonth,
-        moment().year(),
-        moment().month() + 1,
-        moment().week()
-      )
+        timesheet: this.timesheet,
+        people: this.filteredPeople,
+        unit: this.unit,
+        organisation: this.organisation,
+        detailLevel: this.detailLevel,
+        todayYear: this.currentYear,
+        todayMonth: this.currentMonth,
+        year: moment().year(),
+        month: moment().month() + 1,
+        week: moment().week()
+      })
     },
 
     updateRoute({ productionId, studioId }) {

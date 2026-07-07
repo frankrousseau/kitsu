@@ -194,7 +194,7 @@ const currentStatusAutomation = computed(() => {
   border: 1px solid $light-grey-light;
   border-bottom-left-radius: 1em;
   border-bottom-right-radius: 1em;
-  z-index: 300;
+  z-index: $z-dropdown;
   margin-left: -1px;
   max-height: 180px;
   top: 56px;

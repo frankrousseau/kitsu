@@ -251,7 +251,7 @@ const { activeIndex, onKeydown, optionId } = useComboboxKeyboard({
   overflow-y: auto;
   position: absolute;
   width: 195px;
-  z-index: 1000;
+  z-index: $z-modal;
 
   &.open-top {
     bottom: 41px;

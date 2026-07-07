@@ -933,6 +933,7 @@ import { usePlaylistComparison } from '@/composables/players/playlistComparison'
 import { usePreviewShortcuts } from '@/composables/players/previewShortcuts'
 import { usePlayerTransport } from '@/composables/players/transport'
 import { usePreviewRoom } from '@/composables/previewRoom'
+import { isValidRoomId } from '@/lib/players/events'
 import { scrubFrame } from '@/lib/players/scrub'
 import preferences from '@/lib/preferences'
 import {
@@ -1798,8 +1799,6 @@ const clearFocus = () => {
 }
 
 // Helpers
-
-const isValidRoomId = r => !!r?.id && r.id !== 'temp'
 
 const isDefaultBackground = background => {
   const defaultId = currentProduction.value?.default_preview_background_file_id

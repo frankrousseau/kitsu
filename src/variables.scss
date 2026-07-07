@@ -39,6 +39,17 @@ $blue-light: #92a9fa;
 $blue: #7289da;
 $yellow: #ffc107;
 
+// Z-index scale. Values match what's already used across the app for each
+// tier (grepped src/ before picking them) so adopting a variable never
+// changes the stacking order. Only wired up in App.vue and the Combobox*
+// menus for now; the rest of the app's z-index values are still magic
+// numbers and are left alone here (follow-up).
+$z-sticky: 100;
+$z-dropdown: 300;
+$z-topbar: 204;
+$z-modal: 1000;
+$z-tooltip: 300000;
+
 :root {
   --background: #ffffff;
   --background-rgb: 255, 255, 255;

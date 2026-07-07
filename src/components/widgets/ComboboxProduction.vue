@@ -176,7 +176,7 @@ const currentProduction = computed(() => {
   width: 300px;
   position: absolute;
   border: 1px solid $light-grey-light;
-  z-index: 300;
+  z-index: $z-dropdown;
   margin-left: -1px;
   max-height: 200px;
   overflow-y: auto;

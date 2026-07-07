@@ -23,22 +23,20 @@ const EQUAL_ASSIGNATION_REGEX = /assignedto\[([^[]*)\]=\[([^[]*)\]/g
  * Then apply filters found on result list.
  */
 export const applyFilters = (entries, filters, taskMap) => {
-  if (filters && filters.length > 0) {
-    const result = entries.filter(entry => {
-      let isOk = null
-      for (let i = 0; i < filters.length; i++) {
-        const filter = filters[i]
-        if (isOk === false && !filters.union) break
-        if (isOk === true && filters.union) break
-        isOk =
-          applyFiltersFunctions[filter.type](entry, filter, taskMap) || false
-      }
-      return isOk
-    })
-    return result
-  } else {
-    return entries
-  }
+  if (!filters || filters.length === 0) return entries
+
+  const matchesFilter = (entry, filter) =>
+    applyFiltersFunctions[filter.type](entry, filter, taskMap) || false
+
+  // filters.union switches the combinator: OR (some) when set by a +(...)
+  // query group, AND (every) otherwise.
+  return filters.union
+    ? entries.filter(entry =>
+        filters.some(filter => matchesFilter(entry, filter))
+      )
+    : entries.filter(entry =>
+        filters.every(filter => matchesFilter(entry, filter))
+      )
 }
 
 /*

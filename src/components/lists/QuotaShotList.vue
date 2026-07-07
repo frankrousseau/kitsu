@@ -92,23 +92,23 @@ export default {
     thead,
     tbody tr:nth-child(odd) {
       color: $white-grey;
-      background: #36393f;
+      background: var(--background);
     }
 
     tbody tr:nth-child(even) {
       color: $white-grey;
-      background: #46494f;
+      background: var(--background-alt);
     }
 
     thead th,
     thead:hover {
       color: $white-grey;
-      background: #36393f;
-      border-color: #666666;
+      background: var(--background);
+      border-color: var(--border-alt);
     }
 
     tbody td {
-      border-color: #25282e;
+      border-color: var(--border);
     }
 
     tbody tr:hover {
