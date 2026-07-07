@@ -45,7 +45,7 @@
         >
           <toggle-button
             :label="option.label"
-            :model-value="modelValue[option.value]"
+            :model-value="!!modelValue[option.value]"
           />
         </div>
       </div>
