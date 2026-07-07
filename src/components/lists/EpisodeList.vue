@@ -716,6 +716,11 @@ export default {
       return this.episodeSelectionGrid.has(`${lineIndex}-${columnIndex}`)
     },
 
+    // Hook for entity_list.js's data-driven shift-rectangle selection.
+    entityForRow(lineIndex) {
+      return this.displayedEpisodes[lineIndex]
+    },
+
     episodePath(episodeId) {
       return this.getPath('episode', episodeId)
     },

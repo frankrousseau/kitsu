@@ -736,11 +736,10 @@ export default {
     'create-tasks',
     'delete-clicked',
     'edit-clicked',
-    'keep-task-panel-open',
     'metadata-changed',
     'new-clicked',
     'restore-clicked'
-    // 'scroll' comes from entityListMixin's emits + onBodyScroll
+    // 'scroll' and 'keep-task-panel-open' come from entityListMixin
   ],
 
   // PERF-1: virtualized rows, ported from the EditList pilot. useVirtualizer
@@ -1072,15 +1071,6 @@ export default {
       return map
     },
 
-    // Sticked + non-sticked validation columns in the same order as the x/y
-    // grid coordinates used by isSelected()/onTaskSelected().
-    allDisplayedValidationColumns() {
-      return [
-        ...this.stickedDisplayedValidationColumns,
-        ...this.nonStickedDisplayedValidationColumns
-      ]
-    },
-
     maxAssigneesPerCell() {
       return MAX_ASSIGNEES_PER_CELL
     },
@@ -1190,92 +1180,22 @@ export default {
       return this.assetSelectionGrid.has(`${lineIndex}-${columnIndex}`)
     },
 
-    // PERF-1: overrides entity_list.js's onTaskSelected(), same local
-    // override as EditList (consolidating the two copies back into the
-    // shared mixin is ARCH-4's job). The mixin rebuilds a shift-click range
-    // selection by reading `this.$refs['validation-x-y']` for every cell in
-    // the rectangle, which silently drops cells outside the rendered window
-    // once rows are virtualized. This resolves the same rectangle from
-    // rowIndexToAsset/taskTypeMap/taskMap instead. Selectability mirrors the
-    // template exactly: sticked cells never bind :selectable (always
-    // selectable), non-sticked cells use isSelectable() (workflow + shared
-    // asset checks). Everything outside the double loop is unchanged from
-    // the mixin.
-    onTaskSelected(validationInfo, sticked) {
-      const columnOffset = this.stickedDisplayedValidationColumns.length
-      const selection = []
-      if (!sticked) {
-        validationInfo = { ...validationInfo }
-        validationInfo.y += columnOffset
-      }
-      this.$emit('keep-task-panel-open', true)
-      if (validationInfo.isShiftKey) {
-        if (this.lastSelection) {
-          let startX = this.lastSelection.x
-          let endX = validationInfo.x
-          let startY = this.lastSelection.y
-          if (!sticked) startY += columnOffset
-          let endY = validationInfo.y
-          const grid = this.assetSelectionGrid
-          if (validationInfo.x < this.lastSelection.x) {
-            startX = validationInfo.x
-            endX = this.lastSelection.x
-          }
-          if (validationInfo.y < this.lastSelection.y) {
-            startY = validationInfo.y
-            endY = this.lastSelection.y
-            if (!sticked) endY += columnOffset
-          }
+    // Hook for entity_list.js's data-driven shift-rectangle selection:
+    // getIndex(i, k) offsets come from the unfiltered displayedAssets
+    // groups while i indexes the filtered group, mirroring the template's
+    // v-for + :row-x combination (see rowIndexToAsset).
+    entityForRow(lineIndex) {
+      return this.rowIndexToAsset.get(lineIndex)
+    },
 
-          for (let i = startX; i <= endX; i++) {
-            const asset = this.rowIndexToAsset.get(i)
-            if (asset) {
-              for (let j = startY; j <= endY; j++) {
-                const columnId = this.allDisplayedValidationColumns[j]
-                const isSelectedCell = grid?.has(`${i}-${j}`)
-                const selectable =
-                  j < columnOffset || this.isSelectable(asset, columnId)
-                if (columnId && selectable && !isSelectedCell) {
-                  selection.push({
-                    entity: asset,
-                    column: this.taskTypeMap.get(columnId),
-                    task: this.taskMap.get(asset.validations?.get(columnId)),
-                    x: i,
-                    y: j
-                  })
-                }
-              }
-            }
-          }
-          this.$store.commit('ADD_SELECTED_TASK', validationInfo)
-        }
-      } else if (!validationInfo.isCtrlKey) {
-        this.$store.commit('CLEAR_SELECTED_TASKS')
-      }
-      if (selection.length === 0) {
-        this.$store.commit('ADD_SELECTED_TASK', validationInfo)
-      } else {
-        this.$store.commit('ADD_SELECTED_TASKS', selection)
-      }
-      this.updateTaskInQuery()
-
-      if (!validationInfo.isShiftKey && validationInfo.isUserClick) {
-        const x = validationInfo.x
-        let y = validationInfo.y
-        if (!sticked) y -= columnOffset
-        this.lastSelection = { x, y }
-        // The clicked cell was necessarily visible to be clicked, so it is
-        // always currently rendered: this ref lookup stays safe unchanged.
-        const ref = `validation-${x}-${y}`
-        const validationCell = this.$refs[ref][0]
-        this.$nextTick(() => {
-          this.scrollToValidationCell(validationCell)
-        })
-      }
-
-      this.$nextTick(() => {
-        this.$emit('keep-task-panel-open', false)
-      })
+    // Selectability mirrors the template exactly: sticked cells never bind
+    // :selectable (always selectable), non-sticked cells use isSelectable()
+    // (workflow + shared-asset checks).
+    isCellSelectable(asset, columnId, columnIndex) {
+      return (
+        columnIndex < this.stickedDisplayedValidationColumns.length ||
+        this.isSelectable(asset, columnId)
+      )
     },
 
     toggleLine(asset, event) {

@@ -624,10 +624,9 @@ export default {
     'delete-clicked',
     'edit-clicked',
     'edit-history',
-    'keep-task-panel-open',
     'metadata-changed',
     'restore-clicked'
-    // 'scroll' comes from entityListMixin's emits + onBodyScroll
+    // 'scroll' and 'keep-task-panel-open' come from entityListMixin
   ],
 
   // PERF-1 pilot: useVirtualizer is a composable, so it needs a setup()
@@ -808,15 +807,6 @@ export default {
       return MAX_ASSIGNEES_PER_CELL
     },
 
-    // Sticked + non-sticked validation columns in the same order as the x/y
-    // grid coordinates used by isSelected()/onTaskSelected() below.
-    allDisplayedValidationColumns() {
-      return [
-        ...this.stickedDisplayedValidationColumns,
-        ...this.nonStickedDisplayedValidationColumns
-      ]
-    },
-
     // Spans the spacer rows across every column currently in the header,
     // so they don't leave a jagged one-column-wide row in the table.
     totalColumnsCount() {
@@ -866,94 +856,9 @@ export default {
       return this.editSelectionGrid.has(`${lineIndex}-${columnIndex}`)
     },
 
-    // PERF-1 pilot: overrides entity_list.js's onTaskSelected(). The shared
-    // version rebuilds a shift-click range selection by reading
-    // `this.$refs['validation-i-j']` for every cell in the rectangle, which
-    // only works when every row is in the DOM. With rows virtualized, cells
-    // outside the rendered window have no ref and get silently dropped from
-    // the range. This override resolves the same range from
-    // displayedEdits/taskTypeMap/taskMap instead, so shift-click still
-    // selects the full range regardless of what is currently scrolled into
-    // view. Everything outside the double loop is unchanged from the mixin.
-    onTaskSelected(validationInfo, sticked) {
-      const columnOffset = this.stickedDisplayedValidationColumns.length
-      const selection = []
-      if (!sticked) {
-        validationInfo = { ...validationInfo }
-        validationInfo.y += columnOffset
-      }
-      this.$emit('keep-task-panel-open', true)
-      if (validationInfo.isShiftKey) {
-        if (this.lastSelection) {
-          let startX = this.lastSelection.x
-          let endX = validationInfo.x
-          let startY = this.lastSelection.y
-          if (!sticked) startY += columnOffset
-          let endY = validationInfo.y
-          const grid = this.editSelectionGrid
-          if (validationInfo.x < this.lastSelection.x) {
-            startX = validationInfo.x
-            endX = this.lastSelection.x
-          }
-          if (validationInfo.y < this.lastSelection.y) {
-            startY = validationInfo.y
-            endY = this.lastSelection.y
-            if (!sticked) endY += columnOffset
-          }
-
-          for (let i = startX; i <= endX; i++) {
-            const edit = this.displayedEdits[i]
-            if (edit) {
-              for (let j = startY; j <= endY; j++) {
-                const columnId = this.allDisplayedValidationColumns[j]
-                const isSelectedCell = grid?.has(`${i}-${j}`)
-                // ValidationCell's `selectable` prop defaults to true and is
-                // never bound in this list's template, so every column in
-                // range is selectable here (unlike the generic mixin
-                // version, which supports lists that do restrict it).
-                if (columnId && !isSelectedCell) {
-                  selection.push({
-                    entity: edit,
-                    column: this.taskTypeMap.get(columnId),
-                    task: this.taskMap.get(
-                      edit.validations ? edit.validations.get(columnId) : null
-                    ),
-                    x: i,
-                    y: j
-                  })
-                }
-              }
-            }
-          }
-          this.$store.commit('ADD_SELECTED_TASK', validationInfo)
-        }
-      } else if (!validationInfo.isCtrlKey) {
-        this.$store.commit('CLEAR_SELECTED_TASKS')
-      }
-      if (selection.length === 0) {
-        this.$store.commit('ADD_SELECTED_TASK', validationInfo)
-      } else {
-        this.$store.commit('ADD_SELECTED_TASKS', selection)
-      }
-      this.updateTaskInQuery()
-
-      if (!validationInfo.isShiftKey && validationInfo.isUserClick) {
-        const x = validationInfo.x
-        let y = validationInfo.y
-        if (!sticked) y -= columnOffset
-        this.lastSelection = { x, y }
-        // The clicked cell was necessarily visible to be clicked, so it is
-        // always currently rendered: this ref lookup stays safe unchanged.
-        const ref = `validation-${x}-${y}`
-        const validationCell = this.$refs[ref][0]
-        this.$nextTick(() => {
-          this.scrollToValidationCell(validationCell)
-        })
-      }
-
-      this.$nextTick(() => {
-        this.$emit('keep-task-panel-open', false)
-      })
+    // Hook for entity_list.js's data-driven shift-rectangle selection.
+    entityForRow(lineIndex) {
+      return this.displayedEdits[lineIndex]
     },
 
     toggleLine(edit, event) {

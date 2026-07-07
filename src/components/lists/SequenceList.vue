@@ -676,6 +676,11 @@ export default {
       return this.sequenceSelectionGrid.has(`${lineIndex}-${columnIndex}`)
     },
 
+    // Hook for entity_list.js's data-driven shift-rectangle selection.
+    entityForRow(lineIndex) {
+      return this.displayedSequences[lineIndex]
+    },
+
     sequencePath(sequenceId) {
       return this.getPath('sequence', sequenceId)
     },
