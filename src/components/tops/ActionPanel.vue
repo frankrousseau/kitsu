@@ -1366,7 +1366,7 @@ export default {
       'setAssetSearch',
       'setLastTaskPreview',
       'subscribeToTask',
-      'unassignPersonFromTask',
+      'unassignPersonFromTasks',
       'unassignSelectedTasks',
       'unsubscribeFromTask'
     ]),
@@ -1420,16 +1420,14 @@ export default {
       const person = this.isCurrentUserArtist ? this.user : this.person
       if (person) {
         this.loading.assignation = true
-        func
-          .runPromiseAsSeries(
-            Array.from(this.selectedTasks.values()).map(task => {
-              return this.unassignPersonFromTask({ task, person })
-            })
-          )
-          .then(() => {
+        this.unassignPersonFromTasks({
+          tasks: Array.from(this.selectedTasks.values()),
+          person
+        })
+          .catch(console.error)
+          .finally(() => {
             this.loading.assignation = false
           })
-          .catch(console.error)
       }
     },
 

@@ -761,11 +761,21 @@ const actions = {
     })
   },
 
-  unassignPersonFromTask({ commit }, { task, person }) {
+  unassignPersonFromTask({ dispatch }, { task, person }) {
+    return dispatch('unassignPersonFromTasks', { tasks: [task], person })
+  },
+
+  unassignPersonFromTasks({ commit }, { tasks, person }) {
+    if (tasks.length === 0) return Promise.resolve()
     return tasksApi
-      .unassignPersonFromTask(task.id, person.id)
+      .unassignPersonFromTasks(
+        tasks.map(task => task.id),
+        person.id
+      )
       .then(() => {
-        commit(UNASSIGN_TASK, { task, person })
+        tasks.forEach(task => {
+          commit(UNASSIGN_TASK, { task, person })
+        })
       })
       .catch(console.error)
   },

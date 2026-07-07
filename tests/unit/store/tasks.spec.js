@@ -3,7 +3,13 @@ import { vi } from 'vitest'
 // Importing the tasks module transitively pulls in the root store
 // (lib/models → timezone → @/store); stub it so no Vuex store is built.
 vi.mock('@/store', () => ({ default: {} }))
+vi.mock('@/store/api/tasks', () => ({
+  default: {
+    unassignPersonFromTasks: vi.fn(() => Promise.resolve())
+  }
+}))
 
+import tasksApi from '@/store/api/tasks'
 import tasksStore from '@/store/modules/tasks'
 import peopleStore from '@/store/modules/people'
 
@@ -125,6 +131,42 @@ describe('Tasks store', () => {
       tasksStore.mutations.ADD_REPLY_TO_COMMENT({}, { comment, reply })
       expect(comment.replies[0].person.full_name).toEqual('Guest Author')
       expect(comment.replies[0].person.initials).toEqual('GA')
+    })
+  })
+
+  describe('batch actions', () => {
+    beforeEach(() => {
+      vi.clearAllMocks()
+    })
+
+    test('unassignPersonFromTasks sends one request and commits per task', async () => {
+      const commit = vi.fn()
+      const person = { id: 'person-1' }
+      const tasks = [{ id: 'task-1' }, { id: 'task-2' }]
+      await tasksStore.actions.unassignPersonFromTasks(
+        { commit },
+        { tasks, person }
+      )
+      expect(tasksApi.unassignPersonFromTasks).toHaveBeenCalledTimes(1)
+      expect(tasksApi.unassignPersonFromTasks).toHaveBeenCalledWith(
+        ['task-1', 'task-2'],
+        'person-1'
+      )
+      expect(commit).toHaveBeenCalledTimes(2)
+      expect(commit).toHaveBeenNthCalledWith(1, 'UNASSIGN_TASK', {
+        task: tasks[0],
+        person
+      })
+    })
+
+    test('unassignPersonFromTasks skips the request on an empty selection', async () => {
+      const commit = vi.fn()
+      await tasksStore.actions.unassignPersonFromTasks(
+        { commit },
+        { tasks: [], person: { id: 'person-1' } }
+      )
+      expect(tasksApi.unassignPersonFromTasks).not.toHaveBeenCalled()
+      expect(commit).not.toHaveBeenCalled()
     })
   })
 

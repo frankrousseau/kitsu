@@ -228,9 +228,9 @@ export default {
     })
   },
 
-  unassignPersonFromTask(taskId, personId) {
+  unassignPersonFromTasks(taskIds, personId) {
     return client.pput('/api/actions/tasks/clear-assignation', {
-      task_ids: [taskId],
+      task_ids: taskIds,
       person_id: personId
     })
   },
