@@ -197,7 +197,7 @@ export default {
     currentProduction: {
       immediate: true,
       handler() {
-        const userLocale = this.user?.locale.substring(0, 2)
+        const userLocale = (this.user?.locale || 'en').substring(0, 2)
         const variant = this.currentProduction?.production_style
         if (userLocale !== 'en') {
           return

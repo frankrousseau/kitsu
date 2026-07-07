@@ -508,6 +508,7 @@ export default {
       draftComment: {},
       previewForms: [],
       currentFrame: 0,
+      isUseCurrentFrame: false,
       currentTask: null,
       hookupPlaylistTaskIds: [],
       selectedTab: 'validation',

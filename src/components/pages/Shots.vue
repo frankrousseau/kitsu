@@ -374,6 +374,7 @@ export default {
       displaySettings: {
         bigThumbnails: false,
         contactSheetMode: false,
+        fullTaskTypeNames: false,
         inOutTimecode: false,
         showAssignations: true,
         showInfos: true

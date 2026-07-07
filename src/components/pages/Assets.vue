@@ -328,6 +328,7 @@ export default {
       displaySettings: {
         bigThumbnails: false,
         contactSheetMode: false,
+        fullTaskTypeNames: false,
         showAssignations: true,
         showInfos: true,
         showSharedAssets: true,
