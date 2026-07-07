@@ -53,8 +53,6 @@ app.directive('focus', {
 // Inject the socket into the store.
 store.$socket = app.config.globalProperties.$socket
 
-app.config.compilerOptions.whitespace = 'preserve'
-
 // Last-resort error logging: Sentry only runs in production builds, and
 // without these handlers dev/self-hosted errors vanish silently.
 app.config.errorHandler = (err, instance, info) => {
