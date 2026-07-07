@@ -149,6 +149,12 @@ defineExpose({ getValue, setValue, focus, clearSearch })
   color: var(--text);
 }
 
+// The wrapper's focus-within green border is the focus indicator here;
+// the global :focus-visible outline would double it.
+.search-input:focus-visible {
+  outline: none;
+}
+
 .search-icon {
   width: 20px;
   margin-top: 5px;
@@ -195,7 +201,7 @@ defineExpose({ getValue, setValue, focus, clearSearch })
   }
 }
 
-.search-field-wrapper:focus,
+.search-field-wrapper:focus-within,
 .search-field-wrapper:hover {
   border-color: $green;
 }
