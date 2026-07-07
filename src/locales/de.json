@@ -1697,6 +1697,7 @@
       "hours": "Stunden",
       "month": "Monat",
       "time_spents": "Zeitaufwand (Stunden)",
+      "timelog_title": "Timelog",
       "title": "Stundenzettel",
       "year": "Jahr",
       "confirm_day_off": "Wenn Sie diesen Tag als freien Tag festlegen, werden alle für den aktuellen Tag eingetragenen Zeiten gelöscht. Sind Sie sicher, dass Sie fortfahren möchten?",

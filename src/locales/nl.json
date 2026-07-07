@@ -1697,6 +1697,7 @@
       "hours": "uren",
       "month": "Maand",
       "time_spents": "Bestede tijd (uren)",
+      "timelog_title": "Tijdlog",
       "title": "Urenstaten",
       "year": "Jaar",
       "confirm_day_off": "Als u deze dag als vrije dag instelt, wordt alle voor de huidige dag ingevulde tijd gewist. Weet je zeker dat je door wilt gaan?",

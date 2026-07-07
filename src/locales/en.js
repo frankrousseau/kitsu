@@ -2204,6 +2204,7 @@ export default {
     month: 'Month',
     off: 'Off',
     time_spents: 'Time Spent (hours)',
+    timelog_title: 'Timelog',
     title: 'Timesheets',
     unit: 'Unit',
     year: 'Year'

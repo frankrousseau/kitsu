@@ -1697,6 +1697,7 @@
       "hours": "小時",
       "month": "月",
       "time_spents": "已用時長(小時)",
+      "timelog_title": "時間記錄",
       "title": "時間表(多個)",
       "year": "年",
       "confirm_day_off": "將這天設定為休息日會刪除當天記錄的所有時間。您確定要繼續嗎？",

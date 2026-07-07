@@ -1700,6 +1700,7 @@
       "hours": "ore",
       "month": "Mese",
       "time_spents": "Tempo impiegato (ore)",
+      "timelog_title": "Registro ore",
       "title": "Timesheet",
       "year": "Anno",
       "confirm_day_off": "Impostare questo giorno come giorno di ferie cancellerà tutto il tempo registrato per il giorno corrente. Sei sicuro di voler continuare?",
