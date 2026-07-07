@@ -1,6 +1,7 @@
 import moment from 'moment'
 
 import assetsApi from '@/store/api/assets'
+import entitiesApi from '@/store/api/entities'
 import peopleApi from '@/store/api/people'
 
 import assetTypeStore from '@/store/modules/assettypes'
@@ -818,19 +819,28 @@ const actions = {
     commit(CLEAR_SELECTED_ASSETS)
   },
 
-  async deleteSelectedAssets({ state, dispatch }) {
+  async deleteSelectedAssets({ state, commit, rootGetters }) {
     let selectedAssetIds = [...state.selectedAssets.values()]
       .filter(asset => !asset.canceled)
       .map(asset => asset.id)
     if (selectedAssetIds.length === 0) {
       selectedAssetIds = [...state.selectedAssets.keys()]
     }
-    for (const assetId of selectedAssetIds) {
-      const asset = cache.assetMap.get(assetId)
-      if (asset) {
-        await dispatch('deleteAsset', asset)
+    const assets = selectedAssetIds
+      .map(assetId => cache.assetMap.get(assetId))
+      .filter(asset => asset)
+    if (assets.length === 0) return
+    await entitiesApi.deleteEntities(
+      rootGetters.currentProduction.id,
+      assets.map(asset => asset.id)
+    )
+    assets.forEach(asset => {
+      if (asset.tasks.length > 0 && !asset.canceled) {
+        commit(CANCEL_ASSET, asset)
+      } else {
+        commit(REMOVE_ASSET, asset)
       }
-    }
+    })
   },
 
   async loadSharedAssets({ commit, rootGetters }, { production }) {

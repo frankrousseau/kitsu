@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 
 import conceptsApi from '@/store/api/concepts'
+import entitiesApi from '@/store/api/entities'
 
 import {
   LOAD_CONCEPTS_START,
@@ -132,19 +133,24 @@ const actions = {
     commit(ADD_SELECTED_CONCEPTS, concept)
   },
 
-  async deleteSelectedConcepts({ state, dispatch }) {
+  async deleteSelectedConcepts({ state, commit, rootGetters }) {
     let selectedConceptIds = [...state.selectedConcepts.values()]
       .filter(concept => !concept.canceled)
       .map(concept => concept.id)
     if (selectedConceptIds.length === 0) {
       selectedConceptIds = [...state.selectedConcepts.keys()]
     }
-    for (const conceptId of selectedConceptIds) {
-      const concept = state.conceptMap.get(conceptId)
-      if (concept) {
-        await dispatch('deleteConcept', concept)
-      }
-    }
+    const concepts = selectedConceptIds
+      .map(conceptId => state.conceptMap.get(conceptId))
+      .filter(concept => concept)
+    if (concepts.length === 0) return
+    await entitiesApi.deleteEntities(
+      rootGetters.currentProduction.id,
+      concepts.map(concept => concept.id)
+    )
+    concepts.forEach(concept => {
+      commit(DELETE_CONCEPT_END, concept)
+    })
   },
 
   clearSelectedConcepts({ commit }) {

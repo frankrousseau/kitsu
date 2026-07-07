@@ -1,7 +1,8 @@
 import moment from 'moment'
 
-import peopleApi from '@/store/api/people'
 import editsApi from '@/store/api/edits'
+import entitiesApi from '@/store/api/entities'
+import peopleApi from '@/store/api/people'
 
 import peopleStore from '@/store/modules/people'
 import productionsStore from '@/store/modules/productions'
@@ -645,19 +646,28 @@ const actions = {
     commit(CLEAR_SELECTED_EDITS)
   },
 
-  async deleteSelectedEdits({ state, dispatch }) {
+  async deleteSelectedEdits({ state, commit, rootGetters }) {
     let selectedEditIds = [...state.selectedEdits.values()]
       .filter(edit => !edit.canceled)
       .map(edit => edit.id)
     if (selectedEditIds.length === 0) {
       selectedEditIds = [...state.selectedEdits.keys()]
     }
-    for (const editId of selectedEditIds) {
-      const edit = cache.editMap.get(editId)
-      if (edit) {
-        await dispatch('deleteEdit', edit)
+    const edits = selectedEditIds
+      .map(editId => cache.editMap.get(editId))
+      .filter(edit => edit)
+    if (edits.length === 0) return
+    await entitiesApi.deleteEntities(
+      rootGetters.currentProduction.id,
+      edits.map(edit => edit.id)
+    )
+    edits.forEach(edit => {
+      if (edit.tasks.length > 0 && !edit.canceled) {
+        commit(CANCEL_EDIT, edit)
+      } else {
+        commit(REMOVE_EDIT, edit)
       }
-    }
+    })
   }
 }
 

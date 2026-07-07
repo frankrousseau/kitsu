@@ -1,5 +1,6 @@
 import moment from 'moment'
 
+import entitiesApi from '@/store/api/entities'
 import peopleApi from '@/store/api/people'
 import shotsApi from '@/store/api/shots'
 
@@ -763,19 +764,28 @@ const actions = {
     commit(CLEAR_SELECTED_SHOTS)
   },
 
-  async deleteSelectedShots({ state, dispatch }) {
+  async deleteSelectedShots({ state, commit, rootGetters }) {
     let selectedShotIds = [...state.selectedShots.values()]
       .filter(shot => !shot.canceled)
       .map(shot => shot.id)
     if (selectedShotIds.length === 0) {
       selectedShotIds = [...state.selectedShots.keys()]
     }
-    for (const shotId of selectedShotIds) {
-      const shot = cache.shotMap.get(shotId)
-      if (shot) {
-        await dispatch('deleteShot', shot)
+    const shots = selectedShotIds
+      .map(shotId => cache.shotMap.get(shotId))
+      .filter(shot => shot)
+    if (shots.length === 0) return
+    await entitiesApi.deleteEntities(
+      rootGetters.currentProduction.id,
+      shots.map(shot => shot.id)
+    )
+    shots.forEach(shot => {
+      if (shot.tasks.length > 0 && !shot.canceled) {
+        commit(CANCEL_SHOT, shot)
+      } else {
+        commit(REMOVE_SHOT, shot)
       }
-    }
+    })
   },
 
   async setNbFramesFromTaskTypePreviews(
