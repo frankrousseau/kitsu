@@ -1174,7 +1174,10 @@ const mutations = {
       newAsset.production_id = newAsset.project_id
       newAsset.episode_id = newAsset.source_id
       insertSortedAsset(cache.assets, newAsset)
-      cache.result.push(newAsset)
+      // With no active search, cache.result aliases cache.assets
+      // (buildResult / LOAD_ASSETS_END assign the same array), so pushing
+      // here too would insert the new asset twice into the shared array.
+      if (cache.result !== cache.assets) cache.result.push(newAsset)
       state.displayedAssets.push(newAsset)
       state.assetFilledColumns = getFilledColumns(state.displayedAssets)
       state.displayedAssetsLength = cache.assets.filter(a => !a.canceled).length
