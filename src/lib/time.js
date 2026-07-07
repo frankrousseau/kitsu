@@ -180,7 +180,10 @@ export const getDatesFromStartDate = (
   estimation,
   daysOff = []
 ) => {
-  if (estimation > 0 && !organisation.format_duration_in_hours) {
+  // The estimation is always expressed in days here, whatever the display
+  // preference: skipping the computation for hours-displaying studios left
+  // a null due date that ended up serialized as "Invalid date".
+  if (estimation > 0) {
     dueDate = addBusinessDays(startDate, Math.ceil(estimation) - 1, daysOff)
   }
 
@@ -211,7 +214,8 @@ export const getDatesFromEndDate = (
   estimation,
   daysOff = []
 ) => {
-  if (estimation > 0 && !organisation.format_duration_in_hours) {
+  // Same day-based contract as getDatesFromStartDate.
+  if (estimation > 0) {
     startDate = removeBusinessDays(dueDate, Math.ceil(estimation) - 1, daysOff)
   }
 
