@@ -969,6 +969,10 @@ thead .name.sequence-name {
   width: 70px;
 }
 
+// Anchored on the th too: with rows virtualized, table auto-layout only
+// sees the rendered window, so a td-only min-width stops binding when no
+// row is rendered; the thead always is.
+th.resolution,
 td.resolution {
   min-width: 110px;
   max-width: 110px;
