@@ -9,7 +9,7 @@ export default {
     let path = '/api/data/shots/with-tasks'
     if (production) path += `?project_id=${production.id}`
     if (episode) path += `&episode_id=${episode.id}`
-    return client.pget(path)
+    return client.pgetNdjson(path)
   },
 
   getSequence(sequenceId) {
