@@ -974,9 +974,9 @@ export default {
     'keep-task-panel-open',
     'metadata-changed',
     'restore-clicked',
-    'scroll',
     'sequence-clicked',
     'shot-history'
+    // 'scroll' comes from entityListMixin's emits + onBodyScroll
   ],
 
   // PERF-1: virtualized rows, same recipe as EditList/AssetList.
@@ -1299,7 +1299,7 @@ export default {
   },
 
   methods: {
-    ...mapActions(['displayMoreShots', 'setShotSelection']),
+    ...mapActions(['setShotSelection']),
 
     formatToTimecode,
 
@@ -1443,20 +1443,10 @@ export default {
       })
     },
 
-    onBodyScroll(event) {
-      if (!this.$refs.body) return
-      const position = event.target
-      this.$emit('scroll', position.scrollTop)
-      const maxHeight =
-        this.$refs.body.scrollHeight - this.$refs.body.offsetHeight
-      if (maxHeight < position.scrollTop + 100) {
-        this.loadMoreShots()
-      }
-    },
-
-    loadMoreShots() {
-      this.displayMoreShots()
-    },
+    // PERF-1: no local onBodyScroll anymore. The store now displays the
+    // full result at once (rows are virtualized), so the old
+    // scroll-to-bottom -> displayMoreShots wiring is gone and the mixin's
+    // onBodyScroll (scroll-position emit only) takes over.
 
     shotPath(shotId) {
       return this.getPath('shot', shotId)
