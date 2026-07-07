@@ -13,7 +13,7 @@
         <template v-if="!entry.has_avatar">
           {{ generatedAvatar }}
         </template>
-        <img :src="thumbnailPath" :alt="entry.name" v-else />
+        <img :src="thumbnailPath" :alt="onlyAvatar ? entry.name : ''" v-else />
       </div>
       <span class="flexrow-item" v-if="!onlyAvatar">
         {{ entry.name }}
@@ -28,7 +28,7 @@
         <template v-if="!entry.has_avatar">
           {{ generatedAvatar }}
         </template>
-        <img :src="thumbnailPath" :alt="entry.name" v-else />
+        <img :src="thumbnailPath" :alt="onlyAvatar ? entry.name : ''" v-else />
       </div>
       <span class="flexrow-item" v-if="!onlyAvatar">
         {{ entry.name }}

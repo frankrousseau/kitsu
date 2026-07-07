@@ -63,7 +63,7 @@
         :src="thumbnailInfo.src"
         width="150"
         height="100"
-        :alt="thumbnailInfo.name"
+        alt=""
         v-if="thumbnailInfo.src"
       />
       <span class="flexrow-item">

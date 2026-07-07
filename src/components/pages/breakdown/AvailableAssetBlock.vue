@@ -203,6 +203,7 @@ export default {
   text-align: center;
   justify-content: center;
   align-items: center;
+  overflow: hidden;
   z-index: 2;
   width: 60px;
   height: 60px;

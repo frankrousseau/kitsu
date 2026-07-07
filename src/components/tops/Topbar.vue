@@ -1258,6 +1258,7 @@ export default {
 .studio-logo-wrapper {
   margin: 8px 8px;
   margin-right: 1em;
+  overflow: hidden;
   padding: 0;
 
   .studio-logo {

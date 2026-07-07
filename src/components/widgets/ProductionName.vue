@@ -15,7 +15,7 @@
       <template v-if="!production.has_avatar">{{ avatar }}</template>
       <img
         :src="thumbnailPath"
-        :alt="production.name"
+        :alt="onlyAvatar ? production.name : ''"
         :style="{
           width: `${size}px`,
           height: `${size}px`

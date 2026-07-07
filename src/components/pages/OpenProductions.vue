@@ -68,7 +68,7 @@
       class="flexrow open-productions-header"
       v-if="!isOpenProductionsLoading && openProductions.length > 0"
     >
-      <img class="logo" src="../../assets/kitsu.png" width="23" alt="Kitsu" />
+      <img class="logo" src="../../assets/kitsu.png" width="23" alt="" />
       <h1 class="title filler">
         {{ $t('productions.home.title') }}
       </h1>
@@ -120,11 +120,7 @@
               <template v-if="!production.has_avatar">
                 {{ generateAvatar(production) }}
               </template>
-              <img
-                :src="getThumbnailPath(production)"
-                :alt="production.name"
-                v-else
-              />
+              <img :src="getThumbnailPath(production)" alt="" v-else />
             </div>
             <div class="production-name">
               {{ production.name }}

@@ -319,6 +319,7 @@ export default {
       height: 100px;
       margin-right: 5px;
       margin-top: 10px;
+      overflow: hidden;
       width: 100px;
     }
 
