@@ -305,8 +305,8 @@ const savePriorities = async forms => {
   if (now - lastCall > 1000 && !isSaving) {
     lastCall = now
     isSaving = true
-    await func.runPromiseAsSeries(
-      forms.map(async form => store.dispatch('editTaskTypeLink', form))
+    await func.runPromiseMapAsSeries(forms, form =>
+      store.dispatch('editTaskTypeLink', form)
     )
     isSaving = false
     if (newSaveCall) {

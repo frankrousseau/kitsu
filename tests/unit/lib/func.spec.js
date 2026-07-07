@@ -20,13 +20,12 @@ describe('func', () => {
     expect(count).toBe(1) // throttled
   })
 
-  test('runPromiseAsSeries', async () => {
-    let counter = 0
-    const promises = [
-      Promise.resolve().then(() => { counter += 1; return undefined }),
-      Promise.resolve().then(() => { counter += 5; return undefined })
-    ]
-    await func.runPromiseAsSeries(promises)
-    expect(counter).toEqual(6)
+  test('runPromiseMapAsSeries starts a call only after the previous one', async () => {
+    const order = []
+    await func.runPromiseMapAsSeries([1, 2], item => {
+      order.push(`start-${item}`)
+      return Promise.resolve().then(() => order.push(`end-${item}`))
+    })
+    expect(order).toEqual(['start-1', 'end-1', 'start-2', 'end-2'])
   })
 })

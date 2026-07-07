@@ -291,8 +291,9 @@ const actions = {
       }
       entityIdsByTaskType[taskTypeId].push(entityId)
     })
-    return func.runPromiseAsSeries(
-      Object.keys(entityIdsByTaskType).map(taskTypeId => {
+    return func.runPromiseMapAsSeries(
+      Object.keys(entityIdsByTaskType),
+      taskTypeId => {
         const data = {
           task_type_id: taskTypeId,
           type,
@@ -323,7 +324,7 @@ const actions = {
             console.error(err)
             return []
           })
-      })
+      }
     )
   },
 

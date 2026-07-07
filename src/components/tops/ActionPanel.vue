@@ -1553,10 +1553,8 @@ export default {
     confirmTasksSubscription() {
       this.loading.tasksSubscription = true
       func
-        .runPromiseAsSeries(
-          Array.from(this.selectedTasks.values()).map(task => {
-            return this.subscribeToTask(task.id)
-          })
+        .runPromiseMapAsSeries(Array.from(this.selectedTasks.values()), task =>
+          this.subscribeToTask(task.id)
         )
         .then(() => {
           this.loading.tasksSubscription = false
@@ -1571,10 +1569,8 @@ export default {
     confirmTasksUnsubscription() {
       this.loading.tasksSubscription = true
       func
-        .runPromiseAsSeries(
-          Array.from(this.selectedTasks.values()).map(task => {
-            return this.unsubscribeFromTask(task.id)
-          })
+        .runPromiseMapAsSeries(Array.from(this.selectedTasks.values()), task =>
+          this.unsubscribeFromTask(task.id)
         )
         .then(() => {
           this.loading.tasksSubscription = false
@@ -1600,10 +1596,9 @@ export default {
         this.loading.setThumbnails = false
       } else {
         func
-          .runPromiseAsSeries(
-            Array.from(this.selectedTasks.values()).map(task => {
-              return this.setLastTaskPreview(task.id)
-            })
+          .runPromiseMapAsSeries(
+            Array.from(this.selectedTasks.values()),
+            task => this.setLastTaskPreview(task.id)
           )
           .then(() => {
             this.loading.setThumbnails = false
