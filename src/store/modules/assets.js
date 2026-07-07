@@ -11,7 +11,6 @@ import tasksStore from '@/store/modules/tasks'
 import taskStatusStore from '@/store/modules/taskstatus'
 import taskTypesStore from '@/store/modules/tasktypes'
 
-import func from '@/lib/func'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import { minutesToDays } from '@/lib/time'
 import { PAGE_SIZE } from '@/lib/pagination'
@@ -551,16 +550,9 @@ const actions = {
           return workflow.includes(taskTypeId)
         })
       }
-      const createTaskPromises = taskTypeIds.map(taskTypeId => {
-        dispatch('createTask', {
-          entityId: asset.id,
-          projectId: asset.project_id,
-          taskTypeId,
-          type: 'assets'
-        })
-      })
-      return func
-        .runPromiseAsSeries(createTaskPromises)
+      // An empty list means "all valid task types" server-side: skip the call.
+      if (taskTypeIds.length === 0) return asset
+      return dispatch('createEntityTasks', { entityId: asset.id, taskTypeIds })
         .then(() => asset)
         .catch(console.error)
     })

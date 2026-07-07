@@ -11,7 +11,6 @@ import tasksStore from '@/store/modules/tasks'
 import taskStatusStore from '@/store/modules/taskstatus'
 import taskTypesStore from '@/store/modules/tasktypes'
 
-import func from '@/lib/func'
 import { PAGE_SIZE } from '@/lib/pagination'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import {
@@ -509,16 +508,9 @@ const actions = {
     return shotsApi.newShot(shot).then(shot => {
       commit(NEW_SHOT_END, { shot })
       const taskTypeIds = rootGetters.productionShotTaskTypeIds
-      const createTaskPromises = taskTypeIds.map(taskTypeId =>
-        dispatch('createTask', {
-          entityId: shot.id,
-          projectId: shot.project_id,
-          taskTypeId: taskTypeId,
-          type: 'shots'
-        })
-      )
-      return func
-        .runPromiseAsSeries(createTaskPromises)
+      // An empty list means "all valid task types" server-side: skip the call.
+      if (taskTypeIds.length === 0) return shot
+      return dispatch('createEntityTasks', { entityId: shot.id, taskTypeIds })
         .then(() => shot)
         .catch(console.error)
     })

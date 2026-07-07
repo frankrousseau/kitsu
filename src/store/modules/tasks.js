@@ -377,6 +377,23 @@ const actions = {
     })
   },
 
+  createEntityTasks({ commit, rootGetters }, { entityId, taskTypeIds }) {
+    const production = rootGetters.currentProduction
+    const taskTypeMap = taskTypeStore.cache.taskTypeMap
+    const taskStatusMap = taskStatusStore.cache.taskStatusMap
+    return tasksApi.createEntityTasks(entityId, taskTypeIds).then(tasks => {
+      tasks.forEach(task => {
+        commit(NEW_TASK_END, {
+          task,
+          production,
+          taskTypeMap,
+          taskStatusMap
+        })
+      })
+      return tasks
+    })
+  },
+
   changeSelectedTaskStatus(
     { commit, state, rootGetters },
     { taskStatusId, comment }

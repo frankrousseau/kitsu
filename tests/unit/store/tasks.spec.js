@@ -5,7 +5,10 @@ import { vi } from 'vitest'
 vi.mock('@/store', () => ({ default: {} }))
 vi.mock('@/store/api/tasks', () => ({
   default: {
-    unassignPersonFromTasks: vi.fn(() => Promise.resolve())
+    unassignPersonFromTasks: vi.fn(() => Promise.resolve()),
+    createEntityTasks: vi.fn(() =>
+      Promise.resolve([{ id: 'task-1' }, { id: 'task-2' }])
+    )
   }
 }))
 
@@ -167,6 +170,24 @@ describe('Tasks store', () => {
       )
       expect(tasksApi.unassignPersonFromTasks).not.toHaveBeenCalled()
       expect(commit).not.toHaveBeenCalled()
+    })
+
+    test('createEntityTasks commits NEW_TASK_END for each created task', async () => {
+      const commit = vi.fn()
+      const rootGetters = { currentProduction: { id: 'prod-1' } }
+      const tasks = await tasksStore.actions.createEntityTasks(
+        { commit, rootGetters },
+        { entityId: 'entity-1', taskTypeIds: ['type-1', 'type-2'] }
+      )
+      expect(tasksApi.createEntityTasks).toHaveBeenCalledTimes(1)
+      expect(tasksApi.createEntityTasks).toHaveBeenCalledWith('entity-1', [
+        'type-1',
+        'type-2'
+      ])
+      expect(tasks.map(task => task.id)).toEqual(['task-1', 'task-2'])
+      expect(commit).toHaveBeenCalledTimes(2)
+      expect(commit.mock.calls[0][0]).toEqual('NEW_TASK_END')
+      expect(commit.mock.calls[0][1].task).toEqual(tasks[0])
     })
   })
 

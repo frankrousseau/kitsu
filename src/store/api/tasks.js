@@ -146,6 +146,12 @@ export default {
     return client.ppost(url, {})
   },
 
+  createEntityTasks(entityId, taskTypeIds) {
+    return client.ppost(`/api/data/entities/${entityId}/tasks`, {
+      task_type_ids: taskTypeIds
+    })
+  },
+
   deleteTask(task) {
     return client.pdel(`/api/data/tasks/${task.id}?force=true`)
   },

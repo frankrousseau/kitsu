@@ -9,7 +9,6 @@ import tasksStore from '@/store/modules/tasks'
 import taskTypesStore from '@/store/modules/tasktypes'
 import taskStatusStore from '@/store/modules/taskstatus'
 
-import func from '@/lib/func'
 import { PAGE_SIZE } from '@/lib/pagination'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import {
@@ -421,16 +420,9 @@ const actions = {
     return editsApi.newEdit(edit).then(edit => {
       commit(NEW_EDIT_END, edit)
       const taskTypeIds = rootGetters.productionEditTaskTypeIds
-      const createTaskPromises = taskTypeIds.map(taskTypeId =>
-        dispatch('createTask', {
-          entityId: edit.id,
-          projectId: edit.project_id,
-          taskTypeId: taskTypeId,
-          type: 'edits'
-        })
-      )
-      return func
-        .runPromiseAsSeries(createTaskPromises)
+      // An empty list means "all valid task types" server-side: skip the call.
+      if (taskTypeIds.length === 0) return edit
+      return dispatch('createEntityTasks', { entityId: edit.id, taskTypeIds })
         .then(() => edit)
         .catch(console.error)
     })
