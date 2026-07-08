@@ -133,7 +133,25 @@
                 metadataDisplayHeaders.readyFor
               "
             >
-              {{ $t('assets.fields.ready_for') }}
+              <div class="flexrow field-header">
+                <span class="flexrow-item">
+                  {{ $t('assets.fields.ready_for') }}
+                </span>
+                <span
+                  class="asset-field-menu-button header-icon pointer"
+                  role="button"
+                  tabindex="0"
+                  @click="showFieldHeaderMenu('ready_for', $event)"
+                  @keydown.enter.prevent="
+                    showFieldHeaderMenu('ready_for', $event)
+                  "
+                  @keydown.space.prevent="
+                    showFieldHeaderMenu('ready_for', $event)
+                  "
+                >
+                  <chevron-down-icon :size="14" />
+                </span>
+              </div>
             </th>
 
             <th
