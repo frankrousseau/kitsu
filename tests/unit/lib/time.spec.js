@@ -195,6 +195,20 @@ describe('time', () => {
       start_date: '2019-10-01', // tuesday
       due_date: '2019-10-10' // a week later + 2 days (weekend) + 1 day off
     })
+    // The estimation is in days regardless of the display preference: an
+    // hours-displaying organisation must not end up with a null due date
+    // (it was serialized as "Invalid date" by callers — issue #1977).
+    expect(
+      getDatesFromStartDate(
+        { format_duration_in_hours: true },
+        startDate,
+        null,
+        7
+      )
+    ).toEqual({
+      start_date: '2019-10-01',
+      due_date: '2019-10-09'
+    })
   })
   test('getDatesFromEndDate', () => {
     const startDate = parseSimpleDate('2019-10-01')

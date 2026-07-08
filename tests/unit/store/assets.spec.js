@@ -82,6 +82,86 @@ describe('Assets store', () => {
     })
   })
 
+  describe('cache.result aliasing on creation', () => {
+    const makeAsset = (id, name) => ({
+      id,
+      name,
+      asset_type_name: 'Char',
+      canceled: false,
+      timeSpent: 0,
+      estimation: 0,
+      tasks: [],
+      data: {}
+    })
+
+    const searchPayload = assetSearch => ({
+      assetSearch,
+      production: { id: 'p1', descriptors: [] },
+      taskStatusMap: new Map(),
+      taskTypeMap: new Map(),
+      persons: []
+    })
+
+    const makeState = () => ({
+      assetSorting: [],
+      assetTypes: [],
+      displayedAssets: [],
+      displayedAssetsTimeSpent: 0,
+      displayedAssetsEstimation: 0
+    })
+
+    beforeEach(() => {
+      const existing = makeAsset('a1', 'Existing')
+      assetsStore.cache.assets = [existing]
+      assetsStore.cache.assetMap = new Map([['a1', existing]])
+      assetsStore.cache.assetIndex = {}
+      assetsStore.cache.result = []
+    })
+
+    test('EDIT_ASSET_END does not duplicate the created asset when cache.result aliases cache.assets', () => {
+      const state = makeState()
+
+      // Empty query: indexSearch yields null, so buildResult falls back to
+      // cache.assets and cache.result becomes the SAME array reference.
+      assetsStore.mutations.SET_ASSET_SEARCH(state, searchPayload(''))
+      expect(assetsStore.cache.result).toBe(assetsStore.cache.assets)
+
+      assetsStore.mutations.EDIT_ASSET_END(state, {
+        newAsset: makeAsset('a2', 'Created'),
+        assetTypeMap: new Map()
+      })
+
+      // The next rebuild copies cache.result into displayedAssets: the
+      // created asset must appear exactly once, not twice.
+      assetsStore.mutations.SET_ASSET_SEARCH(state, searchPayload(''))
+      expect(state.displayedAssets.filter(a => a.id === 'a2')).toHaveLength(1)
+      expect(
+        assetsStore.cache.assets.filter(a => a.id === 'a2')
+      ).toHaveLength(1)
+    })
+
+    test('EDIT_ASSET_END still records the created asset in a distinct cache.result (active search)', () => {
+      const state = makeState()
+
+      // Non-empty query: indexSearch returns a fresh array, cache.result is
+      // NOT aliased and must keep receiving the created asset.
+      assetsStore.mutations.SET_ASSET_SEARCH(state, searchPayload('existing'))
+      expect(assetsStore.cache.result).not.toBe(assetsStore.cache.assets)
+
+      assetsStore.mutations.EDIT_ASSET_END(state, {
+        newAsset: makeAsset('a2', 'Created'),
+        assetTypeMap: new Map()
+      })
+
+      expect(
+        assetsStore.cache.result.filter(a => a.id === 'a2')
+      ).toHaveLength(1)
+      expect(
+        assetsStore.cache.assets.filter(a => a.id === 'a2')
+      ).toHaveLength(1)
+    })
+  })
+
   describe('cache.result maintenance', () => {
     test('REMOVE_ASSET drops the asset from cache.result so it cannot reappear on "show more" (BUG-10)', () => {
       const asset = { id: 'a1', name: 'A1', asset_type_name: 'Char', tasks: [] }

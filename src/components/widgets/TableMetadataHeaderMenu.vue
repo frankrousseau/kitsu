@@ -1,12 +1,33 @@
 <template>
   <div class="header-menu hidden">
-    <div @click="$emit('edit-clicked')" v-if="isEditAllowed">
+    <div
+      role="button"
+      tabindex="0"
+      @click="$emit('edit-clicked')"
+      @keydown.enter.prevent="$emit('edit-clicked')"
+      @keydown.space.prevent="$emit('edit-clicked')"
+      v-if="isEditAllowed"
+    >
       {{ $t('main.edit') }}
     </div>
-    <div @click="$emit('sort-by-clicked')" v-if="showSort">
+    <div
+      role="button"
+      tabindex="0"
+      @click="$emit('sort-by-clicked')"
+      @keydown.enter.prevent="$emit('sort-by-clicked')"
+      @keydown.space.prevent="$emit('sort-by-clicked')"
+      v-if="showSort"
+    >
       {{ $t('main.sort_by') }}
     </div>
-    <div @click="$emit('toggle-stick')" v-if="showStick">
+    <div
+      role="button"
+      tabindex="0"
+      @click="$emit('toggle-stick')"
+      @keydown.enter.prevent="$emit('toggle-stick')"
+      @keydown.space.prevent="$emit('toggle-stick')"
+      v-if="showStick"
+    >
       <template v-if="isSticked">
         {{ $t('main.unstick') }}
       </template>
@@ -14,7 +35,15 @@
         {{ $t('main.stick') }}
       </template>
     </div>
-    <div class="error" @click="$emit('delete-clicked')" v-if="isEditAllowed">
+    <div
+      class="error"
+      role="button"
+      tabindex="0"
+      @click="$emit('delete-clicked')"
+      @keydown.enter.prevent="$emit('delete-clicked')"
+      @keydown.space.prevent="$emit('delete-clicked')"
+      v-if="isEditAllowed"
+    >
       {{ $t('main.delete') }}
     </div>
   </div>

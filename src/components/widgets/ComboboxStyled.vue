@@ -12,7 +12,15 @@
         open: showList
       }"
       ref="select"
+      role="combobox"
+      :tabindex="disabled ? -1 : 0"
+      aria-haspopup="listbox"
+      :aria-expanded="showList"
+      :aria-activedescendant="
+        activeIndex > -1 ? optionId(activeIndex) : undefined
+      "
       @click="toggleList"
+      @keydown="onKeydown"
     >
       <div class="flexrow" :title="selectedOptionLabel">
         <slot name="icon"></slot>
@@ -30,14 +38,17 @@
         ></span>
         <chevron-down-icon class="down-icon flexrow-item" />
       </div>
-      <div class="select-input" v-if="showList">
+      <div class="select-input" ref="listRef" role="listbox" v-if="showList">
         <div
+          :id="optionId(index)"
           :key="option.id"
           class="option-line flexrow"
+          role="option"
+          :aria-selected="option.value === selectedOption?.value"
           :class="{ placeholder: option.placeholder }"
           @click="selectOption(option)"
           @click.middle="openRoute(option)"
-          v-for="option in optionList"
+          v-for="(option, index) in optionList"
         >
           <entity-thumbnail
             class="revision-thumbnail"
@@ -75,6 +86,8 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ChevronDownIcon } from 'lucide-vue-next'
+
+import { useComboboxKeyboard } from '@/composables/comboboxKeyboard'
 
 import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 
@@ -169,6 +182,7 @@ const selectOption = option => {
 }
 
 const toggleList = () => {
+  if (props.disabled) return
   if (showList.value) {
     lastScrollPosition = select.value.scrollTop
   }
@@ -179,6 +193,15 @@ const toggleList = () => {
     })
   }
 }
+
+const listRef = ref(null)
+const { activeIndex, onKeydown, optionId } = useComboboxKeyboard({
+  isOpen: showList,
+  toggle: toggleList,
+  optionsLength: () => optionList.value.length,
+  onSelect: index => selectOption(optionList.value[index]),
+  listRef
+})
 
 watch(
   () => props.options,

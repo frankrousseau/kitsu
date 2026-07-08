@@ -122,4 +122,37 @@ describe('ComboboxStatus', () => {
     await wrapper.setProps({ label: 'Status' })
     expect(wrapper.find('label').text()).toBe('Status')
   })
+
+  it('exposes combobox/listbox ARIA roles', async () => {
+    const trigger = wrapper.find('.flexrow')
+    expect(trigger.attributes('role')).toBe('combobox')
+    expect(trigger.attributes('tabindex')).toBe('0')
+    expect(trigger.attributes('aria-expanded')).toBe('false')
+    await trigger.trigger('click')
+    expect(trigger.attributes('aria-expanded')).toBe('true')
+    expect(wrapper.find('.select-input').attributes('role')).toBe('listbox')
+    expect(wrapper.findAll('.status-line')[0].attributes('role')).toBe(
+      'option'
+    )
+  })
+
+  it('opens the dropdown and selects an option via keyboard', async () => {
+    const trigger = wrapper.find('.flexrow')
+    await trigger.trigger('keydown', { key: 'ArrowDown' })
+    expect(wrapper.find('.select-input').exists()).toBe(true)
+    await trigger.trigger('keydown', { key: 'ArrowDown' })
+    await trigger.trigger('keydown', { key: 'ArrowDown' })
+    await trigger.trigger('keydown', { key: 'ArrowDown' })
+    await trigger.trigger('keydown', { key: 'Enter' })
+    expect(wrapper.emitted('update:model-value')[0]).toEqual(['status-3'])
+    expect(wrapper.find('.select-input').exists()).toBe(false)
+  })
+
+  it('closes the dropdown on Escape', async () => {
+    const trigger = wrapper.find('.flexrow')
+    await trigger.trigger('click')
+    expect(wrapper.find('.select-input').exists()).toBe(true)
+    await trigger.trigger('keydown', { key: 'Escape' })
+    expect(wrapper.find('.select-input').exists()).toBe(false)
+  })
 })

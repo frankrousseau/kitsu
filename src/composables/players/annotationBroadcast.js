@@ -17,9 +17,7 @@
  */
 import { unref } from 'vue'
 
-import { PREVIEW_ROOM_EVENTS } from '@/lib/players/events'
-
-const isValidRoomId = room => Boolean(room?.id) && room.id !== 'temp'
+import { isValidRoomId, PREVIEW_ROOM_EVENTS } from '@/lib/players/events'
 
 /**
  * @param {Object} options

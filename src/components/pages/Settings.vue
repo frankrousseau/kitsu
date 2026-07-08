@@ -6,7 +6,7 @@
           <img class="logo-image" :src="organisationLogoPath" alt="" />
         </div>
         <div class="logo-frame logo-frame--empty" v-else>
-          <span class="logo-initial">{{ logoInitial }}</span>
+          <img class="logo-image" src="@/assets/kitsu.png" alt="Kitsu" />
         </div>
         <h1 class="settings-name">
           {{ organisation.name || $t('main.studio') }}
@@ -192,10 +192,6 @@ const organisationLogoPath = ref('')
 
 const organisation = computed(() => store.getters.organisation)
 
-const logoInitial = computed(
-  () => organisation.value?.name?.slice(0, 1).toUpperCase() || '?'
-)
-
 // Functions
 
 const checkWebhook = () => {
@@ -360,12 +356,6 @@ useHead({ title: computed(() => `${t('settings.title')} - Kitsu`) })
 
 .logo-frame--empty {
   border-style: dashed;
-}
-
-.logo-initial {
-  color: var(--text-alt);
-  font-size: 3rem;
-  font-weight: 600;
 }
 
 .settings-name {

@@ -9,8 +9,12 @@
         xyz="fade"
       >
         <div class="has-text-centered login-header">
-          <img src="../../assets/kitsu-text-dark.svg" v-if="isDarkTheme" />
-          <img src="../../assets/kitsu-text.svg" v-else />
+          <img
+            src="../../assets/kitsu-text-dark.svg"
+            alt="Kitsu"
+            v-if="isDarkTheme"
+          />
+          <img src="../../assets/kitsu-text.svg" alt="Kitsu" v-else />
         </div>
         <form v-if="!(isMissingOTP || isWrongOTP)">
           <div class="field" v-if="mainConfig?.saml_enabled">
@@ -77,7 +81,11 @@
             :class="{
               'is-loading': isLoginLoading
             }"
+            role="button"
+            tabindex="0"
             @click="confirmLogIn()"
+            @keydown.enter.prevent="confirmLogIn()"
+            @keydown.space.prevent="confirmLogIn()"
           >
             {{ $t('login.login') }}
           </a>

@@ -9,9 +9,9 @@
 
     <div class="modal-content">
       <div class="box content">
-        <h1 class="title">
+        <h2 class="title">
           {{ $t('entities.build_filter.title') }}
-        </h1>
+        </h2>
 
         <combobox
           locale-key-prefix="entities.build_filter."

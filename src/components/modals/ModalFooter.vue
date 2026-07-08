@@ -8,7 +8,11 @@
           'is-loading': isLoading,
           'is-disabled': isDisabled
         }"
+        role="button"
+        tabindex="0"
         @click="$emit('confirm')"
+        @keydown.enter.prevent="$emit('confirm')"
+        @keydown.space.prevent="$emit('confirm')"
       >
         {{ confirmLabel || $t('main.confirmation') }}
       </a>

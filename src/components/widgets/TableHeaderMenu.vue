@@ -1,18 +1,42 @@
 <template>
   <div class="header-menu hidden">
-    <div @click="$emit('minimize-clicked')">
+    <div
+      role="button"
+      tabindex="0"
+      @click="$emit('minimize-clicked')"
+      @keydown.enter.prevent="$emit('minimize-clicked')"
+      @keydown.space.prevent="$emit('minimize-clicked')"
+    >
       <span v-if="isMinimized">
         {{ $t('main.maximize') }}
       </span>
       <span v-else>{{ $t('main.minimize') }}</span>
     </div>
-    <div @click="$emit('sort-by-clicked')">
+    <div
+      role="button"
+      tabindex="0"
+      @click="$emit('sort-by-clicked')"
+      @keydown.enter.prevent="$emit('sort-by-clicked')"
+      @keydown.space.prevent="$emit('sort-by-clicked')"
+    >
       {{ $t('main.sort_by') }}
     </div>
-    <div @click="$emit('select-column')">
+    <div
+      role="button"
+      tabindex="0"
+      @click="$emit('select-column')"
+      @keydown.enter.prevent="$emit('select-column')"
+      @keydown.space.prevent="$emit('select-column')"
+    >
       {{ $t('main.select_column') }}
     </div>
-    <div @click="$emit('toggle-stick')">
+    <div
+      role="button"
+      tabindex="0"
+      @click="$emit('toggle-stick')"
+      @keydown.enter.prevent="$emit('toggle-stick')"
+      @keydown.space.prevent="$emit('toggle-stick')"
+    >
       <template v-if="isSticked">
         {{ $t('main.unstick') }}
       </template>
@@ -22,7 +46,11 @@
     </div>
     <div
       class="error"
+      role="button"
+      tabindex="0"
       @click="$emit('delete-all-clicked')"
+      @keydown.enter.prevent="$emit('delete-all-clicked')"
+      @keydown.space.prevent="$emit('delete-all-clicked')"
       v-if="isEditAllowed"
     >
       {{ $t('main.delete_all') }}

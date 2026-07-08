@@ -9,7 +9,11 @@
         }"
         :key="`color-${index}`"
         :style="{ 'border-color': color + hexaOpacity }"
+        role="button"
+        tabindex="0"
         @click="colorChanged(color)"
+        @keydown.enter.prevent="colorChanged(color)"
+        @keydown.space.prevent="colorChanged(color)"
         v-for="(color, index) in colors"
       >
         <span :style="{ background: color + hexaOpacity }"> </span>

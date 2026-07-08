@@ -15,7 +15,18 @@
         width: `${width}px`
       }"
     >
-      <div class="flexrow" @click="toggleDepartmentList">
+      <div
+        class="flexrow"
+        role="combobox"
+        tabindex="0"
+        aria-haspopup="listbox"
+        :aria-expanded="showDepartmentList"
+        :aria-activedescendant="
+          activeIndex > -1 ? optionId(activeIndex) : undefined
+        "
+        @click="toggleDepartmentList"
+        @keydown="onKeydown"
+      >
         <div
           class="selected-department-line flexrow-item"
           v-if="currentDepartment"
@@ -26,17 +37,19 @@
       </div>
       <div
         class="select-input"
-        ref="select"
+        ref="listRef"
+        role="listbox"
         :style="listStyle"
         v-if="showDepartmentList"
       >
         <div
-          class="department-line"
+          :id="optionId(index)"
           :key="department.id"
+          class="department-line"
+          role="option"
+          :aria-selected="department.id === currentDepartment?.id"
           @click="selectDepartment(department)"
-          v-for="department in departmentList.filter(
-            ({ id }) => id !== modelValue
-          )"
+          v-for="(department, index) in selectableDepartmentList"
         >
           <department-name :department="department" />
         </div>
@@ -54,6 +67,8 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useStore } from 'vuex'
 import { ChevronDownIcon } from 'lucide-vue-next'
+
+import { useComboboxKeyboard } from '@/composables/comboboxKeyboard'
 
 import ComboboxMask from '@/components/widgets/ComboboxMask.vue'
 import DepartmentName from '@/components/widgets/DepartmentName.vue'
@@ -166,6 +181,10 @@ const departmentList = computed(() => {
   }
 })
 
+const selectableDepartmentList = computed(() =>
+  departmentList.value.filter(({ id }) => id !== props.modelValue)
+)
+
 const currentDepartment = computed(() => {
   if (props.modelValue) {
     const departmentMapped = departmentMap.value.get(props.modelValue)
@@ -208,6 +227,15 @@ const selectDepartment = department => {
 const toggleDepartmentList = () => {
   showDepartmentList.value = !showDepartmentList.value
 }
+
+const listRef = ref(null)
+const { activeIndex, onKeydown, optionId } = useComboboxKeyboard({
+  isOpen: showDepartmentList,
+  toggle: toggleDepartmentList,
+  optionsLength: () => selectableDepartmentList.value.length,
+  onSelect: index => selectDepartment(selectableDepartmentList.value[index]),
+  listRef
+})
 
 const focus = () => {
   combobox.value.focus()
@@ -288,7 +316,7 @@ defineExpose({ focus })
   border-bottom-right-radius: 10px;
   position: absolute;
   border: 1px solid $light-grey-light;
-  z-index: 300;
+  z-index: $z-dropdown;
   margin-left: -1px;
   max-height: 200px;
   overflow-y: auto;

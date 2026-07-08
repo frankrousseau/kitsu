@@ -379,6 +379,56 @@ describe('composables/playlistComparison', () => {
     })
   })
 
+  describe('clampComparisonPreviewIndex', () => {
+    const setup = () => {
+      const entity = {
+        preview_files: {
+          'tt-anim': [
+            {
+              id: 'p2',
+              revision: 2,
+              extension: 'png',
+              previews: [{ id: 'sub-1' }, { id: 'sub-2' }]
+            },
+            { id: 'p1', revision: 1, extension: 'png', previews: [] }
+          ]
+        }
+      }
+      const c = usePlaylistComparison(
+        makeInputs({
+          entityList: [entity],
+          taskTypeMap: new Map([['tt-anim', { id: 'tt-anim', name: 'Anim' }]])
+        })
+      )
+      c.taskTypeId.value = 'tt-anim'
+      return c
+    }
+
+    it('resets the index when it points past the compared revision previews', () => {
+      const c = setup()
+      c.revisionToCompare.value = '2'
+      c.currentComparisonPreviewIndex.value = 2
+      c.revisionToCompare.value = '1'
+      c.clampComparisonPreviewIndex()
+      expect(c.currentComparisonPreviewIndex.value).toBe(0)
+      expect(c.currentPreviewToCompare.value.id).toBe('p1')
+    })
+
+    it('keeps an index that is still valid for the compared revision', () => {
+      const c = setup()
+      c.revisionToCompare.value = '2'
+      c.currentComparisonPreviewIndex.value = 2
+      c.clampComparisonPreviewIndex()
+      expect(c.currentComparisonPreviewIndex.value).toBe(2)
+    })
+
+    it('is a no-op when there is no revision to compare', () => {
+      const c = usePlaylistComparison(makeInputs())
+      c.clampComparisonPreviewIndex()
+      expect(c.currentComparisonPreviewIndex.value).toBe(0)
+    })
+  })
+
   describe('overlayOpacity', () => {
     const setup = () => {
       const entity = {

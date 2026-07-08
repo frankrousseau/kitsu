@@ -449,6 +449,7 @@ import { useAnnotationCursor } from '@/composables/players/annotationCursor'
 import { useComparison } from '@/composables/players/comparison'
 import { useOnionSkin } from '@/composables/players/onionSkin'
 import { usePreviewShortcuts } from '@/composables/players/previewShortcuts'
+import { usePlayerTransport } from '@/composables/players/transport'
 import { getEntityPath } from '@/lib/path'
 import { mergeAnnotationsByFrame } from '@/lib/players/annotation'
 import localPreferences from '@/lib/preferences'
@@ -609,27 +610,22 @@ const currentBackground = ref(null)
 const currentFrame = ref(0)
 const currentIndex = ref(1)
 const currentTime = ref('00:00:00:00')
-const currentTimeRaw = ref(0)
+const { currentTimeRaw, isHd, isMuted, isPlaying, isRepeating, speed, volume } =
+  usePlayerTransport()
 const is3DAnimation = ref(false)
 const isAnnotationsDisplayed = ref(true)
 const isCommentsHidden = ref(true)
 const isDrawing = ref(false)
 const isEnvironmentSkybox = ref(false)
-const isHd = ref(false)
-const isMuted = ref(false)
 const isObjectBackground = ref(false)
 const isOrdering = ref(true)
-const isPlaying = ref(false)
-const isRepeating = ref(false)
 const isTyping = ref(false)
 const isWireframe = ref(false)
 const maxDuration = ref('00:00:00:00')
 const movieDimensions = ref({ width: 1920, height: 1080 })
 const objectBackgroundUrl = ref(null)
 const pencilPalette = ref(['huge', 'big', 'medium', 'small', 'tiny'])
-const speed = ref(3)
 const videoDuration = ref(0)
-const volume = ref(50)
 const width = ref(0)
 
 // Vuex getters
@@ -976,11 +972,14 @@ const setVideoFrameContext = frame => {
   }
 }
 
-// Continuous player time → smooth progress bar during playback. The +1 mirrors
-// getFrameFromPlayer's convention so the bar doesn't jump when pausing.
+// Player time → progress bar during playback. `time` carries the
+// mediaTime + frameDuration/2 convention offset, so a raw division parks the
+// fill at half-frame positions; quantize with the same ceil(...)+1 convention
+// as getFrameFromPlayer so the bar fills whole frames and doesn't jump when
+// pausing.
 const onVideoTimeUpdate = time => {
   if (!isPlaying.value) return
-  progress.value?.updateProgressBar(time / frameDuration.value + 1)
+  progress.value?.updateProgressBar(Math.ceil(time / frameDuration.value) + 1)
 }
 
 const onSubPreviewsWheel = event => {

@@ -900,6 +900,7 @@ export default {
     select_file: 'Select files from your hard drive',
     show: 'Show',
     show_support_chat: 'Show support chat',
+    skip_to_content: 'Skip to content',
     sorted_by: 'Sorted by',
     sort_by: 'Sort by',
     start_date: 'Start date',
@@ -2203,6 +2204,7 @@ export default {
     month: 'Month',
     off: 'Off',
     time_spents: 'Time Spent (hours)',
+    timelog_title: 'Timelog',
     title: 'Timesheets',
     unit: 'Unit',
     year: 'Year'

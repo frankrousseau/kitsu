@@ -35,7 +35,10 @@
       <div
         class="event-line"
         :key="event.id"
+        role="button"
+        tabindex="0"
         @click="selectLine(event)"
+        @keydown.enter.prevent="selectLine(event)"
         v-for="event in filteredEvents"
       >
         <span class="date tag mr1">{{ event.date }}</span>

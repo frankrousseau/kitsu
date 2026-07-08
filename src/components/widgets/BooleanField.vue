@@ -7,7 +7,11 @@
       small: isSmall
     }"
     :disabled="disabled || null"
+    role="button"
+    :tabindex="disabled ? -1 : 0"
     @click="onClick"
+    @keydown.enter.prevent="onClick"
+    @keydown.space.prevent="onClick"
   >
     <span class="icon-wrapper flexrow-item">
       <check-icon

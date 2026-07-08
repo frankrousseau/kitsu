@@ -23,12 +23,12 @@
           {{ $t('main.drop_files_here') }}
         </div>
         <h2 class="subtitle">{{ title }}</h2>
-        <h1 class="title" v-if="isEditing">
+        <h2 class="title" v-if="isEditing">
           {{ $t('tasks.change_preview') }}
-        </h1>
-        <h1 class="title" v-else>
+        </h2>
+        <h2 class="title" v-else>
           {{ isConcept ? $t('concepts.add_concept') : $t('tasks.add_preview') }}
-        </h1>
+        </h2>
 
         <p>
           {{ $t('tasks.select_preview_file') }}
@@ -57,7 +57,14 @@
           <template v-for="(form, index) in forms" :key="`preview-${index}`">
             <p class="preview-name">
               {{ form.get('file').name }}
-              <span @click="removePreview(form)">x</span>
+              <span
+                role="button"
+                tabindex="0"
+                @click="removePreview(form)"
+                @keydown.enter.prevent="removePreview(form)"
+                @keydown.space.prevent="removePreview(form)"
+                >x</span
+              >
             </p>
             <img alt="uploaded file" :src="getURL(form)" v-if="isImage(form)" />
             <video
@@ -100,7 +107,11 @@
               'is-loading': isLoading,
               'is-disabled': forms.length === 0
             }"
+            role="button"
+            tabindex="0"
             @click="$emit('confirm', forms)"
+            @keydown.enter.prevent="$emit('confirm', forms)"
+            @keydown.space.prevent="$emit('confirm', forms)"
           >
             {{
               confirmLabel?.length
@@ -270,7 +281,7 @@ defineExpose({
   text-transform: uppercase;
 }
 
-.modal-content .box h1.title {
+.modal-content .box h2.title {
   font-weight: 350;
   font-size: 2.2em;
   line-height: 1.2em;

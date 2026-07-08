@@ -5,7 +5,11 @@
     </div>
 
     <div class="flexrow-item search-field">
+      <label class="visuallyhidden" :for="fieldId">
+        {{ t('main.search_query') }}
+      </label>
       <input
+        :id="fieldId"
         ref="inputRef"
         class="search-input"
         type="text"
@@ -20,7 +24,16 @@
     </div>
 
     <div class="flexrow-item erase-search">
-      <span class="tag" @click="clearSearch"> x </span>
+      <span
+        class="tag"
+        role="button"
+        tabindex="0"
+        @click="clearSearch"
+        @keydown.enter.prevent="clearSearch"
+        @keydown.space.prevent="clearSearch"
+      >
+        x
+      </span>
     </div>
 
     <div class="flexrow-item save-search" v-if="canSave">
@@ -32,10 +45,13 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, useId } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { SaveIcon, SearchIcon } from 'lucide-vue-next'
 
 import func from '@/lib/func'
+
+const { t } = useI18n()
 
 const props = defineProps({
   placeholder: {
@@ -56,6 +72,7 @@ const emit = defineEmits(['change', 'enter', 'save'])
 const search = ref('')
 const focused = ref(false)
 const inputRef = ref(null)
+const fieldId = useId()
 
 // Debounced: every keystroke otherwise replays the full filter + sort
 // pipeline of the list pages.
@@ -132,6 +149,12 @@ defineExpose({ getValue, setValue, focus, clearSearch })
   color: var(--text);
 }
 
+// The wrapper's focus-within green border is the focus indicator here;
+// the global :focus-visible outline would double it.
+.search-input:focus-visible {
+  outline: none;
+}
+
 .search-icon {
   width: 20px;
   margin-top: 5px;
@@ -178,7 +201,7 @@ defineExpose({ getValue, setValue, focus, clearSearch })
   }
 }
 
-.search-field-wrapper:focus,
+.search-field-wrapper:focus-within,
 .search-field-wrapper:hover {
   border-color: $green;
 }

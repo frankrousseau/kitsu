@@ -84,7 +84,11 @@
         <div
           class="department-element mb1 mt05"
           :key="departmentId"
+          role="button"
+          tabindex="0"
           @click="removeDepartment(departmentId)"
+          @keydown.enter.prevent="removeDepartment(departmentId)"
+          @keydown.space.prevent="removeDepartment(departmentId)"
           v-for="departmentId in form.departments"
         >
           <department-name

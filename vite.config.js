@@ -12,7 +12,7 @@ export default defineConfig({
     })
   ],
   build: {
-    sourcemap: 'hidden',
+    sourcemap: true,
     target: 'es2020',
     rolldownOptions: {
       output: {

@@ -4,7 +4,19 @@
       {{ label }}
     </label>
     <div class="task-type-combo" :class="{ disabled, shy }">
-      <div class="flexrow selector" @click="toggleTaskTypeList">
+      <div
+        class="flexrow selector"
+        ref="triggerRef"
+        role="combobox"
+        :tabindex="disabled ? -1 : 0"
+        aria-haspopup="listbox"
+        :aria-expanded="showTaskTypeList"
+        :aria-activedescendant="
+          activeIndex > -1 ? optionId(activeIndex) : undefined
+        "
+        @click="toggleTaskTypeList"
+        @keydown="onKeydown"
+      >
         <div class="selected-task-type-line flexrow-item">
           <task-type-name :task-type="currentTaskType" v-if="currentTaskType" />
         </div>
@@ -13,15 +25,20 @@
       <teleport to="body">
         <div
           class="select-input"
+          ref="listRef"
+          role="listbox"
           :class="[{ 'open-top': openTop }, { dark: isDarkTheme }]"
           :style="tooltipStyle"
           v-if="showTaskTypeList"
         >
           <div
-            class="task-type-line"
+            :id="optionId(index)"
             :key="taskType.id"
+            class="task-type-line"
+            role="option"
+            :aria-selected="taskType.id === currentTaskType?.id"
             @click="!disabled && selectTaskType(taskType)"
-            v-for="taskType in taskTypeList"
+            v-for="(taskType, index) in taskTypeList"
           >
             <task-type-name :task-type="taskType" />
           </div>
@@ -37,6 +54,8 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useStore } from 'vuex'
 import { ChevronDownIcon } from 'lucide-vue-next'
+
+import { useComboboxKeyboard } from '@/composables/comboboxKeyboard'
 
 import ComboboxMask from '@/components/widgets/ComboboxMask.vue'
 import TaskTypeName from '@/components/widgets/TaskTypeName.vue'
@@ -121,6 +140,8 @@ const selectTaskType = taskType => {
   showTaskTypeList.value = false
 }
 
+const triggerRef = ref(null)
+
 const toggleTaskTypeList = event => {
   if (props.disabled) {
     return
@@ -132,7 +153,9 @@ const toggleTaskTypeList = event => {
     return
   }
 
-  const curDiv = event.currentTarget
+  // Keyboard-triggered opens (via useComboboxKeyboard) call toggle() with no
+  // event, so fall back to the trigger element for positioning.
+  const curDiv = event?.currentTarget ?? triggerRef.value
   const rect = curDiv.getBoundingClientRect()
   const scrollTop = window.pageYOffset || document.documentElement.scrollTop
   const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
@@ -141,6 +164,17 @@ const toggleTaskTypeList = event => {
     left: rect.left + scrollLeft
   }
 }
+
+const listRef = ref(null)
+const { activeIndex, onKeydown, optionId } = useComboboxKeyboard({
+  isOpen: showTaskTypeList,
+  toggle: toggleTaskTypeList,
+  optionsLength: () => props.taskTypeList.length,
+  onSelect: index => {
+    if (!props.disabled) selectTaskType(props.taskTypeList[index])
+  },
+  listRef
+})
 </script>
 
 <style lang="scss" scoped>
@@ -217,7 +251,7 @@ const toggleTaskTypeList = event => {
   overflow-y: auto;
   position: absolute;
   width: 195px;
-  z-index: 1000;
+  z-index: $z-modal;
 
   &.open-top {
     bottom: 41px;

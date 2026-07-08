@@ -252,7 +252,12 @@
               <th scope="rowgroup">
                 <span
                   class="datatable-row-header pointer"
+                  role="button"
+                  tabindex="0"
                   @click="$emit('asset-type-clicked', group[0].asset_type_name)"
+                  @keydown.enter.prevent="
+                    $emit('asset-type-clicked', group[0].asset_type_name)
+                  "
                 >
                   {{ group[0] ? group[0].asset_type_name : '' }}
                 </span>
@@ -545,7 +550,7 @@
         v-if="isEmptyList && !isCurrentUserClient && !isLoading"
       >
         <p class="info">
-          <img src="../../assets/illustrations/empty_asset.png" />
+          <img src="../../assets/illustrations/empty_asset.png" alt="" />
         </p>
         <p class="info">{{ $t('assets.empty_list') }}</p>
         <button-simple
@@ -559,7 +564,7 @@
         v-if="isEmptyList && isCurrentUserClient && !isLoading"
       >
         <p class="info">
-          <img src="../../assets/illustrations/empty_asset.png" />
+          <img src="../../assets/illustrations/empty_asset.png" alt="" />
         </p>
         <p class="info">{{ $t('assets.empty_list_client') }}</p>
       </div>

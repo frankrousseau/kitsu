@@ -11,7 +11,7 @@ import {
 } from '@/lib/time'
 
 const csv = {
-  generateTimesheet(
+  generateTimesheet({
     name,
     timesheet,
     people,
@@ -23,7 +23,7 @@ const csv = {
     year,
     month,
     week
-  ) {
+  }) {
     const headers = csv.getTimesheetHeaders(
       timesheet,
       detailLevel,

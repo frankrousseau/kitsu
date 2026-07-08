@@ -9,7 +9,18 @@
       {{ label }}
     </label>
     <div class="status-combo" :style="comboStyles">
-      <div class="flexrow" @click="toggleStatusList">
+      <div
+        class="flexrow"
+        role="combobox"
+        tabindex="0"
+        aria-haspopup="listbox"
+        :aria-expanded="showStatusList"
+        :aria-activedescendant="
+          activeIndex > -1 ? optionId(activeIndex) : undefined
+        "
+        @click="toggleStatusList"
+        @keydown="onKeydown"
+      >
         <div class="selected-status-line flexrow-item">
           <span
             class="tag"
@@ -32,16 +43,21 @@
       </div>
       <div
         class="select-input"
+        ref="listRef"
+        role="listbox"
         :class="{
           'open-top': openTop
         }"
         v-if="showStatusList"
       >
         <div
+          :id="optionId(index)"
           :key="status.id"
           class="status-line"
+          role="option"
+          :aria-selected="status.id === currentStatus?.id"
           @click="selectStatus(status)"
-          v-for="status in sortedTaskStatusList"
+          v-for="(status, index) in sortedTaskStatusList"
         >
           <span
             class="tag"
@@ -61,13 +77,14 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useStore } from 'vuex'
 import { ChevronDownIcon } from 'lucide-vue-next'
 
 import { sortTaskStatuses } from '@/lib/sorting'
 import { useCombobox } from '@/composables/combobox'
+import { useComboboxKeyboard } from '@/composables/comboboxKeyboard'
 import { useTaskStatusStyle } from '@/composables/taskStatus'
 
 import ComboboxMask from '@/components/widgets/ComboboxMask.vue'
@@ -122,6 +139,15 @@ const {
   toggle: toggleStatusList,
   select: selectStatus
 } = useCombobox(emit)
+
+const listRef = ref(null)
+const { activeIndex, onKeydown, optionId } = useComboboxKeyboard({
+  isOpen: showStatusList,
+  toggle: toggleStatusList,
+  optionsLength: () => sortedTaskStatusList.value.length,
+  onSelect: index => selectStatus(sortedTaskStatusList.value[index]),
+  listRef
+})
 
 const productionMap = computed(() => store.getters.productionMap)
 const taskStatusMap = computed(() => store.getters.taskStatusMap)
@@ -241,7 +267,7 @@ const comboStyles = computed(() => {
   border: 1px solid $light-grey-light;
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
-  z-index: 300;
+  z-index: $z-dropdown;
   margin-left: -1px;
   max-height: 180px;
   top: 38px;

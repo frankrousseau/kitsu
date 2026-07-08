@@ -41,7 +41,10 @@
           <tr
             :key="previewFile.id"
             class="datatable-row"
+            role="button"
+            tabindex="0"
             @click="redirectToTask(previewFile)"
+            @keydown.enter.prevent="redirectToTask(previewFile)"
             v-for="previewFile in previewFiles"
           >
             <td class="date">

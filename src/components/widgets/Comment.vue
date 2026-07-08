@@ -41,7 +41,14 @@
               isPinnable || isEditable || canToggleForClient || canMoveComment
             "
           >
-            <chevron-down-icon class="menu-icon" @click="toggleCommentMenu" />
+            <button
+              type="button"
+              class="menu-icon-button"
+              aria-label="Comment options"
+              @click="toggleCommentMenu"
+            >
+              <chevron-down-icon class="menu-icon" />
+            </button>
             <comment-menu
               :is-pinnable="isPinnable"
               :is-pinned="comment.pinned"
@@ -93,7 +100,11 @@
               <copy-icon
                 class="copy-icon"
                 :size="12"
+                role="button"
+                tabindex="0"
                 @click="emit('duplicate-comment', comment)"
+                @keydown.enter.prevent="emit('duplicate-comment', comment)"
+                @keydown.space.prevent="emit('duplicate-comment', comment)"
               />
             </p>
             <p
@@ -138,6 +149,7 @@
                 <img
                   class="attachment"
                   :src="getDownloadAttachmentPath(attachment)"
+                  :alt="attachment.name"
                 />
               </a>
               <attachment-audio-player
@@ -198,7 +210,11 @@
                   <span
                     class="flexrow-item reply-delete"
                     :title="$t('main.delete')"
+                    role="button"
+                    tabindex="0"
                     @click="onDeleteReplyClicked(replyComment)"
+                    @keydown.enter.prevent="onDeleteReplyClicked(replyComment)"
+                    @keydown.space.prevent="onDeleteReplyClicked(replyComment)"
                     v-if="
                       isCurrentUserAdmin || replyComment.person_id === user.id
                     "
@@ -233,6 +249,7 @@
                     <img
                       class="attachment"
                       :src="getDownloadAttachmentPath(attachment)"
+                      :alt="attachment.name"
                     />
                   </a>
                   <attachment-audio-player
@@ -341,7 +358,15 @@
                       v-for="(attach, index) in replyAttachments"
                     >
                       {{ shortenText(attach.get('file').name, 40) }}
-                      <span @click="removeReplyAttachment(attach)">x</span>
+                      <span
+                        role="button"
+                        tabindex="0"
+                        @click="removeReplyAttachment(attach)"
+                        @keydown.enter.prevent="removeReplyAttachment(attach)"
+                        @keydown.space.prevent="removeReplyAttachment(attach)"
+                      >
+                        x
+                      </span>
                     </div>
                   </div>
                   <div class="flexrow ml05">
@@ -388,7 +413,11 @@
               <span class="filler"></span>
               <span
                 class="flexrow-item reply-button"
+                role="button"
+                tabindex="0"
                 @click="showReplyWidget"
+                @keydown.enter.prevent="showReplyWidget"
+                @keydown.space.prevent="showReplyWidget"
                 v-if="!showReply && isReplyable"
               >
                 {{ $t('main.reply') }}
@@ -438,7 +467,15 @@
           :class="{ pointer: isCurrentUserManager }"
           :title="comment.previews[0].validation_status"
           :data-status="comment.previews[0].validation_status"
+          role="button"
+          tabindex="0"
           @click="changePreviewValidationStatus(comment.previews)"
+          @keydown.enter.prevent="
+            changePreviewValidationStatus(comment.previews)
+          "
+          @keydown.space.prevent="
+            changePreviewValidationStatus(comment.previews)
+          "
         ></span>
       </div>
     </article>
@@ -463,7 +500,14 @@
           {{ shortDate }}
         </span>
         <div class="flexrow-item menu-wrapper" v-if="isPinnable || isEditable">
-          <chevron-down-icon class="menu-icon" @click="toggleCommentMenu" />
+          <button
+            type="button"
+            class="menu-icon-button"
+            aria-label="Comment options"
+            @click="toggleCommentMenu"
+          >
+            <chevron-down-icon class="menu-icon" />
+          </button>
           <comment-menu
             :is-pinnable="isPinnable"
             :is-editable="isEditable"
@@ -1088,9 +1132,15 @@ article.comment {
   margin-top: 0.5em;
 }
 
+.menu-icon-button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
 .menu-icon {
   width: 20px;
-  cursor: pointer;
   color: $light-grey;
 }
 

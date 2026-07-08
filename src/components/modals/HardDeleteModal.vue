@@ -35,7 +35,11 @@
               'is-loading': isLoading
             }"
             :disabled="isLocked || null"
+            role="button"
+            tabindex="0"
             @click="$emit('confirm', selectionOnly === 'true')"
+            @keydown.enter.prevent="$emit('confirm', selectionOnly === 'true')"
+            @keydown.space.prevent="$emit('confirm', selectionOnly === 'true')"
           >
             {{ $t('main.confirmation') }}
           </a>

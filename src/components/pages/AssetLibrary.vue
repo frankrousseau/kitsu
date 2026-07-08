@@ -59,7 +59,12 @@
                     'selected-item': isSelected(entity)
                   }"
                   :key="entity.id"
+                  role="button"
+                  tabindex="0"
                   @click="isCurrentUserManager && toggleEntity(entity)"
+                  @keydown.enter.prevent="
+                    isCurrentUserManager && toggleEntity(entity)
+                  "
                   v-for="entity in group"
                 >
                   <div class="card" :title="entity.full_name">

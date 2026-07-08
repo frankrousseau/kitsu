@@ -159,9 +159,16 @@ export const routes = [
             peopleStore.state.organisation,
             userStore.state.user
           )
+          const isSupervisorOrManager =
+            userStore.getters.isCurrentUserManager(userStore.state) ||
+            userStore.getters.isCurrentUserSupervisor(userStore.state)
           const isProhibited =
-            !userStore.getters.isCurrentUserAdmin(userStore.state) &&
-            to?.matched.some(record => record.meta.requiresAdmin)
+            (!userStore.getters.isCurrentUserAdmin(userStore.state) &&
+              to?.matched.some(record => record.meta.requiresAdmin)) ||
+            (!isSupervisorOrManager &&
+              to?.matched.some(
+                record => record.meta.requiresSupervisorOrManager
+              ))
           if (taskTypeStore.state.taskTypes.length === 0) {
             init()
               .then(ready => {
@@ -337,7 +344,7 @@ export const routes = [
         path: '/team-schedule',
         component: TeamSchedule,
         name: 'team-schedule',
-        meta: { requiresAdmin: true }
+        meta: { requiresSupervisorOrManager: true }
       },
 
       {

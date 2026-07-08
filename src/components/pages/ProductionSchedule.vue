@@ -142,7 +142,14 @@
       v-if="isSidePanelOpen && !isLockedSchedule && !isTVShow"
     >
       <div class="side">
-        <a class="close-button" @click="toggleSidePanel">
+        <a
+          class="close-button"
+          role="button"
+          tabindex="0"
+          @click="toggleSidePanel"
+          @keydown.enter.prevent="toggleSidePanel"
+          @keydown.space.prevent="toggleSidePanel"
+        >
           <x-icon class="align-middle" :size="16" />
         </a>
         <h2 class="mt1">
@@ -186,10 +193,13 @@
             <div
               class="assignment-item"
               draggable="true"
+              role="button"
+              tabindex="0"
               @dragstart="
                 onAssignmentItemDragStart($event, entityType, selectedTaskType)
               "
               @click="onAssignmentItemSelected(entityType)"
+              @keydown.enter.prevent="onAssignmentItemSelected(entityType)"
             >
               <grip-vertical-icon class="icon" />
               <span class="name">
@@ -198,7 +208,15 @@
               </span>
               <span
                 class="expand"
+                role="button"
+                tabindex="0"
                 @click.stop="entityType.expanded = !entityType.expanded"
+                @keydown.enter.stop.prevent="
+                  entityType.expanded = !entityType.expanded
+                "
+                @keydown.space.stop.prevent="
+                  entityType.expanded = !entityType.expanded
+                "
               >
                 <chevron-right-icon v-if="!entityType.expanded" />
                 <chevron-down-icon v-else />
@@ -212,6 +230,8 @@
                 <div
                   class="assignment-item"
                   draggable="true"
+                  role="button"
+                  tabindex="0"
                   @dragstart="
                     onAssignmentItemDragStart(
                       $event,
@@ -220,6 +240,12 @@
                     )
                   "
                   @click="
+                    onAssignmentItemSelected({
+                      ...entityType,
+                      children: [child]
+                    })
+                  "
+                  @keydown.enter.prevent="
                     onAssignmentItemSelected({
                       ...entityType,
                       children: [child]
@@ -290,7 +316,11 @@
                     <a
                       class="reset-assignees"
                       :title="$t('schedule.reset_list')"
+                      role="button"
+                      tabindex="0"
                       @click="assignments.excludes = []"
+                      @keydown.enter.prevent="assignments.excludes = []"
+                      @keydown.space.prevent="assignments.excludes = []"
                       v-if="assignments.excludes.length"
                     >
                       <list-restart-icon
@@ -357,7 +387,11 @@
               />
               <a
                 class="reset-quotas ml05"
+                role="button"
+                tabindex="0"
                 @click="assignments.forcedDailyQuota = null"
+                @keydown.enter.prevent="assignments.forcedDailyQuota = null"
+                @keydown.space.prevent="assignments.forcedDailyQuota = null"
                 v-if="assignments.forcedDailyQuota"
               >
                 <trash-icon class="align-middle" :size="14" />

@@ -8,7 +8,7 @@
     >
       <img
         :loading="isLazy ? 'lazy' : undefined"
-        alt=""
+        :alt="person.full_name"
         :src="person.avatarPath"
         v-if="person.has_avatar"
       />
@@ -26,7 +26,14 @@
           {{ $t('main.avatar.open_page', { personName: person.name }) }}
         </span>
       </router-link>
-      <div class="menu-button flexrow" @click.stop="$emit('unassign', person)">
+      <div
+        class="menu-button flexrow"
+        role="button"
+        tabindex="0"
+        @click.stop="$emit('unassign', person)"
+        @keydown.enter.stop.prevent="$emit('unassign', person)"
+        @keydown.space.stop.prevent="$emit('unassign', person)"
+      >
         <user-minus-icon class="flexrow-item" :size="16" />
         <span class="flexrow-item">
           {{ $t('main.avatar.unassign', { personName: person.name }) }}

@@ -55,7 +55,10 @@
               'datatable-row': true,
               selected: selectionGrid[task.id]
             }"
+            role="button"
+            tabindex="0"
             @click="selectTask($event, index, task)"
+            @keydown.enter.prevent="selectTask($event, index, task)"
             v-for="(task, index) in tasks"
           >
             <td class="project">

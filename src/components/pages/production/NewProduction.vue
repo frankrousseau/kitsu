@@ -320,7 +320,11 @@
               <span
                 :key="assetType.id"
                 class="asset-type-name flexrow-item"
+                role="button"
+                tabindex="0"
                 @click="deleteFromList(assetType, 'assetTypes')"
+                @keydown.enter.prevent="deleteFromList(assetType, 'assetTypes')"
+                @keydown.space.prevent="deleteFromList(assetType, 'assetTypes')"
                 v-for="assetType in productionToCreate.assetTypes"
               >
                 {{ assetType.name }}

@@ -197,7 +197,7 @@ export default {
     currentProduction: {
       immediate: true,
       handler() {
-        const userLocale = this.user?.locale.substring(0, 2)
+        const userLocale = (this.user?.locale || 'en').substring(0, 2)
         const variant = this.currentProduction?.production_style
         if (userLocale !== 'en') {
           return
@@ -862,6 +862,7 @@ h2 {
 .avatar {
   border-radius: 50%;
   color: $white;
+  overflow: hidden;
 
   a,
   a:hover {
@@ -1105,7 +1106,7 @@ abbr {
 }
 
 .z300 {
-  z-index: 300000;
+  z-index: $z-tooltip;
 }
 
 label.label {
@@ -1294,7 +1295,7 @@ textarea.input:focus {
     border-radius: 0.5em;
     padding: 2.8em 3em 3em 3em;
 
-    h1.title {
+    h2.title {
       font-family: Lato;
       font-weight: 400;
       font-size: 3em;
@@ -1323,7 +1324,7 @@ textarea.input:focus {
     .box {
       padding: 1.5em;
 
-      h1.title {
+      h2.title {
         font-size: 1.8em;
         margin-bottom: 0.5em;
       }

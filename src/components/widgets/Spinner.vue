@@ -1,9 +1,9 @@
 <template>
   <div class="has-text-centered" :style="sizeStyle">
-    <img src="../../assets/spinner-white.svg" v-if="isWhite" />
+    <img src="../../assets/spinner-white.svg" alt="" v-if="isWhite" />
     <square-grid :style="{ margin: 'auto' }" v-else-if="isProcessing" />
     <origami :style="{ margin: 'auto' }" v-else-if="isStylish" />
-    <img src="../../assets/spinner.svg" v-else />
+    <img src="../../assets/spinner.svg" alt="" v-else />
   </div>
 </template>
 

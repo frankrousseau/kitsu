@@ -58,7 +58,11 @@
           'is-primary': true,
           'is-loading': isLoadingStay
         }"
+        role="button"
+        tabindex="0"
         @click="confirmAndStayClicked"
+        @keydown.enter.prevent="confirmAndStayClicked"
+        @keydown.space.prevent="confirmAndStayClicked"
         v-if="!assetToEdit?.id"
       >
         {{ $t('main.confirmation_and_stay') }}
@@ -69,7 +73,11 @@
           'is-primary': true,
           'is-loading': isLoading
         }"
+        role="button"
+        tabindex="0"
         @click="confirmClicked"
+        @keydown.enter.prevent="confirmClicked"
+        @keydown.space.prevent="confirmClicked"
       >
         {{ $t('main.confirmation') }}
       </a>

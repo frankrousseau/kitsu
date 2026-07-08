@@ -15,42 +15,90 @@
       <div class="tabs">
         <ul>
           <li :class="{ 'is-active': isActiveTab('parameters') }">
-            <a @click="activeTab = 'parameters'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'parameters'"
+              @keydown.enter.prevent="activeTab = 'parameters'"
+              @keydown.space.prevent="activeTab = 'parameters'"
+            >
               {{ $t('productions.parameters.title') }}
             </a>
           </li>
           <li :class="{ 'is-active': isActiveTab('metadataDescriptors') }">
-            <a @click="activeTab = 'metadataDescriptors'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'metadataDescriptors'"
+              @keydown.enter.prevent="activeTab = 'metadataDescriptors'"
+              @keydown.space.prevent="activeTab = 'metadataDescriptors'"
+            >
               {{ $t('project_templates.tabs.metadata_descriptors') }}
             </a>
           </li>
           <li :class="{ 'is-active': isActiveTab('assetTypes') }">
-            <a @click="activeTab = 'assetTypes'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'assetTypes'"
+              @keydown.enter.prevent="activeTab = 'assetTypes'"
+              @keydown.space.prevent="activeTab = 'assetTypes'"
+            >
               {{ $t('asset_types.title') }}
             </a>
           </li>
           <li :class="{ 'is-active': isActiveTab('taskTypes') }">
-            <a @click="activeTab = 'taskTypes'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'taskTypes'"
+              @keydown.enter.prevent="activeTab = 'taskTypes'"
+              @keydown.space.prevent="activeTab = 'taskTypes'"
+            >
               {{ $t('task_types.title') }}
             </a>
           </li>
           <li :class="{ 'is-active': isActiveTab('taskStatuses') }">
-            <a @click="activeTab = 'taskStatuses'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'taskStatuses'"
+              @keydown.enter.prevent="activeTab = 'taskStatuses'"
+              @keydown.space.prevent="activeTab = 'taskStatuses'"
+            >
               {{ $t('task_status.title') }}
             </a>
           </li>
           <li :class="{ 'is-active': isActiveTab('board') }">
-            <a @click="activeTab = 'board'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'board'"
+              @keydown.enter.prevent="activeTab = 'board'"
+              @keydown.space.prevent="activeTab = 'board'"
+            >
               {{ $t('board.settings.title') }}
             </a>
           </li>
           <li :class="{ 'is-active': isActiveTab('statusAutomations') }">
-            <a @click="activeTab = 'statusAutomations'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'statusAutomations'"
+              @keydown.enter.prevent="activeTab = 'statusAutomations'"
+              @keydown.space.prevent="activeTab = 'statusAutomations'"
+            >
               {{ $t('status_automations.title') }}
             </a>
           </li>
           <li :class="{ 'is-active': isActiveTab('backgrounds') }">
-            <a @click="activeTab = 'backgrounds'">
+            <a
+              role="button"
+              tabindex="0"
+              @click="activeTab = 'backgrounds'"
+              @keydown.enter.prevent="activeTab = 'backgrounds'"
+              @keydown.space.prevent="activeTab = 'backgrounds'"
+            >
               {{ $t('backgrounds.title') }}
             </a>
           </li>
@@ -202,7 +250,14 @@
               :key="tab.name"
               :class="{ 'is-active': metadataEntityTab === tab.name }"
             >
-              <a @click="metadataEntityTab = tab.name">{{ tab.label }}</a>
+              <a
+                role="button"
+                tabindex="0"
+                @click="metadataEntityTab = tab.name"
+                @keydown.enter.prevent="metadataEntityTab = tab.name"
+                @keydown.space.prevent="metadataEntityTab = tab.name"
+                >{{ tab.label }}</a
+              >
             </li>
           </ul>
         </div>

@@ -34,7 +34,11 @@
         <div
           class="flexrow-item mb1"
           :key="taskTypeId"
+          role="button"
+          tabindex="0"
           @click="removeTaskType(taskTypeId)"
+          @keydown.enter.prevent="removeTaskType(taskTypeId)"
+          @keydown.space.prevent="removeTaskType(taskTypeId)"
           v-for="taskTypeId in form.task_types"
         >
           <task-type-name

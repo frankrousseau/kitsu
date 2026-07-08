@@ -15,9 +15,9 @@
       :aria-label="title"
     >
       <div class="box">
-        <h1 class="title">
+        <h2 class="title">
           {{ title }}
-        </h1>
+        </h2>
         <slot />
       </div>
     </div>

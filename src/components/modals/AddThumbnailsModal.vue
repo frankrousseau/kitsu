@@ -55,6 +55,7 @@
         src="@/assets/icons/movie-thumbnail.png"
         width="150"
         height="100"
+        alt=""
         v-if="!thumbnailInfo.src"
       />
       <img
@@ -62,6 +63,7 @@
         :src="thumbnailInfo.src"
         width="150"
         height="100"
+        alt=""
         v-if="thumbnailInfo.src"
       />
       <span class="flexrow-item">

@@ -435,7 +435,10 @@ import { mapGetters, mapActions } from 'vuex'
 import drafts from '@/lib/drafts'
 import { getTaskEntityPath, getTaskEntitiesPath } from '@/lib/path'
 import { formatRevision } from '@/lib/preview'
-import { getTaskTypePriorityOfProd } from '@/lib/productions'
+import {
+  getTaskTypePriorityOfProd,
+  getTaskTypeWithUrl
+} from '@/lib/productions'
 import { sortPeople } from '@/lib/sorting'
 
 import { formatListMixin } from '@/components/mixins/format'
@@ -505,6 +508,7 @@ export default {
       draftComment: {},
       previewForms: [],
       currentFrame: 0,
+      isUseCurrentFrame: false,
       currentTask: null,
       hookupPlaylistTaskIds: [],
       selectedTab: 'validation',
@@ -957,12 +961,13 @@ export default {
         .filter(taskType => entity_tasks[taskType.id])
 
         // add a url that points to the task
-        .map(taskType => {
-          const task = entity_tasks[taskType.id]
-          if (task)
-            taskType.url = `/productions/${task.project_id}/episodes/${task.episode_id || 'all'}/${task_type_entity_slug}/tasks/${task.id}`
-          return taskType
-        })
+        .map(taskType =>
+          getTaskTypeWithUrl(
+            taskType,
+            entity_tasks[taskType.id],
+            task_type_entity_slug
+          )
+        )
       return filtered
     }
   },

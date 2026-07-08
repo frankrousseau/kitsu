@@ -237,7 +237,14 @@
             <div class="flexrow">
               <page-subtitle class="flexrow-item" :text="addEntitiesText" />
               <span class="filler"></span>
-              <a class="close-button" @click="toggleAddEntities">
+              <a
+                class="close-button"
+                role="button"
+                tabindex="0"
+                @click="toggleAddEntities"
+                @keydown.enter.prevent="toggleAddEntities"
+                @keydown.space.prevent="toggleAddEntities"
+              >
                 <x-icon />
               </a>
             </div>
@@ -362,8 +369,12 @@
                       playlisted: currentEntitiesMap[asset.id] !== undefined
                     }"
                     draggable="true"
+                    role="button"
+                    tabindex="0"
                     @dragstart="onEntityDragStart($event, asset)"
                     @click.prevent="addEntityToPlaylist(asset)"
+                    @keydown.enter.prevent="addEntityToPlaylist(asset)"
+                    @keydown.space.prevent="addEntityToPlaylist(asset)"
                     v-for="asset in typeAssets.filter(a => !a.canceled)"
                   >
                     <div
@@ -391,8 +402,12 @@
                     playlisted: currentEntitiesMap[sequence.id] !== undefined
                   }"
                   draggable="true"
+                  role="button"
+                  tabindex="0"
                   @dragstart="onEntityDragStart($event, sequence)"
                   @click.prevent="addEntityToPlaylist(sequence)"
+                  @keydown.enter.prevent="addEntityToPlaylist(sequence)"
+                  @keydown.space.prevent="addEntityToPlaylist(sequence)"
                   v-for="sequence in displayedSequences.filter(
                     s => !s.canceled
                   )"
@@ -434,8 +449,12 @@
                     playlisted: currentEntitiesMap[edit.id] !== undefined
                   }"
                   draggable="true"
+                  role="button"
+                  tabindex="0"
                   @dragstart="onEntityDragStart($event, edit)"
                   @click.prevent="addEntityToPlaylist(edit)"
+                  @keydown.enter.prevent="addEntityToPlaylist(edit)"
+                  @keydown.space.prevent="addEntityToPlaylist(edit)"
                   v-for="edit in displayedEdits.filter(e => !e.canceled)"
                 >
                   <div
@@ -473,8 +492,12 @@
                     playlisted: currentEntitiesMap[episode.id] !== undefined
                   }"
                   draggable="true"
+                  role="button"
+                  tabindex="0"
                   @dragstart="onEntityDragStart($event, episode)"
                   @click.prevent="addEntityToPlaylist(episode)"
+                  @keydown.enter.prevent="addEntityToPlaylist(episode)"
+                  @keydown.space.prevent="addEntityToPlaylist(episode)"
                   v-for="episode in displayedEpisodes.filter(e => !e.canceled)"
                 >
                   <div
@@ -530,8 +553,12 @@
                         playlisted: currentEntitiesMap[shot.id] !== undefined
                       }"
                       draggable="true"
+                      role="button"
+                      tabindex="0"
                       @dragstart="onEntityDragStart($event, shot)"
                       @click.prevent="addEntityToPlaylist(shot)"
+                      @keydown.enter.prevent="addEntityToPlaylist(shot)"
+                      @keydown.space.prevent="addEntityToPlaylist(shot)"
                     >
                       <div
                         class="entity-loading-spinner"

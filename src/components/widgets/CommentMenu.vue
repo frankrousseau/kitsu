@@ -1,18 +1,54 @@
 <template>
   <div class="comment-menu">
-    <div @click="$emit('pin-clicked')" v-if="isPinnable && !isEmpty">
+    <div
+      role="button"
+      tabindex="0"
+      @click="$emit('pin-clicked')"
+      @keydown.enter.prevent="$emit('pin-clicked')"
+      @keydown.space.prevent="$emit('pin-clicked')"
+      v-if="isPinnable && !isEmpty"
+    >
       {{ isPinned ? $t('comments.unpin') : $t('comments.pin') }}
     </div>
-    <div @click="$emit('toggle-for-client-clicked')" v-if="canToggleForClient">
+    <div
+      role="button"
+      tabindex="0"
+      @click="$emit('toggle-for-client-clicked')"
+      @keydown.enter.prevent="$emit('toggle-for-client-clicked')"
+      @keydown.space.prevent="$emit('toggle-for-client-clicked')"
+      v-if="canToggleForClient"
+    >
       {{ $t('comments.toggle_for_client') }}
     </div>
-    <div @click="$emit('edit-clicked')" v-if="isEditable">
+    <div
+      role="button"
+      tabindex="0"
+      @click="$emit('edit-clicked')"
+      @keydown.enter.prevent="$emit('edit-clicked')"
+      @keydown.space.prevent="$emit('edit-clicked')"
+      v-if="isEditable"
+    >
       {{ $t('main.edit') }}
     </div>
-    <div @click="$emit('move-clicked')" v-if="canMove">
+    <div
+      role="button"
+      tabindex="0"
+      @click="$emit('move-clicked')"
+      @keydown.enter.prevent="$emit('move-clicked')"
+      @keydown.space.prevent="$emit('move-clicked')"
+      v-if="canMove"
+    >
       {{ $t('comments.move_to_task') }}
     </div>
-    <div class="error" @click="$emit('delete-clicked')" v-if="isEditable">
+    <div
+      class="error"
+      role="button"
+      tabindex="0"
+      @click="$emit('delete-clicked')"
+      @keydown.enter.prevent="$emit('delete-clicked')"
+      @keydown.space.prevent="$emit('delete-clicked')"
+      v-if="isEditable"
+    >
       {{ $t('main.delete') }}
     </div>
   </div>

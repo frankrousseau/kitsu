@@ -9,7 +9,18 @@
       {{ label }}
     </label>
     <div class="status-automation-combo">
-      <div class="flexrow" @click="toggleStatusAutomationsList">
+      <div
+        class="flexrow"
+        role="combobox"
+        tabindex="0"
+        aria-haspopup="listbox"
+        :aria-expanded="showStatusAutomationsList"
+        :aria-activedescendant="
+          activeIndex > -1 ? optionId(activeIndex) : undefined
+        "
+        @click="toggleStatusAutomationsList"
+        @keydown="onKeydown"
+      >
         <div class="selected-status-automation-line flexrow-item">
           <status-automation-item
             :status-automation="currentStatusAutomation"
@@ -21,12 +32,20 @@
         </div>
         <chevron-down-icon class="down-icon flexrow-item" />
       </div>
-      <div class="select-input" ref="select" v-if="showStatusAutomationsList">
+      <div
+        class="select-input"
+        ref="listRef"
+        role="listbox"
+        v-if="showStatusAutomationsList"
+      >
         <div
-          class="status-automation-line"
+          :id="optionId(index)"
           :key="statusAutomation.id"
+          class="status-automation-line"
+          role="option"
+          :aria-selected="statusAutomation.id === currentStatusAutomation?.id"
           @click="selectStatusAutomation(statusAutomation)"
-          v-for="statusAutomation in statusAutomationsList"
+          v-for="(statusAutomation, index) in statusAutomationsList"
         >
           <status-automation-item
             :status-automation="statusAutomation"
@@ -43,11 +62,12 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useStore } from 'vuex'
 import { ChevronDownIcon } from 'lucide-vue-next'
 
 import { useCombobox } from '@/composables/combobox'
+import { useComboboxKeyboard } from '@/composables/comboboxKeyboard'
 
 import ComboboxMask from '@/components/widgets/ComboboxMask.vue'
 import StatusAutomationItem from '@/components/widgets/StatusAutomationItem.vue'
@@ -88,6 +108,15 @@ const {
   toggle: toggleStatusAutomationsList,
   select: selectStatusAutomation
 } = useCombobox(emit)
+
+const listRef = ref(null)
+const { activeIndex, onKeydown, optionId } = useComboboxKeyboard({
+  isOpen: showStatusAutomationsList,
+  toggle: toggleStatusAutomationsList,
+  optionsLength: () => props.statusAutomationsList.length,
+  onSelect: index => selectStatusAutomation(props.statusAutomationsList[index]),
+  listRef
+})
 
 const statusAutomationMap = computed(() => store.getters.statusAutomationMap)
 
@@ -165,7 +194,7 @@ const currentStatusAutomation = computed(() => {
   border: 1px solid $light-grey-light;
   border-bottom-left-radius: 1em;
   border-bottom-right-radius: 1em;
-  z-index: 300;
+  z-index: $z-dropdown;
   margin-left: -1px;
   max-height: 180px;
   top: 56px;

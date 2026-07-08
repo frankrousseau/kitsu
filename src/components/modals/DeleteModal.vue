@@ -18,7 +18,11 @@
               'is-danger': true,
               'is-loading': isLoading
             }"
+            role="button"
+            tabindex="0"
             @click="$emit('confirm')"
+            @keydown.enter.prevent="$emit('confirm')"
+            @keydown.space.prevent="$emit('confirm')"
           >
             {{ deleteButtonText || $t('main.confirmation') }}
           </a>

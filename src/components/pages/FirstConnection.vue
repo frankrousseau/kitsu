@@ -3,8 +3,12 @@
     <div class="container has-text-centered">
       <div class="box has-text-left">
         <div class="has-text-centered login-header">
-          <img src="../../assets/kitsu-text-dark.svg" v-if="isDarkTheme" />
-          <img src="../../assets/kitsu-text.svg" v-else />
+          <img
+            src="../../assets/kitsu-text-dark.svg"
+            alt="Kitsu"
+            v-if="isDarkTheme"
+          />
+          <img src="../../assets/kitsu-text.svg" alt="Kitsu" v-else />
         </div>
 
         <div class="has-text-centered">
@@ -41,7 +45,11 @@
             :class="{
               'is-loading': isLoading
             }"
+            role="button"
+            tabindex="0"
             @click="confirmResetPassword"
+            @keydown.enter.prevent="confirmResetPassword"
+            @keydown.space.prevent="confirmResetPassword"
             v-if="!isSuccess"
           >
             {{ $t('login.reset_password') }}
