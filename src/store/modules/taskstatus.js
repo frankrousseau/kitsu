@@ -126,6 +126,11 @@ const actions = {
     return taskStatusApi.updateTaskStatusLink(data)
   },
 
+  reorderTaskStatusLinks({ commit }, { projectId, taskStatusIds }) {
+    if (!taskStatusIds?.length) return Promise.resolve()
+    return taskStatusApi.reorderTaskStatusLinks(projectId, taskStatusIds)
+  },
+
   deleteTaskStatus({ commit, state }, taskStatus) {
     return taskStatusApi.deleteTaskStatus(taskStatus).then(() => {
       commit(DELETE_TASK_STATUS_END, taskStatus)

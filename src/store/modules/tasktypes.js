@@ -173,6 +173,11 @@ const actions = {
     return await taskTypesApi.updateTaskTypeLink(data)
   },
 
+  reorderTaskTypeLinks({ commit }, { projectId, taskTypeIds }) {
+    if (!taskTypeIds?.length) return Promise.resolve()
+    return taskTypesApi.reorderTaskTypeLinks(projectId, taskTypeIds)
+  },
+
   deleteTaskType({ commit, state }, taskType) {
     commit(DELETE_TASK_TYPE_START)
     return taskTypesApi.deleteTaskType(taskType).then(() => {

@@ -48,6 +48,13 @@ export default {
     return await client.ppost('/api/data/task-type-links', data)
   },
 
+  reorderTaskTypeLinks(projectId, taskTypeIds) {
+    return client.ppost(
+      `/api/data/projects/${projectId}/task-type-links/batch`,
+      { task_type_ids: taskTypeIds }
+    )
+  },
+
   deleteTaskType(taskType) {
     return client.pdel(`/api/data/task-types/${taskType.id}`)
   },

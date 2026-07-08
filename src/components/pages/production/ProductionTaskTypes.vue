@@ -104,7 +104,6 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 
-import func from '@/lib/func'
 import { sortByName, sortTaskTypes } from '@/lib/sorting'
 import { formatFullDate } from '@/lib/time'
 import stringHelper from '@/lib/string'
@@ -305,9 +304,10 @@ const savePriorities = async forms => {
   if (now - lastCall > 1000 && !isSaving) {
     lastCall = now
     isSaving = true
-    await func.runPromiseMapAsSeries(forms, form =>
-      store.dispatch('editTaskTypeLink', form)
-    )
+    await store.dispatch('reorderTaskTypeLinks', {
+      projectId: currentProduction.value.id,
+      taskTypeIds: forms.map(form => form.taskTypeId)
+    })
     isSaving = false
     if (newSaveCall) {
       await savePriorities(forms)

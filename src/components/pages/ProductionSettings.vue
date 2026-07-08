@@ -281,15 +281,12 @@ const removeTaskStatus = async id => {
 }
 
 const updateTaskStatusPriorities = async taskStatuses => {
-  const taskStatusLinks = taskStatuses.map((status, index) => ({
-    ...currentProduction.value.task_statuses_link[status.id],
-    priority: index + 1,
-    project_id: currentProduction.value.id,
-    task_status_id: status.id
-  }))
-  for (const taskStatusLink of taskStatusLinks) {
-    await store.dispatch('editTaskStatusLink', taskStatusLink)
-  }
+  // The batch route sets each priority from the list order and preserves
+  // the board roles of every link.
+  await store.dispatch('reorderTaskStatusLinks', {
+    projectId: currentProduction.value.id,
+    taskStatusIds: taskStatuses.map(status => status.id)
+  })
   await store.dispatch('loadContext')
 }
 
