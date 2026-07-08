@@ -62,7 +62,7 @@
                   <chevron-down-icon :size="14" />
                 </span>
                 <button-simple
-                  class="is-small flexrow-item"
+                  class="is-small flexrow-item add-metadata-button"
                   icon="plus"
                   :text="''"
                   @click="onAddMetadataClicked"
@@ -1266,6 +1266,11 @@ td.ready-for {
   position: relative;
 }
 
+.field-header .flexrow-item:first-child {
+  flex: 1;
+  margin-right: 20px;
+}
+
 .asset-field-menu-button {
   align-items: center;
   background: var(--background-alt);
@@ -1274,9 +1279,14 @@ td.ready-for {
   flex: 0 0 16px;
   height: 16px;
   justify-content: center;
-  margin-left: 0.3em;
   padding: 1px;
+  position: absolute;
+  right: 0;
   width: 16px;
+}
+
+.add-metadata-button {
+  margin-left: 0.3em;
 }
 
 .validation-cell {
