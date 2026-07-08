@@ -740,6 +740,8 @@ export default {
       },
       stickedColumns: {},
       domEvents: [
+        ['click', this.onDocumentClick],
+        ['keydown', this.onDocumentKeyDown],
         ['mousemove', this.onMouseMove],
         ['touchmove', this.onMouseMove],
         ['mouseup', this.stopBrowsing],
@@ -1097,22 +1099,82 @@ export default {
       this.showHeaderMenu()
     },
 
-    showFieldHeaderMenu(fieldName, event) {
-      const headerMenuEl = this.$refs.headerFieldMenu.$el
-      if (headerMenuEl.className === 'header-menu') {
-        headerMenuEl.className = 'header-menu hidden'
-      } else {
-        headerMenuEl.className = 'header-menu'
-        const headerElement = event.currentTarget.closest('th')
-        const headerBox = headerElement.getBoundingClientRect()
-        const left = headerBox.left - 3
-        const top = headerBox.bottom + 11
-        const width = Math.max(100, headerBox.width - 1)
-        headerMenuEl.style.left = `${left}px`
-        headerMenuEl.style.top = `${top}px`
-        headerMenuEl.style.width = `${width}px`
+    hideHeaderMenu(refName) {
+      this.$refs[refName]?.$el?.classList.add('hidden')
+    },
+
+    hideHeaderMenus(exceptRefName = null) {
+      ;['headerMenu', 'headerMetadataMenu', 'headerFieldMenu']
+        .filter(refName => refName !== exceptRefName)
+        .forEach(refName => this.hideHeaderMenu(refName))
+    },
+
+    showHeaderMenuAt(refName, event, getHeaderElement, offset = {}) {
+      const headerMenuEl = this.$refs[refName].$el
+      if (!event || !headerMenuEl.classList.contains('hidden')) {
+        headerMenuEl.classList.add('hidden')
+        return
       }
+
+      this.hideHeaderMenus(refName)
+      headerMenuEl.classList.remove('hidden')
+
+      const headerElement = getHeaderElement(event)
+      const headerBox = headerElement.getBoundingClientRect()
+      const left = headerBox.left + (offset.left || 0)
+      const top = headerBox.bottom + (offset.top || 0)
+      const width = Math.max(100, headerBox.width - 1)
+      headerMenuEl.style.left = `${left}px`
+      headerMenuEl.style.top = `${top}px`
+      headerMenuEl.style.width = `${width}px`
+    },
+
+    showHeaderMenu(columnId, columnIndexInGrid, event) {
+      this.showHeaderMenuAt('headerMenu', event, event => {
+        let headerElement = event.srcElement.parentNode.parentNode
+        if (headerElement.tagName !== 'TH') {
+          headerElement = headerElement.parentNode
+        }
+        return headerElement
+      })
+      this.lastHeaderMenuDisplayed = columnId
+      this.lastHeaderMenuDisplayedIndexInGrid = columnIndexInGrid
+    },
+
+    showMetadataHeaderMenu(columnId, event) {
+      this.showHeaderMenuAt(
+        'headerMetadataMenu',
+        event,
+        event => event.srcElement.parentNode.parentNode,
+        { left: -3, top: 11 }
+      )
+      this.lastMetadataHeaderMenuDisplayed = columnId
+    },
+
+    showFieldHeaderMenu(fieldName, event) {
+      this.showHeaderMenuAt(
+        'headerFieldMenu',
+        event,
+        event => event.currentTarget.closest('th'),
+        { left: -3, top: 11 }
+      )
       this.lastFieldHeaderMenuDisplayed = fieldName
+    },
+
+    onDocumentClick(event) {
+      if (
+        event.target.closest('.header-menu') ||
+        event.target.closest('.header-icon')
+      ) {
+        return
+      }
+      this.hideHeaderMenus()
+    },
+
+    onDocumentKeyDown(event) {
+      if (event.key === 'Escape') {
+        this.hideHeaderMenus()
+      }
     },
 
     onSortByFieldClicked() {
