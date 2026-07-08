@@ -1263,12 +1263,12 @@ td.ready-for {
 }
 
 .field-header {
+  padding-right: 20px;
   position: relative;
 }
 
 .field-header .flexrow-item:first-child {
   flex: 1;
-  margin-right: 20px;
 }
 
 .asset-field-menu-button {
