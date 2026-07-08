@@ -81,7 +81,25 @@
               :style="{ left: `${nameWidth}px` }"
               v-if="hasStickyEpisode"
             >
-              {{ $t('assets.fields.episode') }}
+              <div class="flexrow field-header">
+                <span class="flexrow-item">
+                  {{ $t('assets.fields.episode') }}
+                </span>
+                <span
+                  class="asset-field-menu-button header-icon pointer"
+                  role="button"
+                  tabindex="0"
+                  @click="showFieldHeaderMenu('episode_id', $event)"
+                  @keydown.enter.prevent="
+                    showFieldHeaderMenu('episode_id', $event)
+                  "
+                  @keydown.space.prevent="
+                    showFieldHeaderMenu('episode_id', $event)
+                  "
+                >
+                  <chevron-down-icon :size="14" />
+                </span>
+              </div>
             </th>
 
             <metadata-header
@@ -196,7 +214,25 @@
                 metadataDisplayHeaders.timeSpent
               "
             >
-              {{ $t('assets.fields.time_spent') }}
+              <div class="flexrow field-header">
+                <span class="flexrow-item">
+                  {{ $t('assets.fields.time_spent') }}
+                </span>
+                <span
+                  class="asset-field-menu-button header-icon pointer"
+                  role="button"
+                  tabindex="0"
+                  @click="showFieldHeaderMenu('timeSpent', $event)"
+                  @keydown.enter.prevent="
+                    showFieldHeaderMenu('timeSpent', $event)
+                  "
+                  @keydown.space.prevent="
+                    showFieldHeaderMenu('timeSpent', $event)
+                  "
+                >
+                  <chevron-down-icon :size="14" />
+                </span>
+              </div>
             </th>
 
             <th
@@ -211,7 +247,25 @@
                 metadataDisplayHeaders.estimation
               "
             >
-              {{ $t('main.estimation_short') }}
+              <div class="flexrow field-header">
+                <span class="flexrow-item">
+                  {{ $t('main.estimation_short') }}
+                </span>
+                <span
+                  class="asset-field-menu-button header-icon pointer"
+                  role="button"
+                  tabindex="0"
+                  @click="showFieldHeaderMenu('estimation', $event)"
+                  @keydown.enter.prevent="
+                    showFieldHeaderMenu('estimation', $event)
+                  "
+                  @keydown.space.prevent="
+                    showFieldHeaderMenu('estimation', $event)
+                  "
+                >
+                  <chevron-down-icon :size="14" />
+                </span>
+              </div>
             </th>
 
             <th
@@ -223,7 +277,25 @@
                 metadataDisplayHeaders.resolution
               "
             >
-              {{ $t('shots.fields.resolution') }}
+              <div class="flexrow field-header">
+                <span class="flexrow-item">
+                  {{ $t('shots.fields.resolution') }}
+                </span>
+                <span
+                  class="asset-field-menu-button header-icon pointer"
+                  role="button"
+                  tabindex="0"
+                  @click="showFieldHeaderMenu('resolution', $event)"
+                  @keydown.enter.prevent="
+                    showFieldHeaderMenu('resolution', $event)
+                  "
+                  @keydown.space.prevent="
+                    showFieldHeaderMenu('resolution', $event)
+                  "
+                >
+                  <chevron-down-icon :size="14" />
+                </span>
+              </div>
             </th>
 
             <template v-if="displaySettings.showInfos">
@@ -1197,10 +1269,17 @@ export default {
 
     onSortByFieldClicked() {
       const fieldName = this.lastFieldHeaderMenuDisplayed
+      const fieldLabels = {
+        episode_id: this.$t('assets.fields.episode'),
+        estimation: this.$t('main.estimation_short'),
+        ready_for: this.$t('assets.fields.ready_for'),
+        resolution: this.$t('shots.fields.resolution'),
+        timeSpent: this.$t('assets.fields.time_spent')
+      }
       this.$emit('change-sort', {
         type: 'field',
         column: fieldName,
-        name: this.$t(`assets.fields.${fieldName}`)
+        name: fieldLabels[fieldName] || this.$t(`assets.fields.${fieldName}`)
       })
       this.showFieldHeaderMenu(fieldName)
     },
