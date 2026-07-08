@@ -430,13 +430,15 @@ const actions = {
     const tasksToUpdate = Array.from(state.selectedTasks.keys())
       .map(taskId => state.taskMap.get(taskId))
       .filter(task => task && task.priority !== priority)
-    // No batch endpoint for priorities: keep the requests serial to avoid
-    // hammering the server with parallel writes.
-    for (const task of tasksToUpdate) {
-      const taskType = rootGetters.taskTypeMap.get(task.task_type_id)
-      const updatedTask = await tasksApi.updateTask(task.id, { priority })
+    if (tasksToUpdate.length === 0) return
+    const updatedTasks = await tasksApi.setTasksPriority(
+      tasksToUpdate.map(task => task.id),
+      priority
+    )
+    updatedTasks.forEach(updatedTask => {
+      const taskType = rootGetters.taskTypeMap.get(updatedTask.task_type_id)
       commit(EDIT_TASK_END, { task: updatedTask, taskType })
-    }
+    })
   },
 
   updateTask({ commit, state }, { taskId, data }) {

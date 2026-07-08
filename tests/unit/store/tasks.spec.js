@@ -8,6 +8,9 @@ vi.mock('@/store/api/tasks', () => ({
     unassignPersonFromTasks: vi.fn(() => Promise.resolve()),
     createEntityTasks: vi.fn(() =>
       Promise.resolve([{ id: 'task-1' }, { id: 'task-2' }])
+    ),
+    setTasksPriority: vi.fn(() =>
+      Promise.resolve([{ id: 'task-1', priority: 2, task_type_id: 'type-1' }])
     )
   }
 }))
@@ -170,6 +173,31 @@ describe('Tasks store', () => {
       )
       expect(tasksApi.unassignPersonFromTasks).not.toHaveBeenCalled()
       expect(commit).not.toHaveBeenCalled()
+    })
+
+    test('changeSelectedPriorities updates the selection in one request', async () => {
+      const commit = vi.fn()
+      const state = {
+        selectedTasks: new Map([
+          ['task-1', true],
+          ['task-2', true]
+        ]),
+        taskMap: new Map([
+          ['task-1', { id: 'task-1', priority: 0 }],
+          // Already at the target priority: must be excluded from the call.
+          ['task-2', { id: 'task-2', priority: 2 }]
+        ])
+      }
+      const rootGetters = { taskTypeMap: new Map() }
+      await tasksStore.actions.changeSelectedPriorities(
+        { commit, state, rootGetters },
+        { priority: 2 }
+      )
+      expect(tasksApi.setTasksPriority).toHaveBeenCalledTimes(1)
+      expect(tasksApi.setTasksPriority).toHaveBeenCalledWith(['task-1'], 2)
+      expect(commit).toHaveBeenCalledTimes(1)
+      expect(commit.mock.calls[0][0]).toEqual('EDIT_TASK_END')
+      expect(commit.mock.calls[0][1].task.priority).toEqual(2)
     })
 
     test('createEntityTasks commits NEW_TASK_END for each created task', async () => {

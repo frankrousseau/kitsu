@@ -234,6 +234,13 @@ export default {
     })
   },
 
+  setTasksPriority(taskIds, priority) {
+    return client.pput('/api/actions/tasks/set-priority', {
+      task_ids: taskIds,
+      priority
+    })
+  },
+
   unassignPersonFromTasks(taskIds, personId) {
     return client.pput('/api/actions/tasks/clear-assignation', {
       task_ids: taskIds,
