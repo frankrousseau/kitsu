@@ -12,7 +12,7 @@ export default {
     if (episode) {
       path += `&episode_id=${episode.id}`
     }
-    return client.pget(path)
+    return withTasks ? client.pgetNdjson(path) : client.pget(path)
   },
 
   getSharedAssets(production, shared = true) {

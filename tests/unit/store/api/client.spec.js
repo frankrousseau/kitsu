@@ -147,4 +147,91 @@ describe('store/api/client', () => {
     await client.searchData('rabbit', 10, 0, ['assets'], 'production-1')
     expect(h.sent.project_id).toEqual('production-1')
   })
+
+  describe('pgetNdjson', () => {
+    // NDJSON body split in two chunks, cutting a line in half, to
+    // exercise the buffering.
+    const ndjsonResponse = lines => {
+      const text = lines.map(line => JSON.stringify(line)).join('\n') + '\n'
+      const encoder = new TextEncoder()
+      const middle = Math.floor(text.length / 2)
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => 'application/x-ndjson' },
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode(text.slice(0, middle)))
+            controller.enqueue(encoder.encode(text.slice(middle)))
+            controller.close()
+          }
+        })
+      }
+    }
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    test('requests stream+compact and maps rows by field name', async () => {
+      const fetchMock = vi.fn(async () =>
+        ndjsonResponse([
+          {
+            compact: true,
+            asset_fields: ['id', 'name', 'tasks'],
+            task_fields: ['id', 'task_status_id']
+          },
+          ['asset-1', 'Chair', [['task-1', 'status-open']]],
+          ['asset-2', 'Table', []]
+        ])
+      )
+      vi.stubGlobal('fetch', fetchMock)
+      const entities = await client.pgetNdjson(
+        '/api/data/assets/with-tasks?project_id=production-1'
+      )
+      expect(fetchMock.mock.calls[0][0]).toEqual(
+        '/api/data/assets/with-tasks?project_id=production-1' +
+          '&stream=true&compact=true'
+      )
+      expect(entities).toEqual([
+        {
+          id: 'asset-1',
+          name: 'Chair',
+          tasks: [{ id: 'task-1', task_status_id: 'status-open' }]
+        },
+        { id: 'asset-2', name: 'Table', tasks: [] }
+      ])
+    })
+
+    test('falls back to the legacy request when the answer is not NDJSON', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => ({
+          ok: false,
+          status: 400,
+          headers: { get: () => 'application/json' }
+        }))
+      )
+      h.response = { body: [{ id: 'asset-1' }] }
+      await expect(
+        client.pgetNdjson('/api/data/shots/with-tasks')
+      ).resolves.toEqual([{ id: 'asset-1' }])
+      expect(h.calls).toEqual([
+        { method: 'GET', path: '/api/data/shots/with-tasks' }
+      ])
+    })
+
+    test('a 401 redirects to login and never settles the promise', async () => {
+      vi.stubGlobal('fetch', vi.fn(async () => ({ status: 401 })))
+      const outcome = await Promise.race([
+        client.pgetNdjson('/api/data/shots/with-tasks').then(
+          () => 'resolved',
+          () => 'rejected'
+        ),
+        new Promise(resolve => setTimeout(() => resolve('pending'), 20))
+      ])
+      expect(outcome).toBe('pending')
+      expect(errors.backToLogin).toHaveBeenCalled()
+    })
+  })
 })
