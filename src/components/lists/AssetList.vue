@@ -47,12 +47,12 @@
               }"
               scope="col"
             >
-              <div class="flexrow">
+              <div class="flexrow field-header">
                 <span class="flexrow-item">
                   {{ $t('assets.fields.name') }}
                 </span>
                 <span
-                  class="metadata-menu-button header-icon pointer"
+                  class="asset-field-menu-button header-icon pointer"
                   role="button"
                   tabindex="0"
                   @click="showFieldHeaderMenu('name', $event)"
@@ -151,7 +151,7 @@
                   {{ $t('assets.fields.description') }}
                 </span>
                 <span
-                  class="metadata-menu-button header-icon pointer"
+                  class="asset-field-menu-button header-icon pointer"
                   role="button"
                   tabindex="0"
                   @click="showFieldHeaderMenu('description', $event)"
@@ -1260,6 +1260,23 @@ td.ready-for {
   min-width: 200px;
   max-width: 200px;
   width: 200px;
+}
+
+.field-header {
+  position: relative;
+}
+
+.asset-field-menu-button {
+  align-items: center;
+  background: var(--background-alt);
+  border-radius: 50%;
+  display: inline-flex;
+  flex: 0 0 16px;
+  height: 16px;
+  justify-content: center;
+  margin-left: 0.3em;
+  padding: 1px;
+  width: 16px;
 }
 
 .validation-cell {
