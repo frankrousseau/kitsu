@@ -25,6 +25,13 @@
         @toggle-stick="metadataStickColumnClicked($event)"
       />
 
+      <table-metadata-header-menu
+        ref="headerFieldMenu"
+        :is-edit-allowed="false"
+        :show-stick="false"
+        @sort-by-clicked="onSortByFieldClicked()"
+      />
+
       <table
         class="datatable multi-section"
         :class="{ 'expand-task-types': displaySettings.fullTaskTypeNames }"
@@ -36,9 +43,19 @@
               class="name shot-name datatable-row-header"
               ref="th-shot"
             >
-              <div class="flexrow">
+              <div class="flexrow field-header">
                 <span class="flexrow-item">
                   {{ $t('shots.fields.name') }}
+                </span>
+                <span
+                  class="asset-field-menu-button header-icon pointer"
+                  role="button"
+                  tabindex="0"
+                  @click="showFieldHeaderMenu('name', $event)"
+                  @keydown.enter.prevent="showFieldHeaderMenu('name', $event)"
+                  @keydown.space.prevent="showFieldHeaderMenu('name', $event)"
+                >
+                  <chevron-down-icon :size="14" />
                 </span>
                 <button-simple
                   class="is-small flexrow"
@@ -100,7 +117,25 @@
                 isShotDescription
               "
             >
-              {{ $t('shots.fields.description') }}
+              <div class="flexrow field-header">
+                <span class="flexrow-item">
+                  {{ $t('shots.fields.description') }}
+                </span>
+                <span
+                  class="asset-field-menu-button header-icon pointer"
+                  role="button"
+                  tabindex="0"
+                  @click="showFieldHeaderMenu('description', $event)"
+                  @keydown.enter.prevent="
+                    showFieldHeaderMenu('description', $event)
+                  "
+                  @keydown.space.prevent="
+                    showFieldHeaderMenu('description', $event)
+                  "
+                >
+                  <chevron-down-icon :size="14" />
+                </span>
+              </div>
             </th>
 
             <th
@@ -826,6 +861,7 @@
 </template>
 
 <script>
+import { ChevronDownIcon } from 'lucide-vue-next'
 import { mapGetters, mapActions } from 'vuex'
 
 import preferences from '@/lib/preferences'
@@ -864,6 +900,7 @@ export default {
 
   components: {
     ButtonSimple,
+    ChevronDownIcon,
     DescriptionCell,
     EntityThumbnail,
     MetadataHeader,
@@ -921,6 +958,7 @@ export default {
     return {
       type: 'shot',
       hiddenColumns: {},
+      lastFieldHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayed: null,
       lastMetadataHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayedIndexInGrid: null,

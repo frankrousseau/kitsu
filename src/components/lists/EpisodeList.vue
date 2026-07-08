@@ -25,6 +25,13 @@
         @toggle-stick="metadataStickColumnClicked($event)"
       />
 
+      <table-metadata-header-menu
+        ref="headerFieldMenu"
+        :is-edit-allowed="false"
+        :show-stick="false"
+        @sort-by-clicked="onSortByFieldClicked()"
+      />
+
       <table
         class="datatable"
         :class="{ 'expand-task-types': displaySettings.fullTaskTypeNames }"
@@ -40,9 +47,19 @@
               class="name episode-name datatable-row-header"
               ref="th-episode"
             >
-              <div class="flexrow">
+              <div class="flexrow field-header">
                 <span class="flexrow-item">
                   {{ $t('episodes.fields.name') }}
+                </span>
+                <span
+                  class="asset-field-menu-button header-icon pointer"
+                  role="button"
+                  tabindex="0"
+                  @click="showFieldHeaderMenu('name', $event)"
+                  @keydown.enter.prevent="showFieldHeaderMenu('name', $event)"
+                  @keydown.space.prevent="showFieldHeaderMenu('name', $event)"
+                >
+                  <chevron-down-icon :size="14" />
                 </span>
                 <button-simple
                   class="is-small flexrow-item"
@@ -104,7 +121,25 @@
                 isEpisodeDescription
               "
             >
-              {{ $t('episodes.fields.description') }}
+              <div class="flexrow field-header">
+                <span class="flexrow-item">
+                  {{ $t('episodes.fields.description') }}
+                </span>
+                <span
+                  class="asset-field-menu-button header-icon pointer"
+                  role="button"
+                  tabindex="0"
+                  @click="showFieldHeaderMenu('description', $event)"
+                  @keydown.enter.prevent="
+                    showFieldHeaderMenu('description', $event)
+                  "
+                  @keydown.space.prevent="
+                    showFieldHeaderMenu('description', $event)
+                  "
+                >
+                  <chevron-down-icon :size="14" />
+                </span>
+              </div>
             </th>
 
             <template v-if="displaySettings.showInfos">
@@ -532,6 +567,7 @@
 </template>
 
 <script>
+import { ChevronDownIcon } from 'lucide-vue-next'
 import { mapGetters, mapActions } from 'vuex'
 
 import { descriptorMixin } from '@/components/mixins/descriptors'
@@ -607,6 +643,7 @@ export default {
     return {
       type: 'episode',
       hiddenColumns: {},
+      lastFieldHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayed: null,
       lastMetadataHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayedIndexInGrid: null,
@@ -630,6 +667,7 @@ export default {
 
   components: {
     ButtonSimple,
+    ChevronDownIcon,
     DescriptionCell,
     EntityThumbnail,
     MetadataHeader,

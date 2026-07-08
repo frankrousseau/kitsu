@@ -23,6 +23,13 @@
         @toggle-stick="metadataStickColumnClicked($event)"
       />
 
+      <table-metadata-header-menu
+        ref="headerFieldMenu"
+        :is-edit-allowed="false"
+        :show-stick="false"
+        @sort-by-clicked="onSortByFieldClicked()"
+      />
+
       <table
         class="datatable"
         :class="{ 'expand-task-types': displaySettings.fullTaskTypeNames }"
@@ -38,9 +45,19 @@
               class="name sequence-name datatable-row-header"
               ref="th-sequence"
             >
-              <div class="flexrow">
+              <div class="flexrow field-header">
                 <span class="flexrow-item">
                   {{ $t('sequences.fields.name') }}
+                </span>
+                <span
+                  class="asset-field-menu-button header-icon pointer"
+                  role="button"
+                  tabindex="0"
+                  @click="showFieldHeaderMenu('name', $event)"
+                  @keydown.enter.prevent="showFieldHeaderMenu('name', $event)"
+                  @keydown.space.prevent="showFieldHeaderMenu('name', $event)"
+                >
+                  <chevron-down-icon :size="14" />
                 </span>
                 <button-simple
                   class="is-small flexrow-item"
@@ -99,7 +116,25 @@
                 isSequenceDescription
               "
             >
-              {{ $t('sequences.fields.description') }}
+              <div class="flexrow field-header">
+                <span class="flexrow-item">
+                  {{ $t('sequences.fields.description') }}
+                </span>
+                <span
+                  class="asset-field-menu-button header-icon pointer"
+                  role="button"
+                  tabindex="0"
+                  @click="showFieldHeaderMenu('description', $event)"
+                  @keydown.enter.prevent="
+                    showFieldHeaderMenu('description', $event)
+                  "
+                  @keydown.space.prevent="
+                    showFieldHeaderMenu('description', $event)
+                  "
+                >
+                  <chevron-down-icon :size="14" />
+                </span>
+              </div>
             </th>
 
             <th
@@ -499,6 +534,7 @@
 </template>
 
 <script>
+import { ChevronDownIcon } from 'lucide-vue-next'
 import { mapGetters, mapActions } from 'vuex'
 
 import { getEntityPath } from '@/lib/path'
@@ -565,6 +601,7 @@ export default {
     return {
       type: 'sequence',
       hiddenColumns: {},
+      lastFieldHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayed: null,
       lastMetadataHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayedIndexInGrid: null,
@@ -590,6 +627,7 @@ export default {
 
   components: {
     ButtonSimple,
+    ChevronDownIcon,
     DescriptionCell,
     EntityThumbnail,
     MetadataHeader,
