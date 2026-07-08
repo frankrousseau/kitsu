@@ -623,13 +623,10 @@ const removeTaskType = async taskTypeId => {
 }
 
 const reorderTaskTypes = async ordered => {
-  for (const { taskTypeId, priority } of ordered) {
-    await store.dispatch('addTaskTypeToTemplate', {
-      templateId: templateId.value,
-      taskTypeId,
-      priority
-    })
-  }
+  await store.dispatch('reorderTemplateTaskTypes', {
+    templateId: templateId.value,
+    taskTypeIds: ordered.map(item => item.taskTypeId)
+  })
   await loadTemplateData()
 }
 
@@ -650,13 +647,10 @@ const removeTaskStatus = async taskStatusId => {
 }
 
 const reorderTaskStatuses = async ordered => {
-  for (const { taskStatusId, priority } of ordered) {
-    await store.dispatch('addTaskStatusToTemplate', {
-      templateId: templateId.value,
-      taskStatusId,
-      priority
-    })
-  }
+  await store.dispatch('reorderTemplateTaskStatuses', {
+    templateId: templateId.value,
+    taskStatusIds: ordered.map(item => item.taskStatusId)
+  })
   await loadTemplateData()
 }
 

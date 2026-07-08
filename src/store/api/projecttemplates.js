@@ -85,6 +85,13 @@ export default {
     )
   },
 
+  reorderTemplateTaskTypes(templateId, taskTypeIds) {
+    return client.ppost(
+      `/api/data/project-templates/${templateId}/task-types/reorder`,
+      { task_type_ids: taskTypeIds }
+    )
+  },
+
   // Task status links
   getTemplateTaskStatuses(templateId) {
     return client.pget(
@@ -105,6 +112,13 @@ export default {
   removeTaskStatusFromTemplate(templateId, taskStatusId) {
     return client.pdel(
       `/api/data/project-templates/${templateId}/task-statuses/${taskStatusId}`
+    )
+  },
+
+  reorderTemplateTaskStatuses(templateId, taskStatusIds) {
+    return client.ppost(
+      `/api/data/project-templates/${templateId}/task-statuses/reorder`,
+      { task_status_ids: taskStatusIds }
     )
   },
 

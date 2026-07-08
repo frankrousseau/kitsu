@@ -55,6 +55,12 @@ export default {
     )
   },
 
+  reorderTaskTypes(taskTypeIds) {
+    return client.ppost('/api/data/task-types/reorder', {
+      task_type_ids: taskTypeIds
+    })
+  },
+
   deleteTaskType(taskType) {
     return client.pdel(`/api/data/task-types/${taskType.id}`)
   },
