@@ -47,31 +47,24 @@
               }"
               scope="col"
             >
-              <div class="flexrow field-header">
-                <span class="flexrow-item">
-                  {{ $t('assets.fields.name') }}
-                </span>
-                <span
-                  class="asset-field-menu-button header-icon pointer"
-                  role="button"
-                  tabindex="0"
-                  @click="showFieldHeaderMenu('name', $event)"
-                  @keydown.enter.prevent="showFieldHeaderMenu('name', $event)"
-                  @keydown.space.prevent="showFieldHeaderMenu('name', $event)"
-                >
-                  <chevron-down-icon :size="14" />
-                </span>
-                <button-simple
-                  class="is-small flexrow-item add-metadata-button"
-                  icon="plus"
-                  :text="''"
-                  @click="onAddMetadataClicked"
-                  v-if="
-                    (isCurrentUserManager || isCurrentUserSupervisor) &&
-                    !isLoading
-                  "
-                />
-              </div>
+              <sortable-field-header
+                field-name="name"
+                :label="$t('assets.fields.name')"
+                @show-menu="showFieldHeaderMenu"
+              >
+                <template #actions>
+                  <button-simple
+                    class="is-small flexrow-item add-metadata-button"
+                    icon="plus"
+                    :text="''"
+                    @click="onAddMetadataClicked"
+                    v-if="
+                      (isCurrentUserManager || isCurrentUserSupervisor) &&
+                      !isLoading
+                    "
+                  />
+                </template>
+              </sortable-field-header>
             </th>
 
             <th
@@ -81,25 +74,11 @@
               :style="{ left: `${nameWidth}px` }"
               v-if="hasStickyEpisode"
             >
-              <div class="flexrow field-header">
-                <span class="flexrow-item">
-                  {{ $t('assets.fields.episode') }}
-                </span>
-                <span
-                  class="asset-field-menu-button header-icon pointer"
-                  role="button"
-                  tabindex="0"
-                  @click="showFieldHeaderMenu('episode_id', $event)"
-                  @keydown.enter.prevent="
-                    showFieldHeaderMenu('episode_id', $event)
-                  "
-                  @keydown.space.prevent="
-                    showFieldHeaderMenu('episode_id', $event)
-                  "
-                >
-                  <chevron-down-icon :size="14" />
-                </span>
-              </div>
+              <sortable-field-header
+                field-name="episode_id"
+                :label="$t('assets.fields.episode')"
+                @show-menu="showFieldHeaderMenu"
+              />
             </th>
 
             <metadata-header
@@ -151,25 +130,11 @@
                 metadataDisplayHeaders.readyFor
               "
             >
-              <div class="flexrow field-header">
-                <span class="flexrow-item">
-                  {{ $t('assets.fields.ready_for') }}
-                </span>
-                <span
-                  class="asset-field-menu-button header-icon pointer"
-                  role="button"
-                  tabindex="0"
-                  @click="showFieldHeaderMenu('ready_for', $event)"
-                  @keydown.enter.prevent="
-                    showFieldHeaderMenu('ready_for', $event)
-                  "
-                  @keydown.space.prevent="
-                    showFieldHeaderMenu('ready_for', $event)
-                  "
-                >
-                  <chevron-down-icon :size="14" />
-                </span>
-              </div>
+              <sortable-field-header
+                field-name="ready_for"
+                :label="$t('assets.fields.ready_for')"
+                @show-menu="showFieldHeaderMenu"
+              />
             </th>
 
             <th
@@ -182,25 +147,11 @@
                 isAssetDescription
               "
             >
-              <div class="flexrow field-header">
-                <span class="flexrow-item">
-                  {{ $t('assets.fields.description') }}
-                </span>
-                <span
-                  class="asset-field-menu-button header-icon pointer"
-                  role="button"
-                  tabindex="0"
-                  @click="showFieldHeaderMenu('description', $event)"
-                  @keydown.enter.prevent="
-                    showFieldHeaderMenu('description', $event)
-                  "
-                  @keydown.space.prevent="
-                    showFieldHeaderMenu('description', $event)
-                  "
-                >
-                  <chevron-down-icon :size="14" />
-                </span>
-              </div>
+              <sortable-field-header
+                field-name="description"
+                :label="$t('assets.fields.description')"
+                @show-menu="showFieldHeaderMenu"
+              />
             </th>
 
             <th
@@ -214,25 +165,11 @@
                 metadataDisplayHeaders.timeSpent
               "
             >
-              <div class="flexrow field-header">
-                <span class="flexrow-item">
-                  {{ $t('assets.fields.time_spent') }}
-                </span>
-                <span
-                  class="asset-field-menu-button header-icon pointer"
-                  role="button"
-                  tabindex="0"
-                  @click="showFieldHeaderMenu('timeSpent', $event)"
-                  @keydown.enter.prevent="
-                    showFieldHeaderMenu('timeSpent', $event)
-                  "
-                  @keydown.space.prevent="
-                    showFieldHeaderMenu('timeSpent', $event)
-                  "
-                >
-                  <chevron-down-icon :size="14" />
-                </span>
-              </div>
+              <sortable-field-header
+                field-name="timeSpent"
+                :label="$t('assets.fields.time_spent')"
+                @show-menu="showFieldHeaderMenu"
+              />
             </th>
 
             <th
@@ -247,25 +184,11 @@
                 metadataDisplayHeaders.estimation
               "
             >
-              <div class="flexrow field-header">
-                <span class="flexrow-item">
-                  {{ $t('main.estimation_short') }}
-                </span>
-                <span
-                  class="asset-field-menu-button header-icon pointer"
-                  role="button"
-                  tabindex="0"
-                  @click="showFieldHeaderMenu('estimation', $event)"
-                  @keydown.enter.prevent="
-                    showFieldHeaderMenu('estimation', $event)
-                  "
-                  @keydown.space.prevent="
-                    showFieldHeaderMenu('estimation', $event)
-                  "
-                >
-                  <chevron-down-icon :size="14" />
-                </span>
-              </div>
+              <sortable-field-header
+                field-name="estimation"
+                :label="$t('main.estimation_short')"
+                @show-menu="showFieldHeaderMenu"
+              />
             </th>
 
             <th
@@ -277,25 +200,11 @@
                 metadataDisplayHeaders.resolution
               "
             >
-              <div class="flexrow field-header">
-                <span class="flexrow-item">
-                  {{ $t('shots.fields.resolution') }}
-                </span>
-                <span
-                  class="asset-field-menu-button header-icon pointer"
-                  role="button"
-                  tabindex="0"
-                  @click="showFieldHeaderMenu('resolution', $event)"
-                  @keydown.enter.prevent="
-                    showFieldHeaderMenu('resolution', $event)
-                  "
-                  @keydown.space.prevent="
-                    showFieldHeaderMenu('resolution', $event)
-                  "
-                >
-                  <chevron-down-icon :size="14" />
-                </span>
-              </div>
+              <sortable-field-header
+                field-name="resolution"
+                :label="$t('shots.fields.resolution')"
+                @show-menu="showFieldHeaderMenu"
+              />
             </th>
 
             <template v-if="displaySettings.showInfos">
@@ -705,7 +614,6 @@
 </template>
 
 <script>
-import { ChevronDownIcon } from 'lucide-vue-next'
 import { mapGetters, mapActions } from 'vuex'
 
 import { descriptorMixin } from '@/components/mixins/descriptors'
@@ -728,6 +636,7 @@ import AssetListNumbers from '@/components/widgets/AssetListNumbers.vue'
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
 import ComboboxTaskType from '@/components/widgets/ComboboxTaskType.vue'
 import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
+import SortableFieldHeader from '@/components/widgets/SortableFieldHeader.vue'
 import TableHeaderMenu from '@/components/widgets/TableHeaderMenu.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
 import TableMetadataHeaderMenu from '@/components/widgets/TableMetadataHeaderMenu.vue'
@@ -752,13 +661,13 @@ export default {
   components: {
     AssetListNumbers,
     ButtonSimple,
-    ChevronDownIcon,
     ComboboxTaskType,
     DescriptionCell,
     EntityThumbnail,
     MetadataInput,
     MetadataHeader,
     RowActionsCell,
+    SortableFieldHeader,
     TableInfo,
     TableHeaderMenu,
     TableMetadataHeaderMenu,
@@ -1339,33 +1248,6 @@ td.ready-for {
   min-width: 200px;
   max-width: 200px;
   width: 200px;
-}
-
-.field-header {
-  padding-right: 20px;
-  position: relative;
-}
-
-.field-header .flexrow-item:first-child {
-  flex: 1;
-}
-
-.asset-field-menu-button {
-  align-items: center;
-  background: var(--background-alt);
-  border-radius: 50%;
-  display: inline-flex;
-  flex: 0 0 16px;
-  height: 16px;
-  justify-content: center;
-  padding: 1px;
-  position: absolute;
-  right: 0;
-  width: 16px;
-}
-
-.add-metadata-button {
-  margin-left: 0.3em;
 }
 
 .validation-cell {

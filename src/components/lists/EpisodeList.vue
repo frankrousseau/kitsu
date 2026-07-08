@@ -47,31 +47,24 @@
               class="name episode-name datatable-row-header"
               ref="th-episode"
             >
-              <div class="flexrow field-header">
-                <span class="flexrow-item">
-                  {{ $t('episodes.fields.name') }}
-                </span>
-                <span
-                  class="asset-field-menu-button header-icon pointer"
-                  role="button"
-                  tabindex="0"
-                  @click="showFieldHeaderMenu('name', $event)"
-                  @keydown.enter.prevent="showFieldHeaderMenu('name', $event)"
-                  @keydown.space.prevent="showFieldHeaderMenu('name', $event)"
-                >
-                  <chevron-down-icon :size="14" />
-                </span>
-                <button-simple
-                  class="is-small flexrow-item"
-                  icon="plus"
-                  :text="''"
-                  @click="onAddMetadataClicked"
-                  v-if="
-                    (isCurrentUserManager || isCurrentUserSupervisor) &&
-                    !isLoading
-                  "
-                />
-              </div>
+              <sortable-field-header
+                field-name="name"
+                :label="$t('episodes.fields.name')"
+                @show-menu="showFieldHeaderMenu"
+              >
+                <template #actions>
+                  <button-simple
+                    class="is-small flexrow-item"
+                    icon="plus"
+                    :text="''"
+                    @click="onAddMetadataClicked"
+                    v-if="
+                      (isCurrentUserManager || isCurrentUserSupervisor) &&
+                      !isLoading
+                    "
+                  />
+                </template>
+              </sortable-field-header>
             </th>
 
             <template v-if="displaySettings.showInfos">
@@ -121,25 +114,11 @@
                 isEpisodeDescription
               "
             >
-              <div class="flexrow field-header">
-                <span class="flexrow-item">
-                  {{ $t('episodes.fields.description') }}
-                </span>
-                <span
-                  class="asset-field-menu-button header-icon pointer"
-                  role="button"
-                  tabindex="0"
-                  @click="showFieldHeaderMenu('description', $event)"
-                  @keydown.enter.prevent="
-                    showFieldHeaderMenu('description', $event)
-                  "
-                  @keydown.space.prevent="
-                    showFieldHeaderMenu('description', $event)
-                  "
-                >
-                  <chevron-down-icon :size="14" />
-                </span>
-              </div>
+              <sortable-field-header
+                field-name="description"
+                :label="$t('episodes.fields.description')"
+                @show-menu="showFieldHeaderMenu"
+              />
             </th>
 
             <template v-if="displaySettings.showInfos">
@@ -567,7 +546,6 @@
 </template>
 
 <script>
-import { ChevronDownIcon } from 'lucide-vue-next'
 import { mapGetters, mapActions } from 'vuex'
 
 import { descriptorMixin } from '@/components/mixins/descriptors'
@@ -582,6 +560,7 @@ import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import MetadataHeader from '@/components/cells/MetadataHeader.vue'
 import MetadataInput from '@/components/cells/MetadataInput.vue'
 import RowActionsCell from '@/components/cells/RowActionsCell.vue'
+import SortableFieldHeader from '@/components/widgets/SortableFieldHeader.vue'
 import TableMetadataHeaderMenu from '@/components/widgets/TableMetadataHeaderMenu.vue'
 import TableMetadataSelectorMenu from '@/components/widgets/TableMetadataSelectorMenu.vue'
 import TableHeaderMenu from '@/components/widgets/TableHeaderMenu.vue'
@@ -667,12 +646,12 @@ export default {
 
   components: {
     ButtonSimple,
-    ChevronDownIcon,
     DescriptionCell,
     EntityThumbnail,
     MetadataHeader,
     MetadataInput,
     RowActionsCell,
+    SortableFieldHeader,
     TableHeaderMenu,
     TableMetadataHeaderMenu,
     TableMetadataSelectorMenu,
