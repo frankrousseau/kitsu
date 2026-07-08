@@ -25,6 +25,13 @@
         @toggle-stick="metadataStickColumnClicked($event)"
       />
 
+      <table-metadata-header-menu
+        ref="headerFieldMenu"
+        :is-edit-allowed="false"
+        :show-stick="false"
+        @sort-by-clicked="onSortByFieldClicked()"
+      />
+
       <table
         class="datatable multi-section"
         :class="{ 'expand-task-types': displaySettings.fullTaskTypeNames }"
@@ -43,6 +50,16 @@
               <div class="flexrow">
                 <span class="flexrow-item">
                   {{ $t('assets.fields.name') }}
+                </span>
+                <span
+                  class="metadata-menu-button header-icon pointer"
+                  role="button"
+                  tabindex="0"
+                  @click="showFieldHeaderMenu('name', $event)"
+                  @keydown.enter.prevent="showFieldHeaderMenu('name', $event)"
+                  @keydown.space.prevent="showFieldHeaderMenu('name', $event)"
+                >
+                  <chevron-down-icon :size="14" />
                 </span>
                 <button-simple
                   class="is-small flexrow-item"
@@ -129,7 +146,25 @@
                 isAssetDescription
               "
             >
-              {{ $t('assets.fields.description') }}
+              <div class="flexrow field-header">
+                <span class="flexrow-item">
+                  {{ $t('assets.fields.description') }}
+                </span>
+                <span
+                  class="metadata-menu-button header-icon pointer"
+                  role="button"
+                  tabindex="0"
+                  @click="showFieldHeaderMenu('description', $event)"
+                  @keydown.enter.prevent="
+                    showFieldHeaderMenu('description', $event)
+                  "
+                  @keydown.space.prevent="
+                    showFieldHeaderMenu('description', $event)
+                  "
+                >
+                  <chevron-down-icon :size="14" />
+                </span>
+              </div>
             </th>
 
             <th
@@ -580,6 +615,7 @@
 </template>
 
 <script>
+import { ChevronDownIcon } from 'lucide-vue-next'
 import { mapGetters, mapActions } from 'vuex'
 
 import { descriptorMixin } from '@/components/mixins/descriptors'
@@ -592,20 +628,20 @@ import preferences from '@/lib/preferences'
 import { sortTaskTypes } from '@/lib/sorting'
 import { range } from '@/lib/time'
 
-import AssetListNumbers from '@/components/widgets/AssetListNumbers.vue'
-import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
-import ComboboxTaskType from '@/components/widgets/ComboboxTaskType.vue'
 import DescriptionCell from '@/components/cells/DescriptionCell.vue'
-import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import MetadataHeader from '@/components/cells/MetadataHeader.vue'
 import MetadataInput from '@/components/cells/MetadataInput.vue'
 import RowActionsCell from '@/components/cells/RowActionsCell.vue'
+import ValidationCell from '@/components/cells/ValidationCell.vue'
+import ValidationHeader from '@/components/cells/ValidationHeader.vue'
+import AssetListNumbers from '@/components/widgets/AssetListNumbers.vue'
+import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
+import ComboboxTaskType from '@/components/widgets/ComboboxTaskType.vue'
+import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import TableHeaderMenu from '@/components/widgets/TableHeaderMenu.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
 import TableMetadataHeaderMenu from '@/components/widgets/TableMetadataHeaderMenu.vue'
 import TableMetadataSelectorMenu from '@/components/widgets/TableMetadataSelectorMenu.vue'
-import ValidationCell from '@/components/cells/ValidationCell.vue'
-import ValidationHeader from '@/components/cells/ValidationHeader.vue'
 
 import assetStore from '@/store/modules/assets'
 import assetTypeStore from '@/store/modules/assettypes'
@@ -626,6 +662,7 @@ export default {
   components: {
     AssetListNumbers,
     ButtonSimple,
+    ChevronDownIcon,
     ComboboxTaskType,
     DescriptionCell,
     EntityThumbnail,
@@ -674,6 +711,7 @@ export default {
   emits: [
     'asset-changed',
     'asset-type-clicked',
+    'change-sort',
     'create-tasks',
     'delete-clicked',
     'edit-clicked',
@@ -690,6 +728,7 @@ export default {
       hiddenColumns: {},
       isSelectableMap: {},
       lastSelection: null,
+      lastFieldHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayed: null,
       lastMetadataHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayedIndexInGrid: null,
@@ -1056,6 +1095,34 @@ export default {
     stickColumnClicked() {
       this.toggleStickedColumns(this.lastHeaderMenuDisplayed)
       this.showHeaderMenu()
+    },
+
+    showFieldHeaderMenu(fieldName, event) {
+      const headerMenuEl = this.$refs.headerFieldMenu.$el
+      if (headerMenuEl.className === 'header-menu') {
+        headerMenuEl.className = 'header-menu hidden'
+      } else {
+        headerMenuEl.className = 'header-menu'
+        const headerElement = event.currentTarget.closest('th')
+        const headerBox = headerElement.getBoundingClientRect()
+        const left = headerBox.left - 3
+        const top = headerBox.bottom + 11
+        const width = Math.max(100, headerBox.width - 1)
+        headerMenuEl.style.left = `${left}px`
+        headerMenuEl.style.top = `${top}px`
+        headerMenuEl.style.width = `${width}px`
+      }
+      this.lastFieldHeaderMenuDisplayed = fieldName
+    },
+
+    onSortByFieldClicked() {
+      const fieldName = this.lastFieldHeaderMenuDisplayed
+      this.$emit('change-sort', {
+        type: 'field',
+        column: fieldName,
+        name: this.$t(`assets.fields.${fieldName}`)
+      })
+      this.showFieldHeaderMenu(fieldName)
     },
 
     metadataStickColumnClicked(event) {

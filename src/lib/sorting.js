@@ -288,6 +288,17 @@ export const sortValidationColumns = (
 const compareByName = (a, b) =>
   a.name.localeCompare(b.name, undefined, { numeric: true })
 
+const sortByField = sortInfo => (a, b) => {
+  const dataA = a[sortInfo.column] || ''
+  const dataB = b[sortInfo.column] || ''
+  if (dataA === dataB) return 0
+  if (!dataB) return -1
+  if (!dataA) return 1
+  return String(dataA).localeCompare(String(dataB), undefined, {
+    numeric: true
+  })
+}
+
 const sortEntityResult = (
   result,
   sorting,
@@ -300,7 +311,9 @@ const sortEntityResult = (
     const sortEntities =
       sortInfo.type === 'metadata'
         ? sortByMetadata(sortInfo)
-        : sortByTaskType(taskMap, sortInfo)
+        : sortInfo.type === 'field'
+          ? sortByField(sortInfo)
+          : sortByTaskType(taskMap, sortInfo)
     let sorter = firstBy('canceled').thenBy(sortEntities)
     for (const step of thenBySteps) {
       sorter = sorter.thenBy(step)
