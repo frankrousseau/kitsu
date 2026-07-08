@@ -194,6 +194,24 @@ const actions = {
     })
   },
 
+  subscribeToTasks({ commit }, taskIds) {
+    if (taskIds.length === 0) return Promise.resolve()
+    return tasksApi.subscribeToTasks(taskIds).then(() => {
+      taskIds.forEach(taskId =>
+        commit(LOAD_TASK_SUBSCRIBE_END, { taskId, subscribed: true })
+      )
+    })
+  },
+
+  unsubscribeFromTasks({ commit }, taskIds) {
+    if (taskIds.length === 0) return Promise.resolve()
+    return tasksApi.unsubscribeFromTasks(taskIds).then(() => {
+      taskIds.forEach(taskId =>
+        commit(LOAD_TASK_SUBSCRIBE_END, { taskId, subscribed: false })
+      )
+    })
+  },
+
   loadTaskComments({ commit, dispatch }, { taskId, entityId }) {
     return tasksApi.getTaskComments(taskId).then(comments => {
       commit(LOAD_TASK_COMMENTS_END, { comments, taskId })
@@ -689,6 +707,27 @@ const actions = {
         entityId: entity.id,
         previewId: entity.preview_file_id,
         taskMap
+      })
+    })
+  },
+
+  setTasksMainPreview({ commit, state }, taskIds) {
+    if (taskIds.length === 0) return Promise.resolve()
+    const taskMap = state.taskMap
+    return tasksApi.setTasksMainPreview(taskIds).then(entities => {
+      // The route returns a flat entity list; match each back to its task
+      // through the entity id. Tasks without a preview are skipped server-side.
+      const entityMap = new Map(entities.map(entity => [entity.id, entity]))
+      taskIds.forEach(taskId => {
+        const entity = entityMap.get(taskMap.get(taskId)?.entity?.id)
+        if (entity) {
+          commit(SET_PREVIEW, {
+            taskId,
+            entityId: entity.id,
+            previewId: entity.preview_file_id,
+            taskMap
+          })
+        }
       })
     })
   },

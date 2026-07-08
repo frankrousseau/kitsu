@@ -33,6 +33,18 @@ export default {
     return client.pdel(`/api/actions/user/tasks/${taskId}/unsubscribe`)
   },
 
+  subscribeToTasks(taskIds) {
+    return client.ppost('/api/actions/user/tasks/subscribe', {
+      task_ids: taskIds
+    })
+  },
+
+  unsubscribeFromTasks(taskIds) {
+    return client.ppost('/api/actions/user/tasks/unsubscribe', {
+      task_ids: taskIds
+    })
+  },
+
   getTaskComments(taskId) {
     return client.pget(`/api/data/tasks/${taskId}/comments`)
   },
@@ -202,6 +214,12 @@ export default {
 
   setLastTaskPreviewAsEntityThumbnail(taskId) {
     return client.pput(`/api/actions/tasks/${taskId}/set-main-preview`, {})
+  },
+
+  setTasksMainPreview(taskIds) {
+    return client.pput('/api/actions/tasks/set-main-preview', {
+      task_ids: taskIds
+    })
   },
 
   uploadPreview(previewId, formData) {

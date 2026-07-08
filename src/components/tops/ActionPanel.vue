@@ -923,7 +923,6 @@ import { mapGetters, mapActions } from 'vuex'
 
 import assetsStore from '@/store/modules/assets.js'
 import { intersection } from '@/lib/array'
-import func from '@/lib/func'
 
 import BuildFilterModal from '@/components/modals/BuildFilterModal.vue'
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
@@ -1365,10 +1364,13 @@ export default {
       'postCustomAction',
       'setAssetSearch',
       'setLastTaskPreview',
+      'setTasksMainPreview',
       'subscribeToTask',
+      'subscribeToTasks',
       'unassignPersonFromTasks',
       'unassignSelectedTasks',
-      'unsubscribeFromTask'
+      'unsubscribeFromTask',
+      'unsubscribeFromTasks'
     ]),
 
     getLinkedEntities(concept) {
@@ -1552,33 +1554,25 @@ export default {
 
     confirmTasksSubscription() {
       this.loading.tasksSubscription = true
-      func
-        .runPromiseMapAsSeries(Array.from(this.selectedTasks.values()), task =>
-          this.subscribeToTask(task.id)
-        )
-        .then(() => {
-          this.loading.tasksSubscription = false
-        })
+      this.subscribeToTasks(Array.from(this.selectedTasks.keys()))
         .catch(err => {
           console.error(err)
-          this.loading.tasksSubscription = false
           this.errors.tasksSubscription = false
+        })
+        .finally(() => {
+          this.loading.tasksSubscription = false
         })
     },
 
     confirmTasksUnsubscription() {
       this.loading.tasksSubscription = true
-      func
-        .runPromiseMapAsSeries(Array.from(this.selectedTasks.values()), task =>
-          this.unsubscribeFromTask(task.id)
-        )
-        .then(() => {
-          this.loading.tasksSubscription = false
-        })
+      this.unsubscribeFromTasks(Array.from(this.selectedTasks.keys()))
         .catch(err => {
           console.error(err)
-          this.loading.tasksSubscription = false
           this.errors.tasksSubscription = false
+        })
+        .finally(() => {
+          this.loading.tasksSubscription = false
         })
     },
 
@@ -1595,12 +1589,9 @@ export default {
         )
         this.loading.setThumbnails = false
       } else {
-        func
-          .runPromiseMapAsSeries(
-            Array.from(this.selectedTasks.values()),
-            task => this.setLastTaskPreview(task.id)
-          )
-          .then(() => {
+        this.setTasksMainPreview(Array.from(this.selectedTasks.keys()))
+          .catch(console.error)
+          .finally(() => {
             this.loading.setThumbnails = false
           })
       }

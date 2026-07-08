@@ -11,6 +11,11 @@ vi.mock('@/store/api/tasks', () => ({
     ),
     setTasksPriority: vi.fn(() =>
       Promise.resolve([{ id: 'task-1', priority: 2, task_type_id: 'type-1' }])
+    ),
+    subscribeToTasks: vi.fn(() => Promise.resolve()),
+    unsubscribeFromTasks: vi.fn(() => Promise.resolve()),
+    setTasksMainPreview: vi.fn(() =>
+      Promise.resolve([{ id: 'entity-1', preview_file_id: 'preview-1' }])
     )
   }
 }))
@@ -198,6 +203,55 @@ describe('Tasks store', () => {
       expect(commit).toHaveBeenCalledTimes(1)
       expect(commit.mock.calls[0][0]).toEqual('EDIT_TASK_END')
       expect(commit.mock.calls[0][1].task.priority).toEqual(2)
+    })
+
+    test('subscribeToTasks sends one request and commits per task', async () => {
+      const commit = vi.fn()
+      await tasksStore.actions.subscribeToTasks({ commit }, ['task-1', 'task-2'])
+      expect(tasksApi.subscribeToTasks).toHaveBeenCalledTimes(1)
+      expect(tasksApi.subscribeToTasks).toHaveBeenCalledWith(['task-1', 'task-2'])
+      expect(commit).toHaveBeenCalledTimes(2)
+      expect(commit).toHaveBeenNthCalledWith(1, 'LOAD_TASK_SUBSCRIBE_END', {
+        taskId: 'task-1',
+        subscribed: true
+      })
+    })
+
+    test('unsubscribeFromTasks commits subscribed=false per task', async () => {
+      const commit = vi.fn()
+      await tasksStore.actions.unsubscribeFromTasks(
+        { commit },
+        ['task-1', 'task-2']
+      )
+      expect(tasksApi.unsubscribeFromTasks).toHaveBeenCalledTimes(1)
+      expect(commit).toHaveBeenCalledTimes(2)
+      expect(commit.mock.calls[0][1].subscribed).toBe(false)
+    })
+
+    test('setTasksMainPreview maps returned entities back to their task', async () => {
+      const commit = vi.fn()
+      const state = {
+        taskMap: new Map([
+          ['task-1', { id: 'task-1', entity: { id: 'entity-1' } }],
+          // No preview for this task's entity: skipped server-side.
+          ['task-2', { id: 'task-2', entity: { id: 'entity-2' } }]
+        ])
+      }
+      await tasksStore.actions.setTasksMainPreview(
+        { commit, state },
+        ['task-1', 'task-2']
+      )
+      expect(tasksApi.setTasksMainPreview).toHaveBeenCalledWith([
+        'task-1',
+        'task-2'
+      ])
+      expect(commit).toHaveBeenCalledTimes(1)
+      expect(commit).toHaveBeenCalledWith('SET_PREVIEW', {
+        taskId: 'task-1',
+        entityId: 'entity-1',
+        previewId: 'preview-1',
+        taskMap: state.taskMap
+      })
     })
 
     test('createEntityTasks commits NEW_TASK_END for each created task', async () => {
