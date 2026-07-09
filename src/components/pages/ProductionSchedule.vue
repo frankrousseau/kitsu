@@ -1809,11 +1809,10 @@ export default {
         if (taskIdsToUnassign.length > 0) {
           await this.unassignSelectedTasks({ taskIds: taskIdsToUnassign })
         }
-        await Promise.all(
-          Array.from(taskIdsByAssignee, ([personId, taskIds]) =>
-            this.assignSelectedTasks({ personId, taskIds })
-          )
-        )
+        // Sequence the per-assignee requests instead of firing them at once.
+        for (const [personId, taskIds] of taskIdsByAssignee) {
+          await this.assignSelectedTasks({ personId, taskIds })
+        }
 
         // refresh schedule
         this.expandTaskTypeElement(
