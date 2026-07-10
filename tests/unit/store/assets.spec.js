@@ -6,6 +6,8 @@ vi.mock('@/store', () => ({ default: {} }))
 
 import assetsStore from '@/store/modules/assets'
 import assetsApi from '@/store/api/assets'
+import entitiesApi from '@/store/api/entities'
+import { buildAssetIndex } from '@/lib/indexing'
 
 const baseRootGetters = () => ({
   assetTypeMap: new Map(),
@@ -182,6 +184,95 @@ describe('Assets store', () => {
 
       expect(assetsStore.cache.result.map(a => a.id)).toEqual(['a2'])
       expect(assetsStore.cache.assets.map(a => a.id)).toEqual(['a2'])
+    })
+  })
+
+  describe('batched deletion (PERF-4)', () => {
+    const buildAsset = (id, options = {}) => ({
+      id,
+      name: id,
+      asset_type_name: 'Char',
+      tasks: [],
+      canceled: false,
+      timeSpent: 10,
+      estimation: 20,
+      ...options
+    })
+
+    const buildState = assets => {
+      assetsStore.cache.assetMap = new Map(
+        assets.map(asset => [asset.id, asset])
+      )
+      assetsStore.cache.assets = [...assets]
+      assetsStore.cache.result = [...assets]
+      assetsStore.cache.assetIndex = buildAssetIndex(assets)
+      return {
+        displayedAssets: [...assets],
+        displayedAssetsTimeSpent: 0,
+        displayedAssetsEstimation: 0,
+        displayedAssetsLength: assets.length
+      }
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    test('REMOVE_ASSETS removes, cancels and recomputes stats in one pass', () => {
+      const assets = [
+        buildAsset('asset-1'),
+        buildAsset('asset-2', { tasks: ['task-1'] }),
+        buildAsset('asset-3')
+      ]
+      const state = buildState(assets)
+
+      assetsStore.mutations.REMOVE_ASSETS(state, {
+        removedAssets: [assets[0], assets[2]],
+        canceledAssets: [assets[1]]
+      })
+
+      expect(assetsStore.cache.assets.map(a => a.id)).toEqual(['asset-2'])
+      expect(assetsStore.cache.result.map(a => a.id)).toEqual(['asset-2'])
+      expect(state.displayedAssets.map(a => a.id)).toEqual(['asset-2'])
+      expect([...assetsStore.cache.assetMap.keys()]).toEqual(['asset-2'])
+      expect(assets[1].canceled).toBe(true)
+      // Stats recomputed once from the remaining, non-canceled assets.
+      expect(state.displayedAssetsTimeSpent).toEqual(0)
+      expect(state.displayedAssetsEstimation).toEqual(0)
+      expect(state.displayedAssetsLength).toEqual(0)
+    })
+
+    test('deleteSelectedAssets deletes in one request and commits once', async () => {
+      const assetToRemove = buildAsset('asset-1')
+      const assetToCancel = buildAsset('asset-2', { tasks: ['task-1'] })
+      buildState([assetToRemove, assetToCancel])
+      const state = {
+        selectedAssets: new Map([
+          ['asset-1', assetToRemove],
+          ['asset-2', assetToCancel]
+        ])
+      }
+      const rootGetters = { currentProduction: { id: 'p1' } }
+
+      vi.spyOn(entitiesApi, 'deleteEntities').mockResolvedValue()
+      const commit = vi.fn()
+
+      await assetsStore.actions.deleteSelectedAssets({
+        state,
+        commit,
+        rootGetters
+      })
+
+      expect(entitiesApi.deleteEntities).toHaveBeenCalledTimes(1)
+      expect(entitiesApi.deleteEntities).toHaveBeenCalledWith('p1', [
+        'asset-1',
+        'asset-2'
+      ])
+      expect(commit).toHaveBeenCalledTimes(1)
+      expect(commit).toHaveBeenCalledWith('REMOVE_ASSETS', {
+        removedAssets: [assetToRemove],
+        canceledAssets: [assetToCancel]
+      })
     })
   })
 })

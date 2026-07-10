@@ -53,7 +53,7 @@ const props = defineProps({
   allAssetTypes: { type: Array, default: () => [] }
 })
 
-const emit = defineEmits(['add', 'remove'])
+const emit = defineEmits(['add', 'import-items', 'remove'])
 
 const loadingImport = ref(false)
 
@@ -74,14 +74,14 @@ const onImportFromProduction = async productionId => {
   if (!sourceProduction) return
   const sourceAssetTypeIds = sourceProduction.asset_types || []
   const toAdd = sourceAssetTypeIds.filter(id => !linkedIds.value.has(id))
+  if (toAdd.length === 0) return
   loadingImport.value = true
-  try {
-    for (const id of toAdd) {
-      emit('add', id)
+  emit('import-items', {
+    ids: toAdd,
+    done: () => {
+      loadingImport.value = false
     }
-  } finally {
-    loadingImport.value = false
-  }
+  })
 }
 </script>
 

@@ -1,6 +1,8 @@
 import { v4 as uuidv4 } from 'uuid'
 
+import func from '@/lib/func'
 import conceptsApi from '@/store/api/concepts'
+import entitiesApi from '@/store/api/entities'
 
 import {
   LOAD_CONCEPTS_START,
@@ -77,7 +79,11 @@ const actions = {
   },
 
   async newConcepts({ dispatch }, forms) {
-    return Promise.all(forms.map(form => dispatch('newConcept', form)))
+    // Each concept creation is several requests (entity, task, preview):
+    // run them one file at a time to avoid hammering the server.
+    return func.runPromiseMapAsSeries(forms, form =>
+      dispatch('newConcept', form)
+    )
   },
 
   async newConcept({ commit, dispatch, rootGetters }, form) {
@@ -132,19 +138,24 @@ const actions = {
     commit(ADD_SELECTED_CONCEPTS, concept)
   },
 
-  async deleteSelectedConcepts({ state, dispatch }) {
+  async deleteSelectedConcepts({ state, commit, rootGetters }) {
     let selectedConceptIds = [...state.selectedConcepts.values()]
       .filter(concept => !concept.canceled)
       .map(concept => concept.id)
     if (selectedConceptIds.length === 0) {
       selectedConceptIds = [...state.selectedConcepts.keys()]
     }
-    for (const conceptId of selectedConceptIds) {
-      const concept = state.conceptMap.get(conceptId)
-      if (concept) {
-        await dispatch('deleteConcept', concept)
-      }
-    }
+    const concepts = selectedConceptIds
+      .map(conceptId => state.conceptMap.get(conceptId))
+      .filter(concept => concept)
+    if (concepts.length === 0) return
+    await entitiesApi.deleteEntities(
+      rootGetters.currentProduction.id,
+      concepts.map(concept => concept.id)
+    )
+    concepts.forEach(concept => {
+      commit(DELETE_CONCEPT_END, concept)
+    })
   },
 
   clearSelectedConcepts({ commit }) {

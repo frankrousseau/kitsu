@@ -772,6 +772,7 @@ export default {
       'loadSequences',
       'saveBreakdownSearchFilterGroup',
       'saveCasting',
+      'saveCastings',
       'setAssetLinkLabel',
       'setAssetSearch',
       'setCastingEpisodes',
@@ -953,23 +954,24 @@ export default {
         key => this.selection[key]
       )
 
-      for (const entityId of entityIds) {
+      entityIds.forEach(entityId => {
         this.addAssetToCasting({
           entityId,
           assetId,
           nbOccurences: amount,
           label: this.castingType === 'shot' ? 'animate' : 'fixed'
         })
-
         delete this.saveErrors[entityId]
+      })
 
-        try {
-          await this.saveCasting(entityId)
-          this.setLock()
-        } catch (err) {
+      try {
+        await this.saveCastings(entityIds)
+        this.setLock()
+      } catch (err) {
+        entityIds.forEach(entityId => {
           this.saveErrors[entityId] = true
-          console.error(err)
-        }
+        })
+        console.error(err)
       }
     },
 
@@ -1008,13 +1010,38 @@ export default {
       const entityIds = Object.keys(this.selection).filter(
         key => this.selection[key]
       )
+      const removals = []
       for (const entityId of entityIds) {
         const asset = this.casting[entityId].find(
           asset => asset.asset_id === assetId
         )
         if (asset) {
-          await this.removeOneAsset(assetId, entityId, asset.nb_occurences)
+          if (this.isEpisodeCasting && asset.nb_occurences === 1) {
+            // The confirmation modal flow handles this entity on its own.
+            await this.removeOneAsset(assetId, entityId, asset.nb_occurences)
+          } else {
+            removals.push(entityId)
+          }
         }
+      }
+      if (removals.length === 0) return
+      this.isLocked = true
+      this.loading.remove = true
+      removals.forEach(entityId => {
+        this.removeAssetFromCasting({ entityId, assetId, nbOccurences: 1 })
+        delete this.saveErrors[entityId]
+      })
+      try {
+        await this.saveCastings(removals)
+        this.setLock()
+      } catch (err) {
+        removals.forEach(entityId => {
+          this.saveErrors[entityId] = true
+        })
+        this.errors.remove = true
+        console.error(err)
+      } finally {
+        this.loading.remove = false
       }
     },
 
@@ -1284,18 +1311,21 @@ export default {
       const selectedElements = Object.keys(this.selection).filter(
         key => this.selection[key]
       )
-      for (const entityId of selectedElements) {
+      selectedElements.forEach(entityId => {
         this.setEntityCasting({
           entityId,
           casting: castingToPaste
         })
         delete this.saveErrors[entityId]
-        await this.saveCasting(entityId)
-          .then(this.setLock)
-          .catch(err => {
-            this.saveErrors[entityId] = true
-            console.error(err)
-          })
+      })
+      try {
+        await this.saveCastings(selectedElements)
+        this.setLock()
+      } catch (err) {
+        selectedElements.forEach(entityId => {
+          this.saveErrors[entityId] = true
+        })
+        console.error(err)
       }
       return castingToPaste
     },

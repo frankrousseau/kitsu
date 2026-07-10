@@ -594,7 +594,7 @@ export default {
       'addSelectedTasks',
       'clearSelectedTasks',
       'updateTask',
-      'unassignPersonFromTask',
+      'unassignPersonFromTasks',
       'removeSelectedTask'
     ]),
 
@@ -633,12 +633,11 @@ export default {
     },
 
     onUnassign(task, person) {
-      if (this.selectedTasks.size > 0) {
-        this.selectedTasks.forEach(t => {
-          this.unassignPersonFromTask({ task: t, person })
-        })
+      const tasks = Array.from(this.selectedTasks.values())
+      if (!this.selectedTasks.has(task.id)) {
+        tasks.push(task)
       }
-      this.unassignPersonFromTask({ task, person })
+      this.unassignPersonFromTasks({ tasks, person })
     },
 
     updateStartDate(date) {

@@ -168,7 +168,7 @@ export default {
 
       currentYear: moment().year(),
       currentMonth: moment().month() + 1,
-      currentWeek: moment().week(),
+      currentWeek: moment().isoWeek(),
       currentDay: moment().date(),
       currentPerson: this.getCurrentPerson(),
 
@@ -441,7 +441,7 @@ export default {
         todayMonth: this.currentMonth,
         year: moment().year(),
         month: moment().month() + 1,
-        week: moment().week()
+        week: moment().isoWeek()
       })
     },
 

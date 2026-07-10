@@ -5,12 +5,6 @@ export default {
     }, Promise.resolve())
   },
 
-  runPromiseAsSeries(promises) {
-    return promises.reduce((accumulatorPromise, promise) => {
-      return accumulatorPromise.then(() => promise)
-    }, Promise.resolve())
-  },
-
   throttle(fn, delay) {
     let lastCall = 0
     return function (...args) {

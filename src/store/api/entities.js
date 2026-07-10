@@ -5,6 +5,13 @@ export default {
     return client.pget(`/api/data/entities/${entityId}/news`)
   },
 
+  deleteEntities(projectId, entityIds) {
+    return client.ppost(
+      `/api/actions/projects/${projectId}/delete-entities`,
+      entityIds
+    )
+  },
+
   getEntityPreviewFiles(entityId) {
     return client.pget(`/api/data/entities/${entityId}/preview-files`)
   },

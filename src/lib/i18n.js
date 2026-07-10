@@ -1,6 +1,6 @@
 import { createI18n } from 'vue-i18n'
 
-import locales from '@/locales'
+import locales, { localeLoaders } from '@/locales'
 
 const i18n = createI18n({
   allowComposition: true,
@@ -10,6 +10,21 @@ const i18n = createI18n({
   messages: locales,
   warnHtmlInMessage: 'off'
 })
+
+const loadedLocales = new Set(Object.keys(locales))
+
+/**
+ * Load a locale chunk on demand and register its messages. Resolves
+ * immediately when the locale is already available (the English variants
+ * ship with the main bundle).
+ */
+export const loadLocaleMessages = async locale => {
+  if (loadedLocales.has(locale) || !localeLoaders[locale]) return
+  // The locale JSON files nest their messages under a "default" key.
+  const messages = (await localeLoaders[locale]()).default.default
+  i18n.global.setLocaleMessage(locale, messages)
+  loadedLocales.add(locale)
+}
 
 /*
  * Enable HMR for locales

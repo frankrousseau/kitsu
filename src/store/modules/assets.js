@@ -1,6 +1,7 @@
 import moment from 'moment'
 
 import assetsApi from '@/store/api/assets'
+import entitiesApi from '@/store/api/entities'
 import peopleApi from '@/store/api/people'
 
 import assetTypeStore from '@/store/modules/assettypes'
@@ -11,7 +12,6 @@ import tasksStore from '@/store/modules/tasks'
 import taskStatusStore from '@/store/modules/taskstatus'
 import taskTypesStore from '@/store/modules/tasktypes'
 
-import func from '@/lib/func'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import { minutesToDays } from '@/lib/time'
 import { PAGE_SIZE } from '@/lib/pagination'
@@ -51,6 +51,7 @@ import {
   ADD_ASSET,
   UPDATE_ASSET,
   REMOVE_ASSET,
+  REMOVE_ASSETS,
   CANCEL_ASSET,
   ASSET_CSV_FILE_SELECTED,
   IMPORT_ASSETS_START,
@@ -551,16 +552,9 @@ const actions = {
           return workflow.includes(taskTypeId)
         })
       }
-      const createTaskPromises = taskTypeIds.map(taskTypeId => {
-        dispatch('createTask', {
-          entityId: asset.id,
-          projectId: asset.project_id,
-          taskTypeId,
-          type: 'assets'
-        })
-      })
-      return func
-        .runPromiseAsSeries(createTaskPromises)
+      // An empty list means "all valid task types" server-side: skip the call.
+      if (taskTypeIds.length === 0) return asset
+      return dispatch('createEntityTasks', { entityId: asset.id, taskTypeIds })
         .then(() => asset)
         .catch(console.error)
     })
@@ -826,19 +820,33 @@ const actions = {
     commit(CLEAR_SELECTED_ASSETS)
   },
 
-  async deleteSelectedAssets({ state, dispatch }) {
+  async deleteSelectedAssets({ state, commit, rootGetters }) {
     let selectedAssetIds = [...state.selectedAssets.values()]
       .filter(asset => !asset.canceled)
       .map(asset => asset.id)
     if (selectedAssetIds.length === 0) {
       selectedAssetIds = [...state.selectedAssets.keys()]
     }
-    for (const assetId of selectedAssetIds) {
-      const asset = cache.assetMap.get(assetId)
-      if (asset) {
-        await dispatch('deleteAsset', asset)
+    const assets = selectedAssetIds
+      .map(assetId => cache.assetMap.get(assetId))
+      .filter(asset => asset)
+    if (assets.length === 0) return
+    await entitiesApi.deleteEntities(
+      rootGetters.currentProduction.id,
+      assets.map(asset => asset.id)
+    )
+    // Store bookkeeping batched into a single mutation: a per-asset commit
+    // costs a full list pass each.
+    const removedAssets = []
+    const canceledAssets = []
+    assets.forEach(asset => {
+      if (asset.tasks.length > 0 && !asset.canceled) {
+        canceledAssets.push(asset)
+      } else {
+        removedAssets.push(asset)
       }
-    }
+    })
+    commit(REMOVE_ASSETS, { removedAssets, canceledAssets })
   },
 
   async loadSharedAssets({ commit, rootGetters }, { production }) {
@@ -1136,6 +1144,33 @@ const mutations = {
       helpers.setListStats(state, cache.assets)
       removeEntryFromIndex(cache.assetIndex, assetToDelete)
     }
+  },
+
+  // Bulk variant of REMOVE_ASSET/CANCEL_ASSET: one pass over each list and
+  // one stats recompute instead of one per deleted asset. Cancel flags are
+  // set first so the recomputed stats exclude the canceled assets.
+  [REMOVE_ASSETS](state, { removedAssets, canceledAssets }) {
+    canceledAssets.forEach(asset => {
+      asset.canceled = true
+    })
+    const removedIds = new Set()
+    removedAssets.forEach(asset => {
+      if (cache.assetMap.get(asset.id)) {
+        removedIds.add(asset.id)
+        cache.assetMap.delete(asset.id)
+        removeEntryFromIndex(cache.assetIndex, asset)
+      }
+    })
+    cache.assets = cache.assets.filter(asset => !removedIds.has(asset.id))
+    cache.result = cache.result.filter(asset => !removedIds.has(asset.id))
+    state.displayedAssets = state.displayedAssets.filter(
+      asset => !removedIds.has(asset.id)
+    )
+    state.assetFilledColumns = getFilledColumns(state.displayedAssets)
+    helpers.setListStats(state, cache.assets)
+    state.displayedAssetsLength = cache.result.filter(
+      asset => !asset.canceled
+    ).length
   },
 
   [ASSET_CSV_FILE_SELECTED](state, formData) {

@@ -19,10 +19,29 @@
  * Socket handlers are auto-registered on mount and removed on unmount.
  * Bound handler references are kept locally so `socket.off()` always
  * targets the correct function instance.
+ *
+ * Room-updated events carry a sequence number (see lib/players/roomSync)
+ * so stale in-flight updates are dropped, broadcasts are muted while a
+ * remote state is applied, and outgoing bursts are throttled — guards
+ * against the event feedback storm of issue #1574.
  */
 import { computed, onBeforeUnmount, onMounted, ref, unref } from 'vue'
 
 import { isValidRoomId, PREVIEW_ROOM_EVENTS } from '@/lib/players/events'
+import {
+  nextRoomSeq,
+  roomSeqOf,
+  shouldApplyRoomUpdate,
+  withRoomSeq
+} from '@/lib/players/roomSync'
+
+// Collapse bursts of status updates (rapid shot changes) into a leading
+// and a trailing emit instead of one event per change (#1574).
+const ROOM_UPDATE_THROTTLE_MS = 200
+// How long broadcasts stay muted after applying a remote update: the
+// component watchers on the applied refs fire on later ticks (some via
+// nextTick or the next video time-update) and would echo the state back.
+const REMOTE_APPLY_MUTE_MS = 500
 
 const noop = () => {}
 
@@ -172,6 +191,17 @@ export const usePreviewRoom = options => {
     setComparisonPanZoom = noop
   } = options
 
+  // ---- Event-storm guards (#1574) ----
+  // See lib/players/roomSync.js for the sequence scheme.
+
+  let localSeq = 0
+  let lastAppliedSeq = 0
+  let isApplyingRemoteUpdate = false
+  let applyMuteTimer = null
+  let pendingEmitTimer = null
+  let lastEmitTime = 0
+  let pendingPreviousPreviewFileId = null
+
   // ---- Computed ----
 
   const joinedRoom = computed(() => {
@@ -242,14 +272,19 @@ export const usePreviewRoom = options => {
 
   // ---- Broadcasts ----
 
-  const updateRoomStatus = (previousPreviewFileId = null) => {
+  const emitRoomStatus = () => {
     const r = unref(room)
     if (!isValidRoomId(r) || !joinedRoom.value) return
     const entity = unref(currentEntity)
     const preview = unref(currentPreview)
+    const previousPreviewFileId = pendingPreviousPreviewFileId
+    pendingPreviousPreviewFileId = null
     socket.emit(PREVIEW_ROOM_EVENTS.roomUpdated, {
       user_id: unref(userId),
-      local_id: r.localId,
+      // The sequence rides inside local_id because the Zou relay only
+      // passes whitelisted fields through (see lib/players/roomSync.js).
+      local_id: withRoomSeq(r.localId, localSeq),
+      room_seq: localSeq,
       playlist_id: r.id,
       is_playing: unref(isPlaying),
       current_entity_id: entity?.id,
@@ -274,6 +309,32 @@ export const usePreviewRoom = options => {
         comparison_preview_index: unref(currentComparisonPreviewIndex)
       }
     })
+  }
+
+  const updateRoomStatus = (previousPreviewFileId = null) => {
+    // Never re-broadcast a state just applied from the network: the
+    // watchers on the applied refs would echo it back and two clients
+    // would replay each other's updates forever (#1574).
+    if (isApplyingRemoteUpdate) return
+    const r = unref(room)
+    if (!isValidRoomId(r) || !joinedRoom.value) return
+    // Stamp the action now so queued remote echoes older than the user's
+    // latest action are dropped even while the emit is throttled.
+    localSeq = nextRoomSeq(localSeq, lastAppliedSeq)
+    if (previousPreviewFileId !== null) {
+      pendingPreviousPreviewFileId = previousPreviewFileId
+    }
+    const elapsed = Date.now() - lastEmitTime
+    if (elapsed >= ROOM_UPDATE_THROTTLE_MS) {
+      lastEmitTime = Date.now()
+      emitRoomStatus()
+    } else if (!pendingEmitTimer) {
+      pendingEmitTimer = setTimeout(() => {
+        pendingEmitTimer = null
+        lastEmitTime = Date.now()
+        emitRoomStatus()
+      }, ROOM_UPDATE_THROTTLE_MS - elapsed)
+    }
   }
 
   const postPanZoomChanged = (x, y, zoom) => {
@@ -361,17 +422,25 @@ export const usePreviewRoom = options => {
       eventData.current_preview_file_id !== currentPreviewFileId &&
       eventData.current_preview_file_index === 0
     ) {
+      // The server relays room updates without previous_preview_file_id,
+      // so fall back to the local playing entity: on this side it still
+      // holds the preview file the sender switched away from.
       const previewFileId = eventData.current_preview_file_id
-      const entity = findEntity({
+      let entity = findEntity({
         entity_id: eventData.current_entity_id,
         preview_file_id: eventData.previous_preview_file_id
       })
-      const previewFile = getPreviewFileFromEntity(entity, previewFileId)
-      if (!previewFile) return
-      const tasks = unref(taskMap)
-      const task = tasks?.get?.(previewFile.task_id)
-      if (!task) return
-      changePreviewFile(entity, previewFile, task.task_type_id)
+      const localEntity = unref(currentEntity)
+      if (!entity && localEntity?.id === eventData.current_entity_id) {
+        entity = localEntity
+      }
+      if (entity && entity.preview_file_id !== previewFileId) {
+        const previewFile = getPreviewFileFromEntity(entity, previewFileId)
+        const task = previewFile
+          ? unref(taskMap)?.get?.(previewFile.task_id)
+          : null
+        if (task) changePreviewFile(entity, previewFile, task.task_type_id)
+      }
     }
 
     if (
@@ -491,10 +560,31 @@ export const usePreviewRoom = options => {
   const onRoomUpdated = eventData => {
     const r = unref(room)
     if (!isValidRoomId(r)) return
-    if (r.localId === eventData.local_id) return
     if (!joinedRoom.value) return
     if (eventData.only_newcomer && !r.newComer) return
-    loadRoomCurrentState(eventData)
+    const accepted = shouldApplyRoomUpdate({
+      localId: r.localId,
+      localSeq,
+      lastAppliedSeq,
+      eventData
+    })
+    if (!accepted) return
+    const seq = roomSeqOf(eventData)
+    if (seq !== null) lastAppliedSeq = seq
+    // A newer remote state supersedes any throttled outgoing broadcast.
+    if (pendingEmitTimer) {
+      clearTimeout(pendingEmitTimer)
+      pendingEmitTimer = null
+    }
+    isApplyingRemoteUpdate = true
+    clearTimeout(applyMuteTimer)
+    try {
+      loadRoomCurrentState(eventData)
+    } finally {
+      applyMuteTimer = setTimeout(() => {
+        isApplyingRemoteUpdate = false
+      }, REMOTE_APPLY_MUTE_MS)
+    }
   }
 
   const onPanzoomChanged = eventData => {
@@ -566,6 +656,8 @@ export const usePreviewRoom = options => {
 
   onBeforeUnmount(() => {
     handlerPairs.forEach(([event, handler]) => socket.off(event, handler))
+    clearTimeout(pendingEmitTimer)
+    clearTimeout(applyMuteTimer)
   })
 
   return {

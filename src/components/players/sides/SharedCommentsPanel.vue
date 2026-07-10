@@ -454,16 +454,14 @@ const confirmEditComment = async updatedComment => {
   const attachmentsToDelete = updatedComment.attachmentFilesToDelete || []
   const newAttachmentFiles = updatedComment.newAttachmentFiles || []
   try {
-    await Promise.all(
-      attachmentsToDelete.map(attachment =>
-        playlistsApi.deleteSharedPlaylistCommentAttachment(
-          props.token,
-          commentId,
-          attachment.id,
-          props.guestId
-        )
+    for (const attachment of attachmentsToDelete) {
+      await playlistsApi.deleteSharedPlaylistCommentAttachment(
+        props.token,
+        commentId,
+        attachment.id,
+        props.guestId
       )
-    )
+    }
     if (newAttachmentFiles.length > 0) {
       const formData = new FormData()
       formData.append('guest_id', props.guestId)
