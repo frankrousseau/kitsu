@@ -219,9 +219,12 @@ export default {
   },
 
   reorderMetadataDescriptorsOnAllProjects(entityType, fieldOrder) {
-    return client.ppost('/api/data/metadata-descriptors/all-projects/reorder', {
-      entity_type: entityType,
-      field_order: fieldOrder
-    })
+    return client.ppost(
+      '/api/actions/metadata-descriptors/all-projects/reorder',
+      {
+        entity_type: entityType,
+        field_order: fieldOrder
+      }
+    )
   }
 }

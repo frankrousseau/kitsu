@@ -55,7 +55,7 @@ export default {
 
   reorderTaskStatusLinks(projectId, taskStatusIds) {
     return client.ppost(
-      `/api/data/projects/${projectId}/task-status-links/reorder`,
+      `/api/actions/projects/${projectId}/task-status-links/reorder`,
       { task_status_ids: taskStatusIds }
     )
   },

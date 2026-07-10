@@ -87,7 +87,7 @@ export default {
 
   reorderTemplateTaskTypes(templateId, taskTypeIds) {
     return client.ppost(
-      `/api/data/project-templates/${templateId}/task-types/reorder`,
+      `/api/actions/project-templates/${templateId}/task-types/reorder`,
       { task_type_ids: taskTypeIds }
     )
   },
@@ -117,7 +117,7 @@ export default {
 
   reorderTemplateTaskStatuses(templateId, taskStatusIds) {
     return client.ppost(
-      `/api/data/project-templates/${templateId}/task-statuses/reorder`,
+      `/api/actions/project-templates/${templateId}/task-statuses/reorder`,
       { task_status_ids: taskStatusIds }
     )
   },
