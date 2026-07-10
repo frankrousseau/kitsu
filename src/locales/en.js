@@ -1907,6 +1907,7 @@ export default {
     padding: 'Shot Padding',
     single_tab: 'Single',
     bulk_tab: 'Bulk',
+    bulk_error: 'The bulk creation failed. Please try again.',
     bulk_generate: 'Generate',
     bulk_invalid_start: 'Start name must end with a number.',
     restore_text: 'Are you sure you want to restore {name} from your archive?',
