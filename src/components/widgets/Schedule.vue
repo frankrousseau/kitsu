@@ -807,6 +807,10 @@ const store = useStore()
 const { t } = useI18n()
 
 const props = defineProps({
+  clipChildren: {
+    type: Boolean,
+    default: false
+  },
   daysOff: {
     type: Array,
     default: () => []
@@ -1610,7 +1614,27 @@ const changeEndDate = event => {
   }
 }
 
+// Origin dates (and estimation) are stamped at drag start so the clip can
+// restore-then-apply on every tick without drift and a cancelled move can
+// restore the exact pre-drag state. Only consumers that opt in through the
+// clipChildren prop get the stamping and the propagation: other schedules
+// (e.g. MainSchedule) do not persist child moves, so clipping there would
+// silently revert on reload.
+const stampDragOrigin = timeElement => {
+  if (!props.clipChildren) return
+  timeElement._dragOrigStartDate = timeElement.startDate.clone()
+  timeElement._dragOrigEndDate = timeElement.endDate.clone()
+  timeElement._dragOrigEstimation = timeElement.estimation
+  if (!timeElement.parentElement && Array.isArray(timeElement.children)) {
+    timeElement.children.forEach(child => {
+      child._dragOrigStartDate = child.startDate.clone()
+      child._dragOrigEndDate = child.endDate.clone()
+    })
+  }
+}
+
 const propagateClipToChildren = item => {
+  if (!props.clipChildren) return
   if (item.parentElement || !Array.isArray(item.children)) return
   const newStart = item.startDate
   const newEnd = item.endDate
@@ -1710,14 +1734,7 @@ const moveTimebar = (timeElement, event) => {
     initialClientX = getClientX(event)
     document.body.style.cursor = props.reassignable ? 'all-scroll' : 'ew-resize'
 
-    timeElement._dragOrigStartDate = timeElement.startDate.clone()
-    timeElement._dragOrigEndDate = timeElement.endDate.clone()
-    if (!timeElement.parentElement && Array.isArray(timeElement.children)) {
-      timeElement.children.forEach(child => {
-        child._dragOrigStartDate = child.startDate.clone()
-        child._dragOrigEndDate = child.endDate.clone()
-      })
-    }
+    stampDragOrigin(timeElement)
     updateSelection(timeElement, event)
   }
 }
@@ -1737,14 +1754,7 @@ const moveTimebarLeftSide = (timeElement, event) => {
     initialClientX = getClientX(event)
     document.body.style.cursor = 'w-resize'
 
-    timeElement._dragOrigStartDate = timeElement.startDate.clone()
-    timeElement._dragOrigEndDate = timeElement.endDate.clone()
-    if (!timeElement.parentElement && Array.isArray(timeElement.children)) {
-      timeElement.children.forEach(child => {
-        child._dragOrigStartDate = child.startDate.clone()
-        child._dragOrigEndDate = child.endDate.clone()
-      })
-    }
+    stampDragOrigin(timeElement)
     updateSelection(timeElement, event)
   }
 }
@@ -1768,14 +1778,7 @@ const moveTimebarRightSide = (timeElement, event) => {
     initialClientX = getClientX(event)
     document.body.style.cursor = 'e-resize'
 
-    timeElement._dragOrigStartDate = timeElement.startDate.clone()
-    timeElement._dragOrigEndDate = timeElement.endDate.clone()
-    if (!timeElement.parentElement && Array.isArray(timeElement.children)) {
-      timeElement.children.forEach(child => {
-        child._dragOrigStartDate = child.startDate.clone()
-        child._dragOrigEndDate = child.endDate.clone()
-      })
-    }
+    stampDragOrigin(timeElement)
     updateSelection(timeElement, event)
   }
 }

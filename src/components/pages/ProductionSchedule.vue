@@ -117,6 +117,7 @@
         :zoom-level="zoomLevel"
         :is-loading="loading.schedule"
         :is-error="errors.schedule"
+        clip-children
         is-estimation-linked
         hide-man-days
         :multiline="isTVShow"
@@ -478,9 +479,10 @@
   <confirm-modal
     active
     :text="
-      $t('schedule.confirm_move_children', {
-        count: pendingParentChange ? pendingParentChange.affected.length : 0
-      })
+      $t(
+        'schedule.confirm_move_children',
+        pendingParentChange ? pendingParentChange.affected.length : 0
+      )
     "
     @cancel="cancelChildMove"
     @confirm="confirmChildMove"
@@ -1393,18 +1395,23 @@ export default {
 
     async confirmChildMove() {
       const { item, affected } = this.pendingParentChange
-      await this.updateScheduleItem(item)
-      for (const child of affected) {
-        await this.updateScheduleItem(child)
+      try {
+        await Promise.all(
+          [item, ...affected].map(element => this.updateScheduleItem(element))
+        )
+      } finally {
+        this.pendingParentChange = null
+        this.modals.confirmChildMove = false
       }
-      this.pendingParentChange = null
-      this.modals.confirmChildMove = false
     },
 
     cancelChildMove() {
       const { item, affected } = this.pendingParentChange
       item.startDate = item._dragOrigStartDate.clone()
       item.endDate = item._dragOrigEndDate.clone()
+      if (item._dragOrigEstimation !== undefined) {
+        item.estimation = item._dragOrigEstimation
+      }
       affected.forEach(child => {
         child.startDate = child._dragOrigStartDate.clone()
         child.endDate = child._dragOrigEndDate.clone()

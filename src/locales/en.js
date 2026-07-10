@@ -1785,8 +1785,6 @@ export default {
     md: 'md',
     today: 'Today',
     zoom_level: 'Zoom level',
-    confirm_move_children:
-      'Moving this bar will clip or snap {count} sub-item(s) to fit the new bounds. Continue?',
     milestone: {
       add_milestone: 'Add milestone for',
       delete_milestone: 'Delete milestone',
@@ -1802,6 +1800,8 @@ export default {
     apply_to_prod_confirm: 'Are you sure you want to apply this schedule version to the current production? This will override the current task values.',
     apply_to_prod_error: 'An error occurred while applying the schedule version to the current production.',
     assign: 'Assign to:',
+    confirm_move_children:
+      'Moving this bar will clip or snap {count} sub-item to fit the new bounds. Continue? | Moving this bar will clip or snap {count} sub-items to fit the new bounds. Continue?',
     export: 'Export schedule',
     export_error: 'An error occurred while exporting data.',
     reset_list: 'Reset list',
