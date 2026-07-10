@@ -16,6 +16,12 @@ export const formatListMixin = {
 
     isDurationInHours() {
       return this.organisation.format_duration_in_hours
+    },
+
+    durationUnit() {
+      return this.isDurationInHours
+        ? this.$t('schedule.hours')
+        : this.$t('schedule.md')
     }
   },
 

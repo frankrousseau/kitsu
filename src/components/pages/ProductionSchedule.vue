@@ -430,7 +430,7 @@
                 :step="0.01"
                 placeholder="0.00"
                 type="number"
-                :unit-label="$t('schedule.md')"
+                :unit-label="durationUnit"
                 v-model="assignments.task.estimation"
               />
             </div>
@@ -2185,7 +2185,7 @@ export default {
                   null,
                   null,
                   null,
-                  `${task.entity.name} (${duration}md)`
+                  `${task.entity.name} (${duration}${this.durationUnit})`
                 ])
 
                 // fill task timebar
@@ -2195,7 +2195,7 @@ export default {
                 const endIndex = dates.indexOf(end_date)
                 for (let i = startIndex; i > -1 && i <= endIndex; i++) {
                   const cell = row.getCell(datesColumn + i)
-                  cell.note = `${task.entity.name}\n${start_date} - ${end_date}\n${duration} ${this.$t('schedule.md')}`
+                  cell.note = `${task.entity.name}\n${start_date} - ${end_date}\n${duration} ${this.durationUnit}`
                   cell.fill = {
                     type: 'pattern',
                     pattern: 'solid',
