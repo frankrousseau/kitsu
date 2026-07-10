@@ -848,6 +848,7 @@ export default {
 
   methods: {
     ...mapActions([
+      'addEntitiesToPlaylist',
       'changePlaylistOrder',
       'changePlaylistPreview',
       'changePlaylistType',
@@ -1424,9 +1425,30 @@ export default {
       // Captured once: keep adding to the playlist the user started from,
       // even if they switch playlists mid-sequence.
       const playlist = this.currentPlaylist
-      for (const entity of entities || []) {
-        this.entitiesAddedWhilePanelOpen = true
-        await this.addEntity(entity, playlist)
+      if (!entities?.length) return
+      this.entitiesAddedWhilePanelOpen = true
+      entities.forEach(entity => {
+        this.entityLoading[entity.id] = true
+      })
+      try {
+        await this.addEntitiesToPlaylist({
+          playlist,
+          entityIds: entities.map(entity => entity.id)
+        })
+        if (playlist.id === this.currentPlaylist.id) {
+          const loadedPlaylist = await this.loadPlaylist(playlist)
+          this.currentPlaylist = ref(loadedPlaylist)
+          this.rebuildCurrentEntities()
+          this.$nextTick(() => {
+            this.playlistPlayer?.scrollToRight()
+          })
+        }
+      } catch (err) {
+        console.error(err)
+      } finally {
+        entities.forEach(entity => {
+          this.entityLoading[entity.id] = false
+        })
       }
     },
 

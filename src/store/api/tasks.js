@@ -33,6 +33,18 @@ export default {
     return client.pdel(`/api/actions/user/tasks/${taskId}/unsubscribe`)
   },
 
+  subscribeToTasks(taskIds) {
+    return client.ppost('/api/actions/user/tasks/subscribe', {
+      task_ids: taskIds
+    })
+  },
+
+  unsubscribeFromTasks(taskIds) {
+    return client.ppost('/api/actions/user/tasks/unsubscribe', {
+      task_ids: taskIds
+    })
+  },
+
   getTaskComments(taskId) {
     return client.pget(`/api/data/tasks/${taskId}/comments`)
   },
@@ -146,6 +158,12 @@ export default {
     return client.ppost(url, {})
   },
 
+  createEntityTasks(entityId, taskTypeIds) {
+    return client.ppost(`/api/data/entities/${entityId}/tasks`, {
+      task_type_ids: taskTypeIds
+    })
+  },
+
   deleteTask(task) {
     return client.pdel(`/api/data/tasks/${task.id}?force=true`)
   },
@@ -198,6 +216,12 @@ export default {
     return client.pput(`/api/actions/tasks/${taskId}/set-main-preview`, {})
   },
 
+  setTasksMainPreview(taskIds) {
+    return client.pput('/api/actions/tasks/set-main-preview', {
+      task_ids: taskIds
+    })
+  },
+
   uploadPreview(previewId, formData) {
     return client.ppostFile(
       `/api/pictures/preview-files/${previewId}`,
@@ -228,9 +252,16 @@ export default {
     })
   },
 
-  unassignPersonFromTask(taskId, personId) {
+  setTasksPriority(taskIds, priority) {
+    return client.pput('/api/actions/tasks/set-priority', {
+      task_ids: taskIds,
+      priority
+    })
+  },
+
+  unassignPersonFromTasks(taskIds, personId) {
     return client.pput('/api/actions/tasks/clear-assignation', {
-      task_ids: [taskId],
+      task_ids: taskIds,
       person_id: personId
     })
   },

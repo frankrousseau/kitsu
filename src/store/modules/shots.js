@@ -1,5 +1,6 @@
 import moment from 'moment'
 
+import entitiesApi from '@/store/api/entities'
 import peopleApi from '@/store/api/people'
 import shotsApi from '@/store/api/shots'
 
@@ -11,7 +12,6 @@ import tasksStore from '@/store/modules/tasks'
 import taskStatusStore from '@/store/modules/taskstatus'
 import taskTypesStore from '@/store/modules/tasktypes'
 
-import func from '@/lib/func'
 import { PAGE_SIZE } from '@/lib/pagination'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import {
@@ -509,16 +509,9 @@ const actions = {
     return shotsApi.newShot(shot).then(shot => {
       commit(NEW_SHOT_END, { shot })
       const taskTypeIds = rootGetters.productionShotTaskTypeIds
-      const createTaskPromises = taskTypeIds.map(taskTypeId =>
-        dispatch('createTask', {
-          entityId: shot.id,
-          projectId: shot.project_id,
-          taskTypeId: taskTypeId,
-          type: 'shots'
-        })
-      )
-      return func
-        .runPromiseAsSeries(createTaskPromises)
+      // An empty list means "all valid task types" server-side: skip the call.
+      if (taskTypeIds.length === 0) return shot
+      return dispatch('createEntityTasks', { entityId: shot.id, taskTypeIds })
         .then(() => shot)
         .catch(console.error)
     })
@@ -771,19 +764,28 @@ const actions = {
     commit(CLEAR_SELECTED_SHOTS)
   },
 
-  async deleteSelectedShots({ state, dispatch }) {
+  async deleteSelectedShots({ state, commit, rootGetters }) {
     let selectedShotIds = [...state.selectedShots.values()]
       .filter(shot => !shot.canceled)
       .map(shot => shot.id)
     if (selectedShotIds.length === 0) {
       selectedShotIds = [...state.selectedShots.keys()]
     }
-    for (const shotId of selectedShotIds) {
-      const shot = cache.shotMap.get(shotId)
-      if (shot) {
-        await dispatch('deleteShot', shot)
+    const shots = selectedShotIds
+      .map(shotId => cache.shotMap.get(shotId))
+      .filter(shot => shot)
+    if (shots.length === 0) return
+    await entitiesApi.deleteEntities(
+      rootGetters.currentProduction.id,
+      shots.map(shot => shot.id)
+    )
+    shots.forEach(shot => {
+      if (shot.tasks.length > 0 && !shot.canceled) {
+        commit(CANCEL_SHOT, shot)
+      } else {
+        commit(REMOVE_SHOT, shot)
       }
-    }
+    })
   },
 
   async setNbFramesFromTaskTypePreviews(

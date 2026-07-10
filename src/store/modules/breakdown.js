@@ -191,6 +191,22 @@ const actions = {
     return breakdownApi.updateCasting(production.id, entityId, casting)
   },
 
+  saveCastings({ rootGetters }, entityIds) {
+    if (!entityIds?.length) return Promise.resolve()
+    const production = rootGetters.currentProduction
+    const castings = {}
+    entityIds.forEach(entityId => {
+      castings[entityId] = Object.values(state.casting[entityId]).map(
+        asset => ({
+          asset_id: asset.asset_id,
+          nb_occurences: asset.nb_occurences || 1,
+          label: asset.label
+        })
+      )
+    })
+    return breakdownApi.updateCastings(production.id, castings)
+  },
+
   uploadCastingFile({ commit, state, rootGetters }, formData) {
     const currentProduction = rootGetters.currentProduction
     return breakdownApi.postCastingCsv(currentProduction, formData)

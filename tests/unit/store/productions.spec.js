@@ -442,41 +442,37 @@ describe('Productions store', () => {
       ).rejects.toEqual({ response: { status: 500 } })
     })
 
-    test('addProjectMetadataDescriptorToAllProductions skips productions owning the field_name', async () => {
+    test('addProjectMetadataDescriptorToAllProductions applies the column in one request', async () => {
       const mockCommit = vi.fn()
       const state = {
         productions: [
-          {
-            id: 'production-1',
-            descriptors: [
-              {
-                id: 'descriptor-1',
-                entity_type: 'Project',
-                name: 'studio location',
-                field_name: 'studio_location'
-              }
-            ]
-          },
+          { id: 'production-1', descriptors: [] },
           { id: 'production-2', descriptors: [] }
         ],
-        productionMap: new Map()
+        productionMap: new Map([
+          ['production-1', { id: 'production-1', descriptors: [] }],
+          ['production-2', { id: 'production-2', descriptors: [] }]
+        ])
       }
-      productionApi.addMetadataDescriptor = vi.fn((productionId, descriptor) =>
-        Promise.resolve({
-          ...descriptor,
-          id: 'descriptor-2',
-          project_id: productionId
-        })
+      productionApi.addMetadataDescriptorToAllProjects = vi.fn(() =>
+        Promise.resolve([
+          { id: 'descriptor-1', project_id: 'production-1' },
+          { id: 'descriptor-2', project_id: 'production-2' }
+        ])
       )
       await store.actions.addProjectMetadataDescriptorToAllProductions(
         { commit: mockCommit, state },
-        { name: 'Studio Location', data_type: 'string' }
+        { name: 'Studio Location', data_type: 'string', projectId: 'x' }
       )
-      expect(productionApi.addMetadataDescriptor).toBeCalledTimes(1)
-      expect(productionApi.addMetadataDescriptor).toHaveBeenCalledWith(
-        'production-2',
-        { name: 'Studio Location', data_type: 'string' }
-      )
+      expect(
+        productionApi.addMetadataDescriptorToAllProjects
+      ).toBeCalledTimes(1)
+      // projectId is stripped from the payload before it is sent.
+      expect(
+        productionApi.addMetadataDescriptorToAllProjects
+      ).toHaveBeenCalledWith({ name: 'Studio Location', data_type: 'string' })
+      // One commit per created descriptor.
+      expect(mockCommit).toHaveBeenCalledTimes(2)
     })
 
     describe('editProduction', () => {

@@ -1693,6 +1693,11 @@ export default {
         const startDate = parseDate(this.assignments.startDate)
         const endDate = parseDate(this.assignments.endDate)
 
+        // accumulated during the distribution loop, flushed as one
+        // clear-assignation request plus one assign request per assignee
+        const taskIdsToUnassign = []
+        const taskIdsByAssignee = new Map()
+
         let cumulatedTasks = 0
         let nextAssigneeIndex = 0
         let nextStartDate = startDate.clone()
@@ -1722,7 +1727,7 @@ export default {
             if (this.isVersioned) {
               versionedTask.assignees = []
             } else {
-              await this.unassignSelectedTasks({ taskIds: [task.id] })
+              taskIdsToUnassign.push(task.id)
             }
           }
 
@@ -1771,25 +1776,23 @@ export default {
                   await this.updateScheduleVersionedTask(versionedTask)
                 }
               } else {
-                await Promise.all([
-                  // assign task to the current assignee
-                  this.assignSelectedTasks({
-                    personId: taskAssignee.id,
-                    taskIds: [task.id]
-                  }),
-                  // save task dates & estimation
-                  this.updateTask({
-                    taskId: task.id,
-                    data: {
-                      estimation: daysToMinutes(
-                        this.organisation,
-                        taskEstimation
-                      ),
-                      start_date: taskStartDate.format('YYYY-MM-DD'),
-                      due_date: taskEndDate.format('YYYY-MM-DD')
-                    }
-                  })
-                ])
+                // assignation to the current assignee is batched after the loop
+                if (!taskIdsByAssignee.has(taskAssignee.id)) {
+                  taskIdsByAssignee.set(taskAssignee.id, [])
+                }
+                taskIdsByAssignee.get(taskAssignee.id).push(task.id)
+                // save task dates & estimation
+                await this.updateTask({
+                  taskId: task.id,
+                  data: {
+                    estimation: daysToMinutes(
+                      this.organisation,
+                      taskEstimation
+                    ),
+                    start_date: taskStartDate.format('YYYY-MM-DD'),
+                    due_date: taskEndDate.format('YYYY-MM-DD')
+                  }
+                })
               }
               // set next start date
               if ((cumulatedTasks * taskEstimation) % 1 !== 0) {
@@ -1800,6 +1803,15 @@ export default {
               break // jump to next task
             }
           }
+        }
+
+        // unassign first so batched assignations are not cleared right after
+        if (taskIdsToUnassign.length > 0) {
+          await this.unassignSelectedTasks({ taskIds: taskIdsToUnassign })
+        }
+        // Sequence the per-assignee requests instead of firing them at once.
+        for (const [personId, taskIds] of taskIdsByAssignee) {
+          await this.assignSelectedTasks({ personId, taskIds })
         }
 
         // refresh schedule

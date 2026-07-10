@@ -3,7 +3,24 @@ import { vi } from 'vitest'
 // Importing the tasks module transitively pulls in the root store
 // (lib/models → timezone → @/store); stub it so no Vuex store is built.
 vi.mock('@/store', () => ({ default: {} }))
+vi.mock('@/store/api/tasks', () => ({
+  default: {
+    unassignPersonFromTasks: vi.fn(() => Promise.resolve()),
+    createEntityTasks: vi.fn(() =>
+      Promise.resolve([{ id: 'task-1' }, { id: 'task-2' }])
+    ),
+    setTasksPriority: vi.fn(() =>
+      Promise.resolve([{ id: 'task-1', priority: 2, task_type_id: 'type-1' }])
+    ),
+    subscribeToTasks: vi.fn(() => Promise.resolve()),
+    unsubscribeFromTasks: vi.fn(() => Promise.resolve()),
+    setTasksMainPreview: vi.fn(() =>
+      Promise.resolve([{ id: 'entity-1', preview_file_id: 'preview-1' }])
+    )
+  }
+}))
 
+import tasksApi from '@/store/api/tasks'
 import tasksStore from '@/store/modules/tasks'
 import peopleStore from '@/store/modules/people'
 
@@ -125,6 +142,134 @@ describe('Tasks store', () => {
       tasksStore.mutations.ADD_REPLY_TO_COMMENT({}, { comment, reply })
       expect(comment.replies[0].person.full_name).toEqual('Guest Author')
       expect(comment.replies[0].person.initials).toEqual('GA')
+    })
+  })
+
+  describe('batch actions', () => {
+    beforeEach(() => {
+      vi.clearAllMocks()
+    })
+
+    test('unassignPersonFromTasks sends one request and commits per task', async () => {
+      const commit = vi.fn()
+      const person = { id: 'person-1' }
+      const tasks = [{ id: 'task-1' }, { id: 'task-2' }]
+      await tasksStore.actions.unassignPersonFromTasks(
+        { commit },
+        { tasks, person }
+      )
+      expect(tasksApi.unassignPersonFromTasks).toHaveBeenCalledTimes(1)
+      expect(tasksApi.unassignPersonFromTasks).toHaveBeenCalledWith(
+        ['task-1', 'task-2'],
+        'person-1'
+      )
+      expect(commit).toHaveBeenCalledTimes(2)
+      expect(commit).toHaveBeenNthCalledWith(1, 'UNASSIGN_TASK', {
+        task: tasks[0],
+        person
+      })
+    })
+
+    test('unassignPersonFromTasks skips the request on an empty selection', async () => {
+      const commit = vi.fn()
+      await tasksStore.actions.unassignPersonFromTasks(
+        { commit },
+        { tasks: [], person: { id: 'person-1' } }
+      )
+      expect(tasksApi.unassignPersonFromTasks).not.toHaveBeenCalled()
+      expect(commit).not.toHaveBeenCalled()
+    })
+
+    test('changeSelectedPriorities updates the selection in one request', async () => {
+      const commit = vi.fn()
+      const state = {
+        selectedTasks: new Map([
+          ['task-1', true],
+          ['task-2', true]
+        ]),
+        taskMap: new Map([
+          ['task-1', { id: 'task-1', priority: 0 }],
+          // Already at the target priority: must be excluded from the call.
+          ['task-2', { id: 'task-2', priority: 2 }]
+        ])
+      }
+      const rootGetters = { taskTypeMap: new Map() }
+      await tasksStore.actions.changeSelectedPriorities(
+        { commit, state, rootGetters },
+        { priority: 2 }
+      )
+      expect(tasksApi.setTasksPriority).toHaveBeenCalledTimes(1)
+      expect(tasksApi.setTasksPriority).toHaveBeenCalledWith(['task-1'], 2)
+      expect(commit).toHaveBeenCalledTimes(1)
+      expect(commit.mock.calls[0][0]).toEqual('EDIT_TASK_END')
+      expect(commit.mock.calls[0][1].task.priority).toEqual(2)
+    })
+
+    test('subscribeToTasks sends one request and commits per task', async () => {
+      const commit = vi.fn()
+      await tasksStore.actions.subscribeToTasks({ commit }, ['task-1', 'task-2'])
+      expect(tasksApi.subscribeToTasks).toHaveBeenCalledTimes(1)
+      expect(tasksApi.subscribeToTasks).toHaveBeenCalledWith(['task-1', 'task-2'])
+      expect(commit).toHaveBeenCalledTimes(2)
+      expect(commit).toHaveBeenNthCalledWith(1, 'LOAD_TASK_SUBSCRIBE_END', {
+        taskId: 'task-1',
+        subscribed: true
+      })
+    })
+
+    test('unsubscribeFromTasks commits subscribed=false per task', async () => {
+      const commit = vi.fn()
+      await tasksStore.actions.unsubscribeFromTasks(
+        { commit },
+        ['task-1', 'task-2']
+      )
+      expect(tasksApi.unsubscribeFromTasks).toHaveBeenCalledTimes(1)
+      expect(commit).toHaveBeenCalledTimes(2)
+      expect(commit.mock.calls[0][1].subscribed).toBe(false)
+    })
+
+    test('setTasksMainPreview maps returned entities back to their task', async () => {
+      const commit = vi.fn()
+      const state = {
+        taskMap: new Map([
+          ['task-1', { id: 'task-1', entity: { id: 'entity-1' } }],
+          // No preview for this task's entity: skipped server-side.
+          ['task-2', { id: 'task-2', entity: { id: 'entity-2' } }]
+        ])
+      }
+      await tasksStore.actions.setTasksMainPreview(
+        { commit, state },
+        ['task-1', 'task-2']
+      )
+      expect(tasksApi.setTasksMainPreview).toHaveBeenCalledWith([
+        'task-1',
+        'task-2'
+      ])
+      expect(commit).toHaveBeenCalledTimes(1)
+      expect(commit).toHaveBeenCalledWith('SET_PREVIEW', {
+        taskId: 'task-1',
+        entityId: 'entity-1',
+        previewId: 'preview-1',
+        taskMap: state.taskMap
+      })
+    })
+
+    test('createEntityTasks commits NEW_TASK_END for each created task', async () => {
+      const commit = vi.fn()
+      const rootGetters = { currentProduction: { id: 'prod-1' } }
+      const tasks = await tasksStore.actions.createEntityTasks(
+        { commit, rootGetters },
+        { entityId: 'entity-1', taskTypeIds: ['type-1', 'type-2'] }
+      )
+      expect(tasksApi.createEntityTasks).toHaveBeenCalledTimes(1)
+      expect(tasksApi.createEntityTasks).toHaveBeenCalledWith('entity-1', [
+        'type-1',
+        'type-2'
+      ])
+      expect(tasks.map(task => task.id)).toEqual(['task-1', 'task-2'])
+      expect(commit).toHaveBeenCalledTimes(2)
+      expect(commit.mock.calls[0][0]).toEqual('NEW_TASK_END')
+      expect(commit.mock.calls[0][1].task).toEqual(tasks[0])
     })
   })
 

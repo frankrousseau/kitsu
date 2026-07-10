@@ -194,6 +194,24 @@ const actions = {
     })
   },
 
+  subscribeToTasks({ commit }, taskIds) {
+    if (taskIds.length === 0) return Promise.resolve()
+    return tasksApi.subscribeToTasks(taskIds).then(() => {
+      taskIds.forEach(taskId =>
+        commit(LOAD_TASK_SUBSCRIBE_END, { taskId, subscribed: true })
+      )
+    })
+  },
+
+  unsubscribeFromTasks({ commit }, taskIds) {
+    if (taskIds.length === 0) return Promise.resolve()
+    return tasksApi.unsubscribeFromTasks(taskIds).then(() => {
+      taskIds.forEach(taskId =>
+        commit(LOAD_TASK_SUBSCRIBE_END, { taskId, subscribed: false })
+      )
+    })
+  },
+
   loadTaskComments({ commit, dispatch }, { taskId, entityId }) {
     return tasksApi.getTaskComments(taskId).then(comments => {
       commit(LOAD_TASK_COMMENTS_END, { comments, taskId })
@@ -291,8 +309,9 @@ const actions = {
       }
       entityIdsByTaskType[taskTypeId].push(entityId)
     })
-    return func.runPromiseAsSeries(
-      Object.keys(entityIdsByTaskType).map(taskTypeId => {
+    return func.runPromiseMapAsSeries(
+      Object.keys(entityIdsByTaskType),
+      taskTypeId => {
         const data = {
           task_type_id: taskTypeId,
           type,
@@ -323,7 +342,7 @@ const actions = {
             console.error(err)
             return []
           })
-      })
+      }
     )
   },
 
@@ -377,6 +396,23 @@ const actions = {
     })
   },
 
+  createEntityTasks({ commit, rootGetters }, { entityId, taskTypeIds }) {
+    const production = rootGetters.currentProduction
+    const taskTypeMap = taskTypeStore.cache.taskTypeMap
+    const taskStatusMap = taskStatusStore.cache.taskStatusMap
+    return tasksApi.createEntityTasks(entityId, taskTypeIds).then(tasks => {
+      tasks.forEach(task => {
+        commit(NEW_TASK_END, {
+          task,
+          production,
+          taskTypeMap,
+          taskStatusMap
+        })
+      })
+      return tasks
+    })
+  },
+
   changeSelectedTaskStatus(
     { commit, state, rootGetters },
     { taskStatusId, comment }
@@ -412,13 +448,15 @@ const actions = {
     const tasksToUpdate = Array.from(state.selectedTasks.keys())
       .map(taskId => state.taskMap.get(taskId))
       .filter(task => task && task.priority !== priority)
-    // No batch endpoint for priorities: keep the requests serial to avoid
-    // hammering the server with parallel writes.
-    for (const task of tasksToUpdate) {
-      const taskType = rootGetters.taskTypeMap.get(task.task_type_id)
-      const updatedTask = await tasksApi.updateTask(task.id, { priority })
+    if (tasksToUpdate.length === 0) return
+    const updatedTasks = await tasksApi.setTasksPriority(
+      tasksToUpdate.map(task => task.id),
+      priority
+    )
+    updatedTasks.forEach(updatedTask => {
+      const taskType = rootGetters.taskTypeMap.get(updatedTask.task_type_id)
       commit(EDIT_TASK_END, { task: updatedTask, taskType })
-    }
+    })
   },
 
   updateTask({ commit, state }, { taskId, data }) {
@@ -673,6 +711,27 @@ const actions = {
     })
   },
 
+  setTasksMainPreview({ commit, state }, taskIds) {
+    if (taskIds.length === 0) return Promise.resolve()
+    const taskMap = state.taskMap
+    return tasksApi.setTasksMainPreview(taskIds).then(entities => {
+      // The route returns a flat entity list; match each back to its task
+      // through the entity id. Tasks without a preview are skipped server-side.
+      const entityMap = new Map(entities.map(entity => [entity.id, entity]))
+      taskIds.forEach(taskId => {
+        const entity = entityMap.get(taskMap.get(taskId)?.entity?.id)
+        if (entity) {
+          commit(SET_PREVIEW, {
+            taskId,
+            entityId: entity.id,
+            previewId: entity.preview_file_id,
+            taskMap
+          })
+        }
+      })
+    })
+  },
+
   updatePreviewAnnotation(
     { commit },
     { taskId, preview, additions, deletions, updates }
@@ -761,11 +820,21 @@ const actions = {
     })
   },
 
-  unassignPersonFromTask({ commit }, { task, person }) {
+  unassignPersonFromTask({ dispatch }, { task, person }) {
+    return dispatch('unassignPersonFromTasks', { tasks: [task], person })
+  },
+
+  unassignPersonFromTasks({ commit }, { tasks, person }) {
+    if (tasks.length === 0) return Promise.resolve()
     return tasksApi
-      .unassignPersonFromTask(task.id, person.id)
+      .unassignPersonFromTasks(
+        tasks.map(task => task.id),
+        person.id
+      )
       .then(() => {
-        commit(UNASSIGN_TASK, { task, person })
+        tasks.forEach(task => {
+          commit(UNASSIGN_TASK, { task, person })
+        })
       })
       .catch(console.error)
   },

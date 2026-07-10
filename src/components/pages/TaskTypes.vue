@@ -51,7 +51,6 @@ import { useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 
 import csv from '@/lib/csv'
-import func from '@/lib/func'
 import stringHelpers from '@/lib/string'
 
 // eslint-disable-next-line no-unused-vars
@@ -168,9 +167,10 @@ const savePriorities = forms => {
   if (now - lastCall > 1000 && !isSaving) {
     lastCall = now
     isSaving = true
-    func
-      .runPromiseMapAsSeries(forms, form =>
-        store.dispatch('editTaskType', form)
+    store
+      .dispatch(
+        'reorderTaskTypes',
+        forms.map(form => form.id)
       )
       .then(() => {
         isSaving = false

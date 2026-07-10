@@ -828,28 +828,25 @@ const deleteFromList = (object, listName) => {
 }
 
 const createTaskTypesAndStatuses = async () => {
-  await func.runPromiseAsSeries(
-    productionToCreate.assetTaskTypes
-      .concat(productionToCreate.shotTaskTypes)
-      .map(async (taskType, index) => {
-        const finalIndex =
-          taskType.for_entity === 'Shot'
-            ? index - productionToCreate.assetTaskTypes.length
-            : index
-        return await store.dispatch('addTaskTypeToProduction', {
-          taskTypeId: taskType.id,
-          priority: finalIndex + 1
-        })
+  const calls = productionToCreate.assetTaskTypes
+    .concat(productionToCreate.shotTaskTypes)
+    .map((taskType, index) => () => {
+      const finalIndex =
+        taskType.for_entity === 'Shot'
+          ? index - productionToCreate.assetTaskTypes.length
+          : index
+      return store.dispatch('addTaskTypeToProduction', {
+        taskTypeId: taskType.id,
+        priority: finalIndex + 1
       })
-      .concat(
-        productionToCreate.taskStatuses.map(async taskStatus => {
-          return await store.dispatch(
-            'addTaskStatusToProduction',
-            taskStatus.id
-          )
-        })
+    })
+    .concat(
+      productionToCreate.taskStatuses.map(
+        taskStatus => () =>
+          store.dispatch('addTaskStatusToProduction', taskStatus.id)
       )
-  )
+    )
+  await func.runPromiseMapAsSeries(calls, call => call())
 }
 
 const createAssets = async () => {

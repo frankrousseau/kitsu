@@ -183,5 +183,48 @@ export default {
       `/api/data/projects/${productionId}/metadata-descriptors/reorder`,
       data
     )
+  },
+
+  addMetadataDescriptorToAllProjects(descriptor) {
+    const data = {
+      name: descriptor.name,
+      data_type: descriptor.data_type,
+      choices: descriptor.values,
+      for_client: toBoolean(descriptor.for_client),
+      entity_type: descriptor.entity_type,
+      departments: descriptor.departments
+    }
+    return client.ppost('/api/data/metadata-descriptors/all-projects', data)
+  },
+
+  updateMetadataDescriptorOnAllProjects(fieldName, descriptor) {
+    const data = {
+      name: descriptor.name,
+      data_type: descriptor.data_type,
+      choices: descriptor.values,
+      for_client: toBoolean(descriptor.for_client),
+      entity_type: descriptor.entity_type,
+      departments: descriptor.departments
+    }
+    return client.pput(
+      `/api/data/metadata-descriptors/all-projects/${fieldName}`,
+      data
+    )
+  },
+
+  deleteMetadataDescriptorOnAllProjects(fieldName, entityType) {
+    return client.pdel(
+      `/api/data/metadata-descriptors/all-projects/${fieldName}?entity_type=${entityType}`
+    )
+  },
+
+  reorderMetadataDescriptorsOnAllProjects(entityType, fieldOrder) {
+    return client.ppost(
+      '/api/actions/metadata-descriptors/all-projects/reorder',
+      {
+        entity_type: entityType,
+        field_order: fieldOrder
+      }
+    )
   }
 }
