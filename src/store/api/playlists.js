@@ -25,8 +25,10 @@ export default {
   },
 
   addEntitiesToPlaylist(playlist, entityIds) {
+    // Send (entity, preview) couples. No preview_file_id: the server resolves
+    // each entity's latest preview for the playlist task type.
     return client.ppost(`/api/actions/playlists/${playlist.id}/add-entities`, {
-      entity_ids: entityIds
+      entities: entityIds.map(entityId => ({ entity_id: entityId }))
     })
   },
 
