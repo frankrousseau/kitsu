@@ -688,7 +688,6 @@ export default {
       type: 'asset',
       columnSelectorDisplayed: false,
       hiddenColumns: {},
-      isSelectableMap: {},
       lastSelection: null,
       lastHeaderMenuDisplayed: null,
       lastMetadataHeaderMenuDisplayed: null,
@@ -928,23 +927,23 @@ export default {
         : mainEpisodeName
     },
 
-    // Selectable if the task type is included in the workflow.
+    // Selectable if the cell already holds a task or if the task type is
+    // included in the workflow. Cells with existing tasks stay actionable
+    // even when a workflow change removed their task type, so they can
+    // still be selected and managed instead of freezing.
     isSelectable(asset, columnId) {
       if (asset.shared) {
         return false
       }
-      const key = asset.asset_type_id + columnId
-      if (this.isSelectableMap === undefined) this.isSelectableMap = {}
-      if (this.isSelectableMap[key] === undefined) {
-        const taskType = this.taskTypeMap.get(columnId)
-        const assetType = this.assetTypeMap.get(asset.asset_type_id)
-        let taskTypes = assetType?.task_types || []
-        if (taskTypes.length === 0) {
-          taskTypes = this.productionAssetTaskTypes.map(t => t.id)
-        }
-        this.isSelectable[key] = taskTypes.includes(taskType.id)
+      if (this.taskMap.get(asset.validations?.get(columnId))) {
+        return true
       }
-      return this.isSelectable[key]
+      const assetType = this.assetTypeMap.get(asset.asset_type_id)
+      let taskTypes = assetType?.task_types || []
+      if (taskTypes.length === 0) {
+        taskTypes = this.productionAssetTaskTypes.map(t => t.id)
+      }
+      return taskTypes.includes(columnId)
     },
 
     isSelected(indexInGroup, groupIndex, columnIndex) {
@@ -1119,11 +1118,6 @@ export default {
 
     'displaySettings.bigThumbnails'() {
       this.updateOffsets()
-    },
-
-    currentProduction() {
-      // Map used for performance reasons, to avoid array traversals
-      this.isSelectableMap = {}
     }
   }
 }
