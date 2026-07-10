@@ -1844,15 +1844,12 @@ export default {
         // update task and assignments
         await this.onScheduleItemChanged(task)
         if (!this.isVersioned) {
-          await this.unassignSelectedTasks({ taskIds: [task.id] })
-          await Promise.all(
-            task.assignees.map(personId =>
-              this.assignSelectedTasks({
-                personId,
-                taskIds: [task.id]
-              })
-            )
-          )
+          // One task update carrying the full assignee list replaces the
+          // unassign request plus one assign request per person.
+          await this.updateTask({
+            taskId: task.id,
+            data: { assignees: task.assignees }
+          })
         }
         // refresh task in side panel
         this.assignments.task.startDate = task.startDate.format('YYYY-MM-DD')
