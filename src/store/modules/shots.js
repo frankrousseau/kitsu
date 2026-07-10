@@ -86,6 +86,7 @@ import {
 
 const cache = {
   shots: [],
+  shotsLoadingPromise: null,
   shotMap: new Map(),
   shotIndex: {},
   result: []
@@ -426,10 +427,15 @@ const actions = {
       commit(SET_CURRENT_EPISODE, null)
     }
 
-    if (state.isShotsLoading) return Promise.resolve()
+    if (state.isShotsLoading) {
+      // Return the in-flight load so concurrent callers await the same shots
+      // (e.g. parallel expands in the schedule) instead of racing ahead with
+      // an empty shotMap/sequenceMap.
+      return cache.shotsLoadingPromise || Promise.resolve()
+    }
 
     commit(LOAD_SHOTS_START)
-    return dispatch('loadSequencesWithTasks')
+    const loadingPromise = dispatch('loadSequencesWithTasks')
       .then(() => {
         return shotsApi.getShots(production, episode)
       })
@@ -466,6 +472,8 @@ const actions = {
         commit(LOAD_SHOTS_ERROR)
         console.error(err)
       })
+    cache.shotsLoadingPromise = loadingPromise
+    return loadingPromise
   },
 
   /*
