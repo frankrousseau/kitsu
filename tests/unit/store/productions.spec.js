@@ -335,33 +335,23 @@ describe('Productions store', () => {
     })
 
     test('newProduction', async () => {
-      const descriptor = {
-        id: 'descriptor-1',
-        entity_type: 'Project',
-        name: 'Studio Location',
-        field_name: 'studio_location'
-      }
+      // Zou copies the all-projects descriptors at creation: no
+      // ensureProjectMetadataDescriptor dispatch anymore.
       let mockCommit = vi.fn()
-      const mockDispatch = vi.fn(() => Promise.resolve())
-      const getters = { mergedProjectMetadataDescriptors: [descriptor] }
       productionApi.newProduction = vi.fn(() => Promise.resolve({ id: '1' }))
       await store.actions.newProduction(
-        { commit: mockCommit, dispatch: mockDispatch, getters },
+        { commit: mockCommit },
         'production-id'
       )
       expect(productionApi.newProduction).toBeCalledTimes(1)
       expect(mockCommit).toBeCalledTimes(1)
       expect(mockCommit).toHaveBeenNthCalledWith(1, ADD_PRODUCTION, { id: '1' })
-      expect(mockDispatch).toHaveBeenCalledWith(
-        'ensureProjectMetadataDescriptor',
-        { production: { id: '1' }, descriptor }
-      )
 
       mockCommit = vi.fn()
       productionApi.newProduction = vi.fn(() => Promise.reject(new Error('error')))
       try {
         await store.actions.newProduction(
-          { commit: mockCommit, dispatch: mockDispatch, getters },
+          { commit: mockCommit },
           'production-id'
         )
       } catch {
@@ -699,6 +689,38 @@ describe('Productions store', () => {
         1, PRODUCTION_ADD_TASK_TYPE, '456'
       )
       expect(productionApi.addTaskTypeToProduction).toBeCalledTimes(1)
+    })
+
+    test('addSettingsToProduction', async () => {
+      const mockCommit = vi.fn()
+      const state = {
+        currentProduction: { id: '123', task_types: ['old-1', 'kept-1'] }
+      }
+      productionApi.addSettingsToProduction = vi.fn(() =>
+        Promise.resolve({ id: '123' })
+      )
+      await store.actions.addSettingsToProduction(
+        { commit: mockCommit, state },
+        {
+          taskTypes: [{ taskTypeId: 'kept-1' }, { taskTypeId: 'new-1', priority: 1 }],
+          taskStatusIds: ['status-1'],
+          assetTypeIds: ['asset-type-1'],
+          replaceTaskTypes: true
+        }
+      )
+      expect(productionApi.addSettingsToProduction).toBeCalledTimes(1)
+      // Replace mode drops the task type absent from the wanted set.
+      expect(mockCommit).toHaveBeenCalledWith(
+        PRODUCTION_REMOVE_TASK_TYPE, 'old-1'
+      )
+      expect(mockCommit).toHaveBeenCalledWith(PRODUCTION_ADD_TASK_TYPE, 'kept-1')
+      expect(mockCommit).toHaveBeenCalledWith(PRODUCTION_ADD_TASK_TYPE, 'new-1')
+      expect(mockCommit).toHaveBeenCalledWith(
+        PRODUCTION_ADD_TASK_STATUS, 'status-1'
+      )
+      expect(mockCommit).toHaveBeenCalledWith(
+        PRODUCTION_ADD_ASSET_TYPE, 'asset-type-1'
+      )
     })
 
     test('removeTaskTypeFromProduction', () => {

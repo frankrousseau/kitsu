@@ -106,7 +106,6 @@ import { useStore } from 'vuex'
 
 import { sortByName, sortTaskTypes } from '@/lib/sorting'
 import { formatFullDate } from '@/lib/time'
-import stringHelper from '@/lib/string'
 
 import ComboboxTaskType from '@/components/widgets/ComboboxTaskType.vue'
 import ProductionTaskType from '@/components/pages/production/ProductionTaskType.vue'
@@ -332,23 +331,40 @@ const updatePriorities = async items => {
 
 const importTaskTypesFromProduction = async productionId => {
   loading.import = true
+  errors.delete = false
   const imported = getProductionTaskTypes
     .value(productionId)
     .filter(tt => `${tt.for_entity.toLowerCase()}s` === activeTab.value)
-  const entityName = stringHelper.capitalize(activeTab.value).slice(0, -1)
-  const group = groupByType[entityName]?.ref.value?.list || []
-  for (const item of group) {
-    await removeTaskType({
-      taskType: item.taskType,
-      scheduleItem: imported[0] ? getScheduleItemForTaskType(imported[0]) : null
+  // The imported list replaces the task types of the active tab only: the
+  // other tabs' task types are sent along so the replace keeps them.
+  const kept = currentProduction.value.task_types.filter(id => {
+    const taskType = taskTypeMap.value.get(id)
+    return (
+      taskType && `${taskType.for_entity.toLowerCase()}s` !== activeTab.value
+    )
+  })
+  try {
+    await store.dispatch('addSettingsToProduction', {
+      taskTypes: kept
+        .map(id => ({ taskTypeId: id }))
+        .concat(
+          imported.map((taskType, index) => ({
+            taskTypeId: taskType.id,
+            priority: index + 1
+          }))
+        ),
+      replaceTaskTypes: true
     })
+    // The task-types schedule items route creates missing items and drops
+    // stale ones server-side: one reload replaces per-task-type calls.
+    await store.dispatch('loadScheduleItems', currentProduction.value)
+  } catch (err) {
+    console.error(err)
+    errors.delete = true
   }
-  setTimeout(async () => {
-    for (const taskType of imported) {
-      await addTaskType(taskType)
-    }
-    loading.import = false
-  }, 500)
+  updateTaskTypeIdFromRemaining()
+  resetDisplayedTaskTypes()
+  loading.import = false
 }
 
 onMounted(() => {

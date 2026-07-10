@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid'
 
+import func from '@/lib/func'
 import conceptsApi from '@/store/api/concepts'
 import entitiesApi from '@/store/api/entities'
 
@@ -78,7 +79,11 @@ const actions = {
   },
 
   async newConcepts({ dispatch }, forms) {
-    return Promise.all(forms.map(form => dispatch('newConcept', form)))
+    // Each concept creation is several requests (entity, task, preview):
+    // run them one file at a time to avoid hammering the server.
+    return func.runPromiseMapAsSeries(forms, form =>
+      dispatch('newConcept', form)
+    )
   },
 
   async newConcept({ commit, dispatch, rootGetters }, form) {

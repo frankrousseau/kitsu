@@ -1,3 +1,4 @@
+import func from '@/lib/func'
 import { DEFAULT_FPS } from '@/lib/video'
 
 /*
@@ -72,14 +73,11 @@ export const taskMixin = {
       const newAttachmentFiles = comment.newAttachmentFiles || []
       delete comment.attachmentFilesToDelete
       delete comment.newAttachmentFiles
-      Promise.all(
-        attachmentFilesToDelete
-          .map(attachment => {
-            return { attachment, comment: this.commentToEdit }
-          })
-          .map(this.deleteAttachment)
-      )
-        .then(comment =>
+      func
+        .runPromiseMapAsSeries(attachmentFilesToDelete, attachment =>
+          this.deleteAttachment({ attachment, comment: this.commentToEdit })
+        )
+        .then(() =>
           this.addAttachmentToComment({
             comment: this.commentToEdit,
             files: newAttachmentFiles

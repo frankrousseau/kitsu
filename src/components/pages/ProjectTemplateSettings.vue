@@ -196,6 +196,7 @@
           :task-types="templateTaskTypes"
           :all-task-types="allTaskTypes"
           @add="addTaskType"
+          @import-items="importTaskTypes"
           @remove="removeTaskType"
           @reorder="reorderTaskTypes"
         />
@@ -227,6 +228,7 @@
           :asset-types="templateAssetTypes"
           :all-asset-types="allAssetTypes"
           @add="addAssetType"
+          @import-items="importAssetTypes"
           @remove="removeAssetType"
         />
       </div>
@@ -660,6 +662,38 @@ const addAssetType = async assetTypeId => {
     assetTypeId
   })
   await loadTemplateData()
+}
+
+// Template routes are per id: keep the loop but reload the template data
+// once at the end instead of once per imported item.
+const importTaskTypes = async ({ ids, done }) => {
+  try {
+    for (const taskTypeId of ids) {
+      await store.dispatch('addTaskTypeToTemplate', {
+        templateId: templateId.value,
+        taskTypeId
+      })
+    }
+    await loadTemplateData()
+  } catch (err) {
+    console.error(err)
+  }
+  done()
+}
+
+const importAssetTypes = async ({ ids, done }) => {
+  try {
+    for (const assetTypeId of ids) {
+      await store.dispatch('addAssetTypeToTemplate', {
+        templateId: templateId.value,
+        assetTypeId
+      })
+    }
+    await loadTemplateData()
+  } catch (err) {
+    console.error(err)
+  }
+  done()
 }
 
 const removeAssetType = async assetTypeId => {

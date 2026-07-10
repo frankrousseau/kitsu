@@ -91,7 +91,7 @@ const props = defineProps({
   allTaskTypes: { type: Array, default: () => [] }
 })
 
-const emit = defineEmits(['add', 'remove', 'reorder'])
+const emit = defineEmits(['add', 'import-items', 'remove', 'reorder'])
 
 const initialSection = VALID_SECTIONS.includes(route.query.section)
   ? route.query.section
@@ -156,14 +156,14 @@ const onImportFromProduction = async productionId => {
     if (!taskType) return false
     return `${(taskType.for_entity || '').toLowerCase()}s` === entityTab.value
   })
+  if (toAdd.length === 0) return
   loadingImport.value = true
-  try {
-    for (const id of toAdd) {
-      emit('add', id)
+  emit('import-items', {
+    ids: toAdd,
+    done: () => {
+      loadingImport.value = false
     }
-  } finally {
-    loadingImport.value = false
-  }
+  })
 }
 
 const onReorder = () => {
