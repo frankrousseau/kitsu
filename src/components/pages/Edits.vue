@@ -460,8 +460,13 @@ export default {
     },
 
     filteredEdits() {
+      // Build the lookup from the full edit cache, not the filtered display
+      // list, so the import creation check sees every edit.
+      // The cache Map is not reactive: depend on displayedEdits (updated
+      // by the same mutations) to invalidate this computed.
+      this.displayedEdits // eslint-disable-line no-unused-expressions
       const edits = {}
-      this.displayedEdits.forEach(edit => {
+      this.editMap.forEach(edit => {
         let editKey = ''
         if (
           this.isTVShow &&
