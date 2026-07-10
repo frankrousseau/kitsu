@@ -79,6 +79,10 @@ export default {
     )
   },
 
+  getEditScheduleItems(production, taskType, episodeId = null) {
+    return this.getEntityScheduleItems(production, taskType, 'edits', episodeId)
+  },
+
   getEpisodeScheduleItems(production, taskType, episodeId = null) {
     return this.getEntityScheduleItems(
       production,

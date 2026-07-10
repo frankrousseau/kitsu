@@ -49,6 +49,10 @@ const actions = {
     return scheduleApi.getSequenceScheduleItems(production, taskType, episodeId)
   },
 
+  loadEditScheduleItems({}, { production, taskType, episodeId = null }) {
+    return scheduleApi.getEditScheduleItems(production, taskType, episodeId)
+  },
+
   loadEpisodeScheduleItems({}, { production, taskType, episodeId = null }) {
     return scheduleApi.getEpisodeScheduleItems(production, taskType, episodeId)
   },
