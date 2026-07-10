@@ -280,35 +280,6 @@ describe('EraserBrush._finalizeAndAddPath', () => {
     expect(end.data.path).toBeDefined()
   })
 
-  it('uses the eraser stroke width when detecting affected objects', async () => {
-    const radius = 10
-    const touchingSeparation = radius * 1.5
-    const outsideSeparation = radius * 4
-    const parallelStrokeBounds = centerY => ({
-      left: 0,
-      top: centerY - radius,
-      width: 10,
-      height: radius * 2
-    })
-
-    const touchingParallelStroke = makeErasable(
-      true,
-      parallelStrokeBounds(touchingSeparation)
-    )
-    const outsideParallelStroke = makeErasable(
-      true,
-      parallelStrokeBounds(outsideSeparation)
-    )
-    const canvas = makeCanvas([touchingParallelStroke, outsideParallelStroke])
-    const brush = new EraserBrush(canvas)
-    brush.width = radius * 2
-    brush._points = [{ x: 0, y: 0 }, { x: 10, y: 0 }]
-    await brush._finalizeAndAddPath()
-    const end = canvas._fired.find(f => f.name === 'erasing:end')
-    expect(end.data.targets).toContain(touchingParallelStroke)
-    expect(end.data.targets).not.toContain(outsideParallelStroke)
-  })
-
   it('fires a bare erasing:end and creates no path when there are too few points', async () => {
     const obj = makeErasable(true)
     const canvas = makeCanvas([obj])

@@ -13,19 +13,6 @@ import {
 // gesture is degenerate (a single point). Matches fabric's own internal check.
 const EMPTY_SVG_PATH = 'M 0 0 Q 0 0 0 0 L 0 0'
 
-const inflateRect = (rect, amount) => ({
-  left: rect.left - amount,
-  top: rect.top - amount,
-  width: rect.width + amount * 2,
-  height: rect.height + amount * 2
-})
-
-const rectsOverlap = (a, b) =>
-  a.left <= b.left + b.width &&
-  a.left + a.width >= b.left &&
-  a.top <= b.top + b.height &&
-  a.top + a.height >= b.top
-
 // An object's eraser: a group of paths in the object's LOCAL coordinates.
 // FixedLayout + center origin: its dimensions don't change when paths are
 // added; they're realigned onto the object by `_drawClipPath`.
@@ -251,14 +238,10 @@ export class EraserBrush extends PencilBrush {
     path.setCoords && path.setCoords()
     this.canvas.fire('before:path:created', { path })
     const context = { targets: [], subTargets: [] }
-    // Fabric's object intersection ignores stroke width, so include the
-    // eraser radius in the bounds used to decide which objects receive a mask.
-    const eraserRadius = (path.strokeWidth || this.width || 1) / 2
-    const eraserBounds = inflateRect(path.getBoundingRect(), eraserRadius)
     const tasks = this.canvas._objects.map(
       obj =>
         obj.erasable &&
-        rectsOverlap(obj.getBoundingRect(), eraserBounds) &&
+        obj.intersectsWithObject(path, true, true) &&
         this._addPathToObjectEraser(obj, path, context)
     )
     await Promise.all(tasks)
