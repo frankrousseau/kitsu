@@ -385,6 +385,110 @@ describe('composables/previewRoom', () => {
     })
   })
 
+  describe('loadRoomCurrentState', () => {
+    const makeEntity = () => ({
+      id: 'entity-7',
+      preview_file_id: 'preview-old',
+      preview_files: {
+        'task-type-1': [
+          { id: 'preview-old', task_id: 'task-1' },
+          { id: 'preview-new', task_id: 'task-1' }
+        ]
+      }
+    })
+
+    const mountPlayerState = (overrides = {}) => {
+      const socket = makeSocket()
+      const entity = makeEntity()
+      const changePreviewFile = vi.fn()
+      const currentPreviewIndex = ref(0)
+      const { wrapper, api } = mountWithRoom({
+        room: makeRoom({ people: ['user-1'] }),
+        userId: 'user-1',
+        socket,
+        playingEntityIndex: ref(0),
+        currentEntity: ref(entity),
+        currentPreview: ref({ id: 'preview-old' }),
+        currentPreviewIndex,
+        taskMap: ref(
+          new Map([['task-1', { id: 'task-1', task_type_id: 'task-type-1' }]])
+        ),
+        findEntity: () => null,
+        findEntityIndex: () => 0,
+        changePreviewFile,
+        ...overrides
+      })
+      return { wrapper, api, entity, changePreviewFile, currentPreviewIndex }
+    }
+
+    it('applies a remote version change without previous_preview_file_id', () => {
+      const { wrapper, api, entity, changePreviewFile } = mountPlayerState()
+      api.loadRoomCurrentState({
+        is_playing: false,
+        current_entity_id: 'entity-7',
+        current_entity_index: 0,
+        current_preview_file_id: 'preview-new',
+        current_preview_file_index: 0
+      })
+      expect(changePreviewFile).toHaveBeenCalledWith(
+        entity,
+        { id: 'preview-new', task_id: 'task-1' },
+        'task-type-1'
+      )
+      wrapper.unmount()
+    })
+
+    it('applies a remote position change within a multi-image preview', () => {
+      const { wrapper, api, changePreviewFile, currentPreviewIndex } =
+        mountPlayerState()
+      api.loadRoomCurrentState({
+        is_playing: false,
+        current_entity_id: 'entity-7',
+        current_entity_index: 0,
+        current_preview_file_id: 'sub-preview-2',
+        current_preview_file_index: 2
+      })
+      expect(changePreviewFile).not.toHaveBeenCalled()
+      expect(currentPreviewIndex.value).toBe(2)
+      wrapper.unmount()
+    })
+
+    it('goes back to the first image without treating it as a version change', () => {
+      const { wrapper, api, changePreviewFile, currentPreviewIndex } =
+        mountPlayerState({
+          currentPreview: ref({ id: 'sub-preview-2' }),
+          currentEntity: ref({
+            ...makeEntity(),
+            preview_file_id: 'preview-main'
+          })
+        })
+      currentPreviewIndex.value = 2
+      api.loadRoomCurrentState({
+        is_playing: false,
+        current_entity_id: 'entity-7',
+        current_entity_index: 0,
+        current_preview_file_id: 'preview-main',
+        current_preview_file_index: 0
+      })
+      expect(changePreviewFile).not.toHaveBeenCalled()
+      expect(currentPreviewIndex.value).toBe(0)
+      wrapper.unmount()
+    })
+
+    it('ignores a version change for an unknown entity', () => {
+      const { wrapper, api, changePreviewFile } = mountPlayerState()
+      api.loadRoomCurrentState({
+        is_playing: false,
+        current_entity_id: 'entity-unknown',
+        current_entity_index: 0,
+        current_preview_file_id: 'preview-new',
+        current_preview_file_index: 0
+      })
+      expect(changePreviewFile).not.toHaveBeenCalled()
+      wrapper.unmount()
+    })
+  })
+
   describe('incoming event echo guard', () => {
     /**
      * Helper: mount, grab the registered handler for `event`, return it.
