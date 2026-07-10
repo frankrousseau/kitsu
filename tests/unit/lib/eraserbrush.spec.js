@@ -17,7 +17,13 @@ vi.mock('fabric', () => {
     get type() { return this.constructor.type }
     set type(_) {}
     getObjects() { return this._objects }
-    add(o) { this._objects.forEach(existing => { existing.left = 0 }); o.left = 0; this._objects.push(o); return this }
+    add(o) {
+      this._objects.forEach(existing => { existing.left = 0 })
+      o.left = 0
+      this._objects.push(o)
+      this._enterGroup(o)
+      return this
+    }
     _enterGroup(o) { o.group = this }
     set(props) { Object.assign(this, props); return this }
     drawObject() {}
@@ -27,9 +33,7 @@ vi.mock('fabric', () => {
     set(props) { Object.assign(this, props); return this }
     calcTransformMatrix() { return [1, 0, 0, 1, 0, 0] }
     clone() { return Promise.resolve(new FakePath(this.path, { ...this })) }
-    getBoundingRect() { return { left: 0, top: 0, width: 10, height: 0 } }
     setCoords() {}
-    toObject() { return { path: this.path, left: this.left, top: this.top } }
   }
   class FakePencilBrush {
     constructor(canvas) { this.canvas = canvas; this.color = '#000'; this.width = 4 }
@@ -202,6 +206,7 @@ describe('EraserBrush._addPathToObjectEraser', () => {
     await brush._addPathToObjectEraser(obj, path, context)
     expect(obj.eraser).toBeDefined()
     expect(obj.eraser.getObjects()).toHaveLength(1)
+    expect(obj.eraser.getObjects()[0].group).toBe(obj.eraser)
     expect(obj.set).toHaveBeenCalledWith('dirty', true)
     expect(obj.fire).toHaveBeenCalledWith('erasing:end', expect.any(Object))
     expect(context.targets).toContain(obj)
@@ -254,23 +259,11 @@ describe('EraserBrush._addPathToObjectEraser', () => {
 })
 
 describe('EraserBrush._finalizeAndAddPath', () => {
-  const makeErasable = (
-    erasable,
-    bounds = { left: -5, top: -5, width: 20, height: 20 }
-  ) => ({
+  const makeErasable = erasable => ({
     erasable,
     eraser: undefined,
     group: undefined,
-    getBoundingRect: () => bounds,
-    intersectsWithObject: path => {
-      const pathBounds = path.getBoundingRect()
-      return (
-        bounds.left <= pathBounds.left + pathBounds.width &&
-        bounds.left + bounds.width >= pathBounds.left &&
-        bounds.top <= pathBounds.top + pathBounds.height &&
-        bounds.top + bounds.height >= pathBounds.top
-      )
-    },
+    intersectsWithObject: () => true,
     calcTransformMatrix: () => [1, 0, 0, 1, 0, 0],
     set: vi.fn(),
     fire: vi.fn()
