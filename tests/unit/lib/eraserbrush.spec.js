@@ -16,7 +16,8 @@ vi.mock('fabric', () => {
     get type() { return this.constructor.type }
     set type(_) {}
     getObjects() { return this._objects }
-    add(o) { this._objects.push(o); return this }
+    add(o) { o.left = 0; this._objects.push(o); return this }
+    _enterGroup(o) { o.group = this }
     set(props) { Object.assign(this, props); return this }
     drawObject() {}
   }
@@ -27,6 +28,7 @@ vi.mock('fabric', () => {
     clone() { return Promise.resolve(new FakePath(this.path, { ...this })) }
     getBoundingRect() { return { left: 0, top: 0, width: 10, height: 0 } }
     setCoords() {}
+    toObject() { return { path: this.path, left: this.left, top: this.top } }
   }
   class FakePencilBrush {
     constructor(canvas) { this.canvas = canvas; this.color = '#000'; this.width = 4 }
@@ -76,6 +78,14 @@ describe('Eraser — class contract', () => {
     // Without a static type, v6's toObject() would read the parent Group's
     // static type and serialize the mask as "group".
     expect(Eraser.type).toBe('eraser')
+  })
+
+  it('revives serialized mask paths without running group layout', async () => {
+    const eraser = await Eraser.fromObject({
+      objects: [{ type: 'path', path: 'M 0 0 L 10 0', left: 50, top: 0 }]
+    })
+
+    expect(eraser.getObjects()[0].left).toBe(50)
   })
 })
 
@@ -205,6 +215,20 @@ describe('EraserBrush._addPathToObjectEraser', () => {
     await brush._addPathToObjectEraser(obj, p1, ctx)
     await brush._addPathToObjectEraser(obj, p2, ctx)
     expect(obj.eraser.getObjects()).toHaveLength(2)
+  })
+
+  it('appends to a revived eraser without shifting existing mask paths', async () => {
+    const brush = new EraserBrush({})
+    const obj = makeObj()
+    obj.eraser = await Eraser.fromObject({
+      objects: [{ type: 'path', path: 'M 0 0 L 10 0', left: 50, top: 0 }]
+    })
+    const path = brush.createPath('M 0 0 L 2 0')
+
+    await brush._addPathToObjectEraser(obj, path)
+
+    expect(obj.eraser.getObjects()).toHaveLength(2)
+    expect(obj.eraser.getObjects()[0].left).toBe(50)
   })
 
   it('routes grouped objects to subTargets', async () => {

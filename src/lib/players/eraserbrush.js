@@ -64,7 +64,16 @@ export class Eraser extends Group {
     })
     const options = { ...object }
     delete options.objects
-    return Promise.resolve(new Eraser(children, options))
+    const eraser = new Eraser([], options)
+    children.forEach(child => eraser.addWithoutLayout(child))
+    return Promise.resolve(eraser)
+  }
+
+  addWithoutLayout(object) {
+    this._objects.push(object)
+    this._enterGroup?.(object, false)
+    this.set('dirty', true)
+    return this._objects.length
   }
 }
 
@@ -201,7 +210,7 @@ export class EraserBrush extends PencilBrush {
       clone.calcTransformMatrix()
     )
     util.applyTransformToObject(clone, desiredTransform)
-    eraser.add(clone)
+    eraser.addWithoutLayout(clone)
     obj.set('dirty', true)
     obj.fire('erasing:end', { path: clone })
     if (context) {
