@@ -8,15 +8,16 @@ vi.mock('fabric', () => {
   class FakeFixedLayout {}
   class FakeGroup {
     constructor(objects = [], opts = {}) {
-      this._objects = objects
+      this._objects = []
       Object.assign(this, opts)
+      objects.forEach(o => this.add(o))
     }
     // Mirror v6: instance `type` is a getter off the static; the setter is a
     // deprecated no-op (so `this.type =` / Object.assign({type}) don't throw).
     get type() { return this.constructor.type }
     set type(_) {}
     getObjects() { return this._objects }
-    add(o) { o.left = 0; this._objects.push(o); return this }
+    add(o) { this._objects.forEach(existing => { existing.left = 0 }); o.left = 0; this._objects.push(o); return this }
     _enterGroup(o) { o.group = this }
     set(props) { Object.assign(this, props); return this }
     drawObject() {}
