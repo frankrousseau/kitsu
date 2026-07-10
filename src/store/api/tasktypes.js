@@ -50,7 +50,7 @@ export default {
 
   reorderTaskTypeLinks(projectId, taskTypeIds) {
     return client.ppost(
-      `/api/data/projects/${projectId}/task-type-links/batch`,
+      `/api/data/projects/${projectId}/task-type-links/reorder`,
       { task_type_ids: taskTypeIds }
     )
   },
