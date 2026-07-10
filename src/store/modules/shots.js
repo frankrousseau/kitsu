@@ -55,6 +55,7 @@ import {
   ADD_SHOT,
   UPDATE_SHOT,
   REMOVE_SHOT,
+  REMOVE_SHOTS,
   CANCEL_SHOT,
   RESTORE_SHOT_END,
   NEW_TASK_END,
@@ -779,13 +780,18 @@ const actions = {
       rootGetters.currentProduction.id,
       shots.map(shot => shot.id)
     )
+    // Store bookkeeping batched into a single mutation: a per-shot commit
+    // costs a full list pass each.
+    const removedShots = []
+    const canceledShots = []
     shots.forEach(shot => {
       if (shot.tasks.length > 0 && !shot.canceled) {
-        commit(CANCEL_SHOT, shot)
+        canceledShots.push(shot)
       } else {
-        commit(REMOVE_SHOT, shot)
+        removedShots.push(shot)
       }
     })
+    commit(REMOVE_SHOTS, { removedShots, canceledShots })
   },
 
   async setNbFramesFromTaskTypePreviews(
@@ -1368,6 +1374,37 @@ const mutations = {
       state.displayedShotsFrames -= shotToDelete.nb_frames
     }
     state.displayedShotsDrawings -= shotToDelete.nb_drawings || 0
+  },
+
+  // Bulk variant of REMOVE_SHOT/CANCEL_SHOT: one pass over each list
+  // instead of one per deleted shot.
+  [REMOVE_SHOTS](state, { removedShots, canceledShots }) {
+    const removedIds = new Set(removedShots.map(shot => shot.id))
+    removedShots.forEach(shot => {
+      cache.shotMap.delete(shot.id)
+      removeEntryFromIndex(cache.shotIndex, shot)
+      if (shot.timeSpent && !shot.canceled) {
+        state.displayedShotsTimeSpent -= shot.timeSpent
+      }
+      if (shot.estimation && !shot.canceled) {
+        state.displayedShotsEstimation -= shot.estimation
+      }
+      if (shot.nb_frames) {
+        state.displayedShotsFrames -= shot.nb_frames
+      }
+      state.displayedShotsDrawings -= shot.nb_drawings || 0
+    })
+    cache.shots = cache.shots.filter(shot => !removedIds.has(shot.id))
+    cache.result = cache.result.filter(shot => !removedIds.has(shot.id))
+    state.displayedShots = state.displayedShots.filter(
+      shot => !removedIds.has(shot.id)
+    )
+    canceledShots.forEach(shot => {
+      shot.canceled = true
+    })
+    state.displayedShotsLength = cache.result.filter(
+      shot => !shot.canceled
+    ).length
   },
 
   [CANCEL_SHOT](state, shot) {

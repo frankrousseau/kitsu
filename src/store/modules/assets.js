@@ -51,6 +51,7 @@ import {
   ADD_ASSET,
   UPDATE_ASSET,
   REMOVE_ASSET,
+  REMOVE_ASSETS,
   CANCEL_ASSET,
   ASSET_CSV_FILE_SELECTED,
   IMPORT_ASSETS_START,
@@ -834,13 +835,18 @@ const actions = {
       rootGetters.currentProduction.id,
       assets.map(asset => asset.id)
     )
+    // Store bookkeeping batched into a single mutation: a per-asset commit
+    // costs a full list pass each.
+    const removedAssets = []
+    const canceledAssets = []
     assets.forEach(asset => {
       if (asset.tasks.length > 0 && !asset.canceled) {
-        commit(CANCEL_ASSET, asset)
+        canceledAssets.push(asset)
       } else {
-        commit(REMOVE_ASSET, asset)
+        removedAssets.push(asset)
       }
     })
+    commit(REMOVE_ASSETS, { removedAssets, canceledAssets })
   },
 
   async loadSharedAssets({ commit, rootGetters }, { production }) {
@@ -1138,6 +1144,33 @@ const mutations = {
       helpers.setListStats(state, cache.assets)
       removeEntryFromIndex(cache.assetIndex, assetToDelete)
     }
+  },
+
+  // Bulk variant of REMOVE_ASSET/CANCEL_ASSET: one pass over each list and
+  // one stats recompute instead of one per deleted asset. Cancel flags are
+  // set first so the recomputed stats exclude the canceled assets.
+  [REMOVE_ASSETS](state, { removedAssets, canceledAssets }) {
+    canceledAssets.forEach(asset => {
+      asset.canceled = true
+    })
+    const removedIds = new Set()
+    removedAssets.forEach(asset => {
+      if (cache.assetMap.get(asset.id)) {
+        removedIds.add(asset.id)
+        cache.assetMap.delete(asset.id)
+        removeEntryFromIndex(cache.assetIndex, asset)
+      }
+    })
+    cache.assets = cache.assets.filter(asset => !removedIds.has(asset.id))
+    cache.result = cache.result.filter(asset => !removedIds.has(asset.id))
+    state.displayedAssets = state.displayedAssets.filter(
+      asset => !removedIds.has(asset.id)
+    )
+    state.assetFilledColumns = getFilledColumns(state.displayedAssets)
+    helpers.setListStats(state, cache.assets)
+    state.displayedAssetsLength = cache.result.filter(
+      asset => !asset.canceled
+    ).length
   },
 
   [ASSET_CSV_FILE_SELECTED](state, formData) {
