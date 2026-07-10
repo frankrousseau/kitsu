@@ -848,6 +848,10 @@ const store = useStore()
 const { t } = useI18n()
 
 const props = defineProps({
+  clipChildren: {
+    type: Boolean,
+    default: false
+  },
   daysOff: {
     type: Array,
     default: () => []
@@ -1537,6 +1541,9 @@ const changeDates = event => {
           item.startDate = item.startDate.clone().add(dateDiffVal)
           item.endDate = item.endDate.clone().add(dateDiffVal)
         })
+        selection.value.forEach(item => {
+          propagateClipToChildren(item)
+        })
         if (props.multiline || props.subchildren) {
           const parentElements = [
             ...new Set(selection.value.map(item => item.parentElement))
@@ -1591,6 +1598,7 @@ const changeStartDate = event => {
   ) {
     currentElement.value.startDate = newStartDate.clone()
     updateItemEstimation(currentElement.value)
+    propagateClipToChildren(currentElement.value)
     refreshItemPositions(currentElement.value.parentElement)
     resetSelection([currentElement.value])
   }
@@ -1645,9 +1653,62 @@ const changeEndDate = event => {
   ) {
     currentElement.value.endDate = newEndDate.clone()
     updateItemEstimation(currentElement.value)
+    propagateClipToChildren(currentElement.value)
     refreshItemPositions(currentElement.value.parentElement)
     resetSelection([currentElement.value])
   }
+}
+
+// Origin dates (and estimation) are stamped at drag start so the clip can
+// restore-then-apply on every tick without drift and a cancelled move can
+// restore the exact pre-drag state. Only consumers that opt in through the
+// clipChildren prop get the stamping and the propagation: other schedules
+// (e.g. MainSchedule) do not persist child moves, so clipping there would
+// silently revert on reload.
+const stampDragOrigin = timeElement => {
+  if (!props.clipChildren) return
+  timeElement._dragOrigStartDate = timeElement.startDate.clone()
+  timeElement._dragOrigEndDate = timeElement.endDate.clone()
+  timeElement._dragOrigEstimation = timeElement.estimation
+  if (!timeElement.parentElement && Array.isArray(timeElement.children)) {
+    timeElement.children.forEach(child => {
+      child._dragOrigStartDate = child.startDate.clone()
+      child._dragOrigEndDate = child.endDate.clone()
+    })
+  }
+}
+
+const propagateClipToChildren = item => {
+  if (!props.clipChildren) return
+  if (item.parentElement || !Array.isArray(item.children)) return
+  const newStart = item.startDate
+  const newEnd = item.endDate
+  item.children.forEach(child => {
+    const origStart = child._dragOrigStartDate
+    const origEnd = child._dragOrigEndDate
+    if (!origStart || !origEnd) return
+
+    // restore from orig before applying clip to prevent drift on back-drag
+    child.startDate = origStart.clone()
+    child.endDate = origEnd.clone()
+
+    if (origEnd.isSameOrBefore(newStart)) {
+      // entirely before new start: snap to 1-day bar at start
+      child.startDate = newStart.clone()
+      child.endDate = newStart.clone().add(1, 'days')
+    } else if (origStart.isBefore(newStart)) {
+      // overlaps start: clip start
+      child.startDate = newStart.clone()
+    } else if (origStart.isSameOrAfter(newEnd)) {
+      // entirely after new end: snap to 1-day bar at end
+      child.startDate = newEnd.clone().subtract(1, 'days')
+      child.endDate = newEnd.clone()
+    } else if (origEnd.isAfter(newEnd)) {
+      // overlaps end: clip end
+      child.endDate = newEnd.clone()
+    }
+    // else: child fully inside new bounds — already restored, leave untouched
+  })
 }
 
 const updateItemEstimation = item => {
@@ -1718,6 +1779,7 @@ const moveTimebar = (timeElement, event) => {
     initialClientX = getClientX(event)
     document.body.style.cursor = props.reassignable ? 'all-scroll' : 'ew-resize'
 
+    stampDragOrigin(timeElement)
     updateSelection(timeElement, event)
   }
 }
@@ -1737,6 +1799,7 @@ const moveTimebarLeftSide = (timeElement, event) => {
     initialClientX = getClientX(event)
     document.body.style.cursor = 'w-resize'
 
+    stampDragOrigin(timeElement)
     updateSelection(timeElement, event)
   }
 }
@@ -1760,6 +1823,7 @@ const moveTimebarRightSide = (timeElement, event) => {
     initialClientX = getClientX(event)
     document.body.style.cursor = 'e-resize'
 
+    stampDragOrigin(timeElement)
     updateSelection(timeElement, event)
   }
 }

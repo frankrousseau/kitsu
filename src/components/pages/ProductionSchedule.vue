@@ -117,6 +117,7 @@
         :zoom-level="zoomLevel"
         :is-loading="loading.schedule"
         :is-error="errors.schedule"
+        clip-children
         is-estimation-linked
         hide-man-days
         :multiline="isTVShow"
@@ -509,6 +510,18 @@
     @confirm="applyToProduction()"
     v-if="modals.applyScheduleVersion"
   />
+  <confirm-modal
+    active
+    :text="
+      $t(
+        'schedule.confirm_move_children',
+        pendingParentChange ? pendingParentChange.affected.length : 0
+      )
+    "
+    @cancel="cancelChildMove"
+    @confirm="confirmChildMove"
+    v-if="modals.confirmChildMove"
+  />
 </template>
 
 <script>
@@ -657,8 +670,10 @@ export default {
       modals: {
         editScheduleVersion: false,
         deleteScheduleVersion: false,
-        applyScheduleVersion: false
-      }
+        applyScheduleVersion: false,
+        confirmChildMove: false
+      },
+      pendingParentChange: null
     }
   },
 
@@ -1374,14 +1389,24 @@ export default {
           this.saveScheduleItem(item.parentElement)
         }
       } else if (!item.parentElement) {
-        const minDate = this.getMinDate(item)
-        const maxDate = this.getMaxDate(item)
-        if (item.startDate.isAfter(minDate)) {
-          item.startDate = minDate
+        if (!Array.isArray(item.children)) {
+          await this.updateScheduleItem(item)
+          return
         }
-        if (item.endDate.isBefore(maxDate)) {
-          item.endDate = maxDate
+        const affected = item.children.filter(
+          child =>
+            child._dragOrigStartDate &&
+            child._dragOrigEndDate &&
+            (!child.startDate.isSame(child._dragOrigStartDate) ||
+              !child.endDate.isSame(child._dragOrigEndDate))
+        )
+        if (!affected.length) {
+          await this.updateScheduleItem(item)
+          return
         }
+        this.pendingParentChange = { item, affected }
+        this.modals.confirmChildMove = true
+        return
       }
 
       await this.updateScheduleItem(item)
@@ -1400,6 +1425,33 @@ export default {
       if (!this.isVersioned) {
         await this.saveScheduleItem(item)
       }
+    },
+
+    async confirmChildMove() {
+      const { item, affected } = this.pendingParentChange
+      try {
+        await Promise.all(
+          [item, ...affected].map(element => this.updateScheduleItem(element))
+        )
+      } finally {
+        this.pendingParentChange = null
+        this.modals.confirmChildMove = false
+      }
+    },
+
+    cancelChildMove() {
+      const { item, affected } = this.pendingParentChange
+      item.startDate = item._dragOrigStartDate.clone()
+      item.endDate = item._dragOrigEndDate.clone()
+      if (item._dragOrigEstimation !== undefined) {
+        item.estimation = item._dragOrigEstimation
+      }
+      affected.forEach(child => {
+        child.startDate = child._dragOrigStartDate.clone()
+        child.endDate = child._dragOrigEndDate.clone()
+      })
+      this.pendingParentChange = null
+      this.modals.confirmChildMove = false
     },
 
     getMinDate(parentElement) {
