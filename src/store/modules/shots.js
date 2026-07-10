@@ -87,6 +87,7 @@ import {
 const cache = {
   shots: [],
   shotsLoadingPromise: null,
+  shotsLoadingKey: null,
   shotMap: new Map(),
   shotIndex: {},
   result: []
@@ -427,14 +428,26 @@ const actions = {
       commit(SET_CURRENT_EPISODE, null)
     }
 
+    const loadingKey = `${production.id}/${episode?.id ?? ''}`
     if (state.isShotsLoading) {
-      // Return the in-flight load so concurrent callers await the same shots
-      // (e.g. parallel expands in the schedule) instead of racing ahead with
-      // an empty shotMap/sequenceMap.
-      return cache.shotsLoadingPromise || Promise.resolve()
+      if (cache.shotsLoadingKey === loadingKey) {
+        // Same production+episode already loading: share it so concurrent
+        // callers (e.g. parallel schedule expands) await the same shots
+        // instead of racing ahead with an empty shotMap/sequenceMap.
+        return cache.shotsLoadingPromise || Promise.resolve()
+      }
+      // A different production/episode is in flight (e.g. the user switched
+      // episode mid-load): wait for it to settle, then run our own load so the
+      // newly selected episode's shots are actually fetched, instead of
+      // adopting a load whose stale response gets discarded and leaves this
+      // caller with an empty map.
+      return (cache.shotsLoadingPromise || Promise.resolve()).then(() =>
+        dispatch('loadShots')
+      )
     }
 
     commit(LOAD_SHOTS_START)
+    cache.shotsLoadingKey = loadingKey
     const loadingPromise = dispatch('loadSequencesWithTasks')
       .then(() => {
         return shotsApi.getShots(production, episode)

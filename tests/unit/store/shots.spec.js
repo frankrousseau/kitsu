@@ -17,12 +17,13 @@ describe('Shots store', () => {
       expect(state.isShotsLoadingError).toBe(false)
     })
 
-    test('loadShots does not start a second load while one is in flight (BUG-4)', async () => {
-      const state = { isShotsLoading: true }
+    test('a concurrent same-scope caller shares the in-flight load instead of starting a second one (BUG-4)', async () => {
+      const state = { isShotsLoading: false }
       const commit = vi.fn()
-      const dispatch = vi.fn()
+      // Never resolves: keeps the first load "in flight" for the assertions.
+      const dispatch = vi.fn(() => new Promise(() => {}))
       const rootGetters = {
-        currentProduction: { id: 'p1' },
+        currentProduction: { id: 'p-share' },
         episodes: [],
         userFilters: {},
         userFilterGroups: {},
@@ -33,10 +34,67 @@ describe('Shots store', () => {
         currentEpisode: null
       }
 
-      // Guard resolves immediately without kicking off another load.
-      await shotsStore.actions.loadShots({ commit, dispatch, state, rootGetters })
+      // First call kicks off the load and stores the in-flight promise/key.
+      const first = shotsStore.actions.loadShots({
+        commit,
+        dispatch,
+        state,
+        rootGetters
+      })
+      expect(commit.mock.calls.map(c => c[0])).toContain('LOAD_SHOTS_START')
 
-      expect(dispatch).not.toHaveBeenCalled()
+      // Simulate the mutation the mocked commit did not apply.
+      state.isShotsLoading = true
+      commit.mockClear()
+
+      // A concurrent caller for the same production+episode must get the very
+      // same promise (not a fresh Promise.resolve()) and must not start a
+      // second load — otherwise it races ahead with an empty shotMap.
+      const second = shotsStore.actions.loadShots({
+        commit,
+        dispatch,
+        state,
+        rootGetters
+      })
+      expect(second).toBe(first)
+      expect(commit.mock.calls.map(c => c[0])).not.toContain('LOAD_SHOTS_START')
+    })
+
+    test('a caller for a different episode does not adopt the in-flight load (BUG-4)', async () => {
+      const commit = vi.fn()
+      const dispatch = vi.fn(() => new Promise(() => {}))
+      const baseGetters = {
+        currentProduction: { id: 'p-switch' },
+        episodes: [{ id: 'ep-a' }, { id: 'ep-b' }],
+        userFilters: {},
+        userFilterGroups: {},
+        taskTypeMap: new Map(),
+        personMap: new Map(),
+        taskMap: new Map(),
+        isTVShow: true
+      }
+      const state = { isShotsLoading: false }
+
+      // Load episode A, then leave it in flight.
+      const loadA = shotsStore.actions.loadShots({
+        commit,
+        dispatch,
+        state,
+        rootGetters: { ...baseGetters, currentEpisode: { id: 'ep-a' } }
+      })
+      state.isShotsLoading = true
+      commit.mockClear()
+
+      // Switching to episode B must NOT return A's promise: A's result would be
+      // discarded by the episode stale-guard, leaving B with an empty shotMap.
+      // Instead B gets a distinct promise that fetches B once A settles.
+      const loadB = shotsStore.actions.loadShots({
+        commit,
+        dispatch,
+        state,
+        rootGetters: { ...baseGetters, currentEpisode: { id: 'ep-b' } }
+      })
+      expect(loadB).not.toBe(loadA)
       expect(commit.mock.calls.map(c => c[0])).not.toContain('LOAD_SHOTS_START')
     })
   })
