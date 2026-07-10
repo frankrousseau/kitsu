@@ -107,6 +107,7 @@
           :asset-types="productionAssetTypes"
           :all-asset-types="assetTypes"
           @add="addAssetType"
+          @import-items="importAssetTypes"
           @remove="removeAssetType"
         />
       </div>
@@ -262,6 +263,15 @@ const isActiveTab = tab => activeTab.value === tab
 
 const addAssetType = assetTypeId => {
   store.dispatch('addAssetTypeToProduction', assetTypeId)
+}
+
+const importAssetTypes = async ({ ids, done }) => {
+  try {
+    await store.dispatch('addSettingsToProduction', { assetTypeIds: ids })
+  } catch (err) {
+    console.error(err)
+  }
+  done()
 }
 
 const removeAssetType = assetTypeId => {

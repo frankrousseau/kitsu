@@ -472,25 +472,11 @@ const actions = {
     })
   },
 
-  async newProduction({ commit, dispatch, getters }, data) {
+  async newProduction({ commit }, data) {
+    // Zou copies the all-projects metadata columns (Project descriptors)
+    // onto the new production at creation, no client-side copy needed.
     const production = await productionsApi.newProduction(data)
     commit(ADD_PRODUCTION, production)
-    // The all-projects metadata columns are one descriptor row per project in
-    // Zou: copy them onto the new production so its cells stay editable.
-    try {
-      await Promise.all(
-        getters.mergedProjectMetadataDescriptors.map(descriptor =>
-          dispatch('ensureProjectMetadataDescriptor', {
-            production,
-            descriptor
-          })
-        )
-      )
-    } catch (err) {
-      // The production itself is created and a missing descriptor is
-      // recreated on first cell edit, so don't fail the creation flow.
-      console.error(err)
-    }
     return production
   },
 
@@ -603,6 +589,38 @@ const actions = {
       state.currentProduction.id,
       taskStatusId
     )
+  },
+
+  /**
+   * Attach task types, task statuses and asset types to the current
+   * production in a single request. With replaceTaskTypes, taskTypes is the
+   * full wanted set: task type links absent from it are removed.
+   */
+  async addSettingsToProduction(
+    { commit, state },
+    {
+      taskTypes = [],
+      taskStatusIds = [],
+      assetTypeIds = [],
+      replaceTaskTypes = false
+    }
+  ) {
+    const production = await productionsApi.addSettingsToProduction(
+      state.currentProduction.id,
+      { taskTypes, taskStatusIds, assetTypeIds, replaceTaskTypes }
+    )
+    if (replaceTaskTypes) {
+      const wantedIds = taskTypes.map(({ taskTypeId }) => taskTypeId)
+      state.currentProduction.task_types
+        .filter(id => !wantedIds.includes(id))
+        .forEach(id => commit(PRODUCTION_REMOVE_TASK_TYPE, id))
+    }
+    taskTypes.forEach(({ taskTypeId }) =>
+      commit(PRODUCTION_ADD_TASK_TYPE, taskTypeId)
+    )
+    taskStatusIds.forEach(id => commit(PRODUCTION_ADD_TASK_STATUS, id))
+    assetTypeIds.forEach(id => commit(PRODUCTION_ADD_ASSET_TYPE, id))
+    return production
   },
 
   addStatusAutomationToProduction({ commit, state }, statusAutomationId) {

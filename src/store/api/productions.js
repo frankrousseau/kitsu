@@ -104,6 +104,28 @@ export default {
     return client.ppost(path, data)
   },
 
+  addSettingsToProduction(
+    productionId,
+    {
+      taskTypes = [],
+      taskStatusIds = [],
+      assetTypeIds = [],
+      replaceTaskTypes = false
+    } = {}
+  ) {
+    const data = {
+      task_types: taskTypes.map(({ taskTypeId, priority = null }) => ({
+        task_type_id: taskTypeId,
+        priority
+      })),
+      task_status_ids: taskStatusIds,
+      asset_type_ids: assetTypeIds,
+      replace_task_types: replaceTaskTypes
+    }
+    const path = `/api/data/projects/${productionId}/settings/batch`
+    return client.ppost(path, data)
+  },
+
   removeTaskTypeFromProduction(productionId, taskTypeId) {
     const path = `/api/data/projects/${productionId}/settings/task-types/${taskTypeId}`
     return client.pdel(path)
