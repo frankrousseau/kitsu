@@ -849,9 +849,11 @@ export default {
       'editProduction',
       'loadAssets',
       'loadAssetTypeScheduleItems',
+      'loadEpisodeScheduleItems',
       'loadProductionDaysOff',
       'loadScheduleItems',
       'loadScheduleVersions',
+      'loadSequences',
       'loadSequenceScheduleItems',
       'loadShots',
       'loadTasks',
@@ -1076,11 +1078,12 @@ export default {
           taskTypeElement.people = {}
           taskTypeElement.entitiesByType = {}
 
-          const loadScheduleItems = ['Shot', 'Sequence'].includes(
-            taskTypeElement.for_entity
-          )
-            ? this.loadSequenceScheduleItems
-            : this.loadAssetTypeScheduleItems
+          const loadScheduleItems =
+            taskTypeElement.for_entity === 'Episode'
+              ? this.loadEpisodeScheduleItems
+              : ['Shot', 'Sequence'].includes(taskTypeElement.for_entity)
+                ? this.loadSequenceScheduleItems
+                : this.loadAssetTypeScheduleItems
           const parameters = {
             production: this.currentProduction,
             taskType: this.taskTypeMap.get(taskTypeElement.task_type_id),
@@ -1101,6 +1104,12 @@ export default {
             await this.loadAssets({ withShared: false, withTasks: false })
           } else if (taskTypeElement.for_entity === 'Shot') {
             await this.loadShots()
+          } else if (
+            taskTypeElement.for_entity === 'Sequence' &&
+            this.currentEpisodeId
+          ) {
+            // populate the episode-scoped sequenceMap for the client-side filter
+            await this.loadSequences()
           }
 
           let tasks = await this.loadTasks(
@@ -1270,7 +1279,7 @@ export default {
               )
             })
           } else if (
-            taskTypeElement.for_entity === 'Shot' &&
+            ['Shot', 'Sequence'].includes(taskTypeElement.for_entity) &&
             this.currentEpisodeId
           ) {
             // keep only the sequences of the current episode
