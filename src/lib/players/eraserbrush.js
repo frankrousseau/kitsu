@@ -13,41 +13,6 @@ import {
 // gesture is degenerate (a single point). Matches fabric's own internal check.
 const EMPTY_SVG_PATH = 'M 0 0 Q 0 0 0 0 L 0 0'
 const MIN_VISIBLE_ALPHA = 16
-const MIN_VISIBLE_STROKE_ALPHA = 128
-
-const hasVisibleStrokeCenterline = obj => {
-  obj.renderCache()
-  const canvas = obj._cacheCanvas
-  const context = canvas?.getContext('2d')
-  if (!context) return true
-  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
-  const getAlpha = point => {
-    const x = Math.round(
-      (point.x - obj.strokeOffset.x) * obj.zoomX + obj.cacheTranslationX
-    )
-    const y = Math.round(
-      (point.y - obj.strokeOffset.y) * obj.zoomY + obj.cacheTranslationY
-    )
-    return pixels[(y * canvas.width + x) * 4 + 3] || 0
-  }
-  return obj.strokePoints.slice(1).some((point, index) => {
-    const previous = obj.strokePoints[index]
-    const distance = Math.max(
-      Math.abs(point.x - previous.x),
-      Math.abs(point.y - previous.y),
-      1
-    )
-    return Array.from({ length: Math.ceil(distance) + 1 }).some((_, step) => {
-      const ratio = step / Math.ceil(distance)
-      return (
-        getAlpha({
-          x: previous.x + (point.x - previous.x) * ratio,
-          y: previous.y + (point.y - previous.y) * ratio
-        }) > MIN_VISIBLE_STROKE_ALPHA
-      )
-    })
-  })
-}
 
 export function hasVisiblePixels(obj) {
   if (!obj.toCanvasElement) return true
@@ -60,9 +25,7 @@ export function hasVisiblePixels(obj) {
     if (!context) return true
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
     for (let index = 3; index < pixels.length; index += 4) {
-      if (pixels[index] > MIN_VISIBLE_ALPHA) {
-        return obj.type === 'PSStroke' ? hasVisibleStrokeCenterline(obj) : true
-      }
+      if (pixels[index] > MIN_VISIBLE_ALPHA) return true
     }
     return false
   } catch {

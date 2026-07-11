@@ -62,7 +62,7 @@ it('renders no pixels when a wider eraser stroke covers a color stroke', async (
   expect(countVisiblePixels(stroke)).toBe(0)
 })
 
-it('treats sparse pressure-stroke remnants as invisible', async () => {
+it('conservatively retains pressure-stroke raster remnants', async () => {
   const stroke = new PSStroke(
     [
       new PSPoint(45.485, 45.5, 0.5),
@@ -102,7 +102,7 @@ it('treats sparse pressure-stroke remnants as invisible', async () => {
   await brush._addPathToObjectEraser(stroke, eraserPath)
 
   expect(countCanvasPixels(canvas)).toBeGreaterThan(0)
-  expect(hasVisiblePixels(stroke)).toBe(false)
+  expect(hasVisiblePixels(stroke)).toBe(true)
 })
 
 it('keeps a partially erased stroke visible', async () => {
