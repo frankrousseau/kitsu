@@ -426,7 +426,7 @@ describe('composables/annotation', () => {
       const canvas = createFakeCanvas()
       const { api, postAnnotationUpdate, wrapper } = mountAnnotation({ canvas })
       const pixels = new Uint8ClampedArray(16)
-      pixels[7] = 1
+      pixels[7] = 255
       const obj = createSerializableObject({
         id: 'partial',
         toCanvasElement: () => ({
@@ -442,6 +442,28 @@ describe('composables/annotation', () => {
       expect(canvas.remove).not.toHaveBeenCalled()
       expect(api.deletions.value).toHaveLength(0)
       expect(postAnnotationUpdate).toHaveBeenCalledTimes(1)
+      wrapper.unmount()
+    })
+
+    it('deletes an object with only antialias alpha remaining', () => {
+      const canvas = createFakeCanvas()
+      const { api, wrapper } = mountAnnotation({ canvas })
+      const pixels = new Uint8ClampedArray(16)
+      pixels[7] = 16
+      const obj = createSerializableObject({
+        id: 'antialias-residue',
+        toCanvasElement: () => ({
+          width: 2,
+          height: 2,
+          getContext: () => ({ getImageData: () => ({ data: pixels }) })
+        })
+      })
+      canvas._objects.push(obj)
+
+      api.onErasingEnd({ targets: [obj], path: {} })
+
+      expect(canvas.remove).toHaveBeenCalledWith(obj)
+      expect(api.deletions.value[0].objects).toEqual(['antialias-residue'])
       wrapper.unmount()
     })
 

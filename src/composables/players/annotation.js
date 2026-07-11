@@ -752,6 +752,8 @@ export const useAnnotation = ({
     }
   }
 
+  const MIN_VISIBLE_ALPHA = 16
+
   const hasVisiblePixels = obj => {
     if (!obj.toCanvasElement) return true
     try {
@@ -768,7 +770,7 @@ export const useAnnotation = ({
         canvas.height
       ).data
       for (let index = 3; index < pixels.length; index += 4) {
-        if (pixels[index] !== 0) return true
+        if (pixels[index] > MIN_VISIBLE_ALPHA) return true
       }
       return false
     } catch {
