@@ -396,6 +396,55 @@ describe('composables/annotation', () => {
       wrapper.unmount()
     })
 
+    it('deletes an object with no visible pixels left', () => {
+      const canvas = createFakeCanvas()
+      const { api, postAnnotationDeletion, postAnnotationUpdate, wrapper } =
+        mountAnnotation({ canvas })
+      const obj = createSerializableObject({
+        id: 'erased',
+        toCanvasElement: () => ({
+          width: 2,
+          height: 2,
+          getContext: () => ({
+            getImageData: () => ({ data: new Uint8ClampedArray(16) })
+          })
+        })
+      })
+      canvas._objects.push(obj)
+
+      api.onErasingEnd({ targets: [obj], path: {} })
+
+      expect(canvas.remove).toHaveBeenCalledWith(obj)
+      expect(api.deletions.value[0].objects).toEqual(['erased'])
+      expect(api.updates.value).toHaveLength(0)
+      expect(postAnnotationDeletion).toHaveBeenCalledTimes(1)
+      expect(postAnnotationUpdate).not.toHaveBeenCalled()
+      wrapper.unmount()
+    })
+
+    it('keeps an object when at least one visible pixel remains', () => {
+      const canvas = createFakeCanvas()
+      const { api, postAnnotationUpdate, wrapper } = mountAnnotation({ canvas })
+      const pixels = new Uint8ClampedArray(16)
+      pixels[7] = 1
+      const obj = createSerializableObject({
+        id: 'partial',
+        toCanvasElement: () => ({
+          width: 2,
+          height: 2,
+          getContext: () => ({ getImageData: () => ({ data: pixels }) })
+        })
+      })
+      canvas._objects.push(obj)
+
+      api.onErasingEnd({ targets: [obj], path: {} })
+
+      expect(canvas.remove).not.toHaveBeenCalled()
+      expect(api.deletions.value).toHaveLength(0)
+      expect(postAnnotationUpdate).toHaveBeenCalledTimes(1)
+      wrapper.unmount()
+    })
+
     it('ignores an erasing:end that touched no object', () => {
       const { api, saveAnnotationsCb, wrapper } = mountAnnotation()
       api.onErasingEnd({ targets: [], subTargets: [] })
@@ -1040,6 +1089,34 @@ describe('composables/annotation', () => {
       expect(obj.eraser).toBeDefined()
       expect(obj.eraser.getObjects()).toHaveLength(1)
       expect(obj.eraser.getObjects()[0].path).toBe('M 0 0 L 5 5')
+      wrapper.unmount()
+    })
+
+    it('undo restores and redo removes a fully erased object', () => {
+      const canvas = createFakeCanvas()
+      const { api, wrapper } = mountAnnotation({ canvas })
+      const obj = makeErasable('e1')
+      obj.toCanvasElement = () => ({
+        width: 1,
+        height: 1,
+        getContext: () => ({
+          getImageData: () => ({ data: new Uint8ClampedArray(4) })
+        })
+      })
+      canvas._objects.push(obj)
+
+      api.onErasingEnd({ targets: [obj], path: {} })
+      expect(canvas._objects).not.toContain(obj)
+
+      api.undoLastAction()
+      expect(canvas._objects).toContain(obj)
+      expect(obj.eraser).toBeUndefined()
+      expect(api.deletions.value[0].objects).toHaveLength(0)
+
+      api.redoLastAction()
+      expect(canvas._objects).not.toContain(obj)
+      expect(obj.eraser.getObjects()).toHaveLength(1)
+      expect(api.deletions.value[0].objects).toEqual(['e1'])
       wrapper.unmount()
     })
 

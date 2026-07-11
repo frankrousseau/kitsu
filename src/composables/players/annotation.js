@@ -403,6 +403,16 @@ export const useAnnotation = ({
     }
   }
 
+  const removeFromUpdates = obj => {
+    const currentTime = getCurrentTime()
+    const updatesEntry = findAnnotation(updates.value, currentTime)
+    if (updatesEntry) {
+      updatesEntry.drawing.objects = updatesEntry.drawing.objects.filter(
+        updatedObject => updatedObject.id !== obj.id
+      )
+    }
+  }
+
   const addToUpdates = obj => {
     setObjectData(obj)
     addToUpdatesSerializedObject(obj.serialize())
@@ -742,16 +752,59 @@ export const useAnnotation = ({
     }
   }
 
-  // Erasing mutates existing objects (it appends a path to each object's
-  // `eraser` mask), so it is an UPDATE, not an addition. We re-serialise the
-  // affected objects — their patched toObject() carries the new eraser — and
-  // record a single undoable 'erase' action.
+  const hasVisiblePixels = obj => {
+    if (!obj.toCanvasElement) return true
+    try {
+      const canvas = obj.toCanvasElement({
+        enableRetinaScaling: false,
+        withoutShadow: true
+      })
+      const context = canvas.getContext('2d')
+      if (!context) return true
+      const pixels = context.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      ).data
+      for (let index = 3; index < pixels.length; index += 4) {
+        if (pixels[index] !== 0) return true
+      }
+      return false
+    } catch {
+      return true
+    }
+  }
+
+  const removeFullyErasedObject = obj => {
+    const activeObject = fabricCanvas.value.getActiveObject?.()
+    if (activeObject === obj || activeObject?._objects?.includes(obj)) {
+      fabricCanvas.value.discardActiveObject()
+    }
+    fabricCanvas.value.remove(obj)
+    removeFromUpdates(obj)
+    addToDeletions(obj)
+  }
+
   const onErasingEnd = ({ targets = [], subTargets = [], path } = {}) => {
     if (silentAnnotation) return
-    const affected = [...targets, ...subTargets]
+    const affected = [...new Set([...targets, ...subTargets])]
     if (affected.length === 0) return
-    affected.forEach(obj => addToUpdates(obj))
-    doneActionStack.push({ type: 'erase', targets: affected, path })
+    const removedTargets = []
+    affected.forEach(obj => {
+      if (hasVisiblePixels(obj)) {
+        addToUpdates(obj)
+      } else {
+        removeFullyErasedObject(obj)
+        removedTargets.push(obj)
+      }
+    })
+    doneActionStack.push({
+      type: 'erase',
+      targets: affected,
+      removedTargets,
+      path
+    })
     clearUndoneStack()
     saveAnnotationsCb()
   }
@@ -821,6 +874,12 @@ export const useAnnotation = ({
       action.removed.push({ id: obj.id, obj, path: obj.eraser._objects.pop() })
       if (obj.eraser._objects.length === 0) obj.eraser = undefined
       obj.set('dirty', true)
+      if (action.removedTargets.includes(t)) {
+        silentAnnotation = true
+        fabricCanvas.value.add(obj)
+        silentAnnotation = false
+        removeFromDeletions(obj)
+      }
       addToUpdates(obj)
     })
     fabricCanvas.value?.requestRenderAll()
@@ -835,7 +894,13 @@ export const useAnnotation = ({
       if (!target.eraser) target.eraser = new Eraser()
       target.eraser._objects.push(path)
       target.set('dirty', true)
-      addToUpdates(target)
+      if (
+        action.removedTargets.some(removedTarget => removedTarget.id === id)
+      ) {
+        removeFullyErasedObject(target)
+      } else {
+        addToUpdates(target)
+      }
     })
     fabricCanvas.value?.requestRenderAll()
   }
