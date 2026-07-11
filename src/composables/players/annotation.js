@@ -26,7 +26,11 @@ import {
   getAnnotationContainMapping
 } from '@/lib/players/annotation'
 import { normalizeType } from '@/lib/players/annotationTypes'
-import { Eraser, reviveObjectEraser } from '@/lib/players/eraserbrush'
+import {
+  Eraser,
+  hasVisiblePixels,
+  reviveObjectEraser
+} from '@/lib/players/eraserbrush'
 import clipboard from '@/lib/clipboard'
 import { formatFullDate } from '@/lib/time'
 import localPreferences from '@/lib/preferences'
@@ -749,32 +753,6 @@ export const useAnnotation = ({
     } else {
       addToAdditions(o)
       stackAddAction(obj)
-    }
-  }
-
-  const MIN_VISIBLE_ALPHA = 16
-
-  const hasVisiblePixels = obj => {
-    if (!obj.toCanvasElement) return true
-    try {
-      const canvas = obj.toCanvasElement({
-        enableRetinaScaling: false,
-        withoutShadow: true
-      })
-      const context = canvas.getContext('2d')
-      if (!context) return true
-      const pixels = context.getImageData(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      ).data
-      for (let index = 3; index < pixels.length; index += 4) {
-        if (pixels[index] > MIN_VISIBLE_ALPHA) return true
-      }
-      return false
-    } catch {
-      return true
     }
   }
 
