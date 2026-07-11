@@ -3,7 +3,7 @@ import { expect, it } from 'vitest'
 
 import { getEnv as getNodeEnv } from 'fabric/node'
 
-const { setEnv, StaticCanvas } = await import('fabric')
+const { Path, setEnv, StaticCanvas } = await import('fabric')
 setEnv(getNodeEnv())
 const { PSPoint, PSStroke } = await import('fabricjs-psbrush')
 const { EraserBrush, hasVisiblePixels, installEraserObjectSupport } =
@@ -121,6 +121,45 @@ it('keeps a partially erased stroke visible', async () => {
   const brush = new EraserBrush({})
   brush.width = 30
   const eraserPath = brush.createPath('M 10 10 L 45 45')
+
+  await brush._addPathToObjectEraser(stroke, eraserPath)
+
+  expect(hasVisiblePixels(stroke)).toBe(true)
+})
+
+it('keeps the remaining end of a mostly erased long thin stroke', async () => {
+  const stroke = new PSStroke(
+    [new PSPoint(20, 20, 0.5), new PSPoint(520, 520, 0.5)],
+    {
+      fill: null,
+      stroke: '#5e60ba',
+      strokeWidth: 4,
+      strokeLineCap: 'round',
+      strokeLineJoin: 'round',
+      originX: 'left',
+      originY: 'top'
+    }
+  )
+  const brush = new EraserBrush({})
+  brush.width = 10
+  const eraserPath = brush.createPath('M 15 15 L 420 420')
+
+  await brush._addPathToObjectEraser(stroke, eraserPath)
+
+  expect(hasVisiblePixels(stroke)).toBe(true)
+})
+
+it('keeps a partially erased long thin path', async () => {
+  const stroke = new Path('M 20 20 L 520 520', {
+    fill: null,
+    stroke: '#5e60ba',
+    strokeWidth: 4,
+    strokeLineCap: 'round',
+    strokeLineJoin: 'round'
+  })
+  const brush = new EraserBrush({})
+  brush.width = 10
+  const eraserPath = brush.createPath('M 15 15 L 420 420')
 
   await brush._addPathToObjectEraser(stroke, eraserPath)
 

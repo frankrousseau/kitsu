@@ -856,8 +856,11 @@ export const useAnnotation = ({
       obj.set('dirty', true)
       if (action.removedTargets.includes(t)) {
         silentAnnotation = true
-        fabricCanvas.value.add(obj)
-        silentAnnotation = false
+        try {
+          fabricCanvas.value.add(obj)
+        } finally {
+          silentAnnotation = false
+        }
         removeFromDeletions(obj)
       }
       addToUpdates(obj)
