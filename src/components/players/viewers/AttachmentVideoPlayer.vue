@@ -1,22 +1,21 @@
 <template>
   <div class="attachment-video-player">
-    <div
-      class="attachment-video"
-      :class="{ 'is-paused': !isPlaying }"
-      ref="wrapperEl"
-    >
-      <a
-        class="flexrow attachment-fallback"
-        :href="downloadHref || src"
-        :title="name"
-        target="_blank"
-        v-if="hasError"
-      >
-        <paperclip-icon class="flexrow-item attachment-icon icon-1x" />
-        <span class="flexrow-item">{{ name }}</span>
-      </a>
+    <div class="attachment-error" v-if="hasError">
+      <video-off-icon class="attachment-error-icon" :size="18" />
+      <span class="attachment-error-text">
+        <span class="attachment-error-label">
+          {{ $t('comments.player.video_unavailable') }}
+        </span>
+        <span class="attachment-error-name" v-if="name">{{ name }}</span>
+      </span>
+    </div>
 
-      <template v-else>
+    <template v-else>
+      <div
+        class="attachment-video"
+        :class="{ 'is-paused': !isPlaying }"
+        ref="wrapperEl"
+      >
         <video
           class="attachment-video-el"
           ref="mediaEl"
@@ -77,14 +76,11 @@
             <download-icon :size="14" />
           </a>
         </div>
-      </template>
-    </div>
-    <span
-      class="attachment-name"
-      :title="name"
-      v-if="showName && name && !hasError"
-      >{{ name }}</span
-    >
+      </div>
+      <span class="attachment-name" :title="name" v-if="showName && name">{{
+        name
+      }}</span>
+    </template>
   </div>
 </template>
 
@@ -92,9 +88,9 @@
 import {
   DownloadIcon,
   MaximizeIcon,
-  PaperclipIcon,
   PauseIcon,
   PlayIcon,
+  VideoOffIcon,
   Volume2Icon,
   VolumeXIcon
 } from 'lucide-vue-next'
@@ -250,7 +246,42 @@ const onError = () => {
   white-space: nowrap;
 }
 
-.attachment-fallback {
+.attachment-error {
+  align-items: center;
+  background: var(--background-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   color: var(--text);
+  display: flex;
+  gap: 0.6em;
+  max-width: 32em;
+  padding: 0.6em 0.8em;
+}
+
+.attachment-error-icon {
+  color: var(--text-alt);
+  flex-shrink: 0;
+}
+
+.attachment-error-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.1em;
+  margin-left: 0.3em;
+  min-width: 0;
+}
+
+.attachment-error-label {
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.attachment-error-name {
+  color: var(--text-alt);
+  font-size: 0.8em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>
