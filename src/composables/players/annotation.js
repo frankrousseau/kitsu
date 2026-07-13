@@ -52,15 +52,7 @@ Text.prototype._calculateCurrentDimensions = function () {
   )
 }
 
-/* Monkey patch _getTransformedDimensions() to return a proper fabric point */
 if (PSStroke) {
-  PSStroke.prototype._getTransformedDimensions = function () {
-    const width = this.width * this.scaleX
-    const height = this.height * this.scaleY
-    const dimensions = new Point(width, height)
-    return dimensions
-  }
-
   /* Monkey patches needed to make PSStroke work correctly by adding missing
    * expected methods to deal with Fabric and pressure.
    */

@@ -53,6 +53,23 @@ const createFakeCanvas = (overrides = {}) => {
   return canvas
 }
 
+describe('PSStroke dimensions', () => {
+  it('includes stroke width in transformed and cache bounds', () => {
+    const stroke = new PSStroke(
+      [new PSPoint(0, 0, 1), new PSPoint(100, 0, 1)],
+      { stroke: '#000', strokeWidth: 20, strokeLineCap: 'round' }
+    )
+
+    expect(stroke._getTransformedDimensions()).toEqual(new Point(120, 20))
+    expect(stroke._getCacheCanvasDimensions()).toMatchObject({
+      width: 122,
+      height: 22,
+      x: 120,
+      y: 20
+    })
+  })
+})
+
 const createSerializableObject = (props = {}) => {
   const obj = {
     id: props.id ?? 'obj-1',
