@@ -173,12 +173,14 @@
         :movie-dimensions="movieDimensions"
         :nb-frames="nbFrames"
         :width="width"
-        :handle-in="-1"
-        :handle-out="-1"
+        :handle-in="handleIn"
+        :handle-out="handleOut"
         :preview-id="isMovie && currentPreview ? currentPreview.id : ''"
         @start-scrub="$refs['button-bar'].classList.add('unselectable')"
         @end-scrub="$refs['button-bar'].classList.remove('unselectable')"
         @progress-changed="onProgressChanged"
+        @handle-in-changed="onHandleInChanged"
+        @handle-out-changed="onHandleOutChanged"
         v-show="isMovie"
       />
 
@@ -616,6 +618,11 @@ let lastIndex = 1
 let scrubbing = false
 let scrubStartX = 0
 let containerResizeObserver = null
+// A trim seek (play jump / handle-out loop) is in flight: the rVFC time
+// channel keeps emitting the pre-seek position until the target frame is
+// presented, and those stale ticks would flash the bar back past the
+// handle-out marker.
+let pendingTrimSeek = false
 
 // — Reactive
 
@@ -628,6 +635,8 @@ const currentIndex = ref(1)
 const currentTime = ref('00:00:00:00')
 const { currentTimeRaw, isHd, isMuted, isPlaying, isRepeating, speed, volume } =
   usePlayerTransport()
+const handleIn = ref(-1)
+const handleOut = ref(-1)
 const is3DAnimation = ref(false)
 const isAnnotationsDisplayed = ref(true)
 const isCommentsHidden = ref(true)
@@ -997,6 +1006,26 @@ const setVideoFrameContext = frame => {
       syncComparisonViewer()
     }
     if (!isPlaying.value) loadAnnotation()
+    if (isPlaying.value && hasTrimEnd.value && frame >= handleOut.value) {
+      if (isRepeating.value) {
+        // Loop from the frame START (see the play() jump) and repaint the
+        // bar at the loop target right away: on this tick the playing
+        // channel has already filled past the handle-out marker.
+        const startTime = trimStartFrame.value * frameDuration.value
+        pendingTrimSeek = true
+        previewViewer.value.setCurrentTimeRaw(startTime)
+        comparisonViewer.value?.setCurrentTimeRaw(startTime)
+        progress.value?.updateProgressBar(trimStartFrame.value - 1)
+      } else {
+        pause()
+        setCurrentFrame(handleOut.value)
+        // Align the bar fill with the handle-out marker: the fill is
+        // right-edge inclusive ((f + 1) * frameDuration) while the marker
+        // sits on the frame's LEFT edge, so filling through handleOut
+        // would overshoot the marker by one frame width.
+        progress.value?.updateProgressBar(handleOut.value - 1)
+      }
+    }
   }
 }
 
@@ -1007,6 +1036,10 @@ const setVideoFrameContext = frame => {
 // pausing.
 const onVideoTimeUpdate = time => {
   if (!isPlaying.value) return
+  if (pendingTrimSeek) {
+    if (time >= (trimStartFrame.value + 2) * frameDuration.value) return
+    pendingTrimSeek = false
+  }
   progress.value?.updateProgressBar(Math.ceil(time / frameDuration.value) + 1)
 }
 
@@ -1105,9 +1138,18 @@ const play = () => {
       previewViewer.value.playModelAnimation(current3DAnimation.value)
     } else {
       clearCanvas()
-      if (currentFrame.value >= nbFrames.value - 1) {
-        previewViewer.value.setCurrentFrame(0)
-        comparisonViewer.value.setCurrentFrame(0)
+      const endFrame = hasTrimEnd.value ? handleOut.value : nbFrames.value - 1
+      if (
+        currentFrame.value >= endFrame ||
+        currentFrame.value < trimStartFrame.value
+      ) {
+        // Seek the START of the trim frame, not the usual mid-frame
+        // (setCurrentFrame): starting mid-frame only shows half of the
+        // handle-in frame, which reads as playing one frame late.
+        const startTime = trimStartFrame.value * frameDuration.value
+        pendingTrimSeek = true
+        previewViewer.value.setCurrentTimeRaw(startTime)
+        comparisonViewer.value?.setCurrentTimeRaw(startTime)
       }
       previewViewer.value.play()
       if (comparisonViewer.value && isComparing.value) {
@@ -1118,6 +1160,7 @@ const play = () => {
 }
 
 const pause = () => {
+  pendingTrimSeek = false
   if (isPlaying.value) {
     isPlaying.value = false
     if (is3DModel.value) {
@@ -1255,11 +1298,80 @@ const onProgressChanged = frame => {
   }
 }
 
+// Shot trim handles, shown on the progress bar like in PlaylistPlayer.
+// Not every parent passes entity-type (the Task page doesn't): derive the
+// type from the task payload too. A plain function, not a computed: the
+// shotMap getter exposes a non-reactive cache, so it must be re-read at
+// call time (the watcher below re-runs when the shots finish loading).
+const getTrimmedShot = () => {
+  const entityType =
+    props.entityType ||
+    props.task?.entity_type?.name ||
+    props.task?.entity_type_name
+  if (entityType !== 'Shot') return null
+  return store.getters.shotMap?.get(props.task?.entity_id) || props.task?.entity
+}
+
+const toFrameNumber = value => {
+  const frame = parseInt(value, 10)
+  return Number.isNaN(frame) ? -1 : frame
+}
+
+// Handles describe the trim of the main preview: hide them on
+// sub-previews, whose timelines they don't apply to. Like in
+// PlaylistPlayer, unset handles fall back to the clip bounds so the
+// markers always show on shot movies and dragging them creates the trim.
+const resetHandles = () => {
+  const shot = currentIndex.value === 1 ? getTrimmedShot() : null
+  if (!shot) {
+    handleIn.value = -1
+    handleOut.value = -1
+    return
+  }
+  const data = shot.data || {}
+  const inFrame = toFrameNumber(data.handle_in)
+  const outFrame = toFrameNumber(data.handle_out)
+  handleIn.value = Math.max(inFrame, 0)
+  handleOut.value = outFrame > 0 ? outFrame : nbFrames.value
+}
+
+const onHandleInChanged = ({ frameNumber, save }) => {
+  if (props.readOnly) return
+  handleIn.value = frameNumber
+  if (save) saveHandles()
+}
+
+const onHandleOutChanged = ({ frameNumber, save }) => {
+  if (props.readOnly) return
+  handleOut.value = frameNumber
+  if (save) saveHandles()
+}
+
+const saveHandles = () => {
+  const shot = getTrimmedShot()
+  if (!shot?.id) return
+  store.dispatch('editShot', {
+    id: shot.id,
+    data: {
+      ...shot.data,
+      ...(handleIn.value >= 0 && { handle_in: handleIn.value }),
+      ...(handleOut.value >= 0 && { handle_out: handleOut.value })
+    }
+  })
+}
+
+// Playback respects the trim like PlaylistPlayer: start on handle-in,
+// stop (or loop) on handle-out. Scrubbing and frame stepping stay free.
+const trimStartFrame = computed(() => (handleIn.value > 1 ? handleIn.value : 0))
+const hasTrimEnd = computed(
+  () => handleOut.value > 0 && handleOut.value < nbFrames.value
+)
+
 const onVideoEnd = () => {
   isPlaying.value = false
   if (isRepeating.value) {
-    setCurrentFrame(0)
-    syncComparisonViewer()
+    // No pre-seek: play() detects the end position and re-seeks both
+    // viewers to the trim start's frame START itself.
     nextTick(() => {
       play()
     })
@@ -2103,6 +2215,20 @@ watch(
 watch(currentIndex, () => {
   lastIndex = currentIndex.value
 })
+
+// isShotsLoading: the shotMap cache is not reactive, re-read it when the
+// shots finish loading. nbFrames: keeps the unset handle-out fallback on
+// the clip end once the real movie duration is known.
+watch(
+  [
+    () => props.task,
+    currentIndex,
+    nbFrames,
+    () => store.getters.isShotsLoading
+  ],
+  () => resetHandles(),
+  { immediate: true }
+)
 
 // Keep the compared sub-preview aligned with the main one; when the compared
 // revision has fewer sub-previews, stay on its last one.
