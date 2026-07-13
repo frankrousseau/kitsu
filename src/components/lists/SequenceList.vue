@@ -581,6 +581,7 @@ export default {
       type: 'sequence',
       hiddenColumns: {},
       lastFieldHeaderMenuDisplayed: null,
+      lastFieldHeaderMenuLabel: null,
       lastHeaderMenuDisplayed: null,
       lastMetadataHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayedIndexInGrid: null,

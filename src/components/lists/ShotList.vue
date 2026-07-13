@@ -938,6 +938,7 @@ export default {
       type: 'shot',
       hiddenColumns: {},
       lastFieldHeaderMenuDisplayed: null,
+      lastFieldHeaderMenuLabel: null,
       lastHeaderMenuDisplayed: null,
       lastMetadataHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayedIndexInGrid: null,

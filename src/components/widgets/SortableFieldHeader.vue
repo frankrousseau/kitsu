@@ -28,6 +28,6 @@ const props = defineProps({
 const emit = defineEmits(['show-menu'])
 
 const showMenu = event => {
-  emit('show-menu', props.fieldName, event)
+  emit('show-menu', props.fieldName, props.label, event)
 }
 </script>
