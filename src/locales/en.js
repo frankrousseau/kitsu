@@ -260,7 +260,8 @@ export default {
       fullscreen: 'Fullscreen',
       download: 'Download',
       video_unavailable: 'Video unavailable',
-      audio_unavailable: 'Audio unavailable'
+      audio_unavailable: 'Audio unavailable',
+      image_unavailable: 'Image unavailable'
     },
     post_status: 'Post comment',
     previews: 'Preview files to publish as a new revision',

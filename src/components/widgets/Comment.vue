@@ -139,19 +139,12 @@
               v-if="checklistItems.length > 0"
             />
             <p v-if="comment.attachment_files.length > 0">
-              <a
-                :href="getDownloadAttachmentPath(attachment)"
-                :key="attachment.id"
-                :title="attachment.name"
-                target="_blank"
+              <attachment-image
                 v-for="attachment in pictureAttachments"
-              >
-                <img
-                  class="attachment"
-                  :src="getDownloadAttachmentPath(attachment)"
-                  :alt="attachment.name"
-                />
-              </a>
+                :key="attachment.id"
+                :src="getDownloadAttachmentPath(attachment)"
+                :name="attachment.name"
+              />
               <attachment-audio-player
                 v-for="attachment in audioAttachments"
                 :key="attachment.id"
@@ -237,20 +230,13 @@
                 ></p>
 
                 <p>
-                  <a
-                    :href="getDownloadAttachmentPath(attachment)"
-                    :key="attachment.id"
-                    :title="attachment.name"
-                    target="_blank"
+                  <attachment-image
                     v-for="attachment in replyAttachmentMap.get(replyComment.id)
                       ?.pictures"
-                  >
-                    <img
-                      class="attachment"
-                      :src="getDownloadAttachmentPath(attachment)"
-                      :alt="attachment.name"
-                    />
-                  </a>
+                    :key="attachment.id"
+                    :src="getDownloadAttachmentPath(attachment)"
+                    :name="attachment.name"
+                  />
                   <attachment-audio-player
                     v-for="attachment in replyAttachmentMap.get(replyComment.id)
                       ?.audio"
@@ -589,6 +575,7 @@ import { domMixin } from '@/components/mixins/dom'
 
 import AddAttachmentModal from '@/components/modals/AddAttachmentModal.vue'
 import AttachmentAudioPlayer from '@/components/players/viewers/AttachmentAudioPlayer.vue'
+import AttachmentImage from '@/components/players/viewers/AttachmentImage.vue'
 import AttachmentVideoPlayer from '@/components/players/viewers/AttachmentVideoPlayer.vue'
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
 import CommentMenu from '@/components/widgets/CommentMenu.vue'
@@ -1292,14 +1279,6 @@ article.comment {
 
 p {
   margin: 0;
-}
-
-.attachment {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  display: block;
-  margin: 0.5em auto;
-  max-width: 100%;
 }
 
 .attachment-file-link {
