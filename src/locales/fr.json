@@ -155,7 +155,8 @@
         "fullscreen": "Plein écran",
         "download": "Télécharger",
         "video_unavailable": "Vidéo indisponible",
-        "audio_unavailable": "Audio indisponible"
+        "audio_unavailable": "Audio indisponible",
+        "image_unavailable": "Image indisponible"
       }
     },
     "custom_actions": {
