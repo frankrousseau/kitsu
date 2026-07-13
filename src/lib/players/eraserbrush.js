@@ -13,14 +13,21 @@ import {
 // gesture is degenerate (a single point). Matches fabric's own internal check.
 const EMPTY_SVG_PATH = 'M 0 0 Q 0 0 0 0 L 0 0'
 
+// Mask paths live in the erased object's local frame and must never be
+// repositioned by group layout.
+class NoLayout extends FixedLayout {
+  shouldPerformLayout() {
+    return false
+  }
+}
+
 // An object's eraser: a group of paths in the object's LOCAL coordinates.
-// FixedLayout + center origin: its dimensions don't change when paths are
-// added; they're realigned onto the object by `_drawClipPath`.
+// NoLayout + center origin keeps paths fixed; the mask is realigned onto the
+// object by `_drawClipPath`.
 export class Eraser extends Group {
   // In v6, Group no longer takes an `objectsRelativeToGroup` third argument.
-  // The fixed-layout intent (no recompute on add) is achieved via
-  // `layoutManager: new LayoutManager(new FixedLayout())`. Children passed to
-  // fromObject() are already in group-local coords; FixedLayout preserves them.
+  // FixedLayout still recenters children during initialization, so disable
+  // layout entirely to preserve paths already stored in the object's frame.
   constructor(objects = [], options = {}) {
     // Drop a serialized `type`: passing it through super()/setOptions hits v6's
     // deprecated no-op type setter, which warns on every revival. The static
@@ -31,10 +38,10 @@ export class Eraser extends Group {
       originX: 'center',
       originY: 'center',
       ...opts,
-      // Always build a fresh FixedLayout: a serialized eraser carries a plain
+      // Always build a fresh layout manager: a serialized eraser carries a plain
       // layoutManager (no performLayout()), and spreading it over ours crashed
       // groupInit. Ours must win, so it comes AFTER ...options.
-      layoutManager: new LayoutManager(new FixedLayout())
+      layoutManager: new LayoutManager(new NoLayout())
     })
     // No instance `this.type =` : v6's type setter is a no-op that logs a
     // deprecation warning; the static `Eraser.type` governs serialization.
@@ -51,8 +58,7 @@ export class Eraser extends Group {
   }
 
   // Revival: the children are ALWAYS plain Paths (the eraser only ever adds
-  // Paths), so we rebuild them directly. FixedLayout keeps them where they
-  // are (group-local coords) without recomputing the centre.
+  // Paths), so we rebuild them directly. NoLayout keeps their stored coords.
   static fromObject(object) {
     const children = (object.objects || []).map(p => {
       // Drop the serialized `type` ('path'): passing it to the Path ctor hits
@@ -64,16 +70,7 @@ export class Eraser extends Group {
     })
     const options = { ...object }
     delete options.objects
-    const eraser = new Eraser([], options)
-    children.forEach(child => eraser.addWithoutLayout(child))
-    return Promise.resolve(eraser)
-  }
-
-  addWithoutLayout(object) {
-    this._objects.push(object)
-    this._enterGroup?.(object, false)
-    this.set('dirty', true)
-    return this._objects.length
+    return Promise.resolve(new Eraser(children, options))
   }
 }
 
@@ -110,6 +107,7 @@ export function installEraserObjectSupport() {
 
   const proto = FabricObject.prototype
   const baseDrawClipPath = proto._drawClipPath
+  const baseGetCacheCanvasDimensions = proto._getCacheCanvasDimensions
   const baseNeedsCache = proto.needsItsOwnCache
   const baseToObject = proto.toObject
 
@@ -128,6 +126,27 @@ export function installEraserObjectSupport() {
 
     needsItsOwnCache() {
       return baseNeedsCache.call(this) || !!this.eraser
+    },
+
+    // Destination-out masks leave visible fragments when Fabric rasterizes the
+    // object cache below 1x. Keep erased-object caches at authored resolution;
+    // Fabric scales the finished cache down when drawing it on the canvas.
+    _getCacheCanvasDimensions() {
+      const dimensions = baseGetCacheCanvasDimensions.call(this)
+      if (!this.eraser) return dimensions
+      if (dimensions.zoomX < 1) {
+        const padding = dimensions.width - Math.ceil(dimensions.x)
+        dimensions.x /= dimensions.zoomX
+        dimensions.width = Math.ceil(dimensions.x) + padding
+        dimensions.zoomX = 1
+      }
+      if (dimensions.zoomY < 1) {
+        const padding = dimensions.height - Math.ceil(dimensions.y)
+        dimensions.y /= dimensions.zoomY
+        dimensions.height = Math.ceil(dimensions.y) + padding
+        dimensions.zoomY = 1
+      }
+      return dimensions
     },
 
     // Draws the normal clipPath THEN the eraser as a second clip-mask: that's
@@ -210,7 +229,7 @@ export class EraserBrush extends PencilBrush {
       clone.calcTransformMatrix()
     )
     util.applyTransformToObject(clone, desiredTransform)
-    eraser.addWithoutLayout(clone)
+    eraser.add(clone)
     obj.set('dirty', true)
     obj.fire('erasing:end', { path: clone })
     if (context) {

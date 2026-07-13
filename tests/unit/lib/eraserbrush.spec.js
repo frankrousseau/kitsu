@@ -5,12 +5,18 @@ vi.mock('fabric', () => {
     constructor(strategy) { this.strategy = strategy }
     subscribeTargets() {}
   }
-  class FakeFixedLayout {}
+  class FakeFixedLayout {
+    shouldPerformLayout({ type }) { return type === 'initialization' }
+  }
   class FakeGroup {
     constructor(objects = [], opts = {}) {
-      this._objects = []
+      this._objects = [...objects]
       Object.assign(this, opts)
-      objects.forEach(o => this.add(o))
+      objects.forEach(o => this._enterGroup(o))
+      const strategy = opts.layoutManager?.strategy
+      if (objects.length && strategy?.shouldPerformLayout?.({ type: 'initialization' }) !== false) {
+        this._objects.forEach(o => { o.left = 0; o.top = 0 })
+      }
     }
     // Mirror v6: instance `type` is a getter off the static; the setter is a
     // deprecated no-op (so `this.type =` / Object.assign({type}) don't throw).
@@ -18,13 +24,11 @@ vi.mock('fabric', () => {
     set type(_) {}
     getObjects() { return this._objects }
     add(o) {
-      this._objects.forEach(existing => { existing.left = 0 })
-      o.left = 0
       this._objects.push(o)
       this._enterGroup(o)
       return this
     }
-    _enterGroup(o) { o.group = this }
+    _enterGroup(o) { o.group = this; o.parent = this }
     set(props) { Object.assign(this, props); return this }
     drawObject() {}
   }
@@ -44,6 +48,7 @@ vi.mock('fabric', () => {
     decimatePoints(points) { return points }
   }
   const ObjectProto = {
+    _getCacheCanvasDimensions() { return { width: 102, height: 52, zoomX: 0.5, zoomY: 0.5, x: 100, y: 50 } },
     _drawClipPath(ctx, clipPath, s) { (this._clipCalls ||= []).push({ ctx, clipPath, s }); this._lastClip = clipPath },
     needsItsOwnCache() { return false },
     toObject(extra = []) { return { type: 'mock', extra } },
@@ -134,7 +139,7 @@ describe('EraserBrush — core', () => {
 })
 
 describe('Eraser', () => {
-  it('is a fixed-layout, center-origin group of type eraser', () => {
+  it('is a no-layout, center-origin group of type eraser', () => {
     const eraser = new Eraser()
     expect(eraser.type).toBe('eraser')
     expect(eraser.originX).toBe('center')
@@ -143,12 +148,13 @@ describe('Eraser', () => {
     expect(eraser.layoutManager).toBeDefined()
   })
 
-  it('ignores a serialized layoutManager and builds its own FixedLayout one', () => {
+  it('ignores a serialized layoutManager and builds its own no-layout one', () => {
     // The serialized eraser carries a plain layoutManager (no performLayout);
     // spreading it over our real one crashed groupInit. Ours must win.
     const eraser = new Eraser([], { layoutManager: { bogus: true } })
     expect(eraser.layoutManager.bogus).toBeUndefined()
     expect(eraser.layoutManager.strategy).toBeInstanceOf(FixedLayout)
+    expect(eraser.layoutManager.strategy.shouldPerformLayout()).toBe(false)
   })
 
   it('fromObject revives child paths directly as Path (no enlivenObjects)', async () => {
@@ -159,15 +165,12 @@ describe('Eraser', () => {
     expect(eraser.width).toBe(100)
   })
 
-  it('fromObject passes children with FixedLayout so they stay in group coords', async () => {
-    // FixedLayout preserves child positions (no re-centring), replacing the
-    // v5 objectsRelativeToGroup=true mechanism.
+  it('fromObject disables initialization layout so children stay in group coords', async () => {
     const eraser = await Eraser.fromObject({
       width: 100,
       height: 50,
       objects: [{ path: 'M 0 0 L 5 5' }]
     })
-    // FixedLayout is set on the layoutManager
     expect(eraser.layoutManager).toBeDefined()
     expect(eraser.getObjects()).toHaveLength(1)
   })
@@ -207,6 +210,7 @@ describe('EraserBrush._addPathToObjectEraser', () => {
     expect(obj.eraser).toBeDefined()
     expect(obj.eraser.getObjects()).toHaveLength(1)
     expect(obj.eraser.getObjects()[0].group).toBe(obj.eraser)
+    expect(obj.eraser.getObjects()[0].parent).toBe(obj.eraser)
     expect(obj.set).toHaveBeenCalledWith('dirty', true)
     expect(obj.fire).toHaveBeenCalledWith('erasing:end', expect.any(Object))
     expect(context.targets).toContain(obj)
@@ -324,6 +328,28 @@ describe('installEraserObjectSupport', () => {
     expect(o.needsItsOwnCache()).toBe(false)
     o.eraser = {}
     expect(o.needsItsOwnCache()).toBe(true)
+  })
+
+  it('renders erased object caches at no less than authored resolution', () => {
+    const o = Object.create(FabricObject.prototype)
+    expect(o._getCacheCanvasDimensions()).toEqual({
+      width: 102,
+      height: 52,
+      zoomX: 0.5,
+      zoomY: 0.5,
+      x: 100,
+      y: 50
+    })
+
+    o.eraser = {}
+    expect(o._getCacheCanvasDimensions()).toEqual({
+      width: 202,
+      height: 102,
+      zoomX: 1,
+      zoomY: 1,
+      x: 200,
+      y: 100
+    })
   })
 
   it('toObject includes the serialized eraser when present', () => {
