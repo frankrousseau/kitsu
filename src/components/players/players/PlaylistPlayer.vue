@@ -446,8 +446,16 @@
             ? currentEntity.preview_nb_frames
             : Math.round(2 * fps)
       "
-      :handle-in="playlist.for_entity === 'shot' ? handleIn : -1"
-      :handle-out="playlist.for_entity === 'shot' ? handleOut : -1"
+      :handle-in="
+        playlist.for_entity === 'shot' && currentPreviewIndex === 0
+          ? handleIn
+          : -1
+      "
+      :handle-out="
+        playlist.for_entity === 'shot' && currentPreviewIndex === 0
+          ? handleOut
+          : -1
+      "
       :preview-id="currentPreview ? currentPreview.id : ''"
       @start-scrub="onScrubStart"
       @end-scrub="onScrubEnd"
@@ -3920,6 +3928,14 @@ const getEntityHandles = entity => {
 
 const resetHandles = entity => {
   if (!['shot', 'edit', 'episode'].includes(props.playlist?.for_entity)) return
+  // No entity argument = reset for what is displayed right now. A
+  // sub-preview is not the entity's trimmed main preview, so the entity
+  // trim handles don't apply to its timeline.
+  if (!entity && currentPreviewIndex.value > 0) {
+    handleIn.value = 0
+    handleOut.value = nbFrames.value
+    return
+  }
   entity = entity || currentEntity.value
   const { handleIn: entityHandleIn, handleOut: entityHandleOut } =
     getEntityHandles(entity)
