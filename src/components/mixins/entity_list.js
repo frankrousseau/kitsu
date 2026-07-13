@@ -326,7 +326,7 @@ export const entityListMixin = {
       this.lastHeaderMenuDisplayedIndexInGrid = columnIndexInGrid
     },
 
-    showFieldHeaderMenu(fieldName, event) {
+    showFieldHeaderMenu(fieldName, label, event) {
       this.showHeaderMenuAt(
         'headerFieldMenu',
         event,
@@ -334,6 +334,7 @@ export const entityListMixin = {
         { left: -3, top: 11 }
       )
       this.lastFieldHeaderMenuDisplayed = fieldName
+      if (label !== undefined) this.lastFieldHeaderMenuLabel = label
     },
 
     onHeaderMenuDocumentClick(event) {
@@ -353,14 +354,12 @@ export const entityListMixin = {
     },
 
     onSortByFieldClicked() {
-      const fieldName = this.lastFieldHeaderMenuDisplayed
-      const namespace = this.type === 'sequence' ? 'sequences' : `${this.type}s`
       this.$emit('change-sort', {
         type: 'field',
-        column: fieldName,
-        name: this.$t(`${namespace}.fields.${fieldName}`)
+        column: this.lastFieldHeaderMenuDisplayed,
+        name: this.lastFieldHeaderMenuLabel
       })
-      this.showFieldHeaderMenu(fieldName)
+      this.showFieldHeaderMenu(this.lastFieldHeaderMenuDisplayed)
     },
 
     onMinimizeColumnToggled() {

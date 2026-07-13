@@ -710,7 +710,6 @@ export default {
   emits: [
     'asset-changed',
     'asset-type-clicked',
-    'change-sort',
     'create-tasks',
     'delete-clicked',
     'edit-clicked',
@@ -727,6 +726,7 @@ export default {
       hiddenColumns: {},
       lastSelection: null,
       lastFieldHeaderMenuDisplayed: null,
+      lastFieldHeaderMenuLabel: null,
       lastHeaderMenuDisplayed: null,
       lastMetadataHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayedIndexInGrid: null,
@@ -1093,23 +1093,6 @@ export default {
     stickColumnClicked() {
       this.toggleStickedColumns(this.lastHeaderMenuDisplayed)
       this.showHeaderMenu()
-    },
-
-    onSortByFieldClicked() {
-      const fieldName = this.lastFieldHeaderMenuDisplayed
-      const fieldLabels = {
-        episode_id: this.$t('assets.fields.episode'),
-        estimation: this.$t('main.estimation_short'),
-        ready_for: this.$t('assets.fields.ready_for'),
-        resolution: this.$t('shots.fields.resolution'),
-        timeSpent: this.$t('assets.fields.time_spent')
-      }
-      this.$emit('change-sort', {
-        type: 'field',
-        column: fieldName,
-        name: fieldLabels[fieldName] || this.$t(`assets.fields.${fieldName}`)
-      })
-      this.showFieldHeaderMenu(fieldName)
     },
 
     metadataStickColumnClicked(event) {
