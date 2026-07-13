@@ -605,7 +605,7 @@ const mutations = {
     cache.sequences = []
     state.currentSequence = null
     state.displayedSequences = []
-    cache.sequenceMap = new Map()
+    cache.sequenceMap.clear()
     state.selectedSequences = new Map()
   },
 
@@ -617,7 +617,7 @@ const mutations = {
     cache.sequences = []
     state.currentSequence = null
     state.displayedSequences = []
-    cache.sequenceMap = new Map()
+    cache.sequenceMap.clear()
     state.selectedSequences = new Map()
   },
 
@@ -655,7 +655,7 @@ const mutations = {
     let isTime = false
     let isEstimation = false
     let isResolution = false
-    cache.sequenceMap = new Map()
+    cache.sequenceMap.clear()
     sequences.forEach(sequence => {
       const taskIds = []
       const validations = new Map()
@@ -841,7 +841,7 @@ const mutations = {
     cache.sequences = []
     cache.result = []
     cache.sequenceIndex = {}
-    cache.sequenceMap = new Map()
+    cache.sequenceMap.clear()
     state.sequenceValidationColumns = []
 
     state.isSequencesLoading = true

@@ -910,7 +910,7 @@ const mutations = {
   [CLEAR_ASSETS](state) {
     cache.assets = []
     cache.result = []
-    cache.assetMap = new Map()
+    cache.assetMap.clear()
     state.assetValidationColumns = []
 
     cache.assetIndex = {}
@@ -928,7 +928,7 @@ const mutations = {
   [LOAD_ASSETS_START](state) {
     cache.assets = []
     cache.result = []
-    cache.assetMap = new Map()
+    cache.assetMap.clear()
     state.isAssetsLoading = true
     state.isAssetsLoadingError = false
     state.assetValidationColumns = []
@@ -970,7 +970,7 @@ const mutations = {
     cache.assets = assets
     cache.result = assets
     cache.assetIndex = buildAssetIndex(assets)
-    cache.assetMap = new Map()
+    cache.assetMap.clear()
 
     assets.forEach(asset => {
       helpers.populateAndRegisterAsset(

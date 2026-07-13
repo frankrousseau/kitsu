@@ -676,7 +676,7 @@ const mutations = {
     cache.edits = []
     cache.result = []
     cache.editIndex = {}
-    cache.editMap = new Map()
+    cache.editMap.clear()
     state.editValidationColumns = []
 
     state.isEditsLoading = true
@@ -705,7 +705,7 @@ const mutations = {
     let isTime = false
     let isEstimation = false
     let isResolution = false
-    cache.editMap = new Map()
+    cache.editMap.clear()
     edits.forEach(edit => {
       const taskIds = []
       const validations = new Map()

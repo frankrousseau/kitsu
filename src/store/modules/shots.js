@@ -836,7 +836,10 @@ const mutations = {
     cache.shots = []
     cache.result = []
     cache.shotIndex = {}
-    cache.shotMap = new Map()
+    // clear(), never a new Map(): the shotMap getter has no reactive
+    // dependency, so Vuex memoizes the reference captured at its first
+    // read. Reassigning would leave every consumer on a stale, empty map.
+    cache.shotMap.clear()
 
     state.isShotsLoading = false
     state.isShotsLoadingError = false
@@ -856,7 +859,8 @@ const mutations = {
     cache.shots = []
     cache.result = []
     cache.shotIndex = {}
-    cache.shotMap = new Map()
+    // Same as CLEAR_SHOTS: keep the map identity, the getter is memoized.
+    cache.shotMap.clear()
     state.shotValidationColumns = []
 
     state.isShotsLoading = true
@@ -902,7 +906,6 @@ const mutations = {
     let isEstimation = false
     let isMaxRetakes = false
     let isResolution = false
-    // cache.shotMap = new Map()
     shots.forEach(shot => {
       const taskIds = []
       const validations = new Map()
