@@ -28,13 +28,21 @@ export const formatPrioritySymbol = priority => {
   return '!'.repeat(clamped)
 }
 
+// Number-typed TextFields emit valueAsNumber, so both sanitizers must
+// accept numbers as well as user-typed strings.
 export const sanitizeInteger = value => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? Math.trunc(value) : 0
+  }
   if (typeof value !== 'string') return 0
   const digits = value.replace(/\D/g, '')
   return digits.length > 0 ? parseInt(digits) || 0 : 0
 }
 
 export const sanitizeIntegerLight = value => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? Math.trunc(value) : null
+  }
   if (typeof value !== 'string') return null
   const digits = value.replace(/\D/g, '')
   return digits.length > 0 ? parseInt(digits) || null : null
