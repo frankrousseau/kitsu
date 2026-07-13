@@ -490,17 +490,24 @@ export default {
       return subset
     },
 
-    /* It gets the daily rate of a person, and use the salary scale if
-     * no daily rate is available.
+    /* It gets the daily rate of a person: the rate set in the People
+     * section, else the rate of the matching budget entry, else the
+     * salary scale.
      */
-    getDailyRate(deparmentId, personId) {
+    getDailyRate(departmentId, personId) {
       const person = this.personMap.get(personId)
-      if (!person) return 0
+      const budgetEntry = this.budgetDepartments
+        .find(department => department.id === departmentId)
+        ?.persons.find(entry => entry.person_id === personId)
       const salaryScale =
-        person.seniority && person.position
-          ? this.salaryScale[deparmentId]?.[person.position]?.[person.seniority]
+        person?.seniority && person?.position
+          ? this.salaryScale[departmentId]?.[person.position]?.[
+              person.seniority
+            ]
           : 0
-      return person.daily_salary || salaryScale
+      return (
+        person?.daily_salary || budgetEntry?.daily_salary || salaryScale || 0
+      )
     },
 
     /* It converts the time spent to days then multiply it with the
