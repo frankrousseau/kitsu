@@ -2628,6 +2628,7 @@ const onFrameUpdate = frame => {
   if (props.playlist && isPlaying.value) {
     const hasHandles =
       ['shot', 'edit', 'episode'].includes(props.playlist.for_entity) &&
+      currentPreviewIndex.value === 0 &&
       handleOut.value < nbFrames.value
     const reachedEnd = hasHandles
       ? frameNumber.value >= handleOut.value
@@ -3437,9 +3438,21 @@ const continuePlayingPlaylist = (entityIndex, startMs) => {
   } else {
     currentPreviewIndex.value++
     nextTick(() => {
-      playingPictureTimeout = setTimeout(() => {
-        continuePlayingPlaylist(playingEntityIndex.value, Date.now())
-      }, 100)
+      // A still-image sub-preview can be followed by a video sub-preview.
+      // Play the whole clip from its start instead of rescheduling the image
+      // loop (which would freeze it and then skip it). Sub-previews are not
+      // the entity's trimmed main preview, so ignore the entity handle-in/out.
+      if (isCurrentPreviewMovie.value) {
+        clearTimeout(playingPictureTimeout)
+        rawPlayer.value?.setCurrentFrame(0)
+        rawPlayer.value?.play()
+        if (isComparing.value) rawPlayerComparison.value?.play()
+        isPlaying.value = true
+      } else {
+        playingPictureTimeout = setTimeout(() => {
+          continuePlayingPlaylist(playingEntityIndex.value, Date.now())
+        }, 100)
+      }
     })
   }
 }
@@ -4314,6 +4327,16 @@ watch(currentPreviewIndex, () => {
       height: currentPreview.value.height
     }
   }
+})
+
+// Keep the compared sub-preview aligned with the main one; when the compared
+// revision has fewer sub-previews, stay on its last one.
+watch(currentPreviewIndex, () => {
+  if (!isComparing.value || currentComparisonPreviewLength.value <= 0) return
+  currentComparisonPreviewIndex.value = Math.min(
+    currentPreviewIndex.value,
+    currentComparisonPreviewLength.value - 1
+  )
 })
 
 watch(playingEntityIndex, () => {
