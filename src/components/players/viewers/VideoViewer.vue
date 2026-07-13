@@ -165,6 +165,10 @@ let previousDimensions = null
 let renderer = null
 let renderLoopHandle = null
 let renderLoopIsRvfc = false
+// Target of a raw seek issued while playing: frames already queued
+// behind the seek point keep presenting for a tick or two, and painting
+// them flashes content past the target (visible on handle-out loops).
+let seekGuardTarget = null
 // mediaTime of the last frame the browser actually presented. The
 // source of truth for emitted times/frames (currentTime lies during
 // decode latency, which is the whole point of this pipeline).
@@ -256,6 +260,7 @@ const setCurrentFrame = frame => {
 
 const setCurrentTimeRaw = currentTime => {
   if (currentTime < frameDuration.value) currentTime = 0
+  if (!video.value.paused) seekGuardTarget = currentTime
   video.value.currentTime = currentTime
 }
 
@@ -376,6 +381,17 @@ const startRenderLoop = () => {
     renderLoopIsRvfc = true
     const tick = (now, metadata) => {
       if (!video.value) return
+      // Skip presentations far from an in-flight raw-seek target: the
+      // canvas holds the last pre-seek frame instead of flashing the
+      // stale frames still coming out of the decoder.
+      if (
+        seekGuardTarget !== null &&
+        Math.abs(metadata.mediaTime - seekGuardTarget) > 2 * frameDuration.value
+      ) {
+        renderLoopHandle = video.value.requestVideoFrameCallback(tick)
+        return
+      }
+      seekGuardTarget = null
       hasPaintedVideoFrame = true
       lastMediaTime = metadata.mediaTime
       currentTimeRaw.value = metadata.mediaTime
@@ -446,6 +462,7 @@ const play = () => {
 }
 
 const pause = () => {
+  seekGuardTarget = null
   video.value.pause()
   video.value.currentTime = frameToTime(props.currentFrame)
   emit('frame-update', props.currentFrame)
@@ -704,6 +721,10 @@ onMounted(() => {
       })
 
       video.value.addEventListener('waiting', () => {
+        // In-flight raw seek (trim loop, room sync): the canvas holds the
+        // last frame on purpose — flipping isLoading would hide the canvas
+        // and flash the spinner for a seek-length wait.
+        if (seekGuardTarget !== null) return
         if (props.name.indexOf('comparison') < 0) {
           isLoading.value = true
         }
