@@ -117,7 +117,8 @@ export default {
       notifications_discord_userid: person.notifications_discord_userid,
       departments: person.departments,
       studio_id: person.studio_id,
-      country: person.country
+      country: person.country,
+      use_12_hour_clock: toBool(person.use_12_hour_clock)
     }
     return client.pput(`/api/data/persons/${person.id}`, data)
   },

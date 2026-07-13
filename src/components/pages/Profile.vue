@@ -67,6 +67,13 @@
             v-if="user.role !== 'client' && !user.is_guest"
           />
         </div>
+        <div class="toggle-row">
+          <checkbox
+            :toggle="true"
+            :label="$t('profile.use_12_hour_clock')"
+            v-model="form.use_12_hour_clock"
+          />
+        </div>
       </card>
 
       <card
@@ -219,7 +226,8 @@ const form = ref({
   phone: '',
   country: null,
   timezone: 'Europe/Paris',
-  locale: 'en_US'
+  locale: 'en_US',
+  use_12_hour_clock: false
 })
 
 const passwordForm = ref({
@@ -278,6 +286,7 @@ const countryOptions = computed(() => getCountryOptions(localeCode.value))
 
 const syncFormFromUser = () => {
   Object.assign(form.value, user.value)
+  form.value.use_12_hour_clock = Boolean(user.value.use_12_hour_clock)
   form.value.notifications_enabled = Boolean(user.value.notifications_enabled)
   form.value.notifications_slack_enabled = Boolean(
     user.value.notifications_slack_enabled
