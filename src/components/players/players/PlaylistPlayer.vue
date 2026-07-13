@@ -135,6 +135,7 @@
           :is-hd="isHd"
           :is-repeating="isRepeating"
           :muted="true"
+          :next-handle-in="nextEntityHandleIn"
           :panzoom="true"
           :handle-in="
             ['shot', 'edit', 'episode'].includes(playlist.for_entity)
@@ -258,6 +259,7 @@
           :is-repeating="isRepeating"
           :current-preview-index="currentPreviewIndex"
           :muted="isMuted"
+          :next-handle-in="nextEntityHandleIn"
           :panzoom="true"
           @entity-change="onPlayerPlayingEntityChange"
           @frame-update="onRawPlayerFrameUpdate"
@@ -1288,6 +1290,12 @@ const nextEntityIndex = computed(() => {
   return index
 })
 
+// Next entity's handle-in, so the viewers can park their preloaded decoder
+// past the slate before the players switch (#1019).
+const nextEntityHandleIn = computed(
+  () => getEntityHandles(entityList.value[nextEntityIndex.value]).handleIn
+)
+
 const picturePreviews = computed(() =>
   entityList.value.flatMap(e => [
     {
@@ -1715,8 +1723,11 @@ const previewRoom = usePreviewRoom({
   onWindowResize: () => onWindowResize(),
   findEntity: info => findEntity(info),
   findEntityIndex: info => findEntityIndex(info),
+  // Remote version change: the entity still holds the previous preview
+  // file id locally. Silent so the receiver does not re-persist the
+  // change already saved by the sender.
   changePreviewFile: (entity, previewFile) =>
-    changePreviewFile(entity, previewFile),
+    changePreviewFile(entity, previewFile, entity.preview_file_id, true),
   setRawPlayerFrame: f => rawPlayer.value?.setCurrentFrame(f),
   setCurrentTimeRaw: t => setCurrentTimeRaw(t),
   exists: v => v !== null && v !== undefined,
@@ -3464,7 +3475,12 @@ const onPreviewChanged = ({ entity, previewFile, previousPreviewFileId }) => {
   updateRoomStatus(previousPreviewFileId)
 }
 
-const changePreviewFile = (entity, previewFile, previousPreviewFileId) => {
+const changePreviewFile = (
+  entity,
+  previewFile,
+  previousPreviewFileId,
+  silent = false
+) => {
   pause()
   const localEntity = entityList.value.find(
     s => s.id === entity.id && s.preview_file_id === previousPreviewFileId
@@ -3486,11 +3502,13 @@ const changePreviewFile = (entity, previewFile, previousPreviewFileId) => {
       rawPlayer.value.reloadCurrentEntity()
     }
   }
-  emit('preview-changed', {
-    entity,
-    previewFileId: previewFile.id,
-    previousPreviewFileId
-  })
+  if (!silent) {
+    emit('preview-changed', {
+      entity,
+      previewFileId: previewFile.id,
+      previousPreviewFileId
+    })
+  }
   clearCanvas()
   resetPanZoom()
   panzoomTransform.value = { x: 0, y: 0, scale: 1 }

@@ -107,7 +107,7 @@ import {
   getAttachmentThumbnailPath,
   getDownloadAttachmentPath
 } from '@/lib/path'
-import { parseDate } from '@/lib/time'
+import { formatTimeOfDay, formatVerboseDate, parseDate } from '@/lib/time'
 import { renderComment } from '@/lib/render'
 import files from '@/lib/files'
 
@@ -141,7 +141,13 @@ export default {
   },
 
   computed: {
-    ...mapGetters(['departmentMap', 'personMap', 'user']),
+    ...mapGetters([
+      'dateFormat',
+      'departmentMap',
+      'personMap',
+      'use12HourClock',
+      'user'
+    ]),
 
     messageList() {
       const messages = [...this.messages].sort((a, b) =>
@@ -176,7 +182,7 @@ export default {
             texts: [message ? message : '']
           }
           lastDay = {
-            title: messageDate.format('LL'),
+            title: formatVerboseDate(messageDate, this.dateFormat),
             date: messageDate.format('YYYY-MM-DD'),
             messages: [element]
           }
@@ -194,7 +200,7 @@ export default {
 
     renderDate(date) {
       date = moment(parseDate(date)).tz(this.user.timezone)
-      return date.tz(this.user.timezone).format('HH:mm')
+      return formatTimeOfDay(date, this.use12HourClock)
     },
 
     getAttachmentThumbnailPath,

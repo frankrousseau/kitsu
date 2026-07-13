@@ -2,7 +2,6 @@ import peopleApi from '@/store/api/people'
 import shotsApi from '@/store/api/shots'
 import shotStore from '@/store/modules/shots'
 
-import func from '@/lib/func'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import { buildSequenceIndex, indexSearch } from '@/lib/indexing'
 import {
@@ -458,16 +457,12 @@ const actions = {
     return shotsApi.newSequence(sequence).then(sequence => {
       commit(NEW_SEQUENCE_END, { sequence, episodeMap })
       const taskTypeIds = rootGetters.productionSequenceTaskTypeIds
-      const createTaskPromises = taskTypeIds.map(taskTypeId =>
-        dispatch('createTask', {
-          entityId: sequence.id,
-          projectId: sequence.project_id,
-          taskTypeId: taskTypeId,
-          type: 'sequences'
-        })
-      )
-      return func
-        .runPromiseAsSeries(createTaskPromises)
+      // An empty list means "all valid task types" server-side: skip the call.
+      if (taskTypeIds.length === 0) return sequence
+      return dispatch('createEntityTasks', {
+        entityId: sequence.id,
+        taskTypeIds
+      })
         .then(() => sequence)
         .catch(console.error)
     })

@@ -106,6 +106,11 @@ const props = defineProps({
     type: String,
     default: 'main'
   },
+  nextHandleIn: {
+    // Handle-in frame of the next entity, used to pre-seek its decoder
+    type: Number,
+    default: 0
+  },
   panzoom: {
     type: Boolean,
     default: false
@@ -401,6 +406,19 @@ const reloadCurrentEntity = (silentReload = false) => {
   loadEntity(currentIndex.value, currentPlayer.value.currentTime, silentReload)
 }
 
+// Park the preloaded decoder on the next entity's handle-in frame so its
+// first frame (slate) is never the one painted when players switch.
+const preseekNextPlayer = () => {
+  const player = nextPlayer.value
+  if (!player || !player.getAttribute('src') || props.nextHandleIn <= 0) return
+  const nextEntity = props.entities[getNextIndex(currentIndex.value)]
+  const nextFps =
+    parseFloat(nextEntity?.fps) ||
+    parseFloat(currentProduction.value?.fps) ||
+    DEFAULT_FPS
+  player.currentTime = props.nextHandleIn / nextFps
+}
+
 const loadEntity = (index = 0, currentTime = 0, silentLoad = false) => {
   if (index < props.entities.length) {
     const nextIndex = getNextIndex(index)
@@ -436,6 +454,7 @@ const loadEntity = (index = 0, currentTime = 0, silentLoad = false) => {
       if (!nextPlayer.value.src.endsWith(nextMoviePath)) {
         nextPlayer.value.src = nextMoviePath
       }
+      preseekNextPlayer()
     } else if (nextPlayer.value) {
       nextPlayer.value.src = ''
     }
@@ -596,6 +615,7 @@ const switchPlayers = () => {
   nextPlayer.value = tmpPlayer
   if (nextEntity) {
     nextPlayer.value.src = getMoviePath(nextEntity)
+    preseekNextPlayer()
   }
   resetHeight()
   setSpeed(rate)
@@ -707,6 +727,15 @@ watch(
       setCurrentTimeRaw(0)
       reloadCurrentEntity(true)
     }
+  }
+)
+
+// At switch time the prop still holds the previous "next" value: re-apply
+// the pre-seek once the parent pushes the new next entity's handle-in.
+watch(
+  () => props.nextHandleIn,
+  () => {
+    preseekNextPlayer()
   }
 )
 

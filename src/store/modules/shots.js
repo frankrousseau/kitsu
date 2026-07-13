@@ -1,5 +1,6 @@
 import moment from 'moment'
 
+import entitiesApi from '@/store/api/entities'
 import peopleApi from '@/store/api/people'
 import shotsApi from '@/store/api/shots'
 
@@ -11,7 +12,6 @@ import tasksStore from '@/store/modules/tasks'
 import taskStatusStore from '@/store/modules/taskstatus'
 import taskTypesStore from '@/store/modules/tasktypes'
 
-import func from '@/lib/func'
 import { PAGE_SIZE } from '@/lib/pagination'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import {
@@ -55,6 +55,7 @@ import {
   ADD_SHOT,
   UPDATE_SHOT,
   REMOVE_SHOT,
+  REMOVE_SHOTS,
   CANCEL_SHOT,
   RESTORE_SHOT_END,
   NEW_TASK_END,
@@ -509,16 +510,9 @@ const actions = {
     return shotsApi.newShot(shot).then(shot => {
       commit(NEW_SHOT_END, { shot })
       const taskTypeIds = rootGetters.productionShotTaskTypeIds
-      const createTaskPromises = taskTypeIds.map(taskTypeId =>
-        dispatch('createTask', {
-          entityId: shot.id,
-          projectId: shot.project_id,
-          taskTypeId: taskTypeId,
-          type: 'shots'
-        })
-      )
-      return func
-        .runPromiseAsSeries(createTaskPromises)
+      // An empty list means "all valid task types" server-side: skip the call.
+      if (taskTypeIds.length === 0) return shot
+      return dispatch('createEntityTasks', { entityId: shot.id, taskTypeIds })
         .then(() => shot)
         .catch(console.error)
     })
@@ -566,6 +560,27 @@ const actions = {
       .then(() => {
         commit(IMPORT_SHOTS_END)
       })
+  },
+
+  bulkCreateShots(
+    { commit, dispatch, rootGetters },
+    { shotNames, sequenceName, episodeName }
+  ) {
+    const isTVShow = rootGetters.isTVShow
+    const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const header = isTVShow ? 'Episode,Sequence,Name' : 'Sequence,Name'
+    const rows = shotNames.map(name =>
+      isTVShow
+        ? `${q(episodeName)},${q(sequenceName)},${q(name)}`
+        : `${q(sequenceName)},${q(name)}`
+    )
+    const csv = [header, ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const file = new File([blob], 'shots.csv', { type: 'text/csv' })
+    const formData = new FormData()
+    formData.append('file', file)
+    commit(SHOT_CSV_FILE_SELECTED, formData)
+    return dispatch('uploadShotFile', false)
   },
 
   uploadEdlFile({ rootGetters }, { edl_file, namingConvention, matchCase }) {
@@ -771,19 +786,33 @@ const actions = {
     commit(CLEAR_SELECTED_SHOTS)
   },
 
-  async deleteSelectedShots({ state, dispatch }) {
+  async deleteSelectedShots({ state, commit, rootGetters }) {
     let selectedShotIds = [...state.selectedShots.values()]
       .filter(shot => !shot.canceled)
       .map(shot => shot.id)
     if (selectedShotIds.length === 0) {
       selectedShotIds = [...state.selectedShots.keys()]
     }
-    for (const shotId of selectedShotIds) {
-      const shot = cache.shotMap.get(shotId)
-      if (shot) {
-        await dispatch('deleteShot', shot)
+    const shots = selectedShotIds
+      .map(shotId => cache.shotMap.get(shotId))
+      .filter(shot => shot)
+    if (shots.length === 0) return
+    await entitiesApi.deleteEntities(
+      rootGetters.currentProduction.id,
+      shots.map(shot => shot.id)
+    )
+    // Store bookkeeping batched into a single mutation: a per-shot commit
+    // costs a full list pass each.
+    const removedShots = []
+    const canceledShots = []
+    shots.forEach(shot => {
+      if (shot.tasks.length > 0 && !shot.canceled) {
+        canceledShots.push(shot)
+      } else {
+        removedShots.push(shot)
       }
-    }
+    })
+    commit(REMOVE_SHOTS, { removedShots, canceledShots })
   },
 
   async setNbFramesFromTaskTypePreviews(
@@ -1366,6 +1395,37 @@ const mutations = {
       state.displayedShotsFrames -= shotToDelete.nb_frames
     }
     state.displayedShotsDrawings -= shotToDelete.nb_drawings || 0
+  },
+
+  // Bulk variant of REMOVE_SHOT/CANCEL_SHOT: one pass over each list
+  // instead of one per deleted shot.
+  [REMOVE_SHOTS](state, { removedShots, canceledShots }) {
+    const removedIds = new Set(removedShots.map(shot => shot.id))
+    removedShots.forEach(shot => {
+      cache.shotMap.delete(shot.id)
+      removeEntryFromIndex(cache.shotIndex, shot)
+      if (shot.timeSpent && !shot.canceled) {
+        state.displayedShotsTimeSpent -= shot.timeSpent
+      }
+      if (shot.estimation && !shot.canceled) {
+        state.displayedShotsEstimation -= shot.estimation
+      }
+      if (shot.nb_frames) {
+        state.displayedShotsFrames -= shot.nb_frames
+      }
+      state.displayedShotsDrawings -= shot.nb_drawings || 0
+    })
+    cache.shots = cache.shots.filter(shot => !removedIds.has(shot.id))
+    cache.result = cache.result.filter(shot => !removedIds.has(shot.id))
+    state.displayedShots = state.displayedShots.filter(
+      shot => !removedIds.has(shot.id)
+    )
+    canceledShots.forEach(shot => {
+      shot.canceled = true
+    })
+    state.displayedShotsLength = cache.result.filter(
+      shot => !shot.canceled
+    ).length
   },
 
   [CANCEL_SHOT](state, shot) {

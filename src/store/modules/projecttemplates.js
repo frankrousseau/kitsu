@@ -90,6 +90,11 @@ const actions = {
     )
   },
 
+  reorderTemplateTaskTypes(_, { templateId, taskTypeIds }) {
+    if (!taskTypeIds?.length) return Promise.resolve()
+    return projectTemplatesApi.reorderTemplateTaskTypes(templateId, taskTypeIds)
+  },
+
   loadTemplateTaskStatuses(_, templateId) {
     return projectTemplatesApi.getTemplateTaskStatuses(templateId)
   },
@@ -110,6 +115,14 @@ const actions = {
     return projectTemplatesApi.removeTaskStatusFromTemplate(
       templateId,
       taskStatusId
+    )
+  },
+
+  reorderTemplateTaskStatuses(_, { templateId, taskStatusIds }) {
+    if (!taskStatusIds?.length) return Promise.resolve()
+    return projectTemplatesApi.reorderTemplateTaskStatuses(
+      templateId,
+      taskStatusIds
     )
   },
 

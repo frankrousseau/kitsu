@@ -53,6 +53,13 @@ export default {
     return await client.ppost('/api/data/task-status-links', data)
   },
 
+  reorderTaskStatusLinks(projectId, taskStatusIds) {
+    return client.ppost(
+      `/api/actions/projects/${projectId}/task-status-links/reorder`,
+      { task_status_ids: taskStatusIds }
+    )
+  },
+
   deleteTaskStatus(taskStatus) {
     return client.pdel(`/api/data/task-status/${taskStatus.id}`)
   }

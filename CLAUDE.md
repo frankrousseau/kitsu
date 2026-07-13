@@ -13,8 +13,8 @@ Kitsu is a production tracking web application for animation studios, built by C
 | Tests | `npm run test:unit` (vitest) |
 | Lint | `npm run lint` (eslint + prettier, auto-run on commit via husky + lint-staged) |
 | Build | `npm run build` |
-| Commit style | `[scope] Short description` (e.g. `[widgets] convert Combobox to composition API`) |
-| PR format | C4 contract — Problems / Solutions description |
+| Commit style | `[scope] Short description` (e.g. `[widgets] Convert Combobox to composition API`) |
+| PR format | C4 contract — `**Problem**` / `**Solution**` bold two-paragraph body (see below) |
 
 ## Architecture
 
@@ -79,6 +79,10 @@ A `<script setup>` component exposes nothing through a template ref (≠ Options
 - Fix: grep both ref styles and add the members to `defineExpose`.
 - If the parent only *wrote* state, prefer a watcher on the child's props and delete the ref access.
 
+#### Known eslint gotcha
+
+The eslint config does not detect template usage of component imports in `<script setup>`. Wrap those imports in `eslint-disable no-unused-vars` / `eslint-enable` comments (see `AddMetadataModal.vue` for the pattern).
+
 ### Script setup organization
 
 Group code by role with section comments, in this order:
@@ -106,21 +110,17 @@ const emit = defineEmits([...])
 </script>
 ```
 
+Skip sections that are not relevant. Order within each section is by usage proximity (related items together) rather than alphabetical.
+
 #### Import order
 
-Within `<script setup>`, sort imports **alphabetically by source path** within
-each of these blocks (separate blocks with a blank line):
+Within `<script setup>`, sort imports **alphabetically by source path** within each of these blocks (separate blocks with a blank line):
 
-1. Third-party packages (`vue`, `vue-i18n`, `vuex`, `vue-router`,
-   `lucide-vue-next`, `moment`, …) — alphabetical by package name.
-2. Project libs and composables (`@/lib/...`, `@/composables/...`,
-   `@/store/...`).
-3. Vue components (`@/components/...`) — alphabetical by path; named imports
-   alphabetical too.
+1. Third-party packages (`vue`, `vue-i18n`, `vuex`, `vue-router`, `lucide-vue-next`, `moment`, …) — alphabetical by package name.
+2. Project libs and composables (`@/lib/...`, `@/composables/...`, `@/store/...`).
+3. Vue components (`@/components/...`) — alphabetical by path; named imports alphabetical too.
 
 The same rule applies in `.js` files.
-
-Skip sections that are not relevant. Order within each section is by usage proximity (related items together) rather than alphabetical.
 
 ### Arrow functions
 
@@ -154,7 +154,9 @@ for (const item of items) {
 }
 ```
 
-Use imperative loops only when functional doesn't fit (side effects across iterations, performance-critical hot paths, or complex control flow).
+Use imperative loops only when functional doesn't fit (side effects across iterations, performance-critical hot paths, or complex control flow). **No `continue` mid-loop**: structure skip conditions as `if (condition) { ...work... }` nested branches, not `if (!condition) continue`. Early `return` in functions is fine.
+
+Keep comments minimal: only for the non-obvious *why* (library quirks, subtle ordering, data-format gotchas). Never restate what well-named code already says.
 
 ### Props
 
@@ -214,8 +216,9 @@ Shared toggle/select logic for custom combobox components.
 
 ## i18n
 
+- `src/locales/en.js` is the **source of truth** — new keys go there first. The other locales are kept in sync with it. POEditor was dropped (2026-05): non-English locales are LLM-translated directly in the JSON files.
 - Use `$t()` (or `t()` in `<script setup>`), never `$tc()` (deprecated in vue-i18n 9+).
-- Pluralization with pipe format: the locale key `"studio | studios"` works with `$t('key', count)` where the second argument is a number.
+- Pluralization with pipe format: the locale key `"studio | studios"` works with `$t('key', count)` where the second argument is a number. Every locale uses vue-i18n's DEFAULT plural resolver — keep the **same number of `|` segments as en.js**, don't add a language's extra grammatical plural forms.
 - For animation/VFX domain terms (shot, frame, onion skin, edit/montage, …), align translations with Blender's official terminology (`blender/blender-translations` `po/<lang>.po`, or the translated manual at `docs.blender.org/manual/<lang>/`).
 
 ```js
@@ -228,28 +231,17 @@ t('studios.title')
 
 ### Production-type terminology overlays
 
-`en.js` is the English source of truth. Two **partial overlays** are merged on
-top of it for specific production types:
+`en.js` is the English source of truth. Two **partial overlays** are merged on top of it for specific production types:
 
-- `en_nft.js` — NFT productions: remaps the *shot* concept to **NFT**
-  (`shot/shots/Shot/Shots → NFT/NFTs`). Sequence, episode, asset and edit are
-  unchanged.
-- `en_video-game.js` — video-game productions: `shot → map`,
-  `sequence → level`, `episode → chapter` (asset and edit unchanged).
+- `en_nft.js` — NFT productions: remaps the *shot* concept to **NFT** (`shot/shots/Shot/Shots → NFT/NFTs`). Sequence, episode, asset and edit are unchanged.
+- `en_video-game.js` — video-game productions: `shot → map`, `sequence → level`, `episode → chapter` (asset and edit unchanged).
 
 Rules:
 
-- These files contain **only** the keys whose wording differs from `en.js` —
-  never copy a key whose value is identical to the base.
-- Key names must **mirror `en.js` exactly**. When a key is renamed in `en.js`
-  (e.g. `creation_explaination → creation_explanation`), rename it in the
-  overlays too: a stale key becomes a dead override and the new base key then
-  leaks untranslated vocabulary (English "shot" showing in an NFT/map UI).
-- When a key is **added** to `en.js` whose value mentions a remapped word
-  (shot / sequence / episode), add the matching override to the relevant
-  overlay.
-- Only English has these overlays. The other locales (`fr.json`, …) translate
-  `en.js` and have no production-type variant.
+- These files contain **only** the keys whose wording differs from `en.js` — never copy a key whose value is identical to the base.
+- Key names must **mirror `en.js` exactly**. When a key is renamed in `en.js` (e.g. `creation_explaination → creation_explanation`), rename it in the overlays too: a stale key becomes a dead override and the new base key then leaks untranslated vocabulary (English "shot" showing in an NFT/map UI).
+- When a key is **added** to `en.js` whose value mentions a remapped word (shot / sequence / episode), add the matching override to the relevant overlay.
+- Only English has these overlays. The other locales (`fr.json`, …) translate `en.js` and have no production-type variant.
 
 ## CSS / SCSS
 
@@ -272,13 +264,13 @@ background: $white;    // breaks dark mode
 background: #ffffff;   // breaks dark mode
 ```
 
-SCSS variables (`$red`, `$green`, `$dark-grey-light`, etc.) are fine for non-theme values like accents and are defined in `src/variables.scss`.
-
-For colors that must differ between light/dark, always use `var(--*)`.
+SCSS variables (`$red`, `$green`, `$dark-grey-light`, etc.) are fine for non-theme values like accents and are defined in `src/variables.scss`. For colors that must differ between light/dark, always use `var(--*)`.
 
 ### Datatable pattern
 
 Tables use `.data-list > .datatable-wrapper > table.datatable`. The wrapper handles `overflow: auto` and `border-radius` globally from `App.vue`.
+
+Beware: global `.datatable-row` styles in `App.vue` paint backgrounds on `td` directly, so mobile overrides need `!important` at the `td` level.
 
 ### Responsive
 
@@ -288,11 +280,12 @@ Breakpoints used in the project:
 - `768px` — primary mobile/tablet breakpoint
 - `1000px` — secondary desktop breakpoint
 
-```scss
-@media screen and (max-width: 768px) {
-  // tablet and below
-}
-```
+**Mobile (≤768px) is read-only and card-based:**
+
+1. **Read-only**: hide all editing affordances — page-header action buttons (new, export), in-row edit/delete actions, any "click to edit" hint. Keep detail navigation (router-links on names).
+2. **Cards over rows**: render list entries as cards, not table rows, via pure CSS (table + `display: block` overrides on `tr`/`td`, hidden `<thead>`, badges for compact attributes). Don't duplicate markup with a separate mobile view.
+
+Apply with a `@media (max-width: 768px)` block: `:deep()` on the page header and `:deep(.actions) { display: none }` on rows, then flip the table to a flex card layout.
 
 ## Store (Vuex)
 
@@ -308,31 +301,41 @@ When editing/adding items, re-sort the list to maintain order (some mutations mi
 
 ### No direct `fetch` from components
 
-Components must never call `fetch()` (or any HTTP client) directly. All
-network calls go through:
+Components must never call `fetch()` (or any HTTP client) directly. All network calls go through:
 
-1. an API method in `src/store/api/<entity>.js` using the shared `client.*`
-   helpers (`pget`, `ppost`, `pput`, `pdel`),
-2. a Vuex action in `src/store/modules/<entity>.js` that wraps it and commits
-   the resulting mutations.
+1. an API method in `src/store/api/<entity>.js` using the shared `client.*` helpers (`pget`, `ppost`, `pput`, `pdel`),
+2. a Vuex action in `src/store/modules/<entity>.js` that wraps it and commits the resulting mutations.
 
-This keeps auth/error handling, retries and store updates centralised. If you
-find yourself reaching for `fetch` in a `.vue` file, add the missing API
-method and action instead.
+This keeps auth/error handling, retries and store updates centralised. If you find yourself reaching for `fetch` in a `.vue` file, add the missing API method and action instead.
 
 ## Testing
 
 - Test files go in `tests/unit/` with `.spec.js` extension
 - Framework: Vitest with jsdom
 - Run: `npm run test:unit`
+- A green unit test is NOT proof a UI/player bug is fixed — reproduce against the running dev app (localhost:8080) before claiming success.
 
 ## Migration status
 
-The codebase is migrating from Options API to Composition API. Many components (especially pages and modals) still use Options API with mixins. When touching these files, convert them to `<script setup>`.
+The codebase is migrating from Options API to Composition API. Many components (especially pages and modals) still use Options API with mixins. When touching these files, convert them to `<script setup>` (see the `composition-api-migration` skill).
 
 The `modalMixin` migration is done (the mixin has been removed). When converting a modal:
 1. Use `BaseModal` component if possible (handles markup + Escape key)
 2. Otherwise use `useModal(toRef(props, 'active'), emit)` directly
+
+Vue/Vuex/vue-router/vue-i18n are **deliberately pinned** to their current majors until the Composition API migration finishes. Do not propose major upgrades (Pinia, router majors) as fixes, and don't frame the pins as tech debt. A Vuex → Pinia migration is planned afterwards.
+
+## PR body format
+
+```markdown
+**Problem**
+- Concise bullet per issue
+
+**Solution**
+- Concise bullet per fix
+```
+
+Bold headers, no `## Problems` / `## Solutions` sections (harmonized across cgwire repos 2026-07). Bullets short and factual; no `🤖 Generated with` footer.
 
 ## Key dependencies
 
@@ -342,75 +345,6 @@ The `modalMixin` migration is done (the mixin has been removed). When converting
 - **moment / moment-timezone** — date handling (used throughout schedule and timesheet components)
 - **vue-multiselect** — people/entity selection dropdowns
 
-## Intégration des fonctionnalités IA dans Kitsu
+## AI features
 
-Cette section définit les règles à appliquer pour toute fonctionnalité IA ajoutée à Kitsu (cloud et self-hosted). Elle s'inspire de l'enquête [*Le forcing de l'IA*](https://limitesnumeriques.fr/travaux-productions/ai-forcing) (Limites Numériques, février 2025), qui documente les patterns par lesquels les éditeurs imposent l'IA via le design, au détriment des usages réels.
-
-**Principe directeur** : Kitsu intègre l'IA sans forcing. L'IA est une fonctionnalité comme une autre, justifiée par un usage validé, et non un produit poussé pour lui-même.
-
-### 1. Design d'interface
-
-- Pas de couleur dédiée à l'IA (pas de violet, mauve, dégradé bleu-rose, gradient shimmer).
-- Pas d'icône évoquant la magie (pas de ✨, pas d'étoile, pas de baguette).
-- Pas d'animation spécifique aux boutons ou zones IA quand les autres fonctions sont statiques.
-- Les fonctionnalités IA utilisent les mêmes composants visuels (couleurs, typographie, iconographie Material) que le reste de Kitsu.
-- Pas de placement privilégié : l'IA ne prend pas le bouton principal d'une vue (Tâches, Casting, Breakdown, Playlists). Elle se loge dans le contexte métier où elle a un sens.
-- Pas de répétition de la même fonction IA à plusieurs endroits de l'interface.
-
-### 2. Activation et contrôle
-
-- Activation explicite. Pas de déclenchement par raccourci clavier fréquent ou par clic accidentel sur la zone de saisie principale.
-- Opt-in par défaut, pas opt-out, pour toute fonctionnalité IA significative.
-- En self-hosted, IA désactivée par défaut, activable explicitement par l'administrateur du studio.
-- Bouton clair de désactivation par projet et par studio.
-
-### 3. Nommage et vocabulaire
-
-- Pas de prénom d'assistant ("Kit", "Kitty", "Kitsubot", etc.).
-- Pas de visage, d'avatar ou de mascotte associé à l'IA.
-- Pas de métaphore de l'"assistant" qui aide sans remplacer.
-- Pas de vocabulaire magique ("magie", "boost", "wow", "intelligent").
-- Décrire ce que la fonction fait, factuellement. Exemple : "Générer un résumé des notes de review", pas "Résumer ✨".
-- Indiquer aussi ce que la fonction ne fait pas et ses limites connues (taux d'erreur, hallucinations possibles, types de contenus mal traités).
-
-### 4. Transparence
-
-- Pour chaque appel IA, le studio peut savoir : quel modèle est utilisé, où il tourne (local ou cloud), quelles données sortent du studio, vers quel fournisseur.
-- Cette information est accessible dans les paramètres et dans la documentation, pas cachée derrière plusieurs clics.
-- Quand pertinent, exposer le coût (tokens, latence, ordre de grandeur énergétique) à l'admin du studio.
-- Privilégier les modèles locaux ou auto-hébergeables quand c'est viable, surtout pour le self-hosted.
-
-### 5. Choix de fonctionnalités
-
-- Une fonctionnalité IA n'est développée que pour répondre à un point de douleur identifié et validé avec 2 ou 3 studios pilotes.
-- Pas de fonctionnalité IA "parce qu'il en faut" ou "parce que les concurrents en ont".
-- Pas de "tâtonnement" public : les expérimentations restent en feature flag ou en bêta privée tant que l'usage n'est pas démontré.
-- Mesure de l'usage réel (pas le premier clic d'essai). Une fonction non utilisée au bout de 3 mois est retirée, pas conservée par inertie.
-
-### 6. Communication produit
-
-- Pas de pop-up d'annonce, de modal d'onboarding ou de tour guidé poussant à essayer l'IA.
-- Pas de badge "Nouveau" ou "AI" clignotant sur le bouton.
-- Une page de documentation dédiée suffit. Le changelog mentionne la fonctionnalité au même niveau que les autres.
-- Sur le blog et la roadmap, expliquer **pourquoi** la fonction arrive (quel problème studio elle résout), pas seulement qu'elle arrive.
-
-### 7. Cadrage éditorial
-
-- L'IA est cadrée en empowerment des équipes (artistes, supes, prod), pas en remplacement.
-- Le ton évite l'emphase sur la performance brute du modèle, et insiste sur l'intégration dans le workflow.
-- Cohérent avec la sensibilité de la communauté open source VFX/animation : transparence, respect des métiers, attention à l'empreinte.
-
-### 8. Positionnement
-
-Cette charte n'est pas seulement défensive. Elle ouvre un angle de différenciation : Kitsu peut se positionner comme **le production tracker qui intègre l'IA sans forcing**, à rebours des patterns documentés par Limites Numériques. Cet angle peut être assumé publiquement (article de blog dédié, mention dans la doc, communication communauté).
-
-### Checklist de revue avant merge d'une feature IA
-
-- [ ] Aucune couleur, icône ou animation spécifique IA
-- [ ] Activation explicite, pas de raccourci ambigu
-- [ ] Opt-in (et désactivé par défaut en self-hosted)
-- [ ] Pas d'anthropomorphisation
-- [ ] Modèle, hébergement et données documentés et visibles
-- [ ] Point de douleur validé avec au moins 2 studios pilotes
-- [ ] Métriques d'usage en place
-- [ ] Pas de pop-up ou onboarding poussant à l'essai
+Kitsu integrates AI **without forcing**: no dedicated AI styling, opt-in activation (disabled by default on self-hosted), no anthropomorphization, full transparency on models and data flows, and features only built for validated studio pain points. Before adding or reviewing any AI feature, read the full charter and its merge checklist: [`docs/ai-integration-charter.md`](./docs/ai-integration-charter.md).

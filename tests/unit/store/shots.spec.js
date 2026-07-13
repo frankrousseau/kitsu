@@ -5,6 +5,8 @@ import { vi } from 'vitest'
 vi.mock('@/store', () => ({ default: {} }))
 
 import shotsStore from '@/store/modules/shots'
+import entitiesApi from '@/store/api/entities'
+import { buildShotIndex } from '@/lib/indexing'
 
 describe('Shots store', () => {
   describe('loading flag lifecycle', () => {
@@ -36,6 +38,129 @@ describe('Shots store', () => {
 
       expect(dispatch).not.toHaveBeenCalled()
       expect(commit.mock.calls.map(c => c[0])).not.toContain('LOAD_SHOTS_START')
+    })
+  })
+
+  describe('batched deletion (PERF-4)', () => {
+    const buildShot = (id, options = {}) => ({
+      id,
+      name: id,
+      tasks: [],
+      canceled: false,
+      timeSpent: 10,
+      estimation: 20,
+      nb_frames: 5,
+      nb_drawings: 2,
+      sequence_name: 'SQ01',
+      episode_name: 'E01',
+      ...options
+    })
+
+    const buildState = shots => {
+      shotsStore.cache.shotMap = new Map(shots.map(shot => [shot.id, shot]))
+      shotsStore.cache.shots = [...shots]
+      shotsStore.cache.result = [...shots]
+      shotsStore.cache.shotIndex = buildShotIndex(shots)
+      return {
+        displayedShots: [...shots],
+        displayedShotsTimeSpent: 100,
+        displayedShotsEstimation: 200,
+        displayedShotsFrames: 50,
+        displayedShotsDrawings: 20,
+        displayedShotsLength: shots.length
+      }
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    test('REMOVE_SHOTS matches sequential REMOVE_SHOT/CANCEL_SHOT', () => {
+      const buildFixture = () => [
+        buildShot('shot-1'),
+        buildShot('shot-2', { tasks: ['task-1'] }),
+        buildShot('shot-3')
+      ]
+
+      const bulkShots = buildFixture()
+      const bulkState = buildState(bulkShots)
+      shotsStore.mutations.REMOVE_SHOTS(bulkState, {
+        removedShots: [bulkShots[0], bulkShots[2]],
+        canceledShots: [bulkShots[1]]
+      })
+      const bulkCache = {
+        shots: shotsStore.cache.shots,
+        result: shotsStore.cache.result,
+        mapKeys: [...shotsStore.cache.shotMap.keys()]
+      }
+
+      const seqShots = buildFixture()
+      const seqState = buildState(seqShots)
+      shotsStore.mutations.REMOVE_SHOT(seqState, seqShots[0])
+      shotsStore.mutations.REMOVE_SHOT(seqState, seqShots[2])
+      shotsStore.mutations.CANCEL_SHOT(seqState, seqShots[1])
+
+      expect(bulkState).toEqual(seqState)
+      expect(bulkCache.shots).toEqual(shotsStore.cache.shots)
+      expect(bulkCache.result).toEqual(shotsStore.cache.result)
+      expect(bulkCache.mapKeys).toEqual([...shotsStore.cache.shotMap.keys()])
+      expect(bulkShots[1].canceled).toBe(true)
+    })
+
+    test('deleteSelectedShots deletes in one request and commits once', async () => {
+      const shotToRemove = buildShot('shot-1')
+      const shotToCancel = buildShot('shot-2', { tasks: ['task-1'] })
+      buildState([shotToRemove, shotToCancel])
+      const state = {
+        selectedShots: new Map([
+          ['shot-1', shotToRemove],
+          ['shot-2', shotToCancel]
+        ])
+      }
+      const rootGetters = { currentProduction: { id: 'p1' } }
+
+      vi.spyOn(entitiesApi, 'deleteEntities').mockResolvedValue()
+      const commit = vi.fn()
+
+      await shotsStore.actions.deleteSelectedShots({
+        state,
+        commit,
+        rootGetters
+      })
+
+      expect(entitiesApi.deleteEntities).toHaveBeenCalledTimes(1)
+      expect(entitiesApi.deleteEntities).toHaveBeenCalledWith('p1', [
+        'shot-1',
+        'shot-2'
+      ])
+      expect(commit).toHaveBeenCalledTimes(1)
+      expect(commit).toHaveBeenCalledWith('REMOVE_SHOTS', {
+        removedShots: [shotToRemove],
+        canceledShots: [shotToCancel]
+      })
+    })
+
+    test('a failed bulk deletion commits nothing', async () => {
+      const shotOk = buildShot('shot-1')
+      const shotKo = buildShot('shot-2')
+      buildState([shotOk, shotKo])
+      const state = {
+        selectedShots: new Map([
+          ['shot-1', shotOk],
+          ['shot-2', shotKo]
+        ])
+      }
+      const rootGetters = { currentProduction: { id: 'p1' } }
+
+      vi.spyOn(entitiesApi, 'deleteEntities').mockRejectedValue(
+        new Error('boom')
+      )
+      const commit = vi.fn()
+
+      await expect(
+        shotsStore.actions.deleteSelectedShots({ state, commit, rootGetters })
+      ).rejects.toThrow('boom')
+      expect(commit).not.toHaveBeenCalled()
     })
   })
 })

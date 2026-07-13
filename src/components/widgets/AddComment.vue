@@ -889,21 +889,19 @@ const setValue = async comment => {
   checklistItems.value = JSON.parse(JSON.stringify(comment.checklist))
   text.value = comment.text
 
-  // duplicate attachment files
-  attachments.value = (
-    await Promise.all(
-      comment.attachment_files.map(async attachment => {
-        try {
-          const fileBlob = await filesApi.getAttachmentFileBlob(attachment)
-          const formData = new FormData()
-          formData.append('file', fileBlob, attachment.name)
-          return formData
-        } catch {
-          return null
-        }
-      })
-    )
-  ).filter(Boolean)
+  // duplicate attachment files, one download at a time
+  const duplicatedAttachments = []
+  for (const attachment of comment.attachment_files) {
+    try {
+      const fileBlob = await filesApi.getAttachmentFileBlob(attachment)
+      const formData = new FormData()
+      formData.append('file', fileBlob, attachment.name)
+      duplicatedAttachments.push(formData)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+  attachments.value = duplicatedAttachments
 }
 
 const onAtTextChanged = input => {

@@ -369,7 +369,7 @@ export default {
     },
 
     getWeekTitle(week) {
-      const beginning = moment(this.currentYear + '-' + week, 'YYYY-W')
+      const beginning = moment(this.year + '-' + week, 'YYYY-W')
       const end = beginning.clone().add(6, 'days')
       return beginning.format('YYYY-MM-DD') + ' - ' + end.format('YYYY-MM-DD')
     },

@@ -27,7 +27,7 @@ const removeRvfcMock = () => {
   delete HTMLVideoElement.prototype.cancelVideoFrameCallback
 }
 
-const mountViewer = () => {
+const mountViewer = (props = {}) => {
   const store = createStore({
     getters: { currentProduction: () => ({ fps: '25' }) }
   })
@@ -37,7 +37,8 @@ const mountViewer = () => {
         { id: 'e1', preview_file_id: 'p1', preview_file_extension: 'mp4', fps: 25 },
         { id: 'e2', preview_file_id: 'p2', preview_file_extension: 'mp4', fps: 25 }
       ],
-      name: 'main'
+      name: 'main',
+      ...props
     },
     global: {
       mocks: { $t: key => key },
@@ -181,6 +182,30 @@ describe('players/MultiVideoViewer (canvas pipeline)', () => {
     expect(wrapper.vm.currentPlayer.src).toContain(
       '/movies/low/preview-files/p1b.mp4'
     )
+
+    wrapper.unmount()
+  })
+
+  it('pre-seeks the preloaded decoder to the next entity handle-in (#1019)', async () => {
+    const wrapper = mountViewer({ nextHandleIn: 100 })
+
+    wrapper.vm.loadEntity(0)
+    await wrapper.vm.$nextTick()
+
+    const current = wrapper.vm.currentPlayer
+    const next = wrapper
+      .findAll('video.playlist-movie-decoder')
+      .map(w => w.element)
+      .find(el => el !== current)
+
+    // The decoder preloading e2 must already be parked on its handle-in
+    // frame so the slate at frame 0 never flashes when players switch
+    expect(next.src).toContain('/movies/low/preview-files/p2.mp4')
+    expect(next.currentTime).toBeCloseTo(100 / 25)
+
+    // A handle change on the next entity re-parks the decoder
+    await wrapper.setProps({ nextHandleIn: 50 })
+    expect(next.currentTime).toBeCloseTo(50 / 25)
 
     wrapper.unmount()
   })
