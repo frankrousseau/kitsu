@@ -2180,6 +2180,18 @@ const playEntity = (entityIndex, updateFullPlaylist = true, frame = -1) => {
     nextTick(() => {
       rawPlayer.value?.loadEntity(entityIndex, 0, true)
     })
+    // Unlike movies, pictures have no time-update channel driving the
+    // playlist playhead: jump it to the entity's slot here, even while
+    // playing. Strip clicks/drags pass updateFullPlaylist=false and keep
+    // their exact clicked position.
+    if (updateFullPlaylist && entity) {
+      if (isFullMode.value && !isPlaying.value) {
+        fullPlaylistPlayer.value.currentTime = entity.start_duration
+        playlistProgress.value = entity.start_duration
+      } else if (!isFullMode.value) {
+        playlistProgress.value = entity.start_duration
+      }
+    }
     const ann = getAnnotation(0)
     if (!isPlaying.value) loadAnnotation(ann)
     if (wasDrawing) {
