@@ -111,14 +111,14 @@ describe('Comment attachments', () => {
   })
 
   it('renders a paperclip download link for other files', () => {
-    const links = wrapper.findAll('a.flexrow')
+    const links = wrapper.findAll('a.attachment-file-link')
     const pdfLink = links.find(link => link.text().includes('doc.pdf'))
     expect(pdfLink).toBeTruthy()
   })
 
   it('does not render a paperclip download link for audio/video files', () => {
     const linkText = wrapper
-      .findAll('a.flexrow')
+      .findAll('a.attachment-file-link')
       .map(link => link.text())
       .join(' ')
     expect(linkText).not.toContain('voice.wav')

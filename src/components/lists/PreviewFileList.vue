@@ -89,7 +89,7 @@ import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
 import { getTaskPath } from '@/lib/path'
-import { formatDate } from '@/lib/time'
+import { formatDate as formatDateBase } from '@/lib/time'
 
 import ProductionNameCell from '@/components/cells/ProductionNameCell.vue'
 import TaskTypeCell from '@/components/cells/TaskTypeCell.vue'
@@ -117,8 +117,13 @@ const headerWrapper = ref(null)
 
 const productionMap = computed(() => store.getters.productionMap)
 const taskTypeMap = computed(() => store.getters.taskTypeMap)
+const dateFormat = computed(() => store.getters.dateFormat)
+const use12HourClock = computed(() => store.getters.use12HourClock)
 
 // Functions
+
+const formatDate = date =>
+  formatDateBase(date, dateFormat.value, use12HourClock.value)
 
 const onBodyScroll = event => {
   headerWrapper.value.style.left = `-${event.target.scrollLeft}px`

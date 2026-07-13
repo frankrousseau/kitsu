@@ -47,6 +47,7 @@
         v{{ entry.revision }} - {{ formatFrame(entry.frame) }}
       </span>
       <span
+        class="checklist-clock"
         role="button"
         tabindex="0"
         @click="setFrame(entry)"
@@ -259,33 +260,79 @@ const toggleEntryChecked = entry => {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
+  gap: 0.2em;
   margin-bottom: 0.3em;
 
+  // Single-line clickable columns share one 20px line box so the checkbox,
+  // frame badge and clock stay centered on the label's first line. They are
+  // never multi-line, so centering them is safe.
+  .checklist-checkbox,
+  .checklist-clock,
+  .frame {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    cursor: pointer;
+
+    .icon {
+      width: 20px;
+    }
+
+    .clock {
+      width: 16px;
+    }
+  }
+
+  .frame {
+    justify-content: center;
+    border: 1px solid var(--border-alt);
+    border-radius: 4px;
+    width: 70px;
+    padding: 0 0.3em;
+    font-size: 0.85em;
+    white-space: nowrap;
+
+    // The a11y pass made this a focusable button; its own border already
+    // signals focus, so darken it instead of stacking the default outline.
+    &:focus-visible {
+      outline: none;
+      border-color: var(--text-alt);
+    }
+  }
+
+  // Text columns keep a matching 20px line box on their first line, but stay
+  // flow-content (not flex) so multi-line values grow downward with their
+  // first line still aligned to the checkbox (align-items: flex-start).
   .checklist-label,
   .checklist-text {
     font-size: 0.9em;
-    padding: 0.2em;
+    line-height: 20px;
+    padding: 0 0.3em;
   }
 
   .checklist-label {
     color: #333;
     cursor: default;
-    margin-right: 0;
   }
 
   .checklist-text {
-    padding-top: 0;
-    margin-right: 0.5em;
-    margin-top: 4px;
     width: 100%;
     min-height: 20px;
+    margin-right: 0.5em;
     border: 1px solid transparent;
+    border-radius: 4px;
     resize: none;
 
     &:focus,
     &:active,
     &:hover {
       border: 1px solid $light-grey;
+    }
+
+    // The focus border is the visible indicator; suppress the default
+    // outline the a11y pass left doubled on top of it.
+    &:focus {
+      outline: none;
     }
 
     &:disabled {
@@ -312,31 +359,6 @@ const toggleEntryChecked = entry => {
         fill: rgba($light-grey-2, 0.15);
       }
     }
-  }
-
-  span {
-    cursor: pointer;
-    padding: 0.2em 0 0 0;
-    margin-right: 0.2em;
-    margin-left: 0;
-
-    .icon {
-      width: 20px;
-    }
-
-    .clock {
-      width: 16px;
-    }
-  }
-
-  .frame {
-    border: 1px solid var(--border-alt);
-    border-radius: 4px;
-    width: 70px;
-    margin-top: 2px;
-    padding: 0 0.2em;
-    text-align: center;
-    white-space: nowrap;
   }
 }
 </style>

@@ -1,20 +1,18 @@
 <template>
   <div class="attachment-audio-player">
-    <div class="attachment-audio">
-      <audio ref="mediaEl" :src="src" preload="metadata" @error="onError" />
+    <div class="attachment-error" v-if="hasError">
+      <volume-x-icon class="attachment-error-icon" :size="18" />
+      <span class="attachment-error-text">
+        <span class="attachment-error-label">
+          {{ $t('comments.player.audio_unavailable') }}
+        </span>
+        <span class="attachment-error-name" v-if="name">{{ name }}</span>
+      </span>
+    </div>
 
-      <a
-        class="flexrow attachment-fallback"
-        :href="downloadHref || src"
-        :title="name"
-        target="_blank"
-        v-if="hasError"
-      >
-        <paperclip-icon class="flexrow-item attachment-icon icon-1x" />
-        <span class="flexrow-item">{{ name }}</span>
-      </a>
-
-      <template v-else>
+    <template v-else>
+      <div class="attachment-audio">
+        <audio ref="mediaEl" :src="src" preload="metadata" @error="onError" />
         <button
           class="player-button play-button"
           :aria-label="
@@ -55,21 +53,17 @@
         >
           <download-icon :size="14" />
         </a>
-      </template>
-    </div>
-    <span
-      class="attachment-name"
-      :title="name"
-      v-if="showName && name && !hasError"
-      >{{ name }}</span
-    >
+      </div>
+      <span class="attachment-name" :title="name" v-if="showName && name">{{
+        name
+      }}</span>
+    </template>
   </div>
 </template>
 
 <script setup>
 import {
   DownloadIcon,
-  PaperclipIcon,
   PauseIcon,
   PlayIcon,
   Volume2Icon,
@@ -171,7 +165,51 @@ const onError = () => {
   white-space: nowrap;
 }
 
-.attachment-fallback {
+.attachment-error {
+  align-items: center;
+  background: var(--background-page);
+  border: 1px solid var(--border-alt);
+  border-radius: 8px;
   color: var(--text);
+  display: flex;
+  gap: 0.6em;
+  max-width: 32em;
+  padding: 0.6em 0.8em;
+}
+
+.attachment-error-icon {
+  color: var(--text-alt);
+  flex-shrink: 0;
+}
+
+.dark .attachment-error {
+  border-color: #565a62;
+}
+
+.dark .attachment-error-icon,
+.dark .attachment-error-name {
+  opacity: 0.7;
+}
+
+.attachment-error-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.1em;
+  margin-left: 0.3em;
+  min-width: 0;
+}
+
+.attachment-error-label {
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.attachment-error-name {
+  color: var(--text-alt);
+  font-size: 0.8em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

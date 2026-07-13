@@ -1730,6 +1730,26 @@ tbody:last-child .empty-line:last-child {
   }
 }
 
+.datatable th .field-header .flexrow-item:first-child {
+  flex: 1;
+}
+
+.datatable th .asset-field-menu-button {
+  align-items: center;
+  background: var(--background-alt);
+  border-radius: 50%;
+  display: inline-flex;
+  flex: 0 0 16px;
+  height: 16px;
+  justify-content: center;
+  padding: 1px;
+  width: 16px;
+}
+
+.datatable th .add-metadata-button {
+  margin-left: 0.3em;
+}
+
 // width: 0 + flex: 1 forces the link to size from flex space (not content), so the column can be resized smaller than the longest name.
 // :not(.thumbnail-wrapper, .avatar) excludes the EntityThumbnail anchor and PeopleAvatar which are also direct children of .flexrow.
 .datatable th.name .flexrow > a:not(.thumbnail-wrapper, .avatar),

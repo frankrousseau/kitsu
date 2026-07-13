@@ -150,6 +150,7 @@
       </div>
       <div class="post-area">
         <checklist
+          class="checklist"
           :checklist="checklistItems"
           :frame="frame + 1"
           :revision="revision"
@@ -1242,6 +1243,10 @@ article.add-comment {
 .post-area {
   position: relative;
   padding: 0 0.5em 0.2em 0.5em;
+}
+
+.checklist {
+  margin-top: 0.5em;
 }
 
 .progress-wrapper {

@@ -579,6 +579,80 @@ describe('lib/sorting', () => {
     expect(resultsTaskTypes.map(entry => entry.id)).toEqual([5, 3, 2, 1, 4])
   })
 
+  it('sortAssetResult by field', () => {
+    const entries = [
+      {
+        id: 1,
+        canceled: false,
+        name: 'Banana',
+        asset_type_name: 'prop',
+        estimation: 5,
+        episode_id: 'ep2'
+      },
+      {
+        id: 2,
+        canceled: false,
+        name: 'apple',
+        asset_type_name: 'prop',
+        estimation: 20,
+        episode_id: 'ep1'
+      },
+      {
+        id: 3,
+        canceled: false,
+        name: '',
+        asset_type_name: 'prop',
+        estimation: 3,
+        episode_id: null
+      }
+    ]
+    const taskMap = new Map()
+    const episodeMap = new Map([
+      ['ep1', { name: 'Alpha' }],
+      ['ep2', { name: 'Zeta' }]
+    ])
+
+    const byName = sortAssetResult(
+      entries,
+      [{ type: 'field', column: 'name' }],
+      taskTypeMap,
+      taskMap,
+      episodeMap
+    )
+    // empty name sorts last
+    expect(byName.map(entry => entry.id)).toEqual([2, 1, 3])
+
+    // numeric field compares as numbers, not lexicographically ('20' > '5')
+    const byEstimation = sortAssetResult(
+      entries,
+      [{ type: 'field', column: 'estimation' }],
+      taskTypeMap,
+      taskMap,
+      episodeMap
+    )
+    expect(byEstimation.map(entry => entry.id)).toEqual([3, 1, 2])
+
+    // episode_id resolves to the episode name through episodeMap
+    const byEpisode = sortAssetResult(
+      entries,
+      [{ type: 'field', column: 'episode_id' }],
+      taskTypeMap,
+      taskMap,
+      episodeMap
+    )
+    expect(byEpisode.map(entry => entry.id)).toEqual([2, 1, 3])
+
+    // ascending: false reverses the order
+    const byNameDesc = sortAssetResult(
+      entries,
+      [{ type: 'field', column: 'name', ascending: false }],
+      taskTypeMap,
+      taskMap,
+      episodeMap
+    )
+    expect(byNameDesc.map(entry => entry.id)).toEqual([3, 1, 2])
+  })
+
   it('sortShotResult', () => {
     const entries = [
       {

@@ -210,7 +210,7 @@ import Multiselect from 'vue-multiselect'
 import 'vue-multiselect/dist/vue-multiselect.min.css'
 
 import { useTime } from '@/composables/time'
-import { formatSimpleDate } from '@/lib/time'
+import { formatDisplayDate, formatSimpleDate } from '@/lib/time'
 
 import BaseModal from '@/components/modals/BaseModal.vue'
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
@@ -218,7 +218,7 @@ import Checkbox from '@/components/widgets/Checkbox.vue'
 import DateField from '@/components/widgets/DateField.vue'
 
 const { t } = useI18n()
-const { tomorrow } = useTime()
+const { tomorrow, dateFormat } = useTime()
 const store = useStore()
 
 const props = defineProps({
@@ -422,7 +422,7 @@ const copyLink = token => {
 
 const formatDate = dateStr => {
   if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString()
+  return formatDisplayDate(dateStr, dateFormat.value)
 }
 
 onMounted(() => {

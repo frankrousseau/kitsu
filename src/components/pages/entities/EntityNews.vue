@@ -17,7 +17,7 @@
           }"
         ></span>
         <span class="date flexrow-item">
-          {{ formatFullDate(news.created_at).substring(10, 0) }}
+          {{ formatDisplayDate(news.created_at) }}
         </span>
 
         <people-avatar

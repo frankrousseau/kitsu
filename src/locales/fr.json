@@ -153,7 +153,10 @@
         "mute": "Couper le son",
         "unmute": "Rétablir le son",
         "fullscreen": "Plein écran",
-        "download": "Télécharger"
+        "download": "Télécharger",
+        "video_unavailable": "Vidéo indisponible",
+        "audio_unavailable": "Audio indisponible",
+        "image_unavailable": "Image indisponible"
       }
     },
     "custom_actions": {

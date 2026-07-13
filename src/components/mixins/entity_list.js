@@ -1,3 +1,5 @@
+import { computed } from 'vue'
+
 import colors from '@/lib/colors'
 import preferences from '@/lib/preferences'
 import stringHelpers from '@/lib/string'
@@ -17,6 +19,15 @@ export const entityListMixin = {
     'scroll'
   ],
 
+  provide() {
+    return {
+      activeFieldSort: computed(() => {
+        const current = this.$store.getters[`${this.type}Sorting`]?.[0]
+        return current && current.type === 'field' ? current : null
+      })
+    }
+  },
+
   created() {
     this.initHiddenColumns(this.validationColumns, this.hiddenColumns)
   },
@@ -25,6 +36,8 @@ export const entityListMixin = {
     if (this.resizeHeaders) this.resizeHeaders()
     window.addEventListener('keydown', this.onKeyDown, false)
     window.addEventListener('keyup', this.onKeyUp, false)
+    document.addEventListener('click', this.onHeaderMenuDocumentClick)
+    document.addEventListener('keydown', this.onHeaderMenuDocumentKeyDown)
     this.stickedColumns =
       preferences.getObjectPreference(this.localStorageStickKey) || {}
     if (this.domEvents) this.addEvents(this.domEvents)
@@ -33,6 +46,8 @@ export const entityListMixin = {
   beforeUnmount() {
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('keyup', this.onKeyUp)
+    document.removeEventListener('click', this.onHeaderMenuDocumentClick)
+    document.removeEventListener('keydown', this.onHeaderMenuDocumentKeyDown)
     if (this.domEvents) {
       this.removeEvents(this.domEvents)
       document.body.style.cursor = 'default'
@@ -279,26 +294,90 @@ export const entityListMixin = {
       this.updateTaskInQuery()
     },
 
+    hideHeaderMenu(refName) {
+      this.$refs[refName]?.$el?.classList.add('hidden')
+    },
+
+    hideHeaderMenus(exceptRefName = null) {
+      ;['headerMenu', 'headerMetadataMenu', 'headerFieldMenu']
+        .filter(refName => refName !== exceptRefName)
+        .forEach(refName => this.hideHeaderMenu(refName))
+    },
+
+    showHeaderMenuAt(refName, event, getHeaderElement, offset = {}) {
+      const headerMenuEl = this.$refs[refName]?.$el
+      if (!headerMenuEl) return
+      if (!event || !headerMenuEl.classList.contains('hidden')) {
+        headerMenuEl.classList.add('hidden')
+        return
+      }
+
+      this.hideHeaderMenus(refName)
+      headerMenuEl.classList.remove('hidden')
+
+      const headerElement = getHeaderElement(event)
+      const headerBox = headerElement.getBoundingClientRect()
+      const left = headerBox.left + (offset.left || 0)
+      const top = headerBox.bottom + (offset.top || 0)
+      const width = Math.max(100, headerBox.width - 1)
+      headerMenuEl.style.left = `${left}px`
+      headerMenuEl.style.top = `${top}px`
+      headerMenuEl.style.width = `${width}px`
+    },
+
     showHeaderMenu(columnId, columnIndexInGrid, event) {
-      const headerMenuEl = this.$refs.headerMenu.$el
-      if (headerMenuEl.className === 'header-menu') {
-        headerMenuEl.className = 'header-menu hidden'
-      } else {
-        headerMenuEl.className = 'header-menu'
+      this.showHeaderMenuAt('headerMenu', event, event => {
         let headerElement = event.srcElement.parentNode.parentNode
         if (headerElement.tagName !== 'TH') {
           headerElement = headerElement.parentNode
         }
-        const headerBox = headerElement.getBoundingClientRect()
-        const left = headerBox.left
-        const top = headerBox.bottom
-        const width = Math.max(100, headerBox.width - 1)
-        headerMenuEl.style.left = `${left}px`
-        headerMenuEl.style.top = `${top}px`
-        headerMenuEl.style.width = `${width}px`
-      }
+        return headerElement
+      })
       this.lastHeaderMenuDisplayed = columnId
       this.lastHeaderMenuDisplayedIndexInGrid = columnIndexInGrid
+    },
+
+    showFieldHeaderMenu(fieldName, label, event) {
+      this.showHeaderMenuAt(
+        'headerFieldMenu',
+        event,
+        event => event.currentTarget.closest('th'),
+        { left: -3, top: 11 }
+      )
+      this.lastFieldHeaderMenuDisplayed = fieldName
+      if (label !== undefined) this.lastFieldHeaderMenuLabel = label
+    },
+
+    onHeaderMenuDocumentClick(event) {
+      if (
+        event.target.closest('.header-menu') ||
+        event.target.closest('.header-icon')
+      ) {
+        return
+      }
+      this.hideHeaderMenus()
+    },
+
+    onHeaderMenuDocumentKeyDown(event) {
+      if (event.key === 'Escape') {
+        this.hideHeaderMenus()
+      }
+    },
+
+    onSortByFieldClicked() {
+      const column = this.lastFieldHeaderMenuDisplayed
+      const current = this.$store.getters[`${this.type}Sorting`]?.[0]
+      const ascending =
+        current && current.type === 'field' && current.column === column
+          ? !current.ascending
+          : true
+      this.$emit('change-sort', {
+        type: 'field',
+        column,
+        name: this.lastFieldHeaderMenuLabel,
+        ascending
+      })
+      this.showFieldHeaderMenu(column)
     },
 
     onMinimizeColumnToggled() {

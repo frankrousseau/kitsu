@@ -623,7 +623,7 @@ import { mapGetters, mapActions } from 'vuex'
 import { PlusIcon, XIcon } from 'lucide-vue-next'
 
 import { DEFAULT_NB_FRAMES_PICTURE } from '@/lib/playlist'
-import { formatDate } from '@/lib/time'
+import { formatDate as formatDateBase } from '@/lib/time'
 import { getPlaylistPath } from '@/lib/path'
 import { updateModelFromList, removeModelFromList } from '@/lib/models'
 import { sortAssets, sortShots } from '@/lib/sorting'
@@ -725,6 +725,7 @@ export default {
       'assetSearchText',
       'currentEpisode',
       'currentProduction',
+      'dateFormat',
       'displayedAssets',
       'displayedAssetsByType',
       'displayedEdits',
@@ -747,7 +748,8 @@ export default {
       'shotSearchText',
       'taskMap',
       'taskStatusMap',
-      'taskTypeMap'
+      'taskTypeMap',
+      'use12HourClock'
     ]),
 
     isAdditionLoading() {
@@ -895,7 +897,7 @@ export default {
     // Helpers
 
     formatDate(dateString) {
-      return formatDate(dateString)
+      return formatDateBase(dateString, this.dateFormat, this.use12HourClock)
     },
 
     isCurrentProjectEvent(eventData) {

@@ -179,6 +179,7 @@ import moment from 'moment-timezone'
 import { mapGetters } from 'vuex'
 
 import {
+  formatDisplayDate,
   getMonthRange,
   getWeekRange,
   getDayRange,
@@ -250,7 +251,7 @@ export default {
   },
 
   computed: {
-    ...mapGetters(['dayOffMap', 'organisation', 'route']),
+    ...mapGetters(['dateFormat', 'dayOffMap', 'organisation', 'route']),
 
     yearRange() {
       return range(2018, moment().year())
@@ -371,7 +372,11 @@ export default {
     getWeekTitle(week) {
       const beginning = moment(this.year + '-' + week, 'YYYY-W')
       const end = beginning.clone().add(6, 'days')
-      return beginning.format('YYYY-MM-DD') + ' - ' + end.format('YYYY-MM-DD')
+      return (
+        formatDisplayDate(beginning, this.dateFormat) +
+        ' - ' +
+        formatDisplayDate(end, this.dateFormat)
+      )
     },
 
     getYearDetailRoute(person, year) {

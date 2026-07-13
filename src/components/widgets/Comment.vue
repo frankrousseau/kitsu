@@ -139,19 +139,12 @@
               v-if="checklistItems.length > 0"
             />
             <p v-if="comment.attachment_files.length > 0">
-              <a
-                :href="getDownloadAttachmentPath(attachment)"
-                :key="attachment.id"
-                :title="attachment.name"
-                target="_blank"
+              <attachment-image
                 v-for="attachment in pictureAttachments"
-              >
-                <img
-                  class="attachment"
-                  :src="getDownloadAttachmentPath(attachment)"
-                  :alt="attachment.name"
-                />
-              </a>
+                :key="attachment.id"
+                :src="getDownloadAttachmentPath(attachment)"
+                :name="attachment.name"
+              />
               <attachment-audio-player
                 v-for="attachment in audioAttachments"
                 :key="attachment.id"
@@ -170,14 +163,13 @@
                 :href="getDownloadAttachmentPath(attachment)"
                 :key="attachment.id"
                 :title="attachment.name"
-                class="flexrow"
+                class="attachment-file-link"
                 target="_blank"
                 v-for="attachment in fileAttachments"
               >
-                <paperclip-icon class="flexrow-item attachment-icon icon-1x" />
-                <span class="flexrow-item">
-                  {{ attachment.name }}
-                </span>
+                <paperclip-icon class="attachment-icon" :size="16" />
+                <span class="attachment-file-name">{{ attachment.name }}</span>
+                <download-icon class="attachment-download-icon" :size="15" />
               </a>
             </p>
             <div class="replies">
@@ -238,20 +230,13 @@
                 ></p>
 
                 <p>
-                  <a
-                    :href="getDownloadAttachmentPath(attachment)"
-                    :key="attachment.id"
-                    :title="attachment.name"
-                    target="_blank"
+                  <attachment-image
                     v-for="attachment in replyAttachmentMap.get(replyComment.id)
                       ?.pictures"
-                  >
-                    <img
-                      class="attachment"
-                      :src="getDownloadAttachmentPath(attachment)"
-                      :alt="attachment.name"
-                    />
-                  </a>
+                    :key="attachment.id"
+                    :src="getDownloadAttachmentPath(attachment)"
+                    :name="attachment.name"
+                  />
                   <attachment-audio-player
                     v-for="attachment in replyAttachmentMap.get(replyComment.id)
                       ?.audio"
@@ -272,17 +257,19 @@
                     :href="getDownloadAttachmentPath(attachment)"
                     :key="attachment.id"
                     :title="attachment.name"
-                    class="flexrow"
+                    class="attachment-file-link"
                     target="_blank"
                     v-for="attachment in replyAttachmentMap.get(replyComment.id)
                       ?.files"
                   >
-                    <paperclip-icon
-                      class="flexrow-item attachment-icon icon-1x"
+                    <paperclip-icon class="attachment-icon" :size="16" />
+                    <span class="attachment-file-name">{{
+                      attachment.name
+                    }}</span>
+                    <download-icon
+                      class="attachment-download-icon"
+                      :size="15"
                     />
-                    <span class="flexrow-item">
-                      {{ attachment.name }}
-                    </span>
                   </a>
                 </p>
               </div>
@@ -564,6 +551,7 @@ import moment from 'moment'
 import {
   ChevronDownIcon,
   CopyIcon,
+  DownloadIcon,
   LinkIcon,
   PaperclipIcon,
   ThumbsUpIcon
@@ -574,7 +562,12 @@ import { remove } from '@/lib/models'
 import { getDownloadAttachmentPath, pluralizeEntityType } from '@/lib/path'
 import { renderComment, replaceTimeWithTimecode, safeUrl } from '@/lib/render'
 import { sortByName } from '@/lib/sorting'
-import { formatShortDate, formatTimeOfDay, parseDate } from '@/lib/time'
+import {
+  formatDisplayDate,
+  formatShortDate,
+  formatTimeOfDay,
+  parseDate
+} from '@/lib/time'
 import stringHelpers from '@/lib/string'
 
 import { useAtMentionsMembers } from '@/composables/atMentions'
@@ -582,6 +575,7 @@ import { domMixin } from '@/components/mixins/dom'
 
 import AddAttachmentModal from '@/components/modals/AddAttachmentModal.vue'
 import AttachmentAudioPlayer from '@/components/players/viewers/AttachmentAudioPlayer.vue'
+import AttachmentImage from '@/components/players/viewers/AttachmentImage.vue'
 import AttachmentVideoPlayer from '@/components/players/viewers/AttachmentVideoPlayer.vue'
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
 import CommentMenu from '@/components/widgets/CommentMenu.vue'
@@ -836,7 +830,8 @@ const commentDate = computed(() => {
 })
 
 const fullDate = computed(() => {
-  return commentDate.value.tz(user.value.timezone).format('YYYY-MM-DD HH:mm:ss')
+  const date = commentDate.value.tz(user.value.timezone)
+  return `${formatDisplayDate(date, dateFormat.value)} ${formatTimeOfDay(date, use12HourClock.value)}`
 })
 
 const shortDate = computed(() => {
@@ -859,9 +854,8 @@ const shortenText = (text, length) => {
 }
 
 const replyFullDate = date => {
-  return moment(parseDate(date))
-    .tz(user.value.timezone)
-    .format('YYYY-MM-DD HH:mm:ss')
+  const d = moment(parseDate(date)).tz(user.value.timezone)
+  return `${formatDisplayDate(d, dateFormat.value)} ${formatTimeOfDay(d, use12HourClock.value)}`
 }
 
 const replyShortDate = date => {
@@ -1287,14 +1281,58 @@ p {
   margin: 0;
 }
 
-.attachment {
-  display: block;
-  text-align: center;
-  margin: 0.4em auto;
+.attachment-file-link {
+  align-items: center;
+  background: var(--background-page);
+  border: 1px solid var(--border-alt);
+  border-radius: 8px;
+  color: var(--text);
+  display: flex;
+  gap: 0.5em;
+  margin: 0.4em 0;
+  padding: 0.5em 0.7em;
+  text-decoration: none;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--background-hover);
+    border-color: var(--border-alt);
+  }
+
+  .attachment-icon {
+    color: var(--text-alt);
+    flex-shrink: 0;
+  }
+
+  .attachment-file-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .attachment-download-icon {
+    color: var(--text-alt);
+    flex-shrink: 0;
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+  }
+
+  &:hover .attachment-download-icon,
+  &:focus-visible .attachment-download-icon {
+    opacity: 1;
+  }
 }
 
-.attachment-icon {
-  margin: 0.6em;
+.dark .attachment-file-link {
+  border-color: #565a62;
+}
+
+.dark .attachment-file-link .attachment-icon {
+  opacity: 0.7;
 }
 
 .copy-icon {
