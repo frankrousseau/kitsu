@@ -27,7 +27,7 @@
         <tbody class="datatable-body">
           <tr :key="log.id" class="datatable-row" v-for="log in logs">
             <td class="date">
-              {{ formatSimpleDate(log.date) }}
+              {{ formatDisplayDate(log.date) }}
             </td>
             <people-name-cell
               class="person"

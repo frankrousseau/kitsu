@@ -176,7 +176,7 @@
                 v-if="isEditable && selectionGrid[entry.id]"
               />
               <template v-else>
-                {{ formatDate(entry.start_date) }}
+                {{ formatDisplayDate(entry.start_date) }}
               </template>
             </td>
             <td class="due-date">
@@ -189,7 +189,7 @@
                 v-if="isEditable && selectionGrid[entry.id]"
               />
               <template v-else>
-                {{ formatDate(entry.due_date) }}
+                {{ formatDisplayDate(entry.due_date) }}
               </template>
             </td>
             <td
@@ -269,7 +269,7 @@
                 v-if="!done"
               />
               <td class="end-date" v-else>
-                {{ formatDate(entry.end_date) }}
+                {{ formatDisplayDate(entry.end_date) }}
               </td>
             </template>
             <th class="actions" v-else></th>
@@ -548,10 +548,6 @@ export default {
 
     getDate(date) {
       return date ? moment(date, 'YYYY-MM-DD').toDate() : null
-    },
-
-    formatDate(date) {
-      return date ? formatSimpleDate(date) : ''
     },
 
     onBodyScroll(event) {

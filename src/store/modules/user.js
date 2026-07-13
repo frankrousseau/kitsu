@@ -143,9 +143,11 @@ const getters = {
     state.user && state.user.role === 'supervisor',
   isCurrentUserClient: state => state.user && state.user.role === 'client',
   isCurrentUserVendor: state => state.user && state.user.role === 'vendor',
+  use12HourClock: state => Boolean(state.user?.use_12_hour_clock),
   isSaveProfileLoading: state => state.isSaveProfileLoading,
   isSaveProfileLoadingError: state => state.isSaveProfileLoadingError,
   changePassword: state => state.changePassword,
+  dateFormat: state => state.user?.display_date_format || 'YYYY-MM-DD',
 
   todoMap: state => state.todoMap,
   displayedTodos: state => state.displayedTodos,
