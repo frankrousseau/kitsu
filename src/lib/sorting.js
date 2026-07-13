@@ -333,7 +333,11 @@ const sortEntityResult = (
         : sortInfo.type === 'field'
           ? sortByField(sortInfo, taskTypeMap, episodeMap)
           : sortByTaskType(taskMap, sortInfo)
-    let sorter = firstBy('canceled').thenBy(sortEntities)
+    // ponytail: descending reverses the whole comparator, so empty values
+    // land first instead of last. Special-case empties per direction if that
+    // ordering matters.
+    const direction = sortInfo.ascending === false ? -1 : 1
+    let sorter = firstBy('canceled').thenBy(sortEntities, direction)
     for (const step of thenBySteps) {
       sorter = sorter.thenBy(step)
     }

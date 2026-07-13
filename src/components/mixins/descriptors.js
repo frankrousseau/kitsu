@@ -150,29 +150,12 @@ export const descriptorMixin = {
     },
 
     showMetadataHeaderMenu(columnId, event) {
-      if (this.showHeaderMenuAt) {
-        this.showHeaderMenuAt(
-          'headerMetadataMenu',
-          event,
-          event => event.srcElement.parentNode.parentNode,
-          { left: -3, top: 11 }
-        )
-      } else {
-        const headerMenuEl = this.$refs.headerMetadataMenu.$el
-        if (headerMenuEl.className === 'header-menu') {
-          headerMenuEl.className = 'header-menu hidden'
-        } else {
-          headerMenuEl.className = 'header-menu'
-          const headerElement = event.srcElement.parentNode.parentNode
-          const headerBox = headerElement.getBoundingClientRect()
-          const left = headerBox.left - 3
-          const top = headerBox.bottom + 11
-          const width = Math.max(100, headerBox.width - 1)
-          headerMenuEl.style.left = left + 'px'
-          headerMenuEl.style.top = top + 'px'
-          headerMenuEl.style.width = width + 'px'
-        }
-      }
+      this.showHeaderMenuAt(
+        'headerMetadataMenu',
+        event,
+        event => event.srcElement.parentNode.parentNode,
+        { left: -3, top: 11 }
+      )
       this.lastMetadataHeaderMenuDisplayed = columnId
     },
 

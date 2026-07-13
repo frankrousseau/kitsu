@@ -641,6 +641,16 @@ describe('lib/sorting', () => {
       episodeMap
     )
     expect(byEpisode.map(entry => entry.id)).toEqual([2, 1, 3])
+
+    // ascending: false reverses the order
+    const byNameDesc = sortAssetResult(
+      entries,
+      [{ type: 'field', column: 'name', ascending: false }],
+      taskTypeMap,
+      taskMap,
+      episodeMap
+    )
+    expect(byNameDesc.map(entry => entry.id)).toEqual([3, 1, 2])
   })
 
   it('sortShotResult', () => {
