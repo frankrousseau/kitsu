@@ -1,3 +1,5 @@
+import { computed } from 'vue'
+
 import colors from '@/lib/colors'
 import preferences from '@/lib/preferences'
 import stringHelpers from '@/lib/string'
@@ -16,6 +18,15 @@ export const entityListMixin = {
     'keep-task-panel-open',
     'scroll'
   ],
+
+  provide() {
+    return {
+      activeFieldSort: computed(() => {
+        const current = this.$store.getters[`${this.type}Sorting`]?.[0]
+        return current && current.type === 'field' ? current : null
+      })
+    }
+  },
 
   created() {
     this.initHiddenColumns(this.validationColumns, this.hiddenColumns)
@@ -354,12 +365,19 @@ export const entityListMixin = {
     },
 
     onSortByFieldClicked() {
+      const column = this.lastFieldHeaderMenuDisplayed
+      const current = this.$store.getters[`${this.type}Sorting`]?.[0]
+      const ascending =
+        current && current.type === 'field' && current.column === column
+          ? !current.ascending
+          : true
       this.$emit('change-sort', {
         type: 'field',
-        column: this.lastFieldHeaderMenuDisplayed,
-        name: this.lastFieldHeaderMenuLabel
+        column,
+        name: this.lastFieldHeaderMenuLabel,
+        ascending
       })
-      this.showFieldHeaderMenu(this.lastFieldHeaderMenuDisplayed)
+      this.showFieldHeaderMenu(column)
     },
 
     onMinimizeColumnToggled() {
