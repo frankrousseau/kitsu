@@ -122,7 +122,23 @@
               }"
               @panzoom-ready="onComparisonPanzoomReady"
               @video-loaded="onComparisonVideoLoaded"
-              v-show="isComparing && previewToCompare"
+              v-show="
+                isComparing &&
+                previewToCompare &&
+                (isMovie || !isMovieComparison)
+              "
+            />
+
+            <video
+              class="comparison-preview-viewer comparison-video"
+              :src="comparisonMoviePath"
+              :style="{ opacity: overlayOpacity }"
+              controls
+              loop
+              muted
+              v-if="
+                isComparing && previewToCompare && !isMovie && isMovieComparison
+              "
             />
           </div>
         </div>
@@ -859,6 +875,18 @@ const isPicture = computed(() => isPicturePreview(extension.value))
 const isMovie = computed(() => isMoviePreview(extension.value))
 const is3DModel = computed(() => isModelPreview(extension.value))
 const isSound = computed(() => isSoundPreview(extension.value))
+// When the main preview isn't a movie, the compared preview may still be a
+// video. The frame-synced comparison viewer has no transport of its own in
+// that case, so the compared clip is shown as a plain <video> with native
+// controls (like the playlist does).
+const isMovieComparison = computed(
+  () => isComparing.value && isMoviePreview(comparisonPreview.value?.extension)
+)
+const comparisonMoviePath = computed(() => {
+  const preview = comparisonPreview.value
+  if (!preview?.id) return ''
+  return `/api/movies/originals/preview-files/${preview.id}.${preview.extension}`
+})
 
 const isFullScreenEnabled = computed(
   () =>
@@ -2485,6 +2513,13 @@ defineExpose({
 
 .comparison-preview-viewer {
   z-index: 2;
+}
+
+.comparison-video {
+  min-width: 0;
+  max-height: 100%;
+  object-fit: contain;
+  align-self: center;
 }
 
 // Per-viewer annotation slot. The annotation canvases used to sit
