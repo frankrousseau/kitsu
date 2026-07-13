@@ -170,14 +170,13 @@
                 :href="getDownloadAttachmentPath(attachment)"
                 :key="attachment.id"
                 :title="attachment.name"
-                class="flexrow"
+                class="attachment-file-link"
                 target="_blank"
                 v-for="attachment in fileAttachments"
               >
-                <paperclip-icon class="flexrow-item attachment-icon icon-1x" />
-                <span class="flexrow-item">
-                  {{ attachment.name }}
-                </span>
+                <paperclip-icon class="attachment-icon" :size="16" />
+                <span class="attachment-file-name">{{ attachment.name }}</span>
+                <download-icon class="attachment-download-icon" :size="15" />
               </a>
             </p>
             <div class="replies">
@@ -272,17 +271,19 @@
                     :href="getDownloadAttachmentPath(attachment)"
                     :key="attachment.id"
                     :title="attachment.name"
-                    class="flexrow"
+                    class="attachment-file-link"
                     target="_blank"
                     v-for="attachment in replyAttachmentMap.get(replyComment.id)
                       ?.files"
                   >
-                    <paperclip-icon
-                      class="flexrow-item attachment-icon icon-1x"
+                    <paperclip-icon class="attachment-icon" :size="16" />
+                    <span class="attachment-file-name">{{
+                      attachment.name
+                    }}</span>
+                    <download-icon
+                      class="attachment-download-icon"
+                      :size="15"
                     />
-                    <span class="flexrow-item">
-                      {{ attachment.name }}
-                    </span>
                   </a>
                 </p>
               </div>
@@ -564,6 +565,7 @@ import moment from 'moment'
 import {
   ChevronDownIcon,
   CopyIcon,
+  DownloadIcon,
   LinkIcon,
   PaperclipIcon,
   ThumbsUpIcon
@@ -1288,13 +1290,57 @@ p {
 }
 
 .attachment {
+  border: 1px solid var(--border);
+  border-radius: 8px;
   display: block;
-  text-align: center;
-  margin: 0.4em auto;
+  margin: 0.5em auto;
+  max-width: 100%;
 }
 
-.attachment-icon {
-  margin: 0.6em;
+.attachment-file-link {
+  align-items: center;
+  background: var(--background-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  display: flex;
+  gap: 0.5em;
+  margin: 0.4em 0;
+  padding: 0.5em 0.7em;
+  text-decoration: none;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--background-hover);
+    border-color: var(--border-alt);
+  }
+
+  .attachment-icon {
+    color: var(--text-alt);
+    flex-shrink: 0;
+  }
+
+  .attachment-file-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .attachment-download-icon {
+    color: var(--text-alt);
+    flex-shrink: 0;
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+  }
+
+  &:hover .attachment-download-icon,
+  &:focus-visible .attachment-download-icon {
+    opacity: 1;
+  }
 }
 
 .copy-icon {
