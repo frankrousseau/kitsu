@@ -576,7 +576,12 @@ import { remove } from '@/lib/models'
 import { getDownloadAttachmentPath, pluralizeEntityType } from '@/lib/path'
 import { renderComment, replaceTimeWithTimecode, safeUrl } from '@/lib/render'
 import { sortByName } from '@/lib/sorting'
-import { formatShortDate, formatTimeOfDay, parseDate } from '@/lib/time'
+import {
+  formatDisplayDate,
+  formatShortDate,
+  formatTimeOfDay,
+  parseDate
+} from '@/lib/time'
 import stringHelpers from '@/lib/string'
 
 import { useAtMentionsMembers } from '@/composables/atMentions'
@@ -838,7 +843,8 @@ const commentDate = computed(() => {
 })
 
 const fullDate = computed(() => {
-  return commentDate.value.tz(user.value.timezone).format('YYYY-MM-DD HH:mm:ss')
+  const date = commentDate.value.tz(user.value.timezone)
+  return `${formatDisplayDate(date, dateFormat.value)} ${formatTimeOfDay(date, use12HourClock.value)}`
 })
 
 const shortDate = computed(() => {
@@ -861,9 +867,8 @@ const shortenText = (text, length) => {
 }
 
 const replyFullDate = date => {
-  return moment(parseDate(date))
-    .tz(user.value.timezone)
-    .format('YYYY-MM-DD HH:mm:ss')
+  const d = moment(parseDate(date)).tz(user.value.timezone)
+  return `${formatDisplayDate(d, dateFormat.value)} ${formatTimeOfDay(d, use12HourClock.value)}`
 }
 
 const replyShortDate = date => {
