@@ -453,7 +453,7 @@
                   :class="{
                     thinner: multiline
                   }"
-                  :title="`${rootElement.name} (${rootElement.startDate?.format('YYYY-MM-DD')} - ${rootElement.endDate?.format('YYYY-MM-DD')})`"
+                  :title="`${rootElement.name} (${displayDate(rootElement.startDate)} - ${displayDate(rootElement.endDate)})`"
                   :style="timebarStyle(rootElement, true)"
                 >
                   <div
@@ -590,7 +590,7 @@
 
                   <div
                     class="timebar timebar-ghost timebar-ghost-before"
-                    :title="`${childElement.previousElement.name} (${childElement.previousElement.startDate.format('YYYY-MM-DD')} - ${childElement.previousElement.endDate.format('YYYY-MM-DD')})`"
+                    :title="`${childElement.previousElement.name} (${displayDate(childElement.previousElement.startDate)} - ${displayDate(childElement.previousElement.endDate)})`"
                     :class="{
                       'with-timesheets': withTimesheets
                     }"
@@ -607,7 +607,7 @@
 
                   <div
                     class="timebar timebar-ghost timebar-ghost-after"
-                    :title="`${childElement.nextElement.name} (${childElement.nextElement.startDate.format('YYYY-MM-DD')} - ${childElement.nextElement.endDate.format('YYYY-MM-DD')})`"
+                    :title="`${childElement.nextElement.name} (${displayDate(childElement.nextElement.startDate)} - ${displayDate(childElement.nextElement.endDate)})`"
                     :class="{
                       'with-timesheets': withTimesheets
                     }"
@@ -630,7 +630,7 @@
                       'with-timesheets': withTimesheets,
                       invalid: isOverlapping(childElement)
                     }"
-                    :title="`${multiline && childElement.project_name ? `${childElement.project_name} - ` : ''}${childElement.name} (${childElement.startDate.format('YYYY-MM-DD')} - ${childElement.endDate.format('YYYY-MM-DD')})`"
+                    :title="`${multiline && childElement.project_name ? `${childElement.project_name} - ` : ''}${childElement.name} (${displayDate(childElement.startDate)} - ${displayDate(childElement.endDate)})`"
                     :style="
                       timebarChildStyle(
                         childElement,
@@ -831,6 +831,7 @@ import colors from '@/lib/colors'
 import {
   addBusinessDays,
   daysToMinutes,
+  formatDisplayDate,
   formatFullDate,
   getBusinessDays,
   getDayOffRange,
@@ -980,7 +981,10 @@ const timelinePositionRef = ref(null)
 
 // Store getters
 const currentProduction = computed(() => store.getters.currentProduction)
+const dateFormat = computed(() => store.getters.dateFormat)
 const departmentMap = computed(() => store.getters.departmentMap)
+
+const displayDate = date => formatDisplayDate(date, dateFormat.value)
 const isCurrentUserManager = computed(() => store.getters.isCurrentUserManager)
 const isDarkTheme = computed(() => store.getters.isDarkTheme)
 const milestones = computed(() => store.getters.milestones)

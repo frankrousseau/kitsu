@@ -60,7 +60,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useStore } from 'vuex'
 
-import { formatDate } from '@/lib/time'
+import { formatDate as formatDateBase } from '@/lib/time'
 
 import BaseModal from '@/components/modals/BaseModal.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
@@ -85,8 +85,13 @@ const versions = ref([])
 // Computed
 
 const personMap = computed(() => store.getters.personMap)
+const dateFormat = computed(() => store.getters.dateFormat)
+const use12HourClock = computed(() => store.getters.use12HourClock)
 
 // Functions
+
+const formatDate = date =>
+  formatDateBase(date, dateFormat.value, use12HourClock.value)
 
 const getPersonFullName = personId =>
   personMap.value.get(personId)?.full_name || ''
