@@ -52,8 +52,8 @@ const onError = () => {
 
 .attachment-error {
   align-items: center;
-  background: var(--background-alt);
-  border: 1px solid var(--border);
+  background: var(--background-page);
+  border: 1px solid var(--border-alt);
   border-radius: 8px;
   color: var(--text);
   display: flex;
@@ -66,6 +66,15 @@ const onError = () => {
 .attachment-error-icon {
   color: var(--text-alt);
   flex-shrink: 0;
+}
+
+.dark .attachment-error {
+  border-color: #565a62;
+}
+
+.dark .attachment-error-icon,
+.dark .attachment-error-name {
+  opacity: 0.7;
 }
 
 .attachment-error-text {

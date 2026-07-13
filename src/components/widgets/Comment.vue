@@ -1283,8 +1283,8 @@ p {
 
 .attachment-file-link {
   align-items: center;
-  background: var(--background-alt);
-  border: 1px solid var(--border);
+  background: var(--background-page);
+  border: 1px solid var(--border-alt);
   border-radius: 8px;
   color: var(--text);
   display: flex;
@@ -1325,6 +1325,14 @@ p {
   &:focus-visible .attachment-download-icon {
     opacity: 1;
   }
+}
+
+.dark .attachment-file-link {
+  border-color: #565a62;
+}
+
+.dark .attachment-file-link .attachment-icon {
+  opacity: 0.7;
 }
 
 .copy-icon {
