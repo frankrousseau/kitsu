@@ -13,7 +13,7 @@ import {
 
 export const formatListMixin = {
   computed: {
-    ...mapGetters(['dateFormat', 'organisation']),
+    ...mapGetters(['dateFormat', 'organisation', 'use12HourClock']),
 
     isDurationInHours() {
       return this.organisation.format_duration_in_hours
@@ -31,9 +31,12 @@ export const formatListMixin = {
       return booleanValue ? this.$t('main.yes') : this.$t('main.no')
     },
 
-    formatDate,
     formatFullDate,
     formatSimpleDate,
+
+    formatDate(date) {
+      return formatDate(date, this.dateFormat, this.use12HourClock)
+    },
 
     formatDisplayDate(date) {
       return formatDisplayDate(date, this.dateFormat)

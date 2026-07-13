@@ -132,7 +132,7 @@ import { DownloadIcon } from 'lucide-vue-next'
 import { mapGetters, mapActions } from 'vuex'
 
 import { renderFileSize } from '@/lib/render'
-import { formatDate } from '@/lib/time'
+import { formatDate as formatDateBase } from '@/lib/time'
 import preferences from '@/lib/preferences'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 
@@ -184,10 +184,12 @@ export default {
   computed: {
     ...mapGetters([
       'currentProduction',
+      'dateFormat',
       'isCurrentUserArtist',
       'personMap',
       'taskMap',
-      'taskTypeMap'
+      'taskTypeMap',
+      'use12HourClock'
     ]),
 
     taskTypePreviewFileGroups() {
@@ -239,7 +241,9 @@ export default {
 
     renderFileSize,
 
-    formatDate,
+    formatDate(date) {
+      return formatDateBase(date, this.dateFormat, this.use12HourClock)
+    },
 
     reset() {
       this.isLoading = true

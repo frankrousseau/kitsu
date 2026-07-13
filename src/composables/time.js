@@ -6,7 +6,7 @@ import { useStore } from 'vuex'
 import moment from 'moment-timezone'
 
 import {
-  formatFullDateWithTimezone,
+  formatDisplayDate,
   formatTimeOfDay,
   formatVerboseDate
 } from '@/lib/time'
@@ -27,7 +27,8 @@ export function useTime() {
   const tomorrow = computed(() => moment().add(1, 'day').toDate())
 
   function formatDate(eventDate) {
-    return formatFullDateWithTimezone(eventDate, timezone.value)
+    const date = moment.tz(eventDate, 'UTC').tz(timezone.value)
+    return `${formatDisplayDate(date, dateFormat.value)} ${formatTimeOfDay(date, use12HourClock.value, true)}`
   }
 
   function formatTime(eventDate) {

@@ -945,6 +945,7 @@ import {
   isMoviePreview,
   isPicturePreview
 } from '@/lib/preview'
+import { formatDisplayDate, formatTimeOfDay } from '@/lib/time'
 import {
   ceilToFrame,
   floorToFrame,
@@ -1482,6 +1483,8 @@ const deleteText = computed(() => {
 })
 
 const timezone = computed(() => user.value?.timezone || moment.tz.guess())
+const dateFormat = computed(() => store.getters.dateFormat)
+const use12HourClock = computed(() => store.getters.use12HourClock)
 
 const entityTaskTypes = computed(() => {
   switch (props.playlist?.for_entity) {
@@ -3733,7 +3736,7 @@ const getBuildPath = job =>
 
 const formatDate = creationDate => {
   const date = moment.tz(creationDate, 'UTC').tz(timezone.value)
-  return date.format('YYYY-MM-DD HH:mm')
+  return `${formatDisplayDate(date, dateFormat.value)} ${formatTimeOfDay(date, use12HourClock.value)}`
 }
 
 const setPlaylistProgress = time => {

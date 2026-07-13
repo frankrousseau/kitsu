@@ -56,8 +56,18 @@ export const formatSimpleDate = date => {
   else return ''
 }
 
-export const formatTimeOfDay = (date, use12HourClock = false) => {
-  return moment(date).format(use12HourClock ? 'h:mm A' : 'HH:mm')
+export const formatTimeOfDay = (
+  date,
+  use12HourClock = false,
+  withSeconds = false
+) => {
+  let format
+  if (use12HourClock) {
+    format = withSeconds ? 'h:mm:ss A' : 'h:mm A'
+  } else {
+    format = withSeconds ? 'HH:mm:ss' : 'HH:mm'
+  }
+  return moment(date).format(format)
 }
 
 export const formatFullDate = date => {
@@ -85,10 +95,14 @@ export const formatFullDateWithRevertedTimezone = (date, timezone) => {
   return moment.tz(dateString, timezone).tz('UTC').format('YYYY-MM-DDTHH:mm:ss')
 }
 
-export const formatDate = date => {
+export const formatDate = (
+  date,
+  dateFormat = 'YYYY-MM-DD',
+  use12HourClock = false
+) => {
   const utcDate = moment.tz(date, 'UTC')
   if (moment().diff(utcDate, 'days') > 1) {
-    return utcDate.format('YYYY-MM-DD HH:mm')
+    return `${formatDisplayDate(utcDate, dateFormat)} ${formatTimeOfDay(utcDate, use12HourClock)}`
   } else {
     return utcDate.fromNow()
   }
