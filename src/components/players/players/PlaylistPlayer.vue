@@ -3922,10 +3922,21 @@ const resetPlaylistFrameData = () => {
     const defaultNbFrames =
       entity.preview_nb_frames || 2 * fps.value * frameDuration.value
     framesPerImage.value[index] = defaultNbFrames
-    const n =
-      Math.round((entity.preview_file_duration || 0) * fps.value) ||
-      defaultNbFrames
+    // Duration only counts for movie mains: a picture revision holding a
+    // video sub-preview carries that video's duration, and using it here
+    // would stretch the entity's strip slot past the width PlaylistProgress
+    // computes from preview_nb_frames, leaving holes in the strip.
+    const n = isMoviePreview(entity.preview_file_extension)
+      ? Math.round((entity.preview_file_duration || 0) * fps.value) ||
+        defaultNbFrames
+      : defaultNbFrames
     entity.start_duration = (curFrame + 1) / fps.value
+    // Frozen frame accounting for PlaylistProgress: the strip renders from
+    // these two fields only, so it tiles by construction. Recomputing widths
+    // from live preview fields drifts from the positions frozen here (fps is
+    // the *current* entity's rate, durations refresh after this pass).
+    entity.playlist_start_frame = curFrame
+    entity.playlist_nb_frames = n
     for (let i = 0; i < n; i++) {
       playlistShotPosition.value[curFrame + i] = {
         index,

@@ -324,23 +324,29 @@ const getFrameBackgroundStyle = frame => {
   }
 }
 
+// The strip renders only from the frame accounting frozen by
+// resetPlaylistFrameData (PlaylistPlayer), so segments tile by construction.
+// Deriving widths from live preview fields (duration, nb_frames, current
+// fps) drifts from the frozen positions and opens holes in the strip.
+const totalFrames = computed(() =>
+  props.entityList.reduce(
+    (max, entity) =>
+      Math.max(
+        max,
+        (entity.playlist_start_frame || 0) + (entity.playlist_nb_frames || 0)
+      ),
+    0
+  )
+)
+
 const getEntityPosition = entity => {
-  const ratio =
-    (entity.start_duration - props.frameDuration) / props.playlistDuration
-  return ratio * 100
+  if (!totalFrames.value) return 0
+  return ((entity.playlist_start_frame || 0) / totalFrames.value) * 100
 }
 
 const getEntityWidth = entity => {
-  let ratio
-  if (entity.preview_file_extension === 'mp4') {
-    ratio = entity.preview_file_duration / props.playlistDuration
-  } else if (entity.preview_nb_frames) {
-    const duration = entity.preview_nb_frames * props.frameDuration
-    ratio = duration / props.playlistDuration
-  } else {
-    ratio = (2 * props.fps * props.frameDuration) / props.playlistDuration
-  }
-  return ratio * 100
+  if (!totalFrames.value) return 0
+  return ((entity.playlist_nb_frames || 0) / totalFrames.value) * 100
 }
 
 const getEntityColor = entity => {
