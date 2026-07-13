@@ -147,6 +147,7 @@ const getters = {
   isSaveProfileLoading: state => state.isSaveProfileLoading,
   isSaveProfileLoadingError: state => state.isSaveProfileLoadingError,
   changePassword: state => state.changePassword,
+  dateFormat: state => state.user?.display_date_format || 'YYYY-MM-DD',
 
   todoMap: state => state.todoMap,
   displayedTodos: state => state.displayedTodos,

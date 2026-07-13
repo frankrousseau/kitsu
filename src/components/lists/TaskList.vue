@@ -228,7 +228,7 @@
                 v-if="isInDepartment(task) && selectionGrid[task.id]"
               />
               <template v-else>
-                {{ formatDate(task.start_date) }}
+                {{ formatDisplayDate(task.start_date) }}
               </template>
             </td>
             <td class="due-date" v-if="!withSchedule">
@@ -241,20 +241,20 @@
                 v-if="isInDepartment(task) && selectionGrid[task.id]"
               />
               <template v-else>
-                {{ formatDate(task.due_date) }}
+                {{ formatDisplayDate(task.due_date) }}
               </template>
             </td>
             <td class="real-start-date" v-if="!withSchedule">
-              {{ formatDate(task.real_start_date) }}
+              {{ formatDisplayDate(task.real_start_date) }}
             </td>
             <td class="real-end-date" v-if="!withSchedule">
-              {{ formatDate(task.end_date) }}
+              {{ formatDisplayDate(task.end_date) }}
             </td>
             <td class="done-date" v-if="!withSchedule">
-              {{ formatDate(task.done_date) }}
+              {{ formatDisplayDate(task.done_date) }}
             </td>
             <td class="last-comment-date" v-if="!withSchedule">
-              {{ formatDate(task.last_comment_date) }}
+              {{ formatDisplayDate(task.last_comment_date) }}
             </td>
             <td v-if="!withSchedule"></td>
           </tr>
