@@ -1730,11 +1730,6 @@ tbody:last-child .empty-line:last-child {
   }
 }
 
-.datatable th .field-header {
-  padding-right: 20px;
-  position: relative;
-}
-
 .datatable th .field-header .flexrow-item:first-child {
   flex: 1;
 }
@@ -1748,8 +1743,6 @@ tbody:last-child .empty-line:last-child {
   height: 16px;
   justify-content: center;
   padding: 1px;
-  position: absolute;
-  right: 0;
   width: 16px;
 }
 
