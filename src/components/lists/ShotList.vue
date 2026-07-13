@@ -25,6 +25,13 @@
         @toggle-stick="metadataStickColumnClicked($event)"
       />
 
+      <table-metadata-header-menu
+        ref="headerFieldMenu"
+        :is-edit-allowed="false"
+        :show-stick="false"
+        @sort-by-clicked="onSortByFieldClicked()"
+      />
+
       <table
         class="datatable multi-section"
         :class="{ 'expand-task-types': displaySettings.fullTaskTypeNames }"
@@ -36,21 +43,24 @@
               class="name shot-name datatable-row-header"
               ref="th-shot"
             >
-              <div class="flexrow">
-                <span class="flexrow-item">
-                  {{ $t('shots.fields.name') }}
-                </span>
-                <button-simple
-                  class="is-small flexrow"
-                  icon="plus"
-                  :text="''"
-                  @click="onAddMetadataClicked"
-                  v-if="
-                    (isCurrentUserManager || isCurrentUserSupervisor) &&
-                    !isLoading
-                  "
-                />
-              </div>
+              <sortable-field-header
+                field-name="name"
+                :label="$t('shots.fields.name')"
+                @show-menu="showFieldHeaderMenu"
+              >
+                <template #actions>
+                  <button-simple
+                    class="is-small flexrow"
+                    icon="plus"
+                    :text="''"
+                    @click="onAddMetadataClicked"
+                    v-if="
+                      (isCurrentUserManager || isCurrentUserSupervisor) &&
+                      !isLoading
+                    "
+                  />
+                </template>
+              </sortable-field-header>
             </th>
 
             <metadata-header
@@ -100,7 +110,11 @@
                 isShotDescription
               "
             >
-              {{ $t('shots.fields.description') }}
+              <sortable-field-header
+                field-name="description"
+                :label="$t('shots.fields.description')"
+                @show-menu="showFieldHeaderMenu"
+              />
             </th>
 
             <th
@@ -844,6 +858,7 @@ import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import MetadataHeader from '@/components/cells/MetadataHeader.vue'
 import MetadataInput from '@/components/cells/MetadataInput.vue'
 import RowActionsCell from '@/components/cells/RowActionsCell.vue'
+import SortableFieldHeader from '@/components/widgets/SortableFieldHeader.vue'
 import TableMetadataHeaderMenu from '@/components/widgets/TableMetadataHeaderMenu.vue'
 import TableMetadataSelectorMenu from '@/components/widgets/TableMetadataSelectorMenu.vue'
 import TableHeaderMenu from '@/components/widgets/TableHeaderMenu.vue'
@@ -869,6 +884,7 @@ export default {
     MetadataHeader,
     MetadataInput,
     RowActionsCell,
+    SortableFieldHeader,
     TableHeaderMenu,
     TableMetadataHeaderMenu,
     TableMetadataSelectorMenu,
@@ -921,6 +937,7 @@ export default {
     return {
       type: 'shot',
       hiddenColumns: {},
+      lastFieldHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayed: null,
       lastMetadataHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayedIndexInGrid: null,

@@ -288,9 +288,39 @@ export const sortValidationColumns = (
 const compareByName = (a, b) =>
   a.name.localeCompare(b.name, undefined, { numeric: true })
 
+const NUMERIC_FIELDS = new Set(['estimation', 'timeSpent'])
+
+const getFieldValue = (entry, sortInfo, taskTypeMap, episodeMap) => {
+  const value = entry[sortInfo.column]
+  if (sortInfo.column === 'episode_id') {
+    return episodeMap.get(value)?.name || ''
+  }
+  if (sortInfo.column === 'ready_for') {
+    return taskTypeMap.get(value)?.name || ''
+  }
+  if (sortInfo.column === 'resolution') {
+    return entry.data?.resolution || ''
+  }
+  return value || ''
+}
+
+const sortByField = (sortInfo, taskTypeMap, episodeMap) => (a, b) => {
+  const dataA = getFieldValue(a, sortInfo, taskTypeMap, episodeMap)
+  const dataB = getFieldValue(b, sortInfo, taskTypeMap, episodeMap)
+  if (dataA === dataB) return 0
+  if (NUMERIC_FIELDS.has(sortInfo.column)) return dataA - dataB
+  if (!dataB) return -1
+  if (!dataA) return 1
+  return String(dataA).localeCompare(String(dataB), undefined, {
+    numeric: true
+  })
+}
+
 const sortEntityResult = (
   result,
   sorting,
+  taskTypeMap,
+  episodeMap,
   taskMap,
   thenBySteps,
   defaultSort
@@ -300,7 +330,9 @@ const sortEntityResult = (
     const sortEntities =
       sortInfo.type === 'metadata'
         ? sortByMetadata(sortInfo)
-        : sortByTaskType(taskMap, sortInfo)
+        : sortInfo.type === 'field'
+          ? sortByField(sortInfo, taskTypeMap, episodeMap)
+          : sortByTaskType(taskMap, sortInfo)
     let sorter = firstBy('canceled').thenBy(sortEntities)
     for (const step of thenBySteps) {
       sorter = sorter.thenBy(step)
@@ -312,10 +344,18 @@ const sortEntityResult = (
   return result
 }
 
-export const sortAssetResult = (result, sorting, taskTypeMap, taskMap) => {
+export const sortAssetResult = (
+  result,
+  sorting,
+  taskTypeMap,
+  taskMap,
+  episodeMap
+) => {
   return sortEntityResult(
     result,
     sorting,
+    taskTypeMap,
+    episodeMap,
     taskMap,
     [
       (a, b) =>
@@ -332,6 +372,8 @@ export const sortShotResult = (result, sorting, taskTypeMap, taskMap) => {
   return sortEntityResult(
     result,
     sorting,
+    taskTypeMap,
+    new Map(),
     taskMap,
     [
       sortByEpisode,
@@ -349,6 +391,8 @@ export const sortSequenceResult = (result, sorting, taskTypeMap, taskMap) => {
   return sortEntityResult(
     result,
     sorting,
+    taskTypeMap,
+    new Map(),
     taskMap,
     [sortByEpisode, compareByName],
     sortByName
@@ -356,13 +400,23 @@ export const sortSequenceResult = (result, sorting, taskTypeMap, taskMap) => {
 }
 
 export const sortEpisodeResult = (result, sorting, taskTypeMap, taskMap) => {
-  return sortEntityResult(result, sorting, taskMap, [compareByName], sortByName)
+  return sortEntityResult(
+    result,
+    sorting,
+    taskTypeMap,
+    new Map(),
+    taskMap,
+    [compareByName],
+    sortByName
+  )
 }
 
 export const sortEditResult = (result, sorting, taskTypeMap, taskMap) => {
   return sortEntityResult(
     result,
     sorting,
+    taskTypeMap,
+    new Map(),
     taskMap,
     [sortByEpisode, compareByName],
     sortEdits

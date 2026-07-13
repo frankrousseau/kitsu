@@ -25,6 +25,13 @@
         @toggle-stick="metadataStickColumnClicked($event)"
       />
 
+      <table-metadata-header-menu
+        ref="headerFieldMenu"
+        :is-edit-allowed="false"
+        :show-stick="false"
+        @sort-by-clicked="onSortByFieldClicked()"
+      />
+
       <table
         class="datatable multi-section"
         :class="{ 'expand-task-types': displaySettings.fullTaskTypeNames }"
@@ -40,21 +47,24 @@
               }"
               scope="col"
             >
-              <div class="flexrow">
-                <span class="flexrow-item">
-                  {{ $t('assets.fields.name') }}
-                </span>
-                <button-simple
-                  class="is-small flexrow-item"
-                  icon="plus"
-                  :text="''"
-                  @click="onAddMetadataClicked"
-                  v-if="
-                    (isCurrentUserManager || isCurrentUserSupervisor) &&
-                    !isLoading
-                  "
-                />
-              </div>
+              <sortable-field-header
+                field-name="name"
+                :label="$t('assets.fields.name')"
+                @show-menu="showFieldHeaderMenu"
+              >
+                <template #actions>
+                  <button-simple
+                    class="is-small flexrow-item add-metadata-button"
+                    icon="plus"
+                    :text="''"
+                    @click="onAddMetadataClicked"
+                    v-if="
+                      (isCurrentUserManager || isCurrentUserSupervisor) &&
+                      !isLoading
+                    "
+                  />
+                </template>
+              </sortable-field-header>
             </th>
 
             <th
@@ -64,7 +74,11 @@
               :style="{ left: `${nameWidth}px` }"
               v-if="hasStickyEpisode"
             >
-              {{ $t('assets.fields.episode') }}
+              <sortable-field-header
+                field-name="episode_id"
+                :label="$t('assets.fields.episode')"
+                @show-menu="showFieldHeaderMenu"
+              />
             </th>
 
             <metadata-header
@@ -116,7 +130,11 @@
                 metadataDisplayHeaders.readyFor
               "
             >
-              {{ $t('assets.fields.ready_for') }}
+              <sortable-field-header
+                field-name="ready_for"
+                :label="$t('assets.fields.ready_for')"
+                @show-menu="showFieldHeaderMenu"
+              />
             </th>
 
             <th
@@ -129,7 +147,11 @@
                 isAssetDescription
               "
             >
-              {{ $t('assets.fields.description') }}
+              <sortable-field-header
+                field-name="description"
+                :label="$t('assets.fields.description')"
+                @show-menu="showFieldHeaderMenu"
+              />
             </th>
 
             <th
@@ -143,7 +165,11 @@
                 metadataDisplayHeaders.timeSpent
               "
             >
-              {{ $t('assets.fields.time_spent') }}
+              <sortable-field-header
+                field-name="timeSpent"
+                :label="$t('assets.fields.time_spent')"
+                @show-menu="showFieldHeaderMenu"
+              />
             </th>
 
             <th
@@ -158,7 +184,11 @@
                 metadataDisplayHeaders.estimation
               "
             >
-              {{ $t('main.estimation_short') }}
+              <sortable-field-header
+                field-name="estimation"
+                :label="$t('main.estimation_short')"
+                @show-menu="showFieldHeaderMenu"
+              />
             </th>
 
             <th
@@ -170,7 +200,11 @@
                 metadataDisplayHeaders.resolution
               "
             >
-              {{ $t('shots.fields.resolution') }}
+              <sortable-field-header
+                field-name="resolution"
+                :label="$t('shots.fields.resolution')"
+                @show-menu="showFieldHeaderMenu"
+              />
             </th>
 
             <template v-if="displaySettings.showInfos">
@@ -592,20 +626,21 @@ import preferences from '@/lib/preferences'
 import { sortTaskTypes } from '@/lib/sorting'
 import { range } from '@/lib/time'
 
-import AssetListNumbers from '@/components/widgets/AssetListNumbers.vue'
-import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
-import ComboboxTaskType from '@/components/widgets/ComboboxTaskType.vue'
 import DescriptionCell from '@/components/cells/DescriptionCell.vue'
-import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import MetadataHeader from '@/components/cells/MetadataHeader.vue'
 import MetadataInput from '@/components/cells/MetadataInput.vue'
 import RowActionsCell from '@/components/cells/RowActionsCell.vue'
+import ValidationCell from '@/components/cells/ValidationCell.vue'
+import ValidationHeader from '@/components/cells/ValidationHeader.vue'
+import AssetListNumbers from '@/components/widgets/AssetListNumbers.vue'
+import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
+import ComboboxTaskType from '@/components/widgets/ComboboxTaskType.vue'
+import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
+import SortableFieldHeader from '@/components/widgets/SortableFieldHeader.vue'
 import TableHeaderMenu from '@/components/widgets/TableHeaderMenu.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
 import TableMetadataHeaderMenu from '@/components/widgets/TableMetadataHeaderMenu.vue'
 import TableMetadataSelectorMenu from '@/components/widgets/TableMetadataSelectorMenu.vue'
-import ValidationCell from '@/components/cells/ValidationCell.vue'
-import ValidationHeader from '@/components/cells/ValidationHeader.vue'
 
 import assetStore from '@/store/modules/assets'
 import assetTypeStore from '@/store/modules/assettypes'
@@ -632,6 +667,7 @@ export default {
     MetadataInput,
     MetadataHeader,
     RowActionsCell,
+    SortableFieldHeader,
     TableInfo,
     TableHeaderMenu,
     TableMetadataHeaderMenu,
@@ -674,6 +710,7 @@ export default {
   emits: [
     'asset-changed',
     'asset-type-clicked',
+    'change-sort',
     'create-tasks',
     'delete-clicked',
     'edit-clicked',
@@ -689,6 +726,7 @@ export default {
       columnSelectorDisplayed: false,
       hiddenColumns: {},
       lastSelection: null,
+      lastFieldHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayed: null,
       lastMetadataHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayedIndexInGrid: null,
@@ -1055,6 +1093,23 @@ export default {
     stickColumnClicked() {
       this.toggleStickedColumns(this.lastHeaderMenuDisplayed)
       this.showHeaderMenu()
+    },
+
+    onSortByFieldClicked() {
+      const fieldName = this.lastFieldHeaderMenuDisplayed
+      const fieldLabels = {
+        episode_id: this.$t('assets.fields.episode'),
+        estimation: this.$t('main.estimation_short'),
+        ready_for: this.$t('assets.fields.ready_for'),
+        resolution: this.$t('shots.fields.resolution'),
+        timeSpent: this.$t('assets.fields.time_spent')
+      }
+      this.$emit('change-sort', {
+        type: 'field',
+        column: fieldName,
+        name: fieldLabels[fieldName] || this.$t(`assets.fields.${fieldName}`)
+      })
+      this.showFieldHeaderMenu(fieldName)
     },
 
     metadataStickColumnClicked(event) {

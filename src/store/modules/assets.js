@@ -248,7 +248,13 @@ const helpers = {
     })
     let result = indexSearch(cache.assetIndex, keywords) || cache.assets
     result = applyFilters(result, filters, taskMap)
-    result = sortAssetResult(result, sorting, taskTypeMap, taskMap)
+    result = sortAssetResult(
+      result,
+      sorting,
+      taskTypeMap,
+      taskMap,
+      episodeStore.cache.episodeMap
+    )
     cache.result = result
 
     const limit =

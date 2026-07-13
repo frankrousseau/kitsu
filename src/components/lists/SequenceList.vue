@@ -23,6 +23,13 @@
         @toggle-stick="metadataStickColumnClicked($event)"
       />
 
+      <table-metadata-header-menu
+        ref="headerFieldMenu"
+        :is-edit-allowed="false"
+        :show-stick="false"
+        @sort-by-clicked="onSortByFieldClicked()"
+      />
+
       <table
         class="datatable"
         :class="{ 'expand-task-types': displaySettings.fullTaskTypeNames }"
@@ -38,21 +45,24 @@
               class="name sequence-name datatable-row-header"
               ref="th-sequence"
             >
-              <div class="flexrow">
-                <span class="flexrow-item">
-                  {{ $t('sequences.fields.name') }}
-                </span>
-                <button-simple
-                  class="is-small flexrow-item"
-                  icon="plus"
-                  :text="''"
-                  @click="onAddMetadataClicked"
-                  v-if="
-                    (isCurrentUserManager || isCurrentUserSupervisor) &&
-                    !isLoading
-                  "
-                />
-              </div>
+              <sortable-field-header
+                field-name="name"
+                :label="$t('sequences.fields.name')"
+                @show-menu="showFieldHeaderMenu"
+              >
+                <template #actions>
+                  <button-simple
+                    class="is-small flexrow-item"
+                    icon="plus"
+                    :text="''"
+                    @click="onAddMetadataClicked"
+                    v-if="
+                      (isCurrentUserManager || isCurrentUserSupervisor) &&
+                      !isLoading
+                    "
+                  />
+                </template>
+              </sortable-field-header>
             </th>
             <template v-if="displaySettings.showInfos">
               <metadata-header
@@ -99,7 +109,11 @@
                 isSequenceDescription
               "
             >
-              {{ $t('sequences.fields.description') }}
+              <sortable-field-header
+                field-name="description"
+                :label="$t('sequences.fields.description')"
+                @show-menu="showFieldHeaderMenu"
+              />
             </th>
 
             <th
@@ -514,6 +528,7 @@ import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import MetadataHeader from '@/components/cells/MetadataHeader.vue'
 import MetadataInput from '@/components/cells/MetadataInput.vue'
 import RowActionsCell from '@/components/cells/RowActionsCell.vue'
+import SortableFieldHeader from '@/components/widgets/SortableFieldHeader.vue'
 import TableMetadataHeaderMenu from '@/components/widgets/TableMetadataHeaderMenu.vue'
 import TableMetadataSelectorMenu from '@/components/widgets/TableMetadataSelectorMenu.vue'
 import TableHeaderMenu from '@/components/widgets/TableHeaderMenu.vue'
@@ -565,6 +580,7 @@ export default {
     return {
       type: 'sequence',
       hiddenColumns: {},
+      lastFieldHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayed: null,
       lastMetadataHeaderMenuDisplayed: null,
       lastHeaderMenuDisplayedIndexInGrid: null,
@@ -595,6 +611,7 @@ export default {
     MetadataHeader,
     MetadataInput,
     RowActionsCell,
+    SortableFieldHeader,
     TableHeaderMenu,
     TableMetadataHeaderMenu,
     TableMetadataSelectorMenu,
