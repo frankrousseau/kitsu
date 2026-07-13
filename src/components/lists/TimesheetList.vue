@@ -224,6 +224,7 @@ import { mapGetters } from 'vuex'
 
 import { PAGE_SIZE } from '@/lib/pagination'
 import { getTaskEntityPath } from '@/lib/path'
+import { formatVerboseDate } from '@/lib/time'
 
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
 import DateField from '@/components/widgets/DateField.vue'
@@ -330,6 +331,7 @@ export default {
 
   computed: {
     ...mapGetters([
+      'dateFormat',
       'isCurrentUserArtist',
       'organisation',
       'productionMap',
@@ -382,7 +384,7 @@ export default {
     },
 
     currentDate() {
-      return moment().format('LL')
+      return formatVerboseDate(moment(), this.dateFormat)
     },
 
     onSliderChange(valueInfo) {

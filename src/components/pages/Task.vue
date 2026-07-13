@@ -233,25 +233,25 @@
                     <td class="field-label">
                       {{ $t('tasks.fields.start_date') }}
                     </td>
-                    <td>{{ formatSimpleDate(task.start_date) }}</td>
+                    <td>{{ formatDisplayDate(task.start_date) }}</td>
                   </tr>
                   <tr class="datatable-row">
                     <td class="field-label">
                       {{ $t('tasks.fields.due_date') }}
                     </td>
-                    <td>{{ formatSimpleDate(task.due_date) }}</td>
+                    <td>{{ formatDisplayDate(task.due_date) }}</td>
                   </tr>
                   <tr class="datatable-row">
                     <td class="field-label">
                       {{ $t('tasks.fields.end_date') }}
                     </td>
-                    <td>{{ formatSimpleDate(task.end_date) }}</td>
+                    <td>{{ formatDisplayDate(task.end_date) }}</td>
                   </tr>
                   <tr class="datatable-row">
                     <td class="field-label">
                       {{ $t('tasks.fields.done_date') }}
                     </td>
-                    <td>{{ formatSimpleDate(task.done_date) }}</td>
+                    <td>{{ formatDisplayDate(task.done_date) }}</td>
                   </tr>
                 </tbody>
               </table>

@@ -158,7 +158,6 @@
 </template>
 
 <script setup>
-import moment from 'moment-timezone'
 import { computed, ref } from 'vue'
 import { useStore } from 'vuex'
 
@@ -172,7 +171,7 @@ import TaskTypeName from '@/components/widgets/TaskTypeName.vue'
 import ValidationTag from '@/components/widgets/ValidationTag.vue'
 
 const store = useStore()
-const { timezone } = useTime()
+const { formatTime } = useTime()
 
 const props = defineProps({
   canvasId: { type: String, required: true },
@@ -225,11 +224,6 @@ const hasDoneValue = computed(() => {
   const status = taskStatusMap.value.get(props.news.task_status_id)
   return status ? props.news.change && status.is_done : false
 })
-
-// Functions
-
-const formatTime = date =>
-  moment.tz(date, 'UTC').tz(timezone.value).format('HH:mm')
 </script>
 
 <style lang="scss" scoped>

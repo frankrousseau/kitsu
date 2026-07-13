@@ -123,13 +123,13 @@
               {{ formatDuration(task.duration) }}
             </td>
             <td class="start-date">
-              {{ formatDate(task.start_date) }}
+              {{ formatDisplayDate(task.start_date) }}
             </td>
             <td class="due-date">
-              {{ formatDate(task.due_date) }}
+              {{ formatDisplayDate(task.due_date) }}
             </td>
             <td class="done-date">
-              {{ formatDate(task.done_date) }}
+              {{ formatDisplayDate(task.done_date) }}
             </td>
             <td class="empty"></td>
           </tr>
@@ -307,11 +307,6 @@ export default {
 
     getDate(date) {
       return date ? moment(date, 'YYYY-MM-DD').toDate() : null
-    },
-
-    formatDate(date) {
-      if (date) return moment(date).format('YYYY-MM-DD')
-      return ''
     },
 
     isEstimationBurned(task) {
