@@ -2028,7 +2028,7 @@ watch(current3DAnimation, () => {
   }
 })
 
-watch(currentPreview, () => {
+watch(currentPreview, (newPreview, oldPreview) => {
   endAnnotationSaving()
   // Wipe the fabric canvas before the new preview's annotations are
   // re-loaded — otherwise switching between tasks (or between
@@ -2039,7 +2039,13 @@ watch(currentPreview, () => {
   // switching would re-inject a stroke onto the wrong preview.
   resetUndoStacks()
   reloadAnnotations()
-  isComparing.value = false
+  // Only tear comparison down when the revision (preview file) actually
+  // changes — sub-previews of the same revision share the revision id, so
+  // navigating between them must leave comparison mode running.
+  const revisionChanged = newPreview?.revision !== oldPreview?.revision
+  if (revisionChanged) {
+    isComparing.value = false
+  }
   // Reset the frame bookkeeping synchronously. onPreviewLoaded() also
   // sets frame 0, but only once the media-load event fires; until then
   // currentFrame still holds the previous preview's playhead, so a
@@ -2076,7 +2082,11 @@ watch(currentPreview, () => {
       clearCanvas()
     }
   })
-  setDefaultComparisonTaskType()
+  // Re-pick the default comparison target only on a real revision change;
+  // doing it on every sub-preview step would reset the user's selection.
+  if (revisionChanged) {
+    setDefaultComparisonTaskType()
+  }
   isOrdering.value =
     props.previews.length > 1 &&
     localPreferences.getPreference('player:ordering') !== 'false'
@@ -2092,6 +2102,16 @@ watch(
 
 watch(currentIndex, () => {
   lastIndex = currentIndex.value
+})
+
+// Keep the compared sub-preview aligned with the main one; when the compared
+// revision has fewer sub-previews, stay on its last one.
+watch(currentIndex, () => {
+  if (!isComparing.value || comparisonPreviewLength.value <= 0) return
+  comparisonPreviewIndex.value = Math.min(
+    currentIndex.value - 1,
+    comparisonPreviewLength.value - 1
+  )
 })
 
 watch(previewToCompare, () => {
