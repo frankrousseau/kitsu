@@ -158,6 +158,13 @@ let renderLoopHandle = null
 let renderLoopIsRvfc = false
 let renderLoopPlayer = null
 let renderLoopGeneration = 0
+// Target of a seek issued while playing — the render loop skips stale
+// presentations until the target frame lands (same guard as VideoViewer).
+let seekGuardTarget = null
+// One play-next per trim end: entity switches to non-movie previews are
+// asynchronous, and extra presentations past the handle-out would emit
+// again and skip entities.
+let trimEndFired = false
 let lastEmittedFrame = null
 let rate = 1
 let silent = false
@@ -239,8 +246,42 @@ const startRenderLoop = () => {
   const generation = renderLoopGeneration
   if (supportsVideoFrameCallback()) {
     renderLoopIsRvfc = true
-    const tick = () => {
+    const tick = (now, metadata) => {
       if (renderLoopGeneration !== generation) return
+      // Skip presentations far from an in-flight seek target (loop on
+      // handle-in, handle-in jump): frames queued behind the seek point
+      // keep presenting for a tick or two and painting them overflows
+      // past the trim before the seek lands.
+      if (
+        seekGuardTarget !== null &&
+        Math.abs(metadata.mediaTime - seekGuardTarget) > 2 * frameDuration.value
+      ) {
+        renderLoopHandle = player.requestVideoFrameCallback(tick)
+        return
+      }
+      seekGuardTarget = null
+      // Enforce the trim end at the paint decision: the parent detects
+      // it through the time channel, which lags the presented frame by
+      // one, so it always paints the first excluded frame. Here the
+      // presented frame is known exactly — loop or chain before painting.
+      if (
+        isPlaying.value &&
+        props.handleOut > 0 &&
+        Math.round(metadata.mediaTime * fps.value) >= props.handleOut
+      ) {
+        if (props.isRepeating) {
+          const target = props.handleIn / fps.value
+          seekGuardTarget = target
+          player.currentTime = target
+          emit('repeat')
+        } else if (!trimEndFired) {
+          trimEndFired = true
+          emit('play-next')
+        }
+        renderLoopHandle = player.requestVideoFrameCallback(tick)
+        return
+      }
+      trimEndFired = false
       renderer?.drawFrame(player)
       if (isPlaying.value && props.name === 'main') {
         updateTime(player.currentTime)
@@ -253,6 +294,13 @@ const startRenderLoop = () => {
     let lastDrawnTime = -1
     const tick = () => {
       if (renderLoopGeneration !== generation) return
+      // Mid-seek (no rVFC, e.g. Firefox): currentTime already reads the
+      // target while the decoder still holds the old position — drawing
+      // would paint stale frames past the trim and emit stale times.
+      if (player.seeking) {
+        renderLoopHandle = requestAnimationFrame(tick)
+        return
+      }
       if (player.currentTime !== lastDrawnTime) {
         lastDrawnTime = player.currentTime
         renderer?.drawFrame(player)
@@ -483,6 +531,7 @@ const loadEntity = (index = 0, currentTime = 0, silentLoad = false) => {
 // Playing
 
 const pause = () => {
+  seekGuardTarget = null
   if (currentPlayer.value) {
     currentPlayer.value.pause()
     currentPlayer.value.currentTime = roundToFrame(
@@ -552,6 +601,7 @@ const getCurrentTimeRaw = () =>
 
 const setCurrentTimeRaw = currentTime => {
   if (currentPlayer.value) {
+    if (isPlaying.value) seekGuardTarget = currentTime
     currentPlayer.value.currentTime = currentTime
   }
 }
@@ -587,6 +637,7 @@ const runSetCurrentTime = currentTime => {
   if (currentPlayer.value && currentPlayer.value.currentTime !== currentTime) {
     isSeeking = true
     try {
+      if (isPlaying.value) seekGuardTarget = currentTime
       // tweaks needed because the html video player is messy with frames
       currentPlayer.value.currentTime = currentTime + 0.001
       onTimeUpdate()

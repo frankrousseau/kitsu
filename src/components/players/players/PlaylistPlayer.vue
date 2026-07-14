@@ -255,6 +255,8 @@
           }"
           :entities="entityList"
           :full-screen="fullScreen"
+          :handle-in="handleIn"
+          :handle-out="handleOut"
           :is-hd="isHd"
           :is-repeating="isRepeating"
           :current-preview-index="currentPreviewIndex"
@@ -2663,14 +2665,20 @@ const onFrameUpdate = frame => {
       ['shot', 'edit', 'episode'].includes(props.playlist.for_entity) &&
       currentPreviewIndex.value === 0 &&
       handleOut.value < nbFrames.value
+    // With rVFC the trim loop is enforced inside MultiVideoViewer at the
+    // paint decision; this detection only remains the fallback for the
+    // rAF pipeline and the entity-chaining (non-repeat) path.
     const reachedEnd = hasHandles
       ? frameNumber.value >= handleOut.value
       : frameNumber.value >= nbFrames.value - 1
     if (reachedEnd) {
       if (isRepeating.value) {
         const startFrame = hasHandles ? handleIn.value : 0
-        rawPlayer.value?.setCurrentFrame(startFrame)
-        rawPlayerComparison.value?.setCurrentFrame(startFrame)
+        // Raw frame-start seek: setCurrentFrame goes through
+        // runSetCurrentTime, whose re-entrancy gate can drop the loop
+        // seek and let the clip play through to its real end.
+        rawPlayer.value?.setCurrentTimeRaw(startFrame / fps.value)
+        rawPlayerComparison.value?.setCurrentTimeRaw(startFrame / fps.value)
       } else {
         onPlayNext()
       }
@@ -3377,7 +3385,20 @@ const getFileFromCanvas = (canvas, filename) => {
 }
 
 const updateProgressBar = f => {
-  const frame = f !== undefined ? f : frameNumber.value
+  let frame = f !== undefined ? f : frameNumber.value
+  // While playing a trimmed main preview, never paint the fill past the
+  // handle-out marker: near the trim end the frame channel runs ahead of
+  // the painted frame and the +1 fill convention lands one frame beyond
+  // the marker on every loop. Paused stepping onto the excluded frame
+  // stays untouched.
+  if (
+    isPlaying.value &&
+    currentPreviewIndex.value === 0 &&
+    ['shot', 'edit', 'episode'].includes(props.playlist?.for_entity) &&
+    handleOut.value < nbFrames.value
+  ) {
+    frame = Math.min(frame, handleOut.value - 1)
+  }
   if (progress.value) progress.value.updateProgressBar(frame + 1)
   // The playlist playhead position is driven by the continuous time-update
   // channel (onRawPlayerTimeUpdate) so it stays smooth, not by the rounded
