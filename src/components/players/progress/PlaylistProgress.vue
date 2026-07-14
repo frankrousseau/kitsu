@@ -350,7 +350,9 @@ const getEntityWidth = entity => {
 }
 
 const getEntityColor = entity => {
-  return entity.task_status_color
+  // Neutral grey for entities without a status color (no preview / no
+  // task): a transparent segment reads as a hole in the strip.
+  return entity.task_status_color || '#62656b'
 }
 
 const getFullEntityName = entity => {

@@ -2208,10 +2208,13 @@ const playEntity = (entityIndex, updateFullPlaylist = true, frame = -1) => {
         setAnnotationDrawingMode(true)
       }, 100)
     }
+    // Entities without any preview borrow the picture timer so continuous
+    // playback holds their slot and then moves on instead of stalling.
     if (
       isPlaying.value &&
       entity &&
-      isPicturePreview(entity.preview_file_extension)
+      (isPicturePreview(entity.preview_file_extension) ||
+        !entity.preview_file_id)
     ) {
       playPicture()
     }
@@ -3450,7 +3453,10 @@ const continuePlayingPlaylist = (entityIndex, startMs) => {
     return
   }
   const previews = currentEntity.value?.preview_file_previews
-  if (previews && previews.length === currentPreviewIndex.value) {
+  // No previews at all (entity without preview): advance to the next
+  // entity, otherwise the else branch increments currentPreviewIndex
+  // forever and playback stalls on the empty entity.
+  if (!previews || previews.length === currentPreviewIndex.value) {
     nextTick(() => {
       onPlayNextEntity(true)
       framesSeenOfPicture.value = 1
@@ -3947,6 +3953,8 @@ const resetPlaylistFrameData = () => {
   let playlistDur = 0
   let curFrame = 0
   entityList.value.forEach((entity, index) => {
+    // An entity without preview still spans its edit length (like a slug
+    // in a conform): playback holds the slot, the strip shows it in grey.
     const defaultNbFrames =
       entity.preview_nb_frames || 2 * fps.value * frameDuration.value
     framesPerImage.value[index] = defaultNbFrames
