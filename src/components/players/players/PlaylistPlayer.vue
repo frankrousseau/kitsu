@@ -446,8 +446,16 @@
             ? currentEntity.preview_nb_frames
             : Math.round(2 * fps)
       "
-      :handle-in="playlist.for_entity === 'shot' ? handleIn : -1"
-      :handle-out="playlist.for_entity === 'shot' ? handleOut : -1"
+      :handle-in="
+        playlist.for_entity === 'shot' && currentPreviewIndex === 0
+          ? handleIn
+          : -1
+      "
+      :handle-out="
+        playlist.for_entity === 'shot' && currentPreviewIndex === 0
+          ? handleOut
+          : -1
+      "
       :preview-id="currentPreview ? currentPreview.id : ''"
       @start-scrub="onScrubStart"
       @end-scrub="onScrubEnd"
@@ -2180,6 +2188,18 @@ const playEntity = (entityIndex, updateFullPlaylist = true, frame = -1) => {
     nextTick(() => {
       rawPlayer.value?.loadEntity(entityIndex, 0, true)
     })
+    // Unlike movies, pictures have no time-update channel driving the
+    // playlist playhead: jump it to the entity's slot here, even while
+    // playing. Strip clicks/drags pass updateFullPlaylist=false and keep
+    // their exact clicked position.
+    if (updateFullPlaylist && entity) {
+      if (isFullMode.value && !isPlaying.value) {
+        fullPlaylistPlayer.value.currentTime = entity.start_duration
+        playlistProgress.value = entity.start_duration
+      } else if (!isFullMode.value) {
+        playlistProgress.value = entity.start_duration
+      }
+    }
     const ann = getAnnotation(0)
     if (!isPlaying.value) loadAnnotation(ann)
     if (wasDrawing) {
@@ -2188,10 +2208,13 @@ const playEntity = (entityIndex, updateFullPlaylist = true, frame = -1) => {
         setAnnotationDrawingMode(true)
       }, 100)
     }
+    // Entities without any preview borrow the picture timer so continuous
+    // playback holds their slot and then moves on instead of stalling.
     if (
       isPlaying.value &&
       entity &&
-      isPicturePreview(entity.preview_file_extension)
+      (isPicturePreview(entity.preview_file_extension) ||
+        !entity.preview_file_id)
     ) {
       playPicture()
     }
@@ -2628,6 +2651,7 @@ const onFrameUpdate = frame => {
   if (props.playlist && isPlaying.value) {
     const hasHandles =
       ['shot', 'edit', 'episode'].includes(props.playlist.for_entity) &&
+      currentPreviewIndex.value === 0 &&
       handleOut.value < nbFrames.value
     const reachedEnd = hasHandles
       ? frameNumber.value >= handleOut.value
@@ -3429,7 +3453,10 @@ const continuePlayingPlaylist = (entityIndex, startMs) => {
     return
   }
   const previews = currentEntity.value?.preview_file_previews
-  if (previews && previews.length === currentPreviewIndex.value) {
+  // No previews at all (entity without preview): advance to the next
+  // entity, otherwise the else branch increments currentPreviewIndex
+  // forever and playback stalls on the empty entity.
+  if (!previews || previews.length === currentPreviewIndex.value) {
     nextTick(() => {
       onPlayNextEntity(true)
       framesSeenOfPicture.value = 1
@@ -3437,9 +3464,21 @@ const continuePlayingPlaylist = (entityIndex, startMs) => {
   } else {
     currentPreviewIndex.value++
     nextTick(() => {
-      playingPictureTimeout = setTimeout(() => {
-        continuePlayingPlaylist(playingEntityIndex.value, Date.now())
-      }, 100)
+      // A still-image sub-preview can be followed by a video sub-preview.
+      // Play the whole clip from its start instead of rescheduling the image
+      // loop (which would freeze it and then skip it). Sub-previews are not
+      // the entity's trimmed main preview, so ignore the entity handle-in/out.
+      if (isCurrentPreviewMovie.value) {
+        clearTimeout(playingPictureTimeout)
+        rawPlayer.value?.setCurrentFrame(0)
+        rawPlayer.value?.play()
+        if (isComparing.value) rawPlayerComparison.value?.play()
+        isPlaying.value = true
+      } else {
+        playingPictureTimeout = setTimeout(() => {
+          continuePlayingPlaylist(playingEntityIndex.value, Date.now())
+        }, 100)
+      }
     })
   }
 }
@@ -3895,6 +3934,14 @@ const getEntityHandles = entity => {
 
 const resetHandles = entity => {
   if (!['shot', 'edit', 'episode'].includes(props.playlist?.for_entity)) return
+  // No entity argument = reset for what is displayed right now. A
+  // sub-preview is not the entity's trimmed main preview, so the entity
+  // trim handles don't apply to its timeline.
+  if (!entity && currentPreviewIndex.value > 0) {
+    handleIn.value = 0
+    handleOut.value = nbFrames.value
+    return
+  }
   entity = entity || currentEntity.value
   const { handleIn: entityHandleIn, handleOut: entityHandleOut } =
     getEntityHandles(entity)
@@ -3906,13 +3953,26 @@ const resetPlaylistFrameData = () => {
   let playlistDur = 0
   let curFrame = 0
   entityList.value.forEach((entity, index) => {
+    // An entity without preview still spans its edit length (like a slug
+    // in a conform): playback holds the slot, the strip shows it in grey.
     const defaultNbFrames =
       entity.preview_nb_frames || 2 * fps.value * frameDuration.value
     framesPerImage.value[index] = defaultNbFrames
-    const n =
-      Math.round((entity.preview_file_duration || 0) * fps.value) ||
-      defaultNbFrames
+    // Duration only counts for movie mains: a picture revision holding a
+    // video sub-preview carries that video's duration, and using it here
+    // would stretch the entity's strip slot past the width PlaylistProgress
+    // computes from preview_nb_frames, leaving holes in the strip.
+    const n = isMoviePreview(entity.preview_file_extension)
+      ? Math.round((entity.preview_file_duration || 0) * fps.value) ||
+        defaultNbFrames
+      : defaultNbFrames
     entity.start_duration = (curFrame + 1) / fps.value
+    // Frozen frame accounting for PlaylistProgress: the strip renders from
+    // these two fields only, so it tiles by construction. Recomputing widths
+    // from live preview fields drifts from the positions frozen here (fps is
+    // the *current* entity's rate, durations refresh after this pass).
+    entity.playlist_start_frame = curFrame
+    entity.playlist_nb_frames = n
     for (let i = 0; i < n; i++) {
       playlistShotPosition.value[curFrame + i] = {
         index,
@@ -4314,6 +4374,16 @@ watch(currentPreviewIndex, () => {
       height: currentPreview.value.height
     }
   }
+})
+
+// Keep the compared sub-preview aligned with the main one; when the compared
+// revision has fewer sub-previews, stay on its last one.
+watch(currentPreviewIndex, () => {
+  if (!isComparing.value || currentComparisonPreviewLength.value <= 0) return
+  currentComparisonPreviewIndex.value = Math.min(
+    currentPreviewIndex.value,
+    currentComparisonPreviewLength.value - 1
+  )
 })
 
 watch(playingEntityIndex, () => {

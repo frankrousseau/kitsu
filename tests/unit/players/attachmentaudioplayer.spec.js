@@ -31,10 +31,14 @@ describe('players/AttachmentAudioPlayer', () => {
     expect(link.attributes('href')).toBe('/dl/note.wav')
   })
 
-  it('falls back to a download link when the media errors', async () => {
+  it('shows an unavailable chip (no player, no link) when the media errors', async () => {
     const wrapper = mountPlayer()
     await wrapper.find('audio').trigger('error')
     expect(wrapper.find('.play-button').exists()).toBe(false)
-    expect(wrapper.find('a.attachment-fallback').exists()).toBe(true)
+    const chip = wrapper.find('.attachment-error')
+    expect(chip.exists()).toBe(true)
+    // The unavailable state is informational: no download link (the file is gone).
+    expect(wrapper.find('a').exists()).toBe(false)
+    expect(chip.find('.attachment-error-name').text()).toBe('note.wav')
   })
 })

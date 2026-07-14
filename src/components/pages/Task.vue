@@ -142,17 +142,6 @@
                     :title="$t('tasks.hookup_playlist')"
                   />
                 </button>
-                <label
-                  class="flexrow-item pointer"
-                  v-if="isMovie && isCurrentUserManager"
-                >
-                  <input
-                    class="mr02"
-                    type="checkbox"
-                    v-model="isUseCurrentFrame"
-                  />
-                  {{ $t('tasks.use_current_frame') }}
-                </label>
                 <button
                   class="button flexrow-item mr0"
                   :class="{
@@ -166,6 +155,17 @@
                     {{ $t('tasks.set_preview') }}
                   </span>
                 </button>
+                <label
+                  class="flexrow-item pointer"
+                  v-if="isMovie && isCurrentUserManager"
+                >
+                  <input
+                    class="mr02"
+                    type="checkbox"
+                    v-model="isUseCurrentFrame"
+                  />
+                  {{ $t('tasks.use_current_frame') }}
+                </label>
                 <span class="error flexrow-item" v-if="errors.setPreview">
                   {{ $t('tasks.set_preview_error') }}
                 </span>

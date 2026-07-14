@@ -603,7 +603,7 @@ const mutations = {
     let isTime = false
     let isEstimation = false
     let isResolution = false
-    cache.episodeMap = new Map()
+    cache.episodeMap.clear()
     episodes.forEach(episode => {
       const taskIds = []
       const validations = new Map()
@@ -773,7 +773,7 @@ const mutations = {
     cache.episodes = []
     cache.result = []
     cache.episodeIndex = {}
-    cache.episodeMap = new Map()
+    cache.episodeMap.clear()
     state.episodeValidationColumns = []
 
     state.isEpisodesLoading = true
@@ -792,7 +792,7 @@ const mutations = {
   [LOAD_EPISODES_END](state, { episodes, routeEpisodeId }) {
     if (state.episodes.length > 0) return
     if (!episodes) episodes = []
-    cache.episodeMap = new Map()
+    cache.episodeMap.clear()
     episodes.forEach(episode => {
       if (!EPISODE_STATUS.includes(episode.status)) {
         episode.status = 'running'
