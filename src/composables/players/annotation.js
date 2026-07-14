@@ -214,11 +214,13 @@ export const useAnnotation = ({
         object.set('canvasHeight', fabricCanvas.value.height)
       }
       if (!object.createdBy) object.set('createdBy', userId.value)
+      if (!object.createdAt) object.set('createdAt', new Date().toISOString())
     } else {
       if (!object.id) object.id = uuidv4()
       if (!object.canvasWidth) object.canvasWidth = fabricCanvas.value.width
       if (!object.canvasHeight) object.canvasHeight = fabricCanvas.value.height
       if (!object.createdBy) object.createdBy = userId.value
+      if (!object.createdAt) object.createdAt = new Date().toISOString()
     }
     addSerialization(object)
     return object
@@ -578,6 +580,10 @@ export const useAnnotation = ({
 
     const base = {
       id: obj.id,
+      // Authorship metadata must survive the reload, or the next save
+      // re-attributes the object to the current user via setObjectData.
+      createdAt: obj.createdAt,
+      createdBy: obj.createdBy,
       fill: 'transparent',
       left: obj.left * scale + offsetX,
       top: obj.top * scale + offsetY,

@@ -11,15 +11,25 @@
     >
       <canvas ref="canvasEl" :id="canvasId" />
     </div>
+    <div
+      class="annotation-author"
+      v-if="hoverInfo"
+      :style="{ left: `${hoverInfo.x}px`, top: `${hoverInfo.y}px` }"
+    >
+      {{ hoverInfo.label }}
+    </div>
   </div>
 </template>
 
 <script setup>
 import { Canvas, StaticCanvas } from 'fabric'
 import { PSBrush } from 'fabricjs-psbrush'
+import moment from 'moment'
 import { computed, markRaw, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useStore } from 'vuex'
 
 import { lockBrushToFirstPointer } from '@/lib/players/annotation'
+import { formatDisplayDate, formatTimeOfDay } from '@/lib/time'
 
 const props = defineProps({
   canvasId: { type: String, required: true },
@@ -40,12 +50,15 @@ const props = defineProps({
   wheelTarget: { type: HTMLElement, default: null }
 })
 
+const store = useStore()
+
 const emit = defineEmits(['click', 'resized'])
 
 const bounds = ref({ top: 0, left: 0, width: 0, height: 0 })
 const canvasEl = ref(null)
 const clip = ref(null)
 const fabricCanvas = ref(null)
+const hoverInfo = ref(null)
 const overlay = ref(null)
 
 let resizeObserver = null
@@ -144,8 +157,39 @@ const createFabric = () => {
     brush.strokeLineJoin = 'round'
     lockBrushToFirstPointer(brush)
     canvas.freeDrawingBrush = brush
+    canvas.on('mouse:over', onObjectHover)
+    canvas.on('mouse:out', onObjectHoverEnd)
   }
   fabricCanvas.value = markRaw(canvas)
+}
+
+// Author/date chip on hover. personMap and the display settings are read
+// at event time: personMap is a non-reactive store cache and would freeze
+// on the pre-load empty map if wrapped in a computed. Degrades silently
+// (no chip) when neither author nor date is known — e.g. guest views or
+// annotations older than the createdAt field.
+const onObjectHover = event => {
+  if (!props.interactive || !event.target) return
+  const person = store.getters.personMap.get(event.target.createdBy)
+  let date = null
+  if (event.target.createdAt) {
+    const user = store.getters.user
+    const d = moment(event.target.createdAt).tz(user.timezone)
+    date = `${formatDisplayDate(d, store.getters.dateFormat)} ${formatTimeOfDay(d, store.getters.use12HourClock)}`
+  }
+  const label = [person?.full_name, date].filter(Boolean).join(' · ')
+  if (!label) return
+  const rect = clip.value?.getBoundingClientRect()
+  if (!rect) return
+  hoverInfo.value = {
+    label,
+    x: event.e.clientX - rect.left,
+    y: event.e.clientY - rect.top
+  }
+}
+
+const onObjectHoverEnd = () => {
+  hoverInfo.value = null
 }
 
 // Re-dispatch the wheel event on wheelTarget so its panzoom listener
@@ -240,6 +284,21 @@ defineExpose({
   // .video-container — both with overflow: hidden) so the overlay
   // can extend with the panzoom transform without being cropped to
   // the media's un-zoomed bounds.
+  pointer-events: none;
+}
+
+.annotation-author {
+  position: absolute;
+  z-index: 600;
+  transform: translate(-50%, calc(-100% - 8px));
+  padding: 2px 8px;
+  border-radius: 4px;
+  // Constant dark chip: it floats over media content, same look in both
+  // themes.
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  font-size: 0.75rem;
+  white-space: nowrap;
   pointer-events: none;
 }
 

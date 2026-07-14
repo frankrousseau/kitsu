@@ -159,6 +159,7 @@ export const addSerialization = object => {
     result.angle = this.angle
     result.scale = this.scale
     result.createdBy = this.createdBy
+    result.createdAt = this.createdAt
     // Persist the eraser mask centrally: PSStroke's custom toObject() goes
     // through the psbrush callSuper shim and doesn't reliably reach the patched
     // fabric.Object.prototype.toObject, so relying on that alone loses the mask
@@ -196,6 +197,10 @@ export const setObjectData = (object, canvas, userId) => {
   if (userId && !object.createdBy) {
     if (object.set) object.set('createdBy', userId)
     else object.createdBy = userId
+  }
+  if (!object.createdAt) {
+    if (object.set) object.set('createdAt', new Date().toISOString())
+    else object.createdAt = new Date().toISOString()
   }
   addSerialization(object)
   return object

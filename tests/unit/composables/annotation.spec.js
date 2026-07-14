@@ -270,6 +270,41 @@ describe('composables/annotation', () => {
       })
       wrapper.unmount()
     })
+
+    it('stamps and persists createdBy and createdAt', () => {
+      const { api, wrapper } = mountAnnotation()
+      const obj = createSerializableObject({ id: 'meta-1' })
+      api.setObjectData(obj)
+      expect(obj.createdBy).toBe('user-1')
+      expect(obj.createdAt).toBeTruthy()
+      const result = obj.serialize()
+      expect(result.createdBy).toBe('user-1')
+      expect(result.createdAt).toBe(obj.createdAt)
+      wrapper.unmount()
+    })
+
+    it('revives createdBy and createdAt onto reloaded objects', async () => {
+      const canvas = createFakeCanvas()
+      const { api, wrapper } = mountAnnotation({ canvas })
+      await api.addObjectToCanvas(null, {
+        id: 'r1',
+        type: 'path',
+        path: 'M 0 0 L 5 5',
+        createdBy: 'author-9',
+        createdAt: '2026-07-14T10:00:00.000Z',
+        canvasWidth: 800,
+        canvasHeight: 600,
+        left: 0,
+        top: 0,
+        scaleX: 1,
+        scaleY: 1
+      })
+      const revived = canvas._objects.find(o => o.id === 'r1')
+      expect(revived.createdBy).toBe('author-9')
+      expect(revived.createdAt).toBe('2026-07-14T10:00:00.000Z')
+      expect(revived.serialize().createdAt).toBe('2026-07-14T10:00:00.000Z')
+      wrapper.unmount()
+    })
   })
 
   describe('clearModifications', () => {
