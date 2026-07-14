@@ -1225,7 +1225,8 @@ describe('composables/annotation', () => {
 
     it('undo restores and redo removes a fully erased object', () => {
       const canvas = createFakeCanvas()
-      const { api, wrapper } = mountAnnotation({ canvas })
+      const { api, postAnnotationAddition, postAnnotationUpdate, wrapper } =
+        mountAnnotation({ canvas })
       const obj = makeErasable('e1')
       obj.toCanvasElement = () => ({
         width: 1,
@@ -1243,11 +1244,21 @@ describe('composables/annotation', () => {
       expect(canvas._objects).toContain(obj)
       expect(obj.eraser).toBeUndefined()
       expect(api.deletions.value[0].objects).toHaveLength(0)
+      // The restore must sync as an addition BEFORE the update: zou and
+      // remote viewers drop updates for ids their drawing no longer holds.
+      expect(api.additions.value[0].drawing.objects[0].id).toBe('e1')
+      expect(postAnnotationAddition).toHaveBeenCalledTimes(1)
+      expect(postAnnotationUpdate).toHaveBeenCalledTimes(1)
+      expect(postAnnotationAddition.mock.invocationCallOrder[0]).toBeLessThan(
+        postAnnotationUpdate.mock.invocationCallOrder[0]
+      )
 
       api.redoLastAction()
       expect(canvas._objects).not.toContain(obj)
       expect(obj.eraser.getObjects()).toHaveLength(1)
       expect(api.deletions.value[0].objects).toEqual(['e1'])
+      // Redo purges the stale update so the batch nets out to a deletion.
+      expect(api.updates.value[0].drawing.objects).toHaveLength(0)
       wrapper.unmount()
     })
 

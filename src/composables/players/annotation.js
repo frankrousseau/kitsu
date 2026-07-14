@@ -854,6 +854,14 @@ export const useAnnotation = ({
           silentAnnotation = false
         }
         removeFromDeletions(obj)
+        // The object may no longer exist in the saved drawing (its deletion
+        // was already saved): zou drops updates for unknown ids and remote
+        // viewers ignore them, so the restore must be an addition. The
+        // update below still runs: zou applies additions first, so when the
+        // object still exists server-side (same-batch undo) the addition is
+        // ignored and the update carries the restored state.
+        setObjectData(obj)
+        addToAdditions(obj)
       }
       addToUpdates(obj)
     })
