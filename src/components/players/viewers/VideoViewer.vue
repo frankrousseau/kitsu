@@ -408,13 +408,18 @@ const startRenderLoop = () => {
     renderLoopIsRvfc = false
     let lastDrawnTime = -1
     const tick = () => {
-      if (video.value && video.value.currentTime !== lastDrawnTime) {
-        hasPaintedVideoFrame = true
-        lastDrawnTime = video.value.currentTime
-        currentTimeRaw.value = lastDrawnTime
-        renderer?.drawFrame()
-        if (!video.value.paused) {
-          emitFrameSignals(lastDrawnTime)
+      // Mid-seek (no rVFC, e.g. Firefox): currentTime already reads the
+      // target while the decoder still holds the old position — drawing
+      // would paint stale frames past the trim and emit stale times.
+      if (video.value && !video.value.seeking) {
+        if (video.value.currentTime !== lastDrawnTime) {
+          hasPaintedVideoFrame = true
+          lastDrawnTime = video.value.currentTime
+          currentTimeRaw.value = lastDrawnTime
+          renderer?.drawFrame()
+          if (!video.value.paused) {
+            emitFrameSignals(lastDrawnTime)
+          }
         }
       }
       renderLoopHandle = requestAnimationFrame(tick)
