@@ -87,3 +87,13 @@ export const formatFrame = frame => {
   if (frame < 0) frame = 0
   return `${frame}`.padStart(3, '0')
 }
+
+/*
+ * Get the production start frame of an entity (a shot numbered from
+ * data.frame_in, e.g. 1001). Returns undefined when the entity carries no
+ * usable value.
+ */
+export const getEntityFrameStart = entity => {
+  const frameIn = parseInt(entity?.data?.frame_in)
+  return frameIn > 0 ? frameIn : undefined
+}

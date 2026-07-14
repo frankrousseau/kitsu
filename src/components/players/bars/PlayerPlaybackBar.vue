@@ -100,6 +100,8 @@
 <script setup>
 import { computed } from 'vue'
 
+import { formatFrame } from '@/lib/video'
+
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
 import ButtonSound from '@/components/widgets/ButtonSound.vue'
 import ComboboxStyled from '@/components/widgets/ComboboxStyled.vue'
@@ -122,6 +124,10 @@ const props = defineProps({
   currentTime: {
     type: String,
     default: '00:00:00:00'
+  },
+  frameStart: {
+    type: Number,
+    default: undefined
   },
   fullScreen: {
     type: Boolean,
@@ -188,12 +194,25 @@ const speed = defineModel('speed', { type: Number, default: 3 })
 const volume = defineModel('volume', { type: Number, default: 50 })
 
 // Computed
+
+// Display-only shift so the first frame reads as `frameStart` (e.g. a shot
+// with data.frame_in = 1001) instead of 1. Internal frame math is untouched.
+const frameStartOffset = computed(() =>
+  props.frameStart > 0 ? props.frameStart - 1 : 0
+)
+
 const frameIndicator = computed(() => {
+  const frameLabel = frameStartOffset.value
+    ? formatFrame(Number(props.currentFrameLabel) + frameStartOffset.value)
+    : props.currentFrameLabel
   if (props.light && !props.fullScreen) {
-    return `(${props.currentFrameLabel})`
+    return `(${frameLabel})`
   }
-  const nbFrames = String(props.nbFrames).padStart(3, '0')
-  return `(${props.currentFrameLabel} / ${nbFrames})`
+  const nbFrames = String(props.nbFrames + frameStartOffset.value).padStart(
+    3,
+    '0'
+  )
+  return `(${frameLabel} / ${nbFrames})`
 })
 </script>
 

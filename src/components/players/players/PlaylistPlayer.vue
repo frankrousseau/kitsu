@@ -436,6 +436,7 @@
       :comparison-annotations="comparisonAnnotations"
       :empty="!isCurrentPreviewMovie"
       :frame-duration="frameDuration"
+      :frame-start="frameStart"
       :is-full-mode="isFullMode"
       :is-full-screen="fullScreen || isEntitiesHidden"
       :movie-dimensions="movieDimensions"
@@ -515,6 +516,7 @@
         :compact="isFullMode"
         :current-frame-label="currentFrame"
         :current-time="currentTime"
+        :frame-start="frameStart"
         :full-screen="fullScreen"
         :is-3-d-animation="objectModel.isAnimation"
         :is-3-d-model="isCurrentPreviewModel"
@@ -959,6 +961,7 @@ import {
   floorToFrame,
   formatFrame,
   formatTime,
+  getEntityFrameStart,
   roundToFrame
 } from '@/lib/video'
 
@@ -1386,6 +1389,13 @@ const frameNumber = computed(() => {
   if (n >= nbFrames.value) n = nbFrames.value
   return Math.round(n) - 1
 })
+
+// Production start frame of the playing shot (data.frame_in, e.g. 1001).
+// Forwarded to the playback bar / progress bar as a display-only offset —
+// currentFrame stays 1-based since annotation seeks round-trip on it.
+const frameStart = computed(() =>
+  getEntityFrameStart(shotMap.value.get(currentEntity.value?.id))
+)
 
 const currentFrame = computed(() => formatFrame(frameNumber.value + 2))
 
