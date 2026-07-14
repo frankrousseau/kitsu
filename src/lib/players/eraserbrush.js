@@ -12,6 +12,26 @@ import {
 // Signature of an "empty" SVG path produced by convertPointsToSVGPath when the
 // gesture is degenerate (a single point). Matches fabric's own internal check.
 const EMPTY_SVG_PATH = 'M 0 0 Q 0 0 0 0 L 0 0'
+const MIN_VISIBLE_ALPHA = 16
+
+export function hasVisiblePixels(obj) {
+  if (!obj.toCanvasElement) return true
+  try {
+    const canvas = obj.toCanvasElement({
+      enableRetinaScaling: false,
+      withoutShadow: true
+    })
+    const context = canvas.getContext('2d')
+    if (!context) return true
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
+    for (let index = 3; index < pixels.length; index += 4) {
+      if (pixels[index] > MIN_VISIBLE_ALPHA) return true
+    }
+    return false
+  } catch {
+    return true
+  }
+}
 
 // Mask paths live in the erased object's local frame and must never be
 // repositioned by group layout.

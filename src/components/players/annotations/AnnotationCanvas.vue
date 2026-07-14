@@ -124,6 +124,7 @@ const createFabric = () => {
     : new Canvas(canvasEl.value, {
         fireRightClick: true,
         enablePointerEvents: true,
+        perPixelTargetFind: true,
         // Marquee must fully contain an annotation to pick it up.
         // Without this, even a 1-2 pixel jitter on click can finalise
         // a tiny marquee that grabs nearby objects whose bboxes
