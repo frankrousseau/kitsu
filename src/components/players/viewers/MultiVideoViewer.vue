@@ -723,9 +723,14 @@ const unbindLoadingHandlers = player => {
 watch(
   () => props.currentPreviewIndex,
   () => {
-    if (!isPlaying.value) {
-      setCurrentTimeRaw(0)
-      reloadCurrentEntity(true)
+    // Reload even mid-playback: keeping the old source makes the "sub"
+    // resume the previous video at its old position and stop at that
+    // video's end. Resume on the new source when it was playing.
+    const wasPlaying = isPlaying.value
+    setCurrentTimeRaw(0)
+    reloadCurrentEntity(true)
+    if (wasPlaying) {
+      currentPlayer.value?.play()?.catch(() => {})
     }
   }
 )
