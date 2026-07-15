@@ -63,11 +63,36 @@ export const usePlaylistComparison = ({
     const files = entity?.preview_files?.[base.taskTypeId.value]
     if (!files) return []
     const revisions = files.map(p => p.revision).sort((a, b) => b - a)
+    const options = [{ label: 'Last', value: null }]
+    // "Previous" only makes sense when there is a revision before the last.
+    if (revisions.length > 1) {
+      options.push({ label: 'Previous', value: 'previous' })
+    }
     return [
-      { label: 'Last', value: null },
+      ...options,
       ...revisions.map(r => ({ label: `v${r}`, value: `${r}` }))
     ]
   })
+
+  // Resolves the preview file a compared revision points to. "previous"
+  // is the revision just before the one currently shown for that entity
+  // (anchored on its preview_file_id, latest when it isn't part of this
+  // task type's files); any other value falls back to the existing
+  // match-or-first behaviour (Last / vN).
+  const pickComparisonPreview = (files, entity) => {
+    if (!files || files.length === 0) return null
+    if (revisionToCompare.value === 'previous') {
+      const sorted = [...files].sort((a, b) => b.revision - a.revision)
+      const currentIndex = sorted.findIndex(
+        p => p.id === entity?.preview_file_id
+      )
+      const anchor = currentIndex >= 0 ? currentIndex : 0
+      return sorted[anchor + 1] || sorted[anchor]
+    }
+    return (
+      files.find(p => `${p.revision}` === revisionToCompare.value) || files[0]
+    )
+  }
   const entityListToCompare = computed(() => {
     if (!base.taskTypeId.value) return []
     return entityList.value.map(entity => {
@@ -81,9 +106,7 @@ export const usePlaylistComparison = ({
         key = Object.keys(previewFiles)[0]
         files = previewFiles[key]
       }
-      const preview =
-        files?.find(p => `${p.revision}` === revisionToCompare.value) ||
-        files?.[0]
+      const preview = pickComparisonPreview(files, entity)
       if (!preview) {
         return { preview_file_id: '', preview_file_extension: 'none' }
       }
@@ -98,8 +121,7 @@ export const usePlaylistComparison = ({
     const entity = currentEntity.value
     const files = entity?.preview_files?.[base.taskTypeId.value]
     if (!files || files.length === 0) return null
-    const match = files.find(p => `${p.revision}` === revisionToCompare.value)
-    return match || files[0]
+    return pickComparisonPreview(files, entity)
   })
 
   const currentPreviewToCompare = computed(() => {
