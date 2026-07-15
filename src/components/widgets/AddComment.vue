@@ -211,7 +211,7 @@
               id="input-revision"
               class="input flexrow-item column preview-revision"
               type="number"
-              :min="revision + 1"
+              :min="0"
               pattern="[0-9]"
               :placeholder="revision + 1"
               @enter="$emit('add-preview')"
@@ -670,8 +670,7 @@ const isValidForm = computed(() => {
     mode.value === 'status' ||
     (mode.value === 'publish' &&
       props.previewForms.length &&
-      (nextRevision.value === undefined ||
-        nextRevision.value > props.revision) &&
+      (nextRevision.value === undefined || nextRevision.value > -1) &&
       (!showLinkField.value ||
         !link.value ||
         inputLinkRef.value?.checkValidity()))
@@ -734,7 +733,7 @@ const runAddComment = (
   }
 
   revisionVal = Number(revisionVal)
-  if (isNaN(revisionVal) || revisionVal < 1) {
+  if (isNaN(revisionVal) || revisionVal < 0) {
     revisionVal = undefined
   }
 
