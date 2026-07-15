@@ -210,6 +210,7 @@
             <input
               id="input-revision"
               class="input flexrow-item column preview-revision"
+              :class="{ 'below-current': isRevisionBelowCurrent }"
               type="number"
               :min="0"
               pattern="[0-9]"
@@ -670,11 +671,21 @@ const isValidForm = computed(() => {
     mode.value === 'status' ||
     (mode.value === 'publish' &&
       props.previewForms.length &&
-      (nextRevision.value === undefined || nextRevision.value > -1) &&
+      (nextRevision.value === undefined ||
+        nextRevision.value === '' ||
+        nextRevision.value > -1) &&
       (!showLinkField.value ||
         !link.value ||
         inputLinkRef.value?.checkValidity()))
   )
+})
+
+// Warn (without blocking) when the chosen revision is not greater than
+// the current one: allowed since revision 0 is valid, but worth flagging.
+const isRevisionBelowCurrent = computed(() => {
+  const value = nextRevision.value
+  if (value === undefined || value === '') return false
+  return Number(value) <= props.revision
 })
 
 const shortenText = strings.shortenText
@@ -732,9 +743,13 @@ const runAddComment = (
     checklistVal = checklistVal.filter(item => item.text)
   }
 
-  revisionVal = Number(revisionVal)
-  if (isNaN(revisionVal) || revisionVal < 0) {
+  if (revisionVal === '' || revisionVal === undefined) {
     revisionVal = undefined
+  } else {
+    revisionVal = Number(revisionVal)
+    if (isNaN(revisionVal) || revisionVal < 0) {
+      revisionVal = undefined
+    }
   }
 
   if (!showLinkField.value) {
@@ -1013,7 +1028,7 @@ watch(isFrameAddition, value => {
 watch(
   () => props.previewForms,
   () => {
-    const form = props.previewForms?.findLast(form => getRevision(form) > 0)
+    const form = props.previewForms?.findLast(form => getRevision(form) > -1)
     nextRevision.value = getRevision(form)
   },
   { deep: true, immediate: true }
@@ -1075,6 +1090,11 @@ article.add-comment {
 
 .preview-revision {
   max-width: 30%;
+
+  &.below-current {
+    border-color: $red;
+    color: $red;
+  }
 }
 
 .preview-delete-link,
