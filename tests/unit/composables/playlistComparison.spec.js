@@ -171,10 +171,8 @@ describe('composables/playlistComparison', () => {
       ])
     })
 
-    it('resolves "previous" to the revision before the one currently shown', () => {
+    it('resolves "previous" to last - 1 (second highest revision) per entity', () => {
       const entityA = {
-        // Playing v2 while v3 exists → previous is v1, not v2.
-        preview_file_id: 'a2',
         preview_files: {
           'tt-anim': [
             { id: 'a3', revision: 3, extension: 'mp4' },
@@ -184,7 +182,6 @@ describe('composables/playlistComparison', () => {
         }
       }
       const entityB = {
-        preview_file_id: 'b1',
         preview_files: {
           'tt-anim': [{ id: 'b1', revision: 1, extension: 'png' }]
         }
@@ -198,33 +195,10 @@ describe('composables/playlistComparison', () => {
       c.taskTypeId.value = 'tt-anim'
       c.revisionToCompare.value = 'previous'
       expect(c.entityListToCompare.value).toEqual([
-        { preview_file_id: 'a1', preview_file_extension: 'mp4' },
+        // last is v3 → previous is v2, whatever the array order
+        { preview_file_id: 'a2', preview_file_extension: 'mp4' },
         // entity B has a single revision → previous falls back to it
         { preview_file_id: 'b1', preview_file_extension: 'png' }
-      ])
-    })
-
-    it('resolves "previous" to the second latest when the shown revision is the newest', () => {
-      const entity = {
-        preview_file_id: 'a3', // playing the latest
-        preview_files: {
-          'tt-anim': [
-            { id: 'a3', revision: 3, extension: 'mp4' },
-            { id: 'a2', revision: 2, extension: 'mp4' },
-            { id: 'a1', revision: 1, extension: 'mp4' }
-          ]
-        }
-      }
-      const c = usePlaylistComparison(
-        makeInputs({
-          entityList: [entity],
-          taskTypeMap: new Map([['tt-anim', { id: 'tt-anim', name: 'Anim' }]])
-        })
-      )
-      c.taskTypeId.value = 'tt-anim'
-      c.revisionToCompare.value = 'previous'
-      expect(c.entityListToCompare.value).toEqual([
-        { preview_file_id: 'a2', preview_file_extension: 'mp4' }
       ])
     })
 
