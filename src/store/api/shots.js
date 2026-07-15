@@ -1,4 +1,5 @@
 import client from '@/store/api/client'
+import { sanitizeIntegerLight } from '@/composables/format'
 
 export default {
   getShot(shotId) {
@@ -98,8 +99,16 @@ export default {
       shot.max_retakes !== undefined
     ) {
       Object.assign(data.data, {
-        frame_in: shot.frameIn,
-        frame_out: shot.frameOut,
+        // Store an empty frame as null (not ''), and a filled one as an int,
+        // so shots stay homogeneous for consumers expecting a number.
+        frame_in:
+          shot.frameIn !== undefined
+            ? sanitizeIntegerLight(shot.frameIn)
+            : undefined,
+        frame_out:
+          shot.frameOut !== undefined
+            ? sanitizeIntegerLight(shot.frameOut)
+            : undefined,
         fps: shot.fps,
         resolution: shot.resolution,
         max_retakes: parseInt(shot.max_retakes)
