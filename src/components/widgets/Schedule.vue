@@ -1095,6 +1095,8 @@ let dragSourcePersonId = null
 // layout; invalidated on resize and zoom via resetScheduleSize
 let wrapperRect = null
 let positionBarFrame = null
+let moveFrame = null
+let lastMoveEvent = null
 
 let domEvents = []
 let moveEvents = []
@@ -1344,7 +1346,7 @@ const resetScheduleSize = () => {
   }
 }
 
-const onMouseMove = event => {
+const processMouseMove = event => {
   if (isChangeStartDate.value) {
     changeStartDate(event)
   } else if (isChangeEndDate.value) {
@@ -1355,6 +1357,17 @@ const onMouseMove = event => {
     if (isBrowsingX.value) scrollScheduleLeft(event)
     if (isBrowsingY.value) scrollScheduleTop(event)
   }
+}
+
+// high-frequency mice fire several mousemove events per frame: process only
+// the latest one per animation frame
+const onMouseMove = event => {
+  lastMoveEvent = event
+  if (moveFrame) return
+  moveFrame = requestAnimationFrame(() => {
+    moveFrame = null
+    processMouseMove(lastMoveEvent)
+  })
 }
 
 // document-level move listeners are attached only for the duration of a drag
@@ -1876,7 +1889,9 @@ const setScrollPosition = top => {
 const scrollScheduleLeft = event => {
   if (!timelineContentWrapperRef.value) return
   const previousLeft = timelineContentWrapperRef.value.scrollLeft
-  const movementX = event.movementX || getClientX(event) - initialClientX
+  // cumulative delta from the last processed event: movementX would lose the
+  // moves skipped by the frame throttle
+  const movementX = getClientX(event) - initialClientX
   const newLeft = previousLeft - movementX
   initialClientX = getClientX(event)
   timelineContentWrapperRef.value.scrollLeft = newLeft
@@ -1886,7 +1901,7 @@ const scrollScheduleLeft = event => {
 const scrollScheduleTop = event => {
   if (!timelineContentWrapperRef.value) return
   const previousTop = timelineContentWrapperRef.value.scrollTop
-  const movementY = event.movementY || getClientY(event) - initialClientY
+  const movementY = getClientY(event) - initialClientY
   const newTop = previousTop - movementY
   initialClientY = getClientY(event)
   setScrollPosition(newTop)
@@ -1946,6 +1961,11 @@ const startBrowsingY = event => {
 const stopBrowsing = event => {
   document.body.style.cursor = 'default'
   removeEvents(moveEvents)
+  // a pending frame would move the item again after the drop is saved
+  if (moveFrame) {
+    cancelAnimationFrame(moveFrame)
+    moveFrame = null
+  }
   if (currentElement.value) {
     if (initialClientX !== getClientX(event)) {
       // on moving or resizing selected items
@@ -2495,6 +2515,7 @@ onBeforeUnmount(() => {
   removeEvents(domEvents)
   removeEvents(moveEvents)
   if (positionBarFrame) cancelAnimationFrame(positionBarFrame)
+  if (moveFrame) cancelAnimationFrame(moveFrame)
   window.removeEventListener('resize', resetScheduleSize)
   document.body.style.cursor = 'default'
 })
