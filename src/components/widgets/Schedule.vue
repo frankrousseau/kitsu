@@ -2537,54 +2537,34 @@ defineExpose({
  *
  * @param {Array<Object>} items - The list of items to position.
  * @param {Moment.unitOfTime} unitOfTime - A unit of time (eg. 'days', 'weeks', 'months', ...).
- * @returns {Array<Object>} The list of items with updated positions.
  */
 const setItemPositions = (items, unitOfTime = 'days') => {
   if (!items?.length) {
     return
   }
-  const attributeName = 'line'
-  const matrix = []
   const minDate = moment
     .min(items.map(item => item.startDate))
     .clone()
     .startOf(unitOfTime)
-  const maxDate = moment
-    .max(items.map(item => item.endDate))
-    .clone()
-    .endOf(unitOfTime)
-  const nbColumns = maxDate.diff(minDate, unitOfTime) + 1
 
+  // one entry per line: the [start, end] ranges already placed on it
+  const lines = []
   items.forEach(item => {
     const start = item.startDate
       .clone()
       .startOf(unitOfTime)
       .diff(minDate, unitOfTime)
     const end = item.endDate.clone().endOf(unitOfTime).diff(minDate, unitOfTime)
-    const line = getFreeLinePosition(item.id, start, end, matrix)
-    item[attributeName] = line
-  })
-
-  function getFreeLinePosition(value, start, end, matrix, line = 0) {
-    for (let index = start; index <= end; index++) {
-      // if empty line
-      if (!matrix[line]) {
-        matrix.push(Array(nbColumns).fill(0))
-        index = end
-      }
-      // if collision on line
-      else if (matrix[line][index]) {
-        // go to next line
-        return getFreeLinePosition(value, start, end, matrix, line + 1)
-      }
-      // if no collision for the whole item
-      if (index === end) {
-        // save item in matrix
-        matrix[line].fill(value, start, end + 1)
-        return line
-      }
+    let line = 0
+    while (lines[line]?.some(([s, e]) => start <= e && end >= s)) {
+      line++
     }
-  }
+    if (!lines[line]) {
+      lines[line] = []
+    }
+    lines[line].push([start, end])
+    item.line = line
+  })
 }
 </script>
 
