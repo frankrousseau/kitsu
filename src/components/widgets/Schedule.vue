@@ -1770,9 +1770,10 @@ const isOverlapping = item => {
   )
 }
 
-const isSelected = item => {
-  return selection.value.some(({ id }) => id === item.id)
-}
+// isSelected runs for every bar on every render: keep it O(1)
+const selectedIds = computed(() => new Set(selection.value.map(({ id }) => id)))
+
+const isSelected = item => selectedIds.value.has(item.id)
 
 const addToSelection = itemToAdd => {
   selection.value.push(itemToAdd)
