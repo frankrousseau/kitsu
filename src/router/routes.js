@@ -485,6 +485,12 @@ export const routes = [
       },
 
       {
+        path: 'productions/:production_id/episodes/:episode_id/schedule',
+        component: ProductionSchedule,
+        name: 'episode-schedule'
+      },
+
+      {
         path: 'productions/:production_id/production-settings',
         component: ProductionSettings,
         name: 'production-settings'

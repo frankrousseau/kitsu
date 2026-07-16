@@ -104,7 +104,6 @@
             icon="list"
             :text="$t('menu.assign_tasks')"
             @click="toggleSidePanel"
-            v-if="!isTVShow"
           />
         </div>
       </div>
@@ -120,10 +119,9 @@
         clip-children
         is-estimation-linked
         hide-man-days
-        :multiline="isTVShow"
         :reassignable="!isLockedSchedule"
         show-expand-all
-        :subchildren="!isTVShow"
+        subchildren
         :type="mode"
         @expand-all="onScheduleExpandAll"
         @item-assign="onScheduleItemAssigned"
@@ -138,10 +136,7 @@
       />
     </div>
 
-    <div
-      class="column side-column"
-      v-if="isSidePanelOpen && !isLockedSchedule && !isTVShow"
-    >
+    <div class="column side-column" v-if="isSidePanelOpen && !isLockedSchedule">
       <div class="side">
         <a
           class="close-button"
@@ -579,6 +574,9 @@ import TextField from '@/components/widgets/TextField.vue'
 
 import assetStore from '@/store/modules/assets'
 import assetTypeStore from '@/store/modules/assettypes'
+import editStore from '@/store/modules/edits'
+import episodeStore from '@/store/modules/episodes'
+import sequenceStore from '@/store/modules/sequences'
 import shotStore from '@/store/modules/shots'
 import taskTypeStore from '@/store/modules/tasktypes'
 
@@ -635,6 +633,7 @@ export default {
       endDate: moment().add(6, 'months').endOf('day'),
       entityType: null,
       isSidePanelOpen: false,
+      resetTimeout: null,
       scheduleItems: [],
       startDate: moment().startOf('day'),
       selectedStartDate: null,
@@ -681,6 +680,10 @@ export default {
     this.reset()
   },
 
+  beforeUnmount() {
+    if (this.resetTimeout) clearTimeout(this.resetTimeout)
+  },
+
   computed: {
     ...mapGetters([
       'currentEpisode',
@@ -706,14 +709,6 @@ export default {
       const nbAssignees = this.availablePersons.length
 
       return nbDays && nbAssignees ? nbEntities / nbDays / nbAssignees : 0
-    },
-
-    assetMap() {
-      return assetStore.cache.assetMap
-    },
-
-    assets() {
-      return assetStore.cache.assets
     },
 
     assetTypeMap() {
@@ -748,12 +743,10 @@ export default {
       )
     },
 
-    shotMap() {
-      return shotStore.cache.shotMap
-    },
-
-    shots() {
-      return shotStore.cache.shots
+    // Concrete episode id for scoping (null for feature films or the 'all'/'main' pseudo-episodes).
+    currentEpisodeId() {
+      const id = this.currentEpisode?.id
+      return this.isTVShow && id && !['all', 'main'].includes(id) ? id : null
     },
 
     taskTypeMap() {
@@ -838,10 +831,14 @@ export default {
       'editProduction',
       'loadAssets',
       'loadAssetTypeScheduleItems',
+      'loadEdits',
+      'loadEditScheduleItems',
       'loadEpisodeScheduleItems',
+      'loadEpisodes',
       'loadProductionDaysOff',
       'loadScheduleItems',
       'loadScheduleVersions',
+      'loadSequences',
       'loadSequenceScheduleItems',
       'loadShots',
       'loadTasks',
@@ -949,7 +946,16 @@ export default {
         })
     },
 
-    async reset() {
+    reset() {
+      // Debounce: cross-prod navigation triggers two close currentEpisode changes (transient 'main' then 'all').
+      if (this.resetTimeout) clearTimeout(this.resetTimeout)
+      this.resetTimeout = setTimeout(() => {
+        this.resetTimeout = null
+        this.loadSchedule()
+      }, 50)
+    },
+
+    async loadSchedule() {
       this.closeSidePanel()
 
       if (this.currentProduction.start_date) {
@@ -1020,16 +1026,22 @@ export default {
           children: [],
           parentElement: taskTypeElement
         }
-        if (this.isTVShow) {
-          scheduleItem.route = getTaskTypeSchedulePath(
-            item.task_type_id,
-            this.currentProduction.id,
-            item.object_id,
-            taskTypeElement.for_entity
-          )
-        }
         return scheduleItem
       })
+    },
+
+    buildTaskFilters(taskType) {
+      const filters = {
+        project_id: this.currentProduction.id,
+        task_type_id: taskType.task_type_id,
+        relations: 'true'
+      }
+      // /tasks?episode_id= only filters shot tasks (shot → sequence → episode);
+      // asset tasks are scoped client-side via the episode-scoped assetMap.
+      if (this.currentEpisodeId && taskType.for_entity === 'Shot') {
+        filters.episode_id = this.currentEpisodeId
+      }
+      return filters
     },
 
     async expandTaskTypeElement(
@@ -1044,25 +1056,29 @@ export default {
         try {
           taskTypeElement.loading = true
 
-          this.selectedTaskType = !this.isTVShow ? taskTypeElement : null
+          this.selectedTaskType = taskTypeElement
           this.assignments.loading = resetAssignments
 
           taskTypeElement.children = []
           taskTypeElement.people = {}
           taskTypeElement.entitiesByType = {}
 
-          const loadScheduleItems = this.isTVShow
-            ? ['Asset', 'Shot'].includes(taskTypeElement.for_entity)
-              ? this.loadEpisodeScheduleItems
-              : this.loadSequenceScheduleItems
-            : taskTypeElement.for_entity === 'Shot'
-              ? this.loadSequenceScheduleItems
-              : taskTypeElement.for_entity === 'Sequence'
-                ? this.loadSequenceScheduleItems
-                : this.loadAssetTypeScheduleItems
+          // one row per asset type (Asset), sequence (Shot/Sequence),
+          // episode (Episode) or edit (Edit)
+          const scheduleItemLoaders = {
+            Asset: this.loadAssetTypeScheduleItems,
+            Shot: this.loadSequenceScheduleItems,
+            Sequence: this.loadSequenceScheduleItems,
+            Episode: this.loadEpisodeScheduleItems,
+            Edit: this.loadEditScheduleItems
+          }
+          const loadScheduleItems =
+            scheduleItemLoaders[taskTypeElement.for_entity] ??
+            this.loadAssetTypeScheduleItems
           const parameters = {
             production: this.currentProduction,
-            taskType: this.taskTypeMap.get(taskTypeElement.task_type_id)
+            taskType: this.taskTypeMap.get(taskTypeElement.task_type_id),
+            episodeId: this.currentEpisodeId
           }
           const scheduleItems = await loadScheduleItems(parameters)
 
@@ -1074,228 +1090,268 @@ export default {
             children.map(child => [child.object_id, child])
           )
 
-          if (this.isTVShow) {
-            taskTypeElement.children = children
-          } else {
-            // load entities
-            if (taskTypeElement.for_entity === 'Asset') {
-              await this.loadAssets({ withShared: false, withTasks: false })
-            }
-            if (taskTypeElement.for_entity === 'Shot') {
-              await this.loadShots()
-            }
+          // load entities (scoped to the current episode for TV shows) that
+          // back the row grouping, the entity name and the episode filter
+          if (taskTypeElement.for_entity === 'Asset') {
+            await this.loadAssets({ withShared: false, withTasks: false })
+          } else if (taskTypeElement.for_entity === 'Shot') {
+            await this.loadShots()
+          } else if (taskTypeElement.for_entity === 'Sequence') {
+            await this.loadSequences()
+          } else if (taskTypeElement.for_entity === 'Episode') {
+            await this.loadEpisodes()
+          } else if (taskTypeElement.for_entity === 'Edit') {
+            await this.loadEdits()
+          }
 
-            let tasks = await this.loadTasks({
-              project_id: this.currentProduction.id,
-              task_type_id: taskTypeElement.task_type_id,
-              relations: 'true'
+          let tasks = await this.loadTasks(
+            this.buildTaskFilters(taskTypeElement)
+          )
+
+          // Update tasks for versioned schedules
+          if (this.isVersioned) {
+            const taskType = this.taskTypeMap.get(taskTypeElement.task_type_id)
+            const versionedTasks = await this.loadTasksFromScheduleVersion({
+              version: { id: this.version },
+              taskType
             })
-
-            // Update tasks for versioned schedules
-            if (this.isVersioned) {
-              const taskType = this.taskTypeMap.get(
-                taskTypeElement.task_type_id
-              )
-              const versionedTasks = await this.loadTasksFromScheduleVersion({
-                version: { id: this.version },
-                taskType
-              })
-              const versionedTaskMap = new Map(
-                versionedTasks.map(versionedTask => [
-                  versionedTask.task_id,
-                  versionedTask
-                ])
-              )
-              tasks = tasks
-                .map(task => {
-                  const versioned = versionedTaskMap.get(task.id)
-                  if (!versioned?.start_date) {
-                    return null
-                  }
-                  return {
-                    ...task,
-                    versionedTaskId: versioned.id,
-                    start_date: versioned.start_date,
-                    due_date: versioned.due_date,
-                    estimation: versioned.estimation,
-                    assignees: versioned.assignees
-                  }
-                })
-                .filter(Boolean)
-            }
-
-            this.daysOffByPerson = await this.loadProductionDaysOff({
-              startDate: this.startDate.format('YYYY-MM-DD'),
-              endDate: this.endDate.format('YYYY-MM-DD')
-            }).catch(
-              () => ({}) // fallback if not allowed to fetch days off
-            )
-
-            // group tasks by entity type and assignee
-            const tasksByType = {}
-            const people = {}
-            tasks.forEach(task => {
-              if (!task.start_date) {
-                return
-              }
-
-              // link entity to task
-              if (taskTypeElement.for_entity === 'Asset') {
-                task.entity = this.assetMap.get(task.entity_id)
-                task.entity_type_id = task.entity.asset_type_id
-              } else if (taskTypeElement.for_entity === 'Shot') {
-                task.entity = this.shotMap.get(task.entity_id)
-                task.entity_type_id = task.entity.sequence_id
-              } else {
-                task.entity_type_id = taskTypeElement.for_entity
-              }
-              if (task.entity?.canceled) {
-                return
-              }
-
-              if (!tasksByType[task.entity_type_id]) {
-                tasksByType[task.entity_type_id] = {}
-              }
-
-              if (!task.assignees.length) {
-                task.assignees = ['unassigned']
-              }
-
-              task.assignees.forEach(assigneeId => {
-                const entityTypeItem = childrenById.get(task.entity_type_id)
-
-                // populate task with start and end dates
-
-                let startDate
-                if (this.mode === 'real') {
-                  if (!task.real_start_date) {
-                    return
-                  }
-                  startDate = parseDate(task.real_start_date)
-                } else {
-                  startDate = parseDate(task.start_date)
-                }
-                if (startDate.isAfter(this.endDate)) {
-                  return
-                }
-                if (startDate.isBefore(entityTypeItem.startDate)) {
-                  entityTypeItem.startDate = startDate.clone()
-                }
-                task.startDate = startDate
-
-                let endDate
-                if (this.mode === 'real') {
-                  endDate = task.done_date
-                    ? parseDate(task.done_date)
-                    : moment.tz()
-                } else if (task.due_date) {
-                  endDate = parseDate(task.due_date)
-                } else if (task.end_date) {
-                  endDate = parseDate(task.end_date)
-                } else if (task.estimation) {
-                  endDate = addBusinessDays(
-                    task.startDate,
-                    Math.ceil(
-                      minutesToDays(this.organisation, task.estimation)
-                    ) - 1,
-                    this.daysOffByPerson[assigneeId]
-                  )
-                }
-                if (!endDate || endDate.isBefore(startDate)) {
-                  const nbDays = startDate.isoWeekday() === 5 ? 3 : 1
-                  endDate = startDate.clone().add(nbDays, 'days')
-                }
-                if (!endDate.isSameOrAfter(startDate)) {
-                  const nbDays = startDate.isoWeekday() === 5 ? 3 : 1
-                  endDate = startDate.clone().add(nbDays, 'days')
-                }
-                if (endDate.isBefore(this.startDate)) {
-                  return
-                }
-                if (endDate.isAfter(entityTypeItem.endDate)) {
-                  entityTypeItem.endDate = endDate.clone()
-                }
-                task.endDate = endDate
-
-                if (!tasksByType[task.entity_type_id][assigneeId]) {
-                  tasksByType[task.entity_type_id][assigneeId] = []
-                  people[assigneeId] =
-                    assigneeId !== 'unassigned'
-                      ? {
-                          ...this.personMap.get(assigneeId),
-                          daysOff: this.daysOffByPerson[assigneeId]
-                        }
-                      : {
-                          id: assigneeId,
-                          avatar: false,
-                          color: '#888',
-                          full_name: this.$t('main.unassigned')
-                        }
-                }
-
-                task.editable = !this.isLockedSchedule
-                task.unresizable = false
-                task.parentElement = entityTypeItem
-
-                tasksByType[task.entity_type_id][assigneeId].push(task)
-              })
-            })
-
-            if (taskTypeElement.for_entity === 'Asset') {
-              // filtering following custom asset types workflow
-              children = children.filter(item => {
-                const assetType = this.assetTypeMap.get(item.object_id)
-                return (
-                  assetType &&
-                  (!assetType.task_types.length ||
-                    assetType.task_types.includes(taskTypeElement.task_type_id))
-                )
-              })
-            }
-
-            // sort grouped tasks
-            const sortEntitiesByUserName = ([keyA], [keyB]) => {
-              if (keyA === 'unassigned') return 1
-              if (keyB === 'unassigned') return -1
-              return people[keyA].full_name.localeCompare(
-                people[keyB].full_name
-              )
-            }
-            const sortTasksByEntityName = (a, b) =>
-              a.entity?.name.localeCompare(b.entity?.name, undefined, {
-                numeric: true
-              })
-            children.forEach(child => {
-              const items = tasksByType[child.object_id] || {}
-              const sortedChildren = new Map(
-                Object.entries(items)
-                  .sort(sortEntitiesByUserName)
-                  .map(([key, tasks]) => [
-                    key,
-                    tasks.sort(sortTasksByEntityName)
-                  ])
-              )
-
-              child.children = sortedChildren
-            })
-
-            taskTypeElement.children = sortByName(children)
-            taskTypeElement.people = people
-
-            // group all assigned entities by type
-            taskTypeElement.entitiesByType = Object.fromEntries(
-              Object.entries(tasksByType).map(([entityTypeId, byAssignee]) => [
-                entityTypeId,
-                Object.entries(byAssignee)
-                  .flatMap(([assignee, items]) =>
-                    assignee !== 'unassigned'
-                      ? items.map(item => item.entity_id)
-                      : undefined
-                  )
-                  .filter(Boolean)
+            const versionedTaskMap = new Map(
+              versionedTasks.map(versionedTask => [
+                versionedTask.task_id,
+                versionedTask
               ])
             )
+            tasks = tasks
+              .map(task => {
+                const versioned = versionedTaskMap.get(task.id)
+                if (!versioned?.start_date) {
+                  return null
+                }
+                return {
+                  ...task,
+                  versionedTaskId: versioned.id,
+                  start_date: versioned.start_date,
+                  due_date: versioned.due_date,
+                  estimation: versioned.estimation,
+                  assignees: versioned.assignees
+                }
+              })
+              .filter(Boolean)
           }
+
+          this.daysOffByPerson = await this.loadProductionDaysOff({
+            startDate: this.startDate.format('YYYY-MM-DD'),
+            endDate: this.endDate.format('YYYY-MM-DD')
+          }).catch(
+            () => ({}) // fallback if not allowed to fetch days off
+          )
+
+          // Read the entity maps fresh from the store cache. They are plain,
+          // non-reactive Maps replaced on each episode-scoped load, so a cached
+          // computed would keep returning the first episode's Map and empty the
+          // drill-down after switching episode.
+          const assetMap = assetStore.cache.assetMap
+          const shotMap = shotStore.cache.shotMap
+          const sequenceMap = sequenceStore.cache.sequenceMap
+          const episodeMap = episodeStore.cache.episodeMap
+          const editMap = editStore.cache.editMap
+
+          // group tasks by entity type and assignee
+          const tasksByType = {}
+          const people = {}
+          tasks.forEach(task => {
+            if (!task.start_date) {
+              return
+            }
+
+            // link entity to task; skip tasks whose entity is not in the
+            // current episode (loadTasks is not episode-scoped, but the entity
+            // maps are for TV shows). Sequence/Episode/Edit task types group
+            // under their own entity id.
+            if (taskTypeElement.for_entity === 'Asset') {
+              task.entity = assetMap.get(task.entity_id)
+              if (!task.entity) return
+              task.entity_type_id = task.entity.asset_type_id
+            } else if (taskTypeElement.for_entity === 'Shot') {
+              task.entity = shotMap.get(task.entity_id)
+              if (!task.entity) return
+              task.entity_type_id = task.entity.sequence_id
+            } else if (taskTypeElement.for_entity === 'Sequence') {
+              task.entity = sequenceMap.get(task.entity_id)
+              if (!task.entity) return
+              task.entity_type_id = task.entity_id
+            } else if (taskTypeElement.for_entity === 'Episode') {
+              task.entity = episodeMap.get(task.entity_id)
+              if (!task.entity) return
+              task.entity_type_id = task.entity_id
+            } else if (taskTypeElement.for_entity === 'Edit') {
+              task.entity = editMap.get(task.entity_id)
+              if (!task.entity) return
+              task.entity_type_id = task.entity_id
+            } else {
+              // unknown for_entity: the task will be dropped by the
+              // childrenById guard below
+              task.entity_type_id = taskTypeElement.for_entity
+            }
+            if (task.entity?.canceled) {
+              return
+            }
+
+            if (!tasksByType[task.entity_type_id]) {
+              tasksByType[task.entity_type_id] = {}
+            }
+
+            if (!task.assignees.length) {
+              task.assignees = ['unassigned']
+            }
+
+            task.assignees.forEach(assigneeId => {
+              const entityTypeItem = childrenById.get(task.entity_type_id)
+              if (!entityTypeItem) return
+
+              // populate task with start and end dates
+
+              let startDate
+              if (this.mode === 'real') {
+                if (!task.real_start_date) {
+                  return
+                }
+                startDate = parseDate(task.real_start_date)
+              } else {
+                startDate = parseDate(task.start_date)
+              }
+              if (startDate.isAfter(this.endDate)) {
+                return
+              }
+              if (startDate.isBefore(entityTypeItem.startDate)) {
+                entityTypeItem.startDate = startDate.clone()
+              }
+              task.startDate = startDate
+
+              let endDate
+              if (this.mode === 'real') {
+                endDate = task.done_date
+                  ? parseDate(task.done_date)
+                  : moment.tz()
+              } else if (task.due_date) {
+                endDate = parseDate(task.due_date)
+              } else if (task.end_date) {
+                endDate = parseDate(task.end_date)
+              } else if (task.estimation) {
+                endDate = addBusinessDays(
+                  task.startDate,
+                  Math.ceil(minutesToDays(this.organisation, task.estimation)) -
+                    1,
+                  this.daysOffByPerson[assigneeId]
+                )
+              }
+              if (!endDate || endDate.isBefore(startDate)) {
+                const nbDays = startDate.isoWeekday() === 5 ? 3 : 1
+                endDate = startDate.clone().add(nbDays, 'days')
+              }
+              if (!endDate.isSameOrAfter(startDate)) {
+                const nbDays = startDate.isoWeekday() === 5 ? 3 : 1
+                endDate = startDate.clone().add(nbDays, 'days')
+              }
+              if (endDate.isBefore(this.startDate)) {
+                return
+              }
+              if (endDate.isAfter(entityTypeItem.endDate)) {
+                entityTypeItem.endDate = endDate.clone()
+              }
+              task.endDate = endDate
+
+              if (!tasksByType[task.entity_type_id][assigneeId]) {
+                tasksByType[task.entity_type_id][assigneeId] = []
+                people[assigneeId] =
+                  assigneeId !== 'unassigned'
+                    ? {
+                        ...this.personMap.get(assigneeId),
+                        daysOff: this.daysOffByPerson[assigneeId]
+                      }
+                    : {
+                        id: assigneeId,
+                        avatar: false,
+                        color: '#888',
+                        full_name: this.$t('main.unassigned')
+                      }
+              }
+
+              task.editable = !this.isLockedSchedule
+              task.unresizable = false
+              task.parentElement = entityTypeItem
+
+              tasksByType[task.entity_type_id][assigneeId].push(task)
+            })
+          })
+
+          if (taskTypeElement.for_entity === 'Asset') {
+            // filtering following custom asset types workflow
+            children = children.filter(item => {
+              const assetType = this.assetTypeMap.get(item.object_id)
+              return (
+                assetType &&
+                (!assetType.task_types.length ||
+                  assetType.task_types.includes(taskTypeElement.task_type_id))
+              )
+            })
+          } else if (
+            ['Shot', 'Sequence'].includes(taskTypeElement.for_entity) &&
+            this.currentEpisodeId
+          ) {
+            // keep only the sequences of the current episode
+            children = children.filter(item => {
+              const sequence = sequenceMap.get(item.object_id)
+              return sequence && sequence.episode_id === this.currentEpisodeId
+            })
+          } else if (
+            taskTypeElement.for_entity === 'Edit' &&
+            this.currentEpisodeId
+          ) {
+            // keep only the edits of the current episode
+            children = children.filter(item => {
+              const edit = editMap.get(item.object_id)
+              return edit && edit.episode_id === this.currentEpisodeId
+            })
+          }
+
+          // sort grouped tasks
+          const sortEntitiesByUserName = ([keyA], [keyB]) => {
+            if (keyA === 'unassigned') return 1
+            if (keyB === 'unassigned') return -1
+            return people[keyA].full_name.localeCompare(people[keyB].full_name)
+          }
+          const sortTasksByEntityName = (a, b) =>
+            a.entity?.name.localeCompare(b.entity?.name, undefined, {
+              numeric: true
+            })
+          children.forEach(child => {
+            const items = tasksByType[child.object_id] || {}
+            const sortedChildren = new Map(
+              Object.entries(items)
+                .sort(sortEntitiesByUserName)
+                .map(([key, tasks]) => [key, tasks.sort(sortTasksByEntityName)])
+            )
+
+            child.children = sortedChildren
+          })
+
+          taskTypeElement.children = sortByName(children)
+          taskTypeElement.people = people
+
+          // group all assigned entities by type
+          taskTypeElement.entitiesByType = Object.fromEntries(
+            Object.entries(tasksByType).map(([entityTypeId, byAssignee]) => [
+              entityTypeId,
+              Object.entries(byAssignee)
+                .flatMap(([assignee, items]) =>
+                  assignee !== 'unassigned'
+                    ? items.map(item => item.entity_id)
+                    : undefined
+                )
+                .filter(Boolean)
+            ])
+          )
         } catch (err) {
           console.error(err)
           taskTypeElement.children = []
@@ -1559,10 +1615,6 @@ export default {
       selectedEntityType = undefined,
       resetAssignments = true
     ) {
-      if (this.isTVShow) {
-        return
-      }
-
       this.selectedTaskType = taskType
 
       if (resetAssignments) {
@@ -1572,11 +1624,9 @@ export default {
       this.assignments.loading = true
 
       // load tasks
-      const tasks = await this.loadTasks({
-        project_id: this.currentProduction.id,
-        task_type_id: this.selectedTaskType.task_type_id,
-        relations: 'true'
-      })
+      const tasks = await this.loadTasks(
+        this.buildTaskFilters(this.selectedTaskType)
+      )
 
       // load entity types
       if (taskType.for_entity === 'Asset') {
@@ -1597,7 +1647,7 @@ export default {
               for_entity: taskType.for_entity,
               expanded: assetType.id === selectedEntityType?.object_id,
               entity_type_id: assetType.id,
-              children: this.assets
+              children: assetStore.cache.assets
                 .filter(
                   asset =>
                     asset.asset_type_id === assetType.id &&
@@ -1616,7 +1666,7 @@ export default {
       } else if (taskType.for_entity === 'Shot') {
         await this.loadShots()
 
-        const shotsBySequence = this.shots
+        const shotsBySequence = shotStore.cache.shots
           .filter(shot => tasks.some(task => task.entity_id === shot.id))
           .reduce((acc, shot) => {
             if (!acc[shot.parent_id]) {
@@ -1638,6 +1688,107 @@ export default {
               for_entity: taskType.for_entity,
               expanded: sequenceId === selectedEntityType?.object_id,
               children: shots
+            }
+          }
+        )
+      } else if (taskType.for_entity === 'Sequence') {
+        await this.loadSequences()
+
+        // sequences are the assignable entities, grouped by episode
+        const sequencesByEpisode = [...sequenceStore.cache.sequenceMap.values()]
+          .filter(
+            sequence =>
+              !sequence.canceled &&
+              (!this.currentEpisodeId ||
+                sequence.episode_id === this.currentEpisodeId) &&
+              tasks.some(task => task.entity_id === sequence.id)
+          )
+          .reduce((acc, sequence) => {
+            const groupId = sequence.episode_id || taskType.for_entity
+            if (!acc[groupId]) {
+              acc[groupId] = []
+            }
+            sequence.assigned = taskType.entitiesByType?.[
+              sequence.id
+            ]?.includes(sequence.id)
+            acc[groupId].push(sequence)
+            return acc
+          }, {})
+
+        this.assignments.entityTypes = Object.keys(sequencesByEpisode).map(
+          groupId => {
+            const sequences = sequencesByEpisode[groupId]
+            return {
+              id: groupId,
+              name: sequences[0].episode_name || this.currentProduction.name,
+              for_entity: taskType.for_entity,
+              expanded: groupId === selectedEntityType?.object_id,
+              children: sequences
+            }
+          }
+        )
+      } else if (taskType.for_entity === 'Episode') {
+        await this.loadEpisodes()
+
+        // episodes are the assignable entities, under a single production group
+        const episodes = [...episodeStore.cache.episodeMap.values()]
+          .filter(
+            episode =>
+              !episode.canceled &&
+              !['all', 'main'].includes(episode.id) &&
+              (!this.currentEpisodeId ||
+                episode.id === this.currentEpisodeId) &&
+              tasks.some(task => task.entity_id === episode.id)
+          )
+          .map(episode => ({
+            ...episode,
+            assigned: taskType.entitiesByType?.[episode.id]?.includes(
+              episode.id
+            )
+          }))
+
+        this.assignments.entityTypes = [
+          {
+            id: taskType.for_entity,
+            name: this.currentProduction.name,
+            for_entity: taskType.for_entity,
+            expanded: true,
+            children: episodes
+          }
+        ]
+      } else if (taskType.for_entity === 'Edit') {
+        await this.loadEdits()
+
+        // edits are the assignable entities, grouped by episode
+        const editsByEpisode = [...editStore.cache.editMap.values()]
+          .filter(
+            edit =>
+              !edit.canceled &&
+              (!this.currentEpisodeId ||
+                edit.episode_id === this.currentEpisodeId) &&
+              tasks.some(task => task.entity_id === edit.id)
+          )
+          .reduce((acc, edit) => {
+            const groupId = edit.episode_id || taskType.for_entity
+            if (!acc[groupId]) {
+              acc[groupId] = []
+            }
+            edit.assigned = taskType.entitiesByType?.[edit.id]?.includes(
+              edit.id
+            )
+            acc[groupId].push(edit)
+            return acc
+          }, {})
+
+        this.assignments.entityTypes = Object.keys(editsByEpisode).map(
+          groupId => {
+            const edits = editsByEpisode[groupId]
+            return {
+              id: groupId,
+              name: edits[0].episode_name || this.currentProduction.name,
+              for_entity: taskType.for_entity,
+              expanded: groupId === selectedEntityType?.object_id,
+              children: edits
             }
           }
         )
@@ -1730,11 +1881,9 @@ export default {
       this.assignments.saving = true
 
       // load tasks
-      const tasks = await this.loadTasks({
-        project_id: this.currentProduction.id,
-        task_type_id: this.selectedTaskType.task_type_id,
-        relations: 'true'
-      })
+      const tasks = await this.loadTasks(
+        this.buildTaskFilters(this.selectedTaskType)
+      )
 
       const dailyQuota =
         this.assignments.forcedDailyQuota ?? this.estimatedDailyQuota
@@ -2362,12 +2511,21 @@ export default {
     currentProduction(value) {
       if (!value) return
       this.reset()
+    },
+
+    currentEpisode(value) {
+      if (!value || ['all', 'main'].includes(value.id)) return
+      if (this.isTVShow) this.reset()
     }
   },
 
   head() {
+    const context =
+      this.isTVShow && this.currentEpisode?.name
+        ? `${this.currentProduction.name} | ${this.currentEpisode.name}`
+        : this.currentProduction.name
     return {
-      title: `${this.currentProduction.name} | ${this.$t('schedule.title')} - Kitsu`
+      title: `${context} | ${this.$t('schedule.title')} - Kitsu`
     }
   }
 }

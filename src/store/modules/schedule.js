@@ -37,16 +37,24 @@ const actions = {
     commit(SET_CURRENT_SCHEDULE_ITEMS, scheduleItems)
   },
 
-  loadAssetTypeScheduleItems({}, { production, taskType }) {
-    return scheduleApi.getAssetTypeScheduleItems(production, taskType)
+  loadAssetTypeScheduleItems({}, { production, taskType, episodeId = null }) {
+    return scheduleApi.getAssetTypeScheduleItems(
+      production,
+      taskType,
+      episodeId
+    )
   },
 
-  loadSequenceScheduleItems({}, { production, taskType }) {
-    return scheduleApi.getSequenceScheduleItems(production, taskType)
+  loadSequenceScheduleItems({}, { production, taskType, episodeId = null }) {
+    return scheduleApi.getSequenceScheduleItems(production, taskType, episodeId)
   },
 
-  loadEpisodeScheduleItems({}, { production, taskType }) {
-    return scheduleApi.getEpisodeScheduleItems(production, taskType)
+  loadEditScheduleItems({}, { production, taskType, episodeId = null }) {
+    return scheduleApi.getEditScheduleItems(production, taskType, episodeId)
+  },
+
+  loadEpisodeScheduleItems({}, { production, taskType, episodeId = null }) {
+    return scheduleApi.getEpisodeScheduleItems(production, taskType, episodeId)
   },
 
   createScheduleItem({ commit, state }, scheduleItem) {

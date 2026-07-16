@@ -61,23 +61,41 @@ export default {
     return client.pdel(path)
   },
 
-  getAssetTypeScheduleItems(production, taskType) {
-    return this.getEntityScheduleItems(production, taskType, 'asset-types')
-  },
-
-  getSequenceScheduleItems(production, taskType) {
-    return this.getEntityScheduleItems(production, taskType, 'sequences')
-  },
-
-  getEpisodeScheduleItems(production, taskType) {
-    return this.getEntityScheduleItems(production, taskType, 'episodes')
-  },
-
-  getEntityScheduleItems(production, taskType, entity) {
-    return client.pget(
-      `/api/data/projects/${production.id}/schedule-items/` +
-        `${taskType.id}/${entity}`
+  getAssetTypeScheduleItems(production, taskType, episodeId = null) {
+    return this.getEntityScheduleItems(
+      production,
+      taskType,
+      'asset-types',
+      episodeId
     )
+  },
+
+  getSequenceScheduleItems(production, taskType, episodeId = null) {
+    return this.getEntityScheduleItems(
+      production,
+      taskType,
+      'sequences',
+      episodeId
+    )
+  },
+
+  getEditScheduleItems(production, taskType, episodeId = null) {
+    return this.getEntityScheduleItems(production, taskType, 'edits', episodeId)
+  },
+
+  getEpisodeScheduleItems(production, taskType, episodeId = null) {
+    return this.getEntityScheduleItems(
+      production,
+      taskType,
+      'episodes',
+      episodeId
+    )
+  },
+
+  getEntityScheduleItems(production, taskType, entity, episodeId = null) {
+    let path = `/api/data/projects/${production.id}/schedule-items/${taskType.id}/${entity}`
+    if (episodeId) path += `?episode_id=${episodeId}`
+    return client.pget(path)
   },
 
   updateScheduleItem(scheduleItem) {

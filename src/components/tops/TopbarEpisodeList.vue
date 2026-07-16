@@ -123,6 +123,7 @@ export default {
       const currentProduction = this.currentProduction
       const section = this.section
       const pluginId = this.$route.params.plugin_id
+      const currentQuery = this.$route.query
       return episodeId => {
         const path = getProductionPath(
           currentProduction,
@@ -130,6 +131,10 @@ export default {
           episodeId,
           pluginId
         )
+        if (section === 'schedule') {
+          // The production schedule keeps its view state (mode, version, ...) in the URL query.
+          path.query = { ...currentQuery }
+        }
         return path
       }
     }

@@ -69,6 +69,8 @@ import {
 const cache = {
   edits: [],
   editIndex: [],
+  editsLoadingPromise: null,
+  editsLoadingKey: null,
   editMap: new Map(),
   result: []
 }
@@ -345,11 +347,23 @@ const actions = {
       episode = null
     }
 
+    const loadingKey = `${production.id}/${episode?.id ?? ''}`
     if (state.isEditsLoading) {
-      return cache.editsLoadingPromise || Promise.resolve([])
+      if (cache.editsLoadingKey === loadingKey) {
+        // Same production+episode already loading: share the in-flight load
+        // so concurrent callers (e.g. schedule expands) await the same edits.
+        return cache.editsLoadingPromise || Promise.resolve([])
+      }
+      // A different production/episode is in flight (e.g. the user switched
+      // episode mid-load): wait for it to settle, then run our own load so
+      // the newly selected episode's edits are actually fetched.
+      return (cache.editsLoadingPromise || Promise.resolve([])).then(() =>
+        dispatch('loadEdits')
+      )
     }
 
     commit(LOAD_EDITS_START)
+    cache.editsLoadingKey = loadingKey
     const loadingPromise = editsApi
       .getEdits(production, episode)
       .then(edits => {
