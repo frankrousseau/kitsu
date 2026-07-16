@@ -2011,8 +2011,15 @@ export default {
         this.buildTaskFilters(this.selectedTaskType)
       )
 
+      // a zero or empty quota would make taskEstimation infinite and hang
+      // the distribution loop in addBusinessDays
       const dailyQuota =
-        this.assignments.forcedDailyQuota ?? this.estimatedDailyQuota
+        parseFloat(this.assignments.forcedDailyQuota) ||
+        this.estimatedDailyQuota
+      if (dailyQuota <= 0) {
+        this.assignments.saving = false
+        return
+      }
       const taskEstimation = 1 / dailyQuota
 
       // assign each selected entity to each selected assignee
