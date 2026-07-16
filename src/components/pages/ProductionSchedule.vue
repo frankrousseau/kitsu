@@ -2453,11 +2453,17 @@ export default {
         data.hierarchy.forEach(item => {
           endRowLevel1 = startRowLevel1
 
+          // ExcelJS expects 8-digit ARGB values, 6-digit hex shifts the
+          // channels and renders wrong colors
+          const lightened = colors.lightenColor(item.color, 0.2).hex()
+          const color = `FF${item.color.slice(1)}`.toUpperCase()
+          const color2 = `FF${lightened.slice(1)}`.toUpperCase()
+
           const row = sheet.addRow([null, item.name])
           row.getCell(1).fill = {
             type: 'pattern',
             pattern: 'solid',
-            fgColor: { argb: item.color.slice(1) }
+            fgColor: { argb: color }
           }
           row.getCell(2).alignment = { vertical: 'top' }
           row.getCell(2).note =
@@ -2467,8 +2473,6 @@ export default {
           // fill timebar
           const start = dates.indexOf(item.start_date)
           const end = dates.indexOf(item.end_date)
-          const color = item.color.slice(1)
-          const color2 = colors.lightenColor(item.color, 0.2).hex().slice(1)
           for (let i = start; i > -1 && i <= end; i++) {
             const cell = row.getCell(5 + i)
             cell.fill = {
