@@ -1177,6 +1177,8 @@ export default {
       taskTypeElement.expanded = expanded || !taskTypeElement.expanded
 
       if (taskTypeElement.expanded) {
+        // unversioned task list shared with the side panel to avoid a reload
+        let rawTasks = null
         try {
           taskTypeElement.loading = true
 
@@ -1231,6 +1233,7 @@ export default {
           let tasks = await this.loadTasks(
             this.buildTaskFilters(taskTypeElement)
           )
+          rawTasks = tasks
 
           // Update tasks for versioned schedules
           if (this.isVersioned) {
@@ -1496,7 +1499,12 @@ export default {
           refreshScheduleCallBack(taskTypeElement)
         }
 
-        this.selectTaskTypeElement(taskTypeElement, null, resetAssignments)
+        this.selectTaskTypeElement(
+          taskTypeElement,
+          null,
+          resetAssignments,
+          rawTasks
+        )
       }
     },
 
@@ -1745,7 +1753,8 @@ export default {
     async selectTaskTypeElement(
       taskType,
       selectedEntityType = undefined,
-      resetAssignments = true
+      resetAssignments = true,
+      preloadedTasks = null
     ) {
       // No assignment panel on the production-wide planning.
       if (this.isAllEpisodes) {
@@ -1760,14 +1769,17 @@ export default {
 
       this.assignments.loading = true
 
-      // load tasks
-      const tasks = await this.loadTasks(
-        this.buildTaskFilters(this.selectedTaskType)
-      )
+      // when called from expandTaskTypeElement, the tasks and entities were
+      // just loaded: reuse them instead of refetching everything
+      const tasks =
+        preloadedTasks ??
+        (await this.loadTasks(this.buildTaskFilters(this.selectedTaskType)))
 
       // load entity types
       if (taskType.for_entity === 'Asset') {
-        await this.loadScopedAssets()
+        if (!preloadedTasks) {
+          await this.loadScopedAssets()
+        }
 
         this.assignments.entityTypes = this.productionAssetTypes
           .filter(assetType => {
@@ -1802,7 +1814,9 @@ export default {
             }
           })
       } else if (taskType.for_entity === 'Shot') {
-        await this.loadShots()
+        if (!preloadedTasks) {
+          await this.loadShots()
+        }
 
         const shotsBySequence = shotStore.cache.shots
           .filter(shot => tasks.some(task => task.entity_id === shot.id))
@@ -1830,7 +1844,9 @@ export default {
           }
         )
       } else if (taskType.for_entity === 'Sequence') {
-        await this.loadSequences()
+        if (!preloadedTasks) {
+          await this.loadSequences()
+        }
 
         // sequences are the assignable entities, grouped by episode
         const sequencesByEpisode = [...sequenceStore.cache.sequenceMap.values()]
@@ -1866,7 +1882,9 @@ export default {
           }
         )
       } else if (taskType.for_entity === 'Episode') {
-        await this.loadEpisodes()
+        if (!preloadedTasks) {
+          await this.loadEpisodes()
+        }
 
         // episodes are the assignable entities, under a single production group
         const episodes = [...episodeStore.cache.episodeMap.values()]
@@ -1895,7 +1913,9 @@ export default {
           }
         ]
       } else if (taskType.for_entity === 'Edit') {
-        await this.loadEdits()
+        if (!preloadedTasks) {
+          await this.loadEdits()
+        }
 
         // edits are the assignable entities, grouped by episode
         const editsByEpisode = [...editStore.cache.editMap.values()]
