@@ -1774,6 +1774,7 @@ export default {
       const tasks =
         preloadedTasks ??
         (await this.loadTasks(this.buildTaskFilters(this.selectedTaskType)))
+      const taskEntityIds = new Set(tasks.map(task => task.entity_id))
 
       // load entity types
       if (taskType.for_entity === 'Asset') {
@@ -1803,7 +1804,7 @@ export default {
                     !asset.canceled &&
                     !asset.shared &&
                     this.assetInScope(asset) &&
-                    tasks.some(task => task.entity_id === asset.id)
+                    taskEntityIds.has(asset.id)
                 )
                 .map(asset => ({
                   ...asset,
@@ -1819,7 +1820,7 @@ export default {
         }
 
         const shotsBySequence = shotStore.cache.shots
-          .filter(shot => tasks.some(task => task.entity_id === shot.id))
+          .filter(shot => taskEntityIds.has(shot.id))
           .reduce((acc, shot) => {
             if (!acc[shot.parent_id]) {
               acc[shot.parent_id] = []
@@ -1855,7 +1856,7 @@ export default {
               !sequence.canceled &&
               (!this.currentEpisodeId ||
                 sequence.episode_id === this.currentEpisodeId) &&
-              tasks.some(task => task.entity_id === sequence.id)
+              taskEntityIds.has(sequence.id)
           )
           .reduce((acc, sequence) => {
             const groupId = sequence.episode_id || taskType.for_entity
@@ -1894,7 +1895,7 @@ export default {
               !['all', 'main'].includes(episode.id) &&
               (!this.currentEpisodeId ||
                 episode.id === this.currentEpisodeId) &&
-              tasks.some(task => task.entity_id === episode.id)
+              taskEntityIds.has(episode.id)
           )
           .map(episode => ({
             ...episode,
@@ -1924,7 +1925,7 @@ export default {
               !edit.canceled &&
               (!this.currentEpisodeId ||
                 edit.episode_id === this.currentEpisodeId) &&
-              tasks.some(task => task.entity_id === edit.id)
+              taskEntityIds.has(edit.id)
           )
           .reduce((acc, edit) => {
             const groupId = edit.episode_id || taskType.for_entity
