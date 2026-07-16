@@ -910,7 +910,7 @@ export default {
             const path = getTaskTypeSchedulePath(
               taskType.id,
               this.currentProduction.id,
-              this.currentEpisode ? this.currentEpisode.id : null,
+              this.currentEpisodeId,
               taskType.for_entity
             )
 
