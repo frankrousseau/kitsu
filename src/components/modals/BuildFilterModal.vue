@@ -50,7 +50,7 @@
         >
           <combobox-task-type
             class="flexrow-item"
-            :task-type-list="taskTypeList"
+            :task-type-list="taskTypeListWithAll"
             :with-margin="false"
             v-model="taskTypeFilter.id"
           />
@@ -583,11 +583,15 @@ const applyTaskTypeChoice = query => {
   taskTypeFilters.values.forEach(taskTypeFilter => {
     let operator = '=['
     if (taskTypeFilter.operator === '=-') operator = '=[-'
-    const taskType = taskTypeMap.value.get(taskTypeFilter.id)
     const value = taskTypeFilter.values
       .map(statusId => taskStatusMap.value.get(statusId).short_name)
       .join(',')
-    query += ` [${taskType.name}]${operator}${value}]`
+    // Empty id means "all task types": emit the cross-task-type status= filter.
+    const field =
+      taskTypeFilter.id === ''
+        ? 'status'
+        : `[${taskTypeMap.value.get(taskTypeFilter.id).name}]`
+    query += ` ${field}${operator}${value}]`
   })
   return query
 }
@@ -807,6 +811,18 @@ const setFiltersFromStatusQuery = filter => {
   })
 }
 
+const setFiltersFromStatusAnyQuery = filter => {
+  let operator = '='
+  if (filter.taskStatuses.length > 1) operator = 'in'
+  else if (filter.excluding) operator = '=-'
+  taskTypeFilters.values.push({
+    localId: uuidv4(),
+    id: '',
+    operator,
+    values: filter.taskStatuses
+  })
+}
+
 const setFiltersFromDescriptorQuery = filter => {
   let operator = '='
   let isChecklist = false
@@ -875,6 +891,7 @@ const setUnion = () => {
 const filterDispatchByType = {
   assettype: setFiltersFromAssetTypeQuery,
   status: setFiltersFromStatusQuery,
+  statusAny: setFiltersFromStatusAnyQuery,
   descriptor: setFiltersFromDescriptorQuery,
   assignation: setFiltersFromAssignationQuery,
   assignedto: setFiltersFromAssignedToQuery,

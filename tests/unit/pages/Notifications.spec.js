@@ -8,9 +8,6 @@ vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }))
 vi.mock('@/composables/desktopNotifications', () => ({
   useDesktopNotifications: vi.fn()
 }))
-vi.mock('@/composables/skeleton', () => ({
-  useSkeletonCycle: () => ({ cycle: { value: 0 }, fadeoutDelayMs: 0 })
-}))
 vi.mock('@/lib/preferences', () => ({
   default: {
     getObjectPreference: vi.fn(() => null),

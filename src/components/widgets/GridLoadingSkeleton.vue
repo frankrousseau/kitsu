@@ -4,10 +4,9 @@
       class="skeleton-row"
       :style="{
         '--row-index': i - 1,
-        '--fadeout-delay': `${fadeoutDelayMs}ms`,
         '--peak-opacity': peakOpacity(i)
       }"
-      :key="`skeleton-row-${cycle}-${i}`"
+      :key="`skeleton-row-${i}`"
       v-for="i in rows"
     >
       <div class="row-header">
@@ -25,18 +24,12 @@
 </template>
 
 <script setup>
-import { toRef } from 'vue'
-
-import { useSkeletonCycle } from '@/composables/skeleton'
-
 const props = defineProps({
   rows: { type: Number, default: 8 },
   cells: { type: Number, default: 7 },
   withAvatar: { type: Boolean, default: true },
   withActions: { type: Boolean, default: true }
 })
-
-const { cycle, fadeoutDelayMs } = useSkeletonCycle(toRef(props, 'rows'))
 
 const peakOpacity = i => {
   const fromEnd = props.rows - i
@@ -60,10 +53,8 @@ const peakOpacity = i => {
   padding: 12px 16px;
   border-bottom: 1px solid rgba(var(--border-rgb), 0.4);
   opacity: 0;
-  animation:
-    skeleton-row-in 0.4s ease-out forwards,
-    skeleton-row-out 0.35s ease-in forwards;
-  animation-delay: calc(var(--row-index) * 150ms), var(--fadeout-delay);
+  animation: skeleton-row-in 0.4s ease-out forwards;
+  animation-delay: calc(var(--row-index) * 150ms);
 }
 
 .row-header {
@@ -79,6 +70,8 @@ const peakOpacity = i => {
   height: 12px;
   border-radius: 8px;
   background: rgba(var(--skeleton-rgb), 0.45);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+  animation-delay: calc(var(--row-index) * 150ms);
 
   &.avatar {
     width: 28px;
@@ -116,17 +109,19 @@ const peakOpacity = i => {
   }
 }
 
-@keyframes skeleton-row-out {
-  from {
-    opacity: var(--peak-opacity, 1);
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
   }
-  to {
-    opacity: 0;
+  50% {
+    opacity: 0.4;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeleton-row {
+  .skeleton-row,
+  .skeleton-block {
     animation: none;
     opacity: 1;
   }

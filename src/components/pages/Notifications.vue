@@ -111,11 +111,8 @@
         <div class="loading-skeleton" v-if="loading.notifications">
           <div
             class="skeleton-card"
-            :style="{
-              '--row-index': i - 1,
-              '--fadeout-delay': `${fadeoutDelayMs}ms`
-            }"
-            :key="`skeleton-${skeletonCycle}-${i}`"
+            :style="{ '--row-index': i - 1 }"
+            :key="`skeleton-${i}`"
             v-for="i in SKELETON_ROWS"
           ></div>
         </div>
@@ -405,7 +402,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
 import { useDesktopNotifications } from '@/composables/desktopNotifications'
-import { useSkeletonCycle } from '@/composables/skeleton'
 import {
   buildEntityRoute,
   buildPlaylistRoute,
@@ -448,9 +444,6 @@ const route = useRoute()
 const router = useRouter()
 const store = useStore()
 const instance = getCurrentInstance()
-const { cycle: skeletonCycle, fadeoutDelayMs } = useSkeletonCycle(
-  ref(SKELETON_ROWS)
-)
 const socket = instance.appContext.config.globalProperties.$socket
 const {
   permission: desktopNotificationsPermission,
@@ -928,10 +921,14 @@ a {
 }
 
 .skeleton-card {
+  // The pulse animates the same opacity as the entry animation, so it
+  // only starts once the 0.4s fade-in is over (its 0% frame matches the
+  // fade-in end value): no visible jump between the two.
   animation:
     skeleton-card-in 0.4s ease-out forwards,
-    skeleton-card-out 0.35s ease-in forwards;
-  animation-delay: calc(var(--row-index) * 150ms), var(--fadeout-delay);
+    skeleton-pulse 1.6s ease-in-out infinite;
+  animation-delay:
+    calc(var(--row-index) * 150ms), calc(var(--row-index) * 150ms + 0.4s);
   background: rgba(var(--skeleton-rgb), 0.45);
   border-radius: 1em;
   height: 72px;
@@ -953,12 +950,13 @@ a {
   }
 }
 
-@keyframes skeleton-card-out {
-  from {
+@keyframes skeleton-pulse {
+  0%,
+  100% {
     opacity: 1;
   }
-  to {
-    opacity: 0;
+  50% {
+    opacity: 0.4;
   }
 }
 
