@@ -1086,6 +1086,9 @@ let initialClientX = null
 let initialClientY = null
 let lastStartDate = null
 let lastEndDate = null
+// person row the drag started on: a multi-assignee task renders one bar per
+// assignee, so assignees[0] is not necessarily the person being reassigned
+let dragSourcePersonId = null
 
 let domEvents = []
 
@@ -1472,13 +1475,13 @@ const changeDates = event => {
       target.classList.add('droppable')
 
       selection.value.forEach(item => {
-        // update item assignation in element hierarchy
-        const previousAssigneeId = item.assignees[0]
+        // the handlers own the assignees and person-line updates: mutating
+        // them here too duplicated the new assignee id
+        const previousAssigneeId =
+          dragSourcePersonId && item.assignees.includes(dragSourcePersonId)
+            ? dragSourcePersonId
+            : item.assignees[0]
         const newAssigneeId = target.dataset.personId
-        item.assignees = item.assignees.filter(
-          assigneeId => assigneeId !== previousAssigneeId
-        )
-        item.assignees.push(newAssigneeId)
 
         emit('item-unassign', item, previousAssigneeId)
         emit('item-assign', item, newAssigneeId)
@@ -1781,6 +1784,8 @@ const moveTimebar = (timeElement, event) => {
     lastStartDate = timeElement.startDate.clone()
     lastEndDate = timeElement.endDate.clone()
     initialClientX = getClientX(event)
+    dragSourcePersonId =
+      event.target.closest?.('[data-person-id]')?.dataset.personId ?? null
     document.body.style.cursor = props.reassignable ? 'all-scroll' : 'ew-resize'
 
     stampDragOrigin(timeElement)
@@ -1955,6 +1960,7 @@ const stopBrowsing = event => {
   isBrowsingY.value = false
   initialClientX = null
   initialClientY = null
+  dragSourcePersonId = null
   currentElement.value = null
 }
 

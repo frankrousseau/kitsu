@@ -2259,7 +2259,8 @@ export default {
           id: task.versionedTaskId,
           assignees: task.assignees
         })
-      } else {
+      } else if (personId !== 'unassigned') {
+        // 'unassigned' is a local placeholder, not a person known to the API
         await this.unassignPersonFromTask({
           person: { id: personId },
           task
