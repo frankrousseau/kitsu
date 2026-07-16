@@ -2,7 +2,7 @@
   <div class="kanban-loading-skeleton">
     <div
       class="skeleton-column"
-      :key="`skeleton-col-${cycle}-${c}`"
+      :key="`skeleton-col-${c}`"
       v-for="c in columns"
     >
       <span class="skeleton-block column-header" />
@@ -10,10 +10,9 @@
         class="skeleton-card"
         :style="{
           '--row-index': i - 1,
-          '--fadeout-delay': `${fadeoutDelayMs}ms`,
           '--peak-opacity': peakOpacity(i)
         }"
-        :key="`skeleton-card-${cycle}-${c}-${i}`"
+        :key="`skeleton-card-${c}-${i}`"
         v-for="i in cards"
       >
         <div class="card-header">
@@ -28,16 +27,10 @@
 </template>
 
 <script setup>
-import { toRef } from 'vue'
-
-import { useSkeletonCycle } from '@/composables/skeleton'
-
 const props = defineProps({
   columns: { type: Number, default: 4 },
   cards: { type: Number, default: 3 }
 })
-
-const { cycle, fadeoutDelayMs } = useSkeletonCycle(toRef(props, 'cards'))
 
 const peakOpacity = i => {
   const fromEnd = props.cards - i
@@ -74,10 +67,8 @@ const peakOpacity = i => {
   border-radius: 8px;
   background: rgba(var(--border-rgb), 0.2);
   opacity: 0;
-  animation:
-    skeleton-card-in 0.4s ease-out forwards,
-    skeleton-card-out 0.35s ease-in forwards;
-  animation-delay: calc(var(--row-index) * 150ms), var(--fadeout-delay);
+  animation: skeleton-card-in 0.4s ease-out forwards;
+  animation-delay: calc(var(--row-index) * 150ms);
 }
 
 .card-header {
@@ -91,6 +82,8 @@ const peakOpacity = i => {
   height: 12px;
   border-radius: 8px;
   background: rgba(var(--skeleton-rgb), 0.45);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+  animation-delay: calc(var(--row-index, 0) * 150ms);
 
   &.column-header {
     width: 60%;
@@ -131,17 +124,19 @@ const peakOpacity = i => {
   }
 }
 
-@keyframes skeleton-card-out {
-  from {
-    opacity: var(--peak-opacity, 1);
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
   }
-  to {
-    opacity: 0;
+  50% {
+    opacity: 0.4;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeleton-card {
+  .skeleton-card,
+  .skeleton-block {
     animation: none;
     opacity: 1;
   }

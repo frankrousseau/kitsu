@@ -2,11 +2,8 @@
   <div class="loading-skeleton">
     <div
       class="skeleton-card timeline-entry"
-      :style="{
-        '--row-index': i - 1,
-        '--fadeout-delay': `${fadeoutDelayMs}ms`
-      }"
-      :key="`skeleton-${cycle}-${i}`"
+      :style="{ '--row-index': i - 1 }"
+      :key="`skeleton-${i}`"
       v-for="i in rows"
     >
       <span class="dot"></span>
@@ -15,15 +12,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-
-import { useSkeletonCycle } from '@/composables/skeleton'
-
-const props = defineProps({
+defineProps({
   rows: { type: Number, default: 6 }
 })
-
-const { cycle, fadeoutDelayMs } = useSkeletonCycle(ref(props.rows))
 </script>
 
 <style lang="scss" scoped>
@@ -36,10 +27,14 @@ const { cycle, fadeoutDelayMs } = useSkeletonCycle(ref(props.rows))
 }
 
 .skeleton-card {
+  // The pulse animates the same opacity as the entry animation, so it
+  // only starts once the 0.4s fade-in is over (its 0% frame matches the
+  // fade-in end value): no visible jump between the two.
   animation:
     skeleton-card-in 0.4s ease-out forwards,
-    skeleton-card-out 0.35s ease-in forwards;
-  animation-delay: calc(var(--row-index) * 150ms), var(--fadeout-delay);
+    skeleton-pulse 1.6s ease-in-out infinite;
+  animation-delay:
+    calc(var(--row-index) * 150ms), calc(var(--row-index) * 150ms + 0.4s);
   background: rgba(var(--skeleton-rgb), 0.45);
   border-radius: 0.5em;
   height: 48px;
@@ -77,12 +72,13 @@ const { cycle, fadeoutDelayMs } = useSkeletonCycle(ref(props.rows))
   }
 }
 
-@keyframes skeleton-card-out {
-  from {
+@keyframes skeleton-pulse {
+  0%,
+  100% {
     opacity: 1;
   }
-  to {
-    opacity: 0;
+  50% {
+    opacity: 0.4;
   }
 }
 
