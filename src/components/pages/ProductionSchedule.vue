@@ -635,6 +635,7 @@ export default {
       },
       availableTaskTypes: [],
       daysOffByPerson: {},
+      daysOffRangeKey: null,
       draggedEntities: [],
       endDate: moment().add(6, 'months').endOf('day'),
       entityType: null,
@@ -1266,12 +1267,18 @@ export default {
               .filter(Boolean)
           }
 
-          this.daysOffByPerson = await this.loadProductionDaysOff({
-            startDate: this.startDate.format('YYYY-MM-DD'),
-            endDate: this.endDate.format('YYYY-MM-DD')
-          }).catch(
-            () => ({}) // fallback if not allowed to fetch days off
-          )
+          // days off only depend on the production and the date range:
+          // reuse them across expands
+          const daysOffKey = `${this.currentProduction.id}_${this.startDate.format('YYYY-MM-DD')}_${this.endDate.format('YYYY-MM-DD')}`
+          if (this.daysOffRangeKey !== daysOffKey) {
+            this.daysOffByPerson = await this.loadProductionDaysOff({
+              startDate: this.startDate.format('YYYY-MM-DD'),
+              endDate: this.endDate.format('YYYY-MM-DD')
+            }).catch(
+              () => ({}) // fallback if not allowed to fetch days off
+            )
+            this.daysOffRangeKey = daysOffKey
+          }
 
           // Read the entity maps fresh from the store cache. They are plain,
           // non-reactive Maps replaced on each episode-scoped load, so a cached
