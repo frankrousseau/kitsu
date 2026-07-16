@@ -2419,7 +2419,13 @@ watch(
   () => {
     resetScheduleSize()
     refreshAllItemPositions()
-    onTimelineScroll(null, { scrollTop: 0, scrollLeft: 0 })
+    setScrollPosition(0)
+    if (timelineContentWrapperRef.value) {
+      timelineContentWrapperRef.value.scrollLeft = 0
+    }
+    if (timelineHeaderRef.value) {
+      timelineHeaderRef.value.scrollLeft = 0
+    }
   }
 )
 
