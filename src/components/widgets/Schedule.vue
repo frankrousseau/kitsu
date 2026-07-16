@@ -1423,14 +1423,26 @@ const isValidItemDates = (startDate, endDate) => {
   )
 }
 
+// dates outside the displayed range (e.g. a task due after the production
+// end) resolve to the nearest boundary instead of undefined, which made the
+// drag computations crash or silently no-op
 const getDisplayedDaysIndex = date => {
-  const dateString = date.format('YYYY-MM-DD')
-  return displayedDaysIndex.value[dateString]
+  const index = displayedDaysIndex.value[date.format('YYYY-MM-DD')]
+  if (index !== undefined) {
+    return index
+  }
+  return date.isBefore(props.startDate) ? 0 : displayedDays.value.length - 1
 }
 
 const getDisplayedWeeksIndex = date => {
   const dateString = date.startOf('isoweek').format('YYYY-MM-DD')
-  return displayedWeeksIndex.value[dateString]
+  const index = displayedWeeksIndex.value[dateString]
+  if (index !== undefined) {
+    return index
+  }
+  return date.isBefore(weeksAvailable.value[0])
+    ? 0
+    : weeksAvailable.value.length - 1
 }
 
 const resetDroppableTargets = () => {
@@ -1600,6 +1612,7 @@ const changeStartDate = event => {
     : displayedDays.value[currentIndex]
 
   if (
+    newStartDate &&
     !newStartDate.isSame(currentElement.value.startDate) &&
     isValidItemDates(newStartDate, currentElement.value.endDate)
   ) {
@@ -1641,12 +1654,12 @@ const changeEndDate = event => {
   currentIndex += dayChange - 1
   if (currentIndex < startDateIndex) currentIndex = startDateIndex
   if (isWeekMode.value) {
-    if (currentIndex > displayedWeeksIndex.value.length) {
-      currentIndex = displayedWeeksIndex.value.length - 1
+    if (currentIndex > weeksAvailable.value.length - 1) {
+      currentIndex = weeksAvailable.value.length - 1
     }
   } else {
-    if (currentIndex > displayedDaysIndex.value.length) {
-      currentIndex = displayedDaysIndex.value.length - 1
+    if (currentIndex > displayedDays.value.length - 1) {
+      currentIndex = displayedDays.value.length - 1
     }
   }
 
