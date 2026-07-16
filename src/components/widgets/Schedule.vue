@@ -1133,10 +1133,12 @@ const daysAvailable = computed(() => {
   const days = []
   let day = props.startDate.clone().utc().startOf('day')
   const endDate = props.endDate.clone().utc().startOf('day')
-  const daysOff = getDayOffRange(props.daysOff).map(dayOff => dayOff.date)
+  const daysOff = new Set(
+    getDayOffRange(props.daysOff).map(dayOff => dayOff.date)
+  )
 
   while (day.isSameOrBefore(endDate)) {
-    day.off = daysOff.includes(day.toISOString().slice(0, 10))
+    day.off = daysOff.has(day.toISOString().slice(0, 10))
     day.newWeek = day.isoWeekday() === 1
     day.newMonth = day.date() === 1
     day.weekend = [6, 7].includes(day.isoWeekday())
