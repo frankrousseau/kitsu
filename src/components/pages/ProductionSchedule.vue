@@ -638,6 +638,7 @@ export default {
       draggedEntities: [],
       endDate: moment().add(6, 'months').endOf('day'),
       entityType: null,
+      expandAll: false,
       isSidePanelOpen: false,
       resetTimeout: null,
       scheduleItems: [],
@@ -1369,10 +1370,6 @@ export default {
                 )
               }
               if (!endDate || endDate.isBefore(startDate)) {
-                const nbDays = startDate.isoWeekday() === 5 ? 3 : 1
-                endDate = startDate.clone().add(nbDays, 'days')
-              }
-              if (!endDate.isSameOrAfter(startDate)) {
                 const nbDays = startDate.isoWeekday() === 5 ? 3 : 1
                 endDate = startDate.clone().add(nbDays, 'days')
               }

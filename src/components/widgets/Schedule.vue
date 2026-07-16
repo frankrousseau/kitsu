@@ -1156,25 +1156,12 @@ const weeksAvailable = computed(() => {
   if (daysAvailable.value.length < 1) return []
   const startDate = daysAvailable.value[0]
   const endDate = daysAvailable.value[daysAvailable.value.length - 1]
-  const day = startDate.clone().add(-1, 'days')
-  let dayDate = day.toDate()
+  let dayDate = startDate.clone().add(-1, 'days').toDate()
   const endDayDate = endDate.clone().add(7, 'days').toDate()
-  dayDate.weekday = day.isoWeekday()
-  dayDate.monthday = day.month()
-  dayDate.week = day.week()
 
   while (dayDate < endDayDate) {
     const nextDay = new Date(Number(dayDate))
     nextDay.setDate(dayDate.getDate() + 1) // Add 1 day
-    if (nextDay.isoweekday > 7) {
-      nextDay.isoweekday = 1
-      nextDay.newWeek = true
-    }
-    nextDay.monthday = dayDate.monthday + 1
-    if (nextDay.getMonth() !== dayDate.getMonth()) {
-      nextDay.newMonth = true
-      nextDay.monthday = 1
-    }
     const momentDay = parseDate(moment(nextDay).format('YYYY-MM-DD'))
     if (momentDay.isoWeekday() === 1) {
       momentDay.weekText = momentDay.format('YYYY-MM-DD')
@@ -1286,14 +1273,6 @@ const unitOfTime = computed(() => {
 })
 
 // Methods
-
-const getNbSubChildren = children => {
-  if (!children) return 0
-
-  return Object.values(children).reduce((acc, subChildren) => {
-    return acc + subChildren.length
-  }, 0)
-}
 
 const getNbLines = (items = []) => {
   const values = items.map(item => item.line || 0)
@@ -2490,7 +2469,6 @@ onBeforeUnmount(() => {
 
 defineExpose({
   exportData,
-  getNbSubChildren,
   refreshAllItemPositions,
   refreshItemPositions,
   refreshManDays,
