@@ -1166,31 +1166,27 @@ const daysAvailable = computed(() => {
 })
 
 const weeksAvailable = computed(() => {
-  const weeks = []
   if (daysAvailable.value.length < 1) return []
   const startDate = daysAvailable.value[0]
   const endDate = daysAvailable.value[daysAvailable.value.length - 1]
-  let dayDate = startDate.clone().add(-1, 'days').toDate()
-  const endDayDate = endDate.clone().add(7, 'days').toDate()
+  const lastDay = endDate.clone().add(7, 'days')
 
-  while (dayDate < endDayDate) {
-    const nextDay = new Date(Number(dayDate))
-    nextDay.setDate(dayDate.getDate() + 1) // Add 1 day
-    const momentDay = parseDate(moment(nextDay).format('YYYY-MM-DD'))
-    if (momentDay.isoWeekday() === 1) {
-      momentDay.weekText = momentDay.format('YYYY-MM-DD')
-      momentDay.label = `${momentDay.weekText} to ${momentDay
-        .clone()
-        .add(6, 'days')
-        .format('YYYY-MM-DD')}`
-      momentDay.weekNumber = momentDay.week()
-      momentDay.newMonth =
-        weeks.length === 0 ||
-        momentDay.month() !== weeks[weeks.length - 1].month()
-      momentDay.monthText = momentDay.format('MMMM YY')
-      weeks.push(momentDay)
-    }
-    dayDate = nextDay
+  const weeks = []
+  // first Monday on or after the schedule start
+  const monday = startDate.clone().add((8 - startDate.isoWeekday()) % 7, 'days')
+  while (monday.isSameOrBefore(lastDay)) {
+    const week = monday.clone()
+    week.weekText = week.format('YYYY-MM-DD')
+    week.label = `${week.weekText} to ${week
+      .clone()
+      .add(6, 'days')
+      .format('YYYY-MM-DD')}`
+    week.weekNumber = week.week()
+    week.newMonth =
+      weeks.length === 0 || week.month() !== weeks[weeks.length - 1].month()
+    week.monthText = week.format('MMMM YY')
+    weeks.push(week)
+    monday.add(7, 'days')
   }
   return weeks
 })
