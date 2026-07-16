@@ -2059,6 +2059,22 @@ export default {
       }
       const taskEstimation = 1 / dailyQuota
 
+      // versioned tasks all belong to the selected task type: load them once
+      // instead of once per entity
+      let versionedTaskByTaskId = null
+      if (this.isVersioned) {
+        const versionedTasks = await this.loadTasksFromScheduleVersion({
+          version: { id: this.version },
+          taskType: { id: this.selectedTaskType.task_type_id }
+        })
+        versionedTaskByTaskId = new Map(
+          versionedTasks.map(versionedTask => [
+            versionedTask.task_id,
+            versionedTask
+          ])
+        )
+      }
+
       // assign each selected entity to each selected assignee
       for (const taskType of this.draggedEntities) {
         const startDate = parseDate(this.assignments.startDate)
@@ -2082,11 +2098,7 @@ export default {
 
           let versionedTask
           if (this.isVersioned) {
-            const versionedTasks = await this.loadTasksFromScheduleVersion({
-              version: { id: this.version },
-              taskType: { id: task.task_type_id }
-            })
-            versionedTask = versionedTasks.find(t => t.task_id === task.id) ?? {
+            versionedTask = versionedTaskByTaskId.get(task.id) ?? {
               taskId: task.id,
               version: this.version,
               assignees: []
