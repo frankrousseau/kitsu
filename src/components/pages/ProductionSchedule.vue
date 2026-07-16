@@ -661,6 +661,7 @@ export default {
       version: DEFAULT_VERSION,
       loading: {
         schedule: false,
+        delete: false,
         editScheduleVersion: false,
         applyScheduleVersion: false,
         expandSchedule: false,
@@ -908,75 +909,78 @@ export default {
 
     async loadData() {
       this.loading.schedule = true
+      this.errors.schedule = false
       this.availableTaskTypes = []
 
-      await this.loadScheduleVersions(this.currentProduction)
+      try {
+        await this.loadScheduleVersions(this.currentProduction)
 
-      return this.loadScheduleItems(this.currentProduction)
-        .then(scheduleItems => {
-          const scheduleStartDate = parseDate(this.selectedStartDate)
-          const scheduleEndDate = parseDate(this.selectedEndDate)
-          scheduleItems = scheduleItems.map(item => {
-            const taskType = this.taskTypeMap.get(item.task_type_id)
-            let startDate, endDate
-            if (item.start_date) {
-              startDate = parseDate(item.start_date)
-            } else {
-              startDate = moment()
-            }
-            if (startDate.isSameOrAfter(scheduleEndDate)) {
-              startDate = scheduleEndDate.clone().add(-1, 'days')
-            }
+        const items = await this.loadScheduleItems(this.currentProduction)
+        const scheduleStartDate = parseDate(this.selectedStartDate)
+        const scheduleEndDate = parseDate(this.selectedEndDate)
+        const scheduleItems = items.map(item => {
+          const taskType = this.taskTypeMap.get(item.task_type_id)
+          let startDate, endDate
+          if (item.start_date) {
+            startDate = parseDate(item.start_date)
+          } else {
+            startDate = moment()
+          }
+          if (startDate.isSameOrAfter(scheduleEndDate)) {
+            startDate = scheduleEndDate.clone().add(-1, 'days')
+          }
 
-            if (startDate.isBefore(scheduleStartDate)) {
-              startDate = scheduleStartDate.clone()
-            }
+          if (startDate.isBefore(scheduleStartDate)) {
+            startDate = scheduleStartDate.clone()
+          }
 
-            if (item.end_date) {
-              endDate = parseDate(item.end_date)
-            } else {
-              endDate = startDate.clone().add(1, 'days')
-            }
-            if (endDate.isSameOrAfter(scheduleEndDate)) {
-              endDate = scheduleEndDate.clone()
-            }
+          if (item.end_date) {
+            endDate = parseDate(item.end_date)
+          } else {
+            endDate = startDate.clone().add(1, 'days')
+          }
+          if (endDate.isSameOrAfter(scheduleEndDate)) {
+            endDate = scheduleEndDate.clone()
+          }
 
-            const path = getTaskTypeSchedulePath(
-              taskType.id,
-              this.currentProduction.id,
-              this.linkedEpisodeId,
-              taskType.for_entity
-            )
-
-            return {
-              ...item,
-              color: taskType.color,
-              for_entity: taskType.for_entity,
-              name: `${taskType.for_entity} / ${taskType.name}`,
-              priority: taskType.priority,
-              startDate,
-              endDate,
-              editable: this.isInDepartment(taskType) && !this.isLockedSchedule,
-              expanded: false,
-              loading: false,
-              route: path,
-              children: []
-            }
-          })
-          this.scheduleItems = sortTaskTypeScheduleItems(
-            scheduleItems,
-            this.currentProduction,
-            this.taskTypeMap
+          const path = getTaskTypeSchedulePath(
+            taskType.id,
+            this.currentProduction.id,
+            this.linkedEpisodeId,
+            taskType.for_entity
           )
 
-          this.availableTaskTypes = this.scopedScheduleItems.map(item => ({
-            ...this.taskTypeMap.get(item.task_type_id),
-            name: item.name
-          }))
+          return {
+            ...item,
+            color: taskType.color,
+            for_entity: taskType.for_entity,
+            name: `${taskType.for_entity} / ${taskType.name}`,
+            priority: taskType.priority,
+            startDate,
+            endDate,
+            editable: this.isInDepartment(taskType) && !this.isLockedSchedule,
+            expanded: false,
+            loading: false,
+            route: path,
+            children: []
+          }
         })
-        .finally(() => {
-          this.loading.schedule = false
-        })
+        this.scheduleItems = sortTaskTypeScheduleItems(
+          scheduleItems,
+          this.currentProduction,
+          this.taskTypeMap
+        )
+
+        this.availableTaskTypes = this.scopedScheduleItems.map(item => ({
+          ...this.taskTypeMap.get(item.task_type_id),
+          name: item.name
+        }))
+      } catch (err) {
+        console.error(err)
+        this.errors.schedule = true
+      } finally {
+        this.loading.schedule = false
+      }
     },
 
     reset() {
@@ -2328,28 +2332,46 @@ export default {
     },
 
     async editVersion(version) {
-      this.modals.editScheduleVersion = false
-      if (!version.id) {
-        const newVersion = await this.createScheduleVersion({
-          production: this.currentProduction,
-          version
-        })
-        this.version = newVersion.id
-        this.onVersionChanged(this.version)
-      } else {
-        await this.updateScheduleVersion(version)
+      this.loading.editScheduleVersion = true
+      this.errors.editScheduleVersion = false
+      try {
+        if (!version.id) {
+          const newVersion = await this.createScheduleVersion({
+            production: this.currentProduction,
+            version
+          })
+          this.version = newVersion.id
+          this.onVersionChanged(this.version)
+        } else {
+          await this.updateScheduleVersion(version)
+        }
+        this.modals.editScheduleVersion = false
+        this.scheduleVersionToEdit = {}
+      } catch (err) {
+        console.error(err)
+        this.errors.editScheduleVersion = true
+      } finally {
+        this.loading.editScheduleVersion = false
       }
-      this.scheduleVersionToEdit = {}
     },
 
     async deleteVersion(version) {
-      this.modals.deleteScheduleVersion = false
-      await this.deleteScheduleVersion(version)
-      if (this.version === version.id) {
-        this.version = DEFAULT_VERSION
-        this.onVersionChanged(this.version)
+      this.loading.delete = true
+      this.errors.deleteScheduleVersion = false
+      try {
+        await this.deleteScheduleVersion(version)
+        if (this.version === version.id) {
+          this.version = DEFAULT_VERSION
+          this.onVersionChanged(this.version)
+        }
+        this.modals.deleteScheduleVersion = false
+        this.scheduleVersionToEdit = {}
+      } catch (err) {
+        console.error(err)
+        this.errors.deleteScheduleVersion = true
+      } finally {
+        this.loading.delete = false
       }
-      this.scheduleVersionToEdit = {}
     },
 
     async applyToProduction() {
