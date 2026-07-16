@@ -107,7 +107,7 @@
                 :to="rootElement.route"
                 v-if="rootElement.route"
               >
-                <link-icon :size="12" v-if="rootElement.route" />
+                <link-icon :size="12" />
               </router-link>
               <input
                 class="man-day-input flexrow-item mr1"

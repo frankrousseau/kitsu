@@ -1116,7 +1116,8 @@ export default {
     },
 
     setCurrentScheduleItem() {
-      if (this.isTVShow && !['all', 'main'].includes(this.currentEpisode.id)) {
+      const episodeId = this.currentEpisode?.id
+      if (this.isTVShow && episodeId && !['all', 'main'].includes(episodeId)) {
         return this.loadEpisodeScheduleItems({
           production: this.currentProduction,
           taskType: this.currentTaskType
@@ -1124,7 +1125,7 @@ export default {
           this.currentScheduleItem = items.find(
             item =>
               item.task_type_id === this.currentTaskType.id &&
-              item.object_id === this.currentEpisode.id
+              item.object_id === episodeId
           )
           return this.currentScheduleItem
         })
