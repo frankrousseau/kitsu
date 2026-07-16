@@ -440,7 +440,9 @@
                 :key="`dayoff-${dayOff.id}-${index}`"
                 :style="dayOffStyle(dayOff)"
                 :title="dayOff.description"
-                v-for="(dayOff, index) in getDayOffRange(rootElement.daysOff)"
+                v-for="(dayOff, index) in cachedDayOffRange(
+                  rootElement.daysOff
+                )"
               >
                 <briefcase-icon class="day-off-icon" :size="14" />
               </div>
@@ -713,7 +715,7 @@
                         :key="`dayoff-${dayOff.id}-${index}`"
                         :style="dayOffStyle(dayOff)"
                         :title="dayOff.description"
-                        v-for="(dayOff, index) in getDayOffRange(
+                        v-for="(dayOff, index) in cachedDayOffRange(
                           rootElement.people[personId].daysOff
                         )"
                       >
@@ -2009,6 +2011,19 @@ const stopBrowsing = event => {
 }
 
 // Helpers
+
+// the template iterates day-off ranges for each root and person row on every
+// render: expand each daysOff array once and reuse it
+const dayOffRangeCache = new WeakMap()
+const cachedDayOffRange = daysOff => {
+  if (!daysOff?.length) return []
+  let range = dayOffRangeCache.get(daysOff)
+  if (!range) {
+    range = getDayOffRange(daysOff)
+    dayOffRangeCache.set(daysOff, range)
+  }
+  return range
+}
 
 const dateDiff = (startDate, endDate, unit = 'days') => {
   if (startDate.isSame(endDate) || !startDate.isValid() || !endDate.isValid()) {
