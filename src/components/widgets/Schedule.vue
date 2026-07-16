@@ -1435,12 +1435,14 @@ const getDisplayedDaysIndex = date => {
 }
 
 const getDisplayedWeeksIndex = date => {
-  const dateString = date.startOf('isoweek').format('YYYY-MM-DD')
-  const index = displayedWeeksIndex.value[dateString]
+  // clone before startOf: moment mutates in place and callers pass the
+  // items' own dates, which snapped them back to their week's Monday
+  const monday = date.clone().startOf('isoweek')
+  const index = displayedWeeksIndex.value[monday.format('YYYY-MM-DD')]
   if (index !== undefined) {
     return index
   }
-  return date.isBefore(weeksAvailable.value[0])
+  return monday.isBefore(weeksAvailable.value[0])
     ? 0
     : weeksAvailable.value.length - 1
 }
@@ -1582,8 +1584,10 @@ const changeDates = event => {
     if (newStartDate) {
       const newEndDate = weeksAvailable.value[currentIndex + length]
       if (isValidItemDates(newStartDate, newEndDate)) {
-        currentElement.value.startDate = newStartDate
-        currentElement.value.endDate = newEndDate
+        // clone: assigning the weeksAvailable moments directly aliases the
+        // header entries with the item dates
+        currentElement.value.startDate = newStartDate.clone()
+        currentElement.value.endDate = newEndDate.clone()
       }
     }
   }
