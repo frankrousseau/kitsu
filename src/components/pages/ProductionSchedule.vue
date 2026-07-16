@@ -2084,6 +2084,7 @@ export default {
         // clear-assignation request plus one assign request per assignee
         const taskIdsToUnassign = []
         const taskIdsByAssignee = new Map()
+        const taskUpdates = []
 
         let cumulatedTasks = 0
         let nextAssigneeIndex = 0
@@ -2164,8 +2165,8 @@ export default {
                   taskIdsByAssignee.set(taskAssignee.id, [])
                 }
                 taskIdsByAssignee.get(taskAssignee.id).push(task.id)
-                // save task dates & estimation
-                await this.updateTask({
+                // task dates & estimation are flushed in batches after the loop
+                taskUpdates.push({
                   taskId: task.id,
                   data: {
                     estimation: daysToMinutes(
@@ -2186,6 +2187,14 @@ export default {
               break // jump to next task
             }
           }
+        }
+
+        // ponytail: chunks of 5 keep the server load reasonable, a bulk
+        // endpoint in zou would replace this
+        for (let i = 0; i < taskUpdates.length; i += 5) {
+          await Promise.all(
+            taskUpdates.slice(i, i + 5).map(update => this.updateTask(update))
+          )
         }
 
         // unassign first so batched assignations are not cleared right after
