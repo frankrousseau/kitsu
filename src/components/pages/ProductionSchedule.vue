@@ -1019,6 +1019,17 @@ export default {
       this.zoomLevel = this.zoomOptions.map(o => o.value).includes(zoom)
         ? zoom
         : DEFAULT_ZOOM
+
+      // loadData computed the editable flags with the default mode/version,
+      // before the query params were applied
+      this.refreshScheduleItemsEditable()
+    },
+
+    refreshScheduleItemsEditable() {
+      this.scheduleItems.forEach(item => {
+        const taskType = this.taskTypeMap.get(item.task_type_id)
+        item.editable = this.isInDepartment(taskType) && !this.isLockedSchedule
+      })
     },
 
     convertScheduleItems(taskTypeElement, scheduleItems) {
@@ -2266,12 +2277,14 @@ export default {
 
     onModeChanged(mode) {
       this.updateRoute({ mode })
+      this.refreshScheduleItemsEditable()
       this.closeSidePanel()
       this.refreshSchedule()
     },
 
     onVersionChanged(version) {
       this.updateRoute({ version })
+      this.refreshScheduleItemsEditable()
       this.closeSidePanel()
       this.refreshSchedule()
     },
