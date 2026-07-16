@@ -585,8 +585,9 @@
                       "
                       :title="`${formatDuration(timesheet.duration)} ${isDurationInHours ? $t('main.hours_spent', formatDuration(timesheet.duration, false)) : $t('main.days_spent', formatDuration(timesheet.duration, false))}`"
                       :key="timesheet.id"
-                      v-for="timesheet in rootElement.timesheet.filter(
-                        ({ task_id }) => task_id === childElement.id
+                      v-for="timesheet in taskTimesheets(
+                        rootElement,
+                        childElement.id
                       )"
                     ></div>
                   </template>
@@ -2023,6 +2024,24 @@ const cachedDayOffRange = daysOff => {
     dayOffRangeCache.set(daysOff, range)
   }
   return range
+}
+
+// same render-time concern for timesheets: group them by task once per array
+const timesheetsByTaskCache = new WeakMap()
+const taskTimesheets = (rootElement, taskId) => {
+  if (!rootElement.timesheet) return []
+  let byTask = timesheetsByTaskCache.get(rootElement.timesheet)
+  if (!byTask) {
+    byTask = new Map()
+    rootElement.timesheet.forEach(timesheet => {
+      if (!byTask.has(timesheet.task_id)) {
+        byTask.set(timesheet.task_id, [])
+      }
+      byTask.get(timesheet.task_id).push(timesheet)
+    })
+    timesheetsByTaskCache.set(rootElement.timesheet, byTask)
+  }
+  return byTask.get(taskId) ?? []
 }
 
 const dateDiff = (startDate, endDate, unit = 'days') => {
