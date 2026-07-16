@@ -925,8 +925,7 @@ export default {
               editable: this.isInDepartment(taskType) && !this.isLockedSchedule,
               expanded: false,
               loading: false,
-              route:
-                taskType.for_entity === 'Shot' && this.isTVShow ? null : path,
+              route: path,
               children: []
             }
           })
