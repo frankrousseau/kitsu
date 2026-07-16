@@ -2047,6 +2047,13 @@ export default {
       const tasks = await this.loadTasks(
         this.buildTaskFilters(this.selectedTaskType)
       )
+      // first task per entity, preserving the find() first-match behavior
+      const taskByEntityId = new Map()
+      tasks.forEach(task => {
+        if (!taskByEntityId.has(task.entity_id)) {
+          taskByEntityId.set(task.entity_id, task)
+        }
+      })
 
       // a zero or empty quota would make taskEstimation infinite and hang
       // the distribution loop in addBusinessDays
@@ -2092,7 +2099,7 @@ export default {
 
         // distribute the task assignments according to the daily quotas, the task type duration and people's availability.
         for (const entity of taskType.children) {
-          const task = tasks.find(task => task.entity_id === entity.id)
+          const task = taskByEntityId.get(entity.id)
           if (!task) {
             continue // no task found for this entity
           }
