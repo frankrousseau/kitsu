@@ -381,6 +381,7 @@
         <div
           ref="timelineContentWrapperRef"
           class="timeline-content-wrapper"
+          @mousemove.passive="onPositionBarMove"
           @scroll.passive="onTimelineScroll"
         >
           <div
@@ -1090,7 +1091,13 @@ let lastEndDate = null
 // assignee, so assignees[0] is not necessarily the person being reassigned
 let dragSourcePersonId = null
 
+// cached wrapper rect: getBoundingClientRect on every mousemove forces a
+// layout; invalidated on resize and zoom via resetScheduleSize
+let wrapperRect = null
+let positionBarFrame = null
+
 let domEvents = []
+let moveEvents = []
 
 // Computed
 
@@ -1327,6 +1334,7 @@ const isVisible = timeElement => {
 }
 
 const resetScheduleSize = () => {
+  wrapperRect = null
   if (timelineContentRef.value) {
     if (props.zoomLevel > 0) {
       timelineContentRef.value.style.width = `${displayedDays.value.length * cellWidth.value}px`
@@ -1347,8 +1355,12 @@ const onMouseMove = event => {
     if (isBrowsingX.value) scrollScheduleLeft(event)
     if (isBrowsingY.value) scrollScheduleTop(event)
   }
+}
 
-  updatePositionBarPosition(event)
+// document-level move listeners are attached only for the duration of a drag
+// or browse: a permanent listener ran on every mousemove of the whole page
+const startMoveTracking = () => {
+  addEvents(moveEvents)
 }
 
 const onChildEstimationChanged = (event, childElement, rootElement) => {
@@ -1377,18 +1389,26 @@ const onChildEstimationChanged = (event, childElement, rootElement) => {
 const updatePositionBarPosition = event => {
   if (!timelineContentWrapperRef.value || !timelinePositionRef.value) return
 
-  const cursorX =
-    getClientX(event) -
-    timelineContentWrapperRef.value.getBoundingClientRect().left
+  if (!wrapperRect) {
+    wrapperRect = timelineContentWrapperRef.value.getBoundingClientRect()
+  }
+  const cursorX = getClientX(event) - wrapperRect.left
 
-  if (cursorX <= 0 || cursorX >= timelineContentWrapperRef.value.offsetWidth)
-    return
+  if (cursorX <= 0 || cursorX >= wrapperRect.width) return
 
   const left =
     Math.floor(
       (timelineContentWrapperRef.value.scrollLeft + cursorX) / cellWidth.value
     ) * cellWidth.value
   timelinePositionRef.value.style.left = `${left}px`
+}
+
+const onPositionBarMove = event => {
+  if (positionBarFrame) return
+  positionBarFrame = requestAnimationFrame(() => {
+    positionBarFrame = null
+    updatePositionBarPosition(event)
+  })
 }
 
 const isValidItemDates = (startDate, endDate) => {
@@ -1784,6 +1804,7 @@ const moveTimebar = (timeElement, event) => {
       event.target.closest?.('[data-person-id]')?.dataset.personId ?? null
     document.body.style.cursor = props.reassignable ? 'all-scroll' : 'ew-resize'
 
+    startMoveTracking()
     stampDragOrigin(timeElement)
     updateSelection(timeElement, event)
   }
@@ -1804,6 +1825,7 @@ const moveTimebarLeftSide = (timeElement, event) => {
     initialClientX = getClientX(event)
     document.body.style.cursor = 'w-resize'
 
+    startMoveTracking()
     stampDragOrigin(timeElement)
     updateSelection(timeElement, event)
   }
@@ -1828,6 +1850,7 @@ const moveTimebarRightSide = (timeElement, event) => {
     initialClientX = getClientX(event)
     document.body.style.cursor = 'e-resize'
 
+    startMoveTracking()
     stampDragOrigin(timeElement)
     updateSelection(timeElement, event)
   }
@@ -1901,6 +1924,7 @@ const startBrowsing = event => {
     isBrowsingY.value = true
     initialClientX = getClientX(event)
     initialClientY = getClientY(event)
+    startMoveTracking()
   }
 }
 
@@ -1908,16 +1932,19 @@ const startBrowsingX = event => {
   document.body.style.cursor = 'grabbing'
   isBrowsingX.value = true
   initialClientX = getClientX(event)
+  startMoveTracking()
 }
 
 const startBrowsingY = event => {
   document.body.style.cursor = 'grabbing'
   isBrowsingY.value = true
   initialClientY = getClientY(event)
+  startMoveTracking()
 }
 
 const stopBrowsing = event => {
   document.body.style.cursor = 'default'
+  removeEvents(moveEvents)
   if (currentElement.value) {
     if (initialClientX !== getClientX(event)) {
       // on moving or resizing selected items
@@ -2447,9 +2474,11 @@ watch(
 // Lifecycle
 
 onMounted(() => {
-  domEvents = [
+  moveEvents = [
     ['mousemove', onMouseMove],
-    ['touchmove', onMouseMove],
+    ['touchmove', onMouseMove]
+  ]
+  domEvents = [
     ['mouseup', stopBrowsing],
     ['mouseleave', stopBrowsing],
     ['touchend', stopBrowsing],
@@ -2463,6 +2492,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   removeEvents(domEvents)
+  removeEvents(moveEvents)
+  if (positionBarFrame) cancelAnimationFrame(positionBarFrame)
   window.removeEventListener('resize', resetScheduleSize)
   document.body.style.cursor = 'default'
 })
