@@ -1976,8 +1976,11 @@ export default {
       this.assignments.startDate = item.start_date || today
       this.assignments.endDate = item.end_date || today
 
-      item.children = this.filteredAssignments(item.children)
-      this.draggedEntities = [item]
+      // copy: filtering item.children in place permanently dropped the
+      // assigned entities from the side panel list
+      this.draggedEntities = [
+        { ...item, children: this.filteredAssignments(item.children) }
+      ]
     },
 
     onAssignmentItemDragStart(event, item, type) {
@@ -1988,8 +1991,9 @@ export default {
       event.dataTransfer.setData('taskTypeId', type.task_type_id)
       event.dataTransfer.setData('entityId', item.id)
 
-      item.children = this.filteredAssignments(item.children)
-      this.draggedEntities = [item]
+      this.draggedEntities = [
+        { ...item, children: this.filteredAssignments(item.children) }
+      ]
     },
 
     onScheduleItemDropped(event, item) {
