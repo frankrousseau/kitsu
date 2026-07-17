@@ -248,14 +248,16 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
     item.man_days = item.estimation || 0
 
     if (item.startDate && item.endDate) {
-      store.dispatch('updateTask', {
-        taskId: item.id,
-        data: {
-          estimation: item.estimation,
-          start_date: item.startDate.format('YYYY-MM-DD'),
-          due_date: item.endDate.format('YYYY-MM-DD')
-        }
-      })
+      store
+        .dispatch('updateTask', {
+          taskId: item.id,
+          data: {
+            estimation: item.estimation,
+            start_date: item.startDate.format('YYYY-MM-DD'),
+            due_date: item.endDate.format('YYYY-MM-DD')
+          }
+        })
+        .catch(console.error)
     }
   }
 

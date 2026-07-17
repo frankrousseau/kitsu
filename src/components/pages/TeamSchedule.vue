@@ -425,9 +425,15 @@ export default {
     },
 
     async init() {
-      await this.loadPeople()
-      await this.loadPersonDates()
-      await this.loadDaysOff()
+      try {
+        await this.loadPeople()
+        await this.loadPersonDates()
+        await this.loadDaysOff()
+      } catch (err) {
+        console.error(err)
+        this.errors.schedule = true
+        return
+      }
 
       this.refreshSchedule()
       this.scrollScheduleToToday()
@@ -636,11 +642,19 @@ export default {
         if (refreshScheduleCallBack) {
           refreshScheduleCallBack(person)
         }
-        await this.assignSelectedTasks({
-          personId: person.id,
-          taskIds: [task.id]
-        })
-        await this.saveTaskScheduleItem(task)
+        try {
+          await this.assignSelectedTasks({
+            personId: person.id,
+            taskIds: [task.id]
+          })
+          await this.saveTaskScheduleItem(task)
+        } catch (err) {
+          console.error(err)
+          person.children = person.children.filter(({ id }) => id !== task.id)
+          if (refreshScheduleCallBack) {
+            refreshScheduleCallBack(person)
+          }
+        }
         await this.loadUnassignedTasks()
       }
     },
@@ -659,9 +673,13 @@ export default {
             item.parentElement.daysOff
           )
         }
-        await this.saveTaskScheduleItem(item)
-        await this.loadPersonDates(true)
-        await this.loadDaysOff()
+        try {
+          await this.saveTaskScheduleItem(item)
+          await this.loadPersonDates(true)
+          await this.loadDaysOff()
+        } catch (err) {
+          console.error(err)
+        }
       }
     },
 

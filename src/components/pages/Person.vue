@@ -824,7 +824,7 @@ export default {
             start_date: item.startDate.format('YYYY-MM-DD'),
             due_date: item.endDate.format('YYYY-MM-DD')
           }
-        })
+        }).catch(console.error)
       }
     },
 

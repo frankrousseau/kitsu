@@ -169,11 +169,18 @@ export default {
       if (!productionElement.expanded) {
         productionElement.loading = true
         productionElement.expanded = true
-        this.loadScheduleItems(productionElement).then(scheduleItems => {
-          scheduleItems = this.convertTaskTypeScheduleItems(scheduleItems)
-          productionElement.children = scheduleItems
-          productionElement.loading = false
-        })
+        this.loadScheduleItems(productionElement)
+          .then(scheduleItems => {
+            scheduleItems = this.convertTaskTypeScheduleItems(scheduleItems)
+            productionElement.children = scheduleItems
+          })
+          .catch(err => {
+            console.error(err)
+            productionElement.expanded = false
+          })
+          .finally(() => {
+            productionElement.loading = false
+          })
       } else {
         productionElement.expanded = false
       }
