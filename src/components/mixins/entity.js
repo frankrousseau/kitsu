@@ -242,7 +242,10 @@ export const entityMixin = {
           } else if (task.end_date) {
             endDate = parseSimpleDate(task.end_date)
           } else if (task.estimation) {
-            endDate = startDate.clone().add(estimation, 'days')
+            endDate = addBusinessDays(
+              startDate,
+              Math.ceil(minutesToDays(this.organisation, estimation)) - 1
+            )
           }
 
           if (!endDate || endDate.isBefore(startDate)) {

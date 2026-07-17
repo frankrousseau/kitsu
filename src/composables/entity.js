@@ -5,8 +5,10 @@ import { useStore } from 'vuex'
 
 import { getEntityPath } from '@/lib/path'
 import {
+  addBusinessDays,
   getFirstStartDate,
   getLastEndDate,
+  minutesToDays,
   parseDate,
   parseSimpleDate
 } from '@/lib/time'
@@ -61,6 +63,7 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
   const getTaskTypePriority = computed(() => store.getters.getTaskTypePriority)
   const currentEpisode = computed(() => store.getters.currentEpisode)
   const currentProduction = computed(() => store.getters.currentProduction)
+  const organisation = computed(() => store.getters.organisation)
 
   // Local state (mirrors the mixin's `data()` fields used by Edit.vue).
   const currentSection = ref('infos')
@@ -191,7 +194,10 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
         } else if (task.end_date) {
           endDate = parseSimpleDate(task.end_date)
         } else if (task.estimation) {
-          endDate = startDate.clone().add(estimation, 'days')
+          endDate = addBusinessDays(
+            startDate,
+            Math.ceil(minutesToDays(organisation.value, estimation)) - 1
+          )
         }
 
         if (!endDate || endDate.isBefore(startDate)) {
