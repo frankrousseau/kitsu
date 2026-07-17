@@ -376,11 +376,13 @@ export default {
           person => person.studio_id === this.selectedStudio
         )
       }
-      if (this.selectedProduction) {
-        selectablePeople = selectablePeople.filter(person => {
-          const production = this.productionMap.get(this.selectedProduction)
-          return production.team.includes(person.id)
-        })
+      const production = this.selectedProduction
+        ? this.productionMap.get(this.selectedProduction)
+        : null
+      if (production) {
+        selectablePeople = selectablePeople.filter(person =>
+          production.team.includes(person.id)
+        )
       }
       return selectablePeople
     },
