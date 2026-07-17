@@ -239,7 +239,13 @@ import { mapGetters, mapActions } from 'vuex'
 
 import colors from '@/lib/colors'
 import { getPersonPath } from '@/lib/path'
-import { addBusinessDays, minutesToDays, parseSimpleDate } from '@/lib/time'
+import {
+  addBusinessDays,
+  getFirstStartDate,
+  getLastEndDate,
+  minutesToDays,
+  parseSimpleDate
+} from '@/lib/time'
 
 import { formatListMixin } from '@/components/mixins/format'
 
@@ -507,7 +513,7 @@ export default {
       this.loading.unassignedTasks = false
     },
 
-    async loadPersonDates(syncSchedule = false) {
+    async loadPersonDates() {
       const personDatesList = await this.getPersonsTasksDates()
       this.personDates = {}
       personDatesList.forEach(p => {
@@ -516,15 +522,17 @@ export default {
           startDate: parseSimpleDate(p.min_date)
         }
       })
+    },
 
-      if (syncSchedule) {
-        this.scheduleItems.forEach(scheduleItem => {
-          const personDates = this.personDates[scheduleItem.id]
-          if (personDates) {
-            scheduleItem.startDate = personDates.startDate
-            scheduleItem.endDate = personDates.endDate
-          }
-        })
+    // recompute the root bar locally after a drag: the person is expanded so
+    // its children are loaded, no need to refetch every person's dates
+    refreshPersonRootDates(person) {
+      if (!person?.children?.length) return
+      person.startDate = getFirstStartDate(person.children).clone()
+      person.endDate = getLastEndDate(person.children).clone()
+      this.personDates[person.id] = {
+        startDate: person.startDate.clone(),
+        endDate: person.endDate.clone()
       }
     },
 
@@ -681,7 +689,7 @@ export default {
         }
         try {
           await this.saveTaskScheduleItem(item)
-          await this.loadPersonDates(true)
+          this.refreshPersonRootDates(item.parentElement)
         } catch (err) {
           console.error(err)
         }
