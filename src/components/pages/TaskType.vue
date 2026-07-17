@@ -2047,6 +2047,7 @@ watch(currentScheduleItem, () => {
 watch(
   [() => schedule.taskTypeStartDate, () => schedule.taskTypeEndDate],
   () => {
+    if (!currentScheduleItem.value) return
     const startDate = moment(schedule.taskTypeStartDate).utc()
     const endDate = moment(schedule.taskTypeEndDate).utc()
     if (
