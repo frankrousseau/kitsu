@@ -6,13 +6,21 @@
           <label class="label">
             {{ $t('main.start_date') }}
           </label>
-          <date-field week-days-disabled v-model="selectedStartDate" />
+          <date-field
+            week-days-disabled
+            v-model="selectedStartDate"
+            @update:model-value="onUpdateSelectedStartDate"
+          />
         </div>
         <div class="flexrow-item field">
           <label class="label">
             {{ $t('main.end_date') }}
           </label>
-          <date-field week-days-disabled v-model="selectedEndDate" />
+          <date-field
+            week-days-disabled
+            v-model="selectedEndDate"
+            @update:model-value="onUpdateSelectedEndDate"
+          />
         </div>
         <combobox-number
           class="flexrow-item zoom-level"
@@ -51,7 +59,8 @@ import {
   getFirstStartDate,
   getLastEndDate,
   getStartDateFromString,
-  getEndDateFromString
+  getEndDateFromString,
+  parseSimpleDate
 } from '@/lib/time'
 import colors from '@/lib/colors'
 
@@ -168,6 +177,14 @@ export default {
       } else {
         productionElement.expanded = false
       }
+    },
+
+    onUpdateSelectedStartDate(date) {
+      this.startDate = parseSimpleDate(date)
+    },
+
+    onUpdateSelectedEndDate(date) {
+      this.endDate = parseSimpleDate(date)
     },
 
     onScheduleItemChanged(item) {
