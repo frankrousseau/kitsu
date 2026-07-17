@@ -432,6 +432,7 @@ import { useStore } from 'vuex'
 import { getEntityMap } from '@/composables/entity'
 import csv from '@/lib/csv'
 import { isSupervisorInDepartments } from '@/lib/descriptors'
+import func from '@/lib/func'
 import {
   applyFilters,
   getDescFilters,
@@ -1918,8 +1919,12 @@ const resetScheduleScroll = () => {
   }
 }
 
+// socket events arrive in bursts (imports, bulk assignments): rebuild the
+// schedule once per burst instead of once per event
+const resetScheduleItemsDebounced = func.debounce(resetScheduleItems, 400)
+
 const onRemoteTaskUpdate = eventData => {
-  resetScheduleItems()
+  resetScheduleItemsDebounced()
   if (
     !isActiveTab('schedule') &&
     taskMap.value.get(eventData.task_id) &&
