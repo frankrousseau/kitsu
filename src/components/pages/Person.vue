@@ -340,14 +340,9 @@ export default {
     },
 
     sortedAllTasks() {
-      let tasks = this.sortTasks([
-        ...this.displayedPersonTasks,
-        ...this.displayedPersonDoneTasks
-      ])
-      if (this.productionId) {
-        tasks = tasks.filter(task => task.project_id === this.productionId)
-      }
-      return tasks
+      // reuse the two cached computeds: they already carry the production
+      // filter, only the merged sort remains to do
+      return this.sortTasks([...this.sortedTasks, ...this.sortedDoneTasks])
     },
 
     tasksStartDate() {
