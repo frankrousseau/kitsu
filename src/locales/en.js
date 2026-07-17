@@ -1436,6 +1436,7 @@ export default {
       episode_span: 'Episode spacing',
       fps: 'FPS',
       is_clients_isolated: 'Isolate client comments (not visible to each others)',
+      is_frame_in_numbering: 'Start the player frame counter at the frame in',
       is_preview_download_allowed: 'Allow artists to download previews',
       is_publish_default: 'Set comment widget for artists on publish mode by default',
       is_set_preview_automated: 'Set new preview as entity thumbnail automatically',

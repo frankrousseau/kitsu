@@ -878,8 +878,11 @@ const frameDuration = computed(
 
 // Production start frame of the displayed shot (data.frame_in, e.g. 1001).
 // Forwarded to the playback bar / progress bar as a display-only offset.
+// Opt-in through the production option; a missing field means disabled.
 const frameStart = computed(() =>
-  getEntityFrameStart(shotMap.value.get(props.task?.entity_id))
+  currentProduction.value?.is_frame_in_numbering
+    ? getEntityFrameStart(shotMap.value.get(props.task?.entity_id))
+    : undefined
 )
 
 const extension = computed(() =>

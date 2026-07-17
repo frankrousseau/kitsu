@@ -134,6 +134,12 @@
           v-if="currentProduction && currentProduction.id"
         />
         <combobox-boolean
+          :label="$t('productions.fields.is_frame_in_numbering')"
+          @enter="runConfirmation"
+          v-model="form.is_frame_in_numbering"
+          v-if="currentProduction && currentProduction.id"
+        />
+        <combobox-boolean
           :label="$t('productions.fields.is_publish_default')"
           @enter="runConfirmation"
           v-model="form.is_publish_default_for_artists"
@@ -227,6 +233,7 @@ const emptyForm = () => ({
   max_retakes: 0,
   revision_padding: 0,
   is_clients_isolated: 'false',
+  is_frame_in_numbering: 'false',
   is_preview_download_allowed: 'false',
   is_set_preview_automated: 'false',
   is_single_preview_per_revision: 'false',
@@ -283,6 +290,9 @@ const resetForm = () => {
       revision_padding: production.revision_padding,
       nb_episodes: production.nb_episodes,
       is_clients_isolated: production.is_clients_isolated ? 'true' : 'false',
+      is_frame_in_numbering: production.is_frame_in_numbering
+        ? 'true'
+        : 'false',
       is_preview_download_allowed: production.is_preview_download_allowed
         ? 'true'
         : 'false',

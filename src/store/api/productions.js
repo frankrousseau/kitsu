@@ -33,6 +33,7 @@ export default {
   updateProduction(production) {
     const BOOLEAN_FIELDS = [
       'is_clients_isolated',
+      'is_frame_in_numbering',
       'is_preview_download_allowed',
       'is_set_preview_automated',
       'is_publish_default_for_artists',
