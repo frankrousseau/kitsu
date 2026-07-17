@@ -682,7 +682,6 @@ export default {
         try {
           await this.saveTaskScheduleItem(item)
           await this.loadPersonDates(true)
-          await this.loadDaysOff()
         } catch (err) {
           console.error(err)
         }
