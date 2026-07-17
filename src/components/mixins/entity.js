@@ -276,6 +276,19 @@ export const entityMixin = {
           }
         })
         .filter(c => c !== null)
+
+      // any task mutation in the store retriggers this build: skip the
+      // replacement (and the widget re-render) when nothing visible changed
+      const signature = children
+        .map(
+          child =>
+            `${child.id}:${child.startDate.valueOf()}:` +
+            `${child.endDate.valueOf()}:${child.man_days || 0}`
+        )
+        .join('|')
+      if (signature === this.scheduleItemsSignature) return
+      this.scheduleItemsSignature = signature
+
       let rootStartDate = moment()
       let rootEndDate = moment().add(1, 'days')
       if (children.length > 0) {
