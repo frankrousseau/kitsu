@@ -237,6 +237,28 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
     scheduleItems.value = [rootElement]
   }
 
+  const saveTaskScheduleItem = item => {
+    if (item.estimation) {
+      item.endDate = addBusinessDays(
+        item.startDate,
+        Math.ceil(minutesToDays(organisation.value, item.estimation)) - 1,
+        item.parentElement.daysOff
+      )
+    }
+    item.man_days = item.estimation || 0
+
+    if (item.startDate && item.endDate) {
+      store.dispatch('updateTask', {
+        taskId: item.id,
+        data: {
+          estimation: item.estimation,
+          start_date: item.startDate.format('YYYY-MM-DD'),
+          due_date: item.endDate.format('YYYY-MM-DD')
+        }
+      })
+    }
+  }
+
   // Watch route params and re-init when the entity id in the URL changes.
   // Mirrors the mixin's `$route` watcher.
   watch(
@@ -263,6 +285,7 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
     nextEntityPath,
     currentTasks,
     tasksStartDate,
-    tasksEndDate
+    tasksEndDate,
+    saveTaskScheduleItem
   }
 }
