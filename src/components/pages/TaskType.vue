@@ -1223,11 +1223,14 @@ const getTasks = entities => {
     entity.tasks.forEach(taskId => {
       const task = taskMap.value.get(taskId.id || taskId)
       if (task) {
-        // Hack to allow filtering on linked entity metadata.
-        store.commit('SET_TASK_EXTRA_DATA', {
-          task,
-          data: entity.data
-        })
+        // Hack to allow filtering on linked entity metadata. Guarded so
+        // the repeated resets do not commit the same reference again.
+        if (task.data !== entity.data) {
+          store.commit('SET_TASK_EXTRA_DATA', {
+            task,
+            data: entity.data
+          })
+        }
         if (task.task_type_id === currentTaskType.value.id) {
           result.push(task)
         }
