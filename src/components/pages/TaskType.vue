@@ -540,8 +540,10 @@ const activeTab = ref('tasks')
 const currentScheduleItem = ref(null)
 const currentSort = ref('entity_name')
 const daysOffByPerson = ref({})
-// not a ref: only read inside prepareScheduleData, never rendered
+// not refs: only read inside the schedule data loads, never rendered
 let daysOffRangeKey = null
+let timeSpentsRangeKey = null
+let timeSpentsCache = {}
 const timesheetByPerson = ref({})
 const displaySettings = ref({
   contactSheetMode: false,
@@ -1461,16 +1463,27 @@ const buildAssignationMap = () => {
   return taskAssignationMap
 }
 
+// same trade-off as the days off cache: one fetch per range, so the
+// debounced socket rebuilds stop refetching all time spents
+const loadTimeSpentsForRange = async (startDate, endDate) => {
+  const key = `${currentTaskType.value.id}_${startDate}_${endDate}`
+  if (key !== timeSpentsRangeKey) {
+    timeSpentsCache = await store
+      .dispatch('loadProductionTimeSpents', {
+        taskType: currentTaskType.value,
+        startDate,
+        endDate
+      })
+      .catch(
+        () => ({}) // fallback if not allowed to fetch timesheets
+      )
+    timeSpentsRangeKey = key
+  }
+  return timeSpentsCache
+}
+
 const loadTimesheets = async (personIds, startDate, endDate) => {
-  const timesheets = await store
-    .dispatch('loadProductionTimeSpents', {
-      taskType: currentTaskType.value,
-      startDate,
-      endDate
-    })
-    .catch(
-      () => ({}) // fallback if not allowed to fetch timesheets
-    )
+  const timesheets = await loadTimeSpentsForRange(startDate, endDate)
 
   const taskById = new Map(tasks.value.map(task => [task.id, task]))
   const timesheetByPersonResult = {}
