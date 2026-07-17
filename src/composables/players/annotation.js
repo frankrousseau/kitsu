@@ -1401,17 +1401,16 @@ export const useAnnotation = ({
   }
 
   // Render whatever is currently on the live fabric canvas onto the
-  // target canvas. Non-destructive: it draws the live canvas's pixels
-  // straight onto the target (scaled to fit), so objects stay on the
-  // live canvas — no per-object moves and no fabric "object belongs to
-  // a different canvas" warnings.
+  // target canvas. toCanvasElement re-renders the scene vectorially on
+  // an offscreen canvas at the target resolution, so strokes stay sharp
+  // (copying the display-sized live pixels would upscale and pixelate
+  // them) while the live objects are never moved: no fabric "object
+  // belongs to a different canvas" warnings.
   const compositeLiveAnnotationsOntoCanvas = canvas => {
     return new Promise(resolve => {
       const live = fabricCanvas.value
       if (!live) return resolve()
-      live.renderAll()
-      const source = live.lowerCanvasEl
-      if (!source) return resolve()
+      const source = live.toCanvasElement(canvas.width / live.getWidth())
       const context = canvas.getContext('2d')
       context.drawImage(source, 0, 0, canvas.width, canvas.height)
       resolve()
