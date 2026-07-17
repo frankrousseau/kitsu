@@ -64,6 +64,22 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
   const currentEpisode = computed(() => store.getters.currentEpisode)
   const currentProduction = computed(() => store.getters.currentProduction)
   const organisation = computed(() => store.getters.organisation)
+  const isCurrentUserManager = computed(
+    () => store.getters.isCurrentUserManager
+  )
+  const isCurrentUserSupervisor = computed(
+    () => store.getters.isCurrentUserSupervisor
+  )
+  const user = computed(() => store.getters.user)
+
+  const canEditTaskDates = taskType => {
+    const departments = user.value.departments || []
+    return (
+      isCurrentUserManager.value ||
+      (isCurrentUserSupervisor.value &&
+        (!departments.length || departments.includes(taskType.department_id)))
+    )
+  }
 
   // Local state (mirrors the mixin's `data()` fields used by Edit.vue).
   const currentSection = ref('infos')
@@ -214,7 +230,7 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
           expanded: false,
           loading: false,
           man_days: estimation,
-          editable: true,
+          editable: canEditTaskDates(taskType),
           unresizable: false,
           parentElement: rootElement,
           color: taskType.color,

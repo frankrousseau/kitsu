@@ -44,7 +44,12 @@ export const entityMixin = {
   },
 
   computed: {
-    ...mapGetters(['organisation']),
+    ...mapGetters([
+      'isCurrentUserManager',
+      'isCurrentUserSupervisor',
+      'organisation',
+      'user'
+    ]),
 
     assetList() {
       return assetsStore.cache.assets
@@ -262,7 +267,7 @@ export const entityMixin = {
             expanded: false,
             loading: false,
             man_days: estimation,
-            editable: true,
+            editable: this.canEditTaskDates(taskType),
             unresizable: false,
             parentElement: rootElement,
             color: taskType.color,
@@ -283,6 +288,15 @@ export const entityMixin = {
         man_days: manDays
       })
       this.scheduleItems = [rootElement]
+    },
+
+    canEditTaskDates(taskType) {
+      const departments = this.user.departments || []
+      return (
+        this.isCurrentUserManager ||
+        (this.isCurrentUserSupervisor &&
+          (!departments.length || departments.includes(taskType.department_id)))
+      )
     },
 
     saveTaskScheduleItem(item) {
