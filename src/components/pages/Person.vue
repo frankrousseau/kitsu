@@ -630,12 +630,21 @@ export default {
         expanded: false,
         loading: false,
         man_days: estimation,
-        editable: false,
+        editable: this.canEditTaskDates(taskType),
         unresizable: false,
         parentElement,
         color: taskType.color,
         children: []
       }
+    },
+
+    canEditTaskDates(taskType) {
+      const departments = this.user.departments || []
+      return (
+        this.isCurrentUserManager ||
+        (this.isCurrentUserSupervisor &&
+          (!departments.length || departments.includes(taskType.department_id)))
+      )
     },
 
     isActiveTab(tab) {
