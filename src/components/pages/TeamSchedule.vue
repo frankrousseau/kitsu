@@ -334,6 +334,12 @@ export default {
     }
   },
 
+  created() {
+    // non-reactive: person id -> raw tasks, so re-expanding a row is instant.
+    // Entries are dropped whenever the row's assignments or dates change.
+    this.personTasksCache = new Map()
+  },
+
   mounted() {
     this.selectedDepartment = this.$route.query.department || undefined
     this.selectedStudio = this.$route.query.studio || undefined
@@ -649,6 +655,7 @@ export default {
         if (!task) {
           return
         }
+        this.personTasksCache.delete(person.id)
         person.children.push(task)
         person.children.sort(
           firstBy('startDate').thenBy('project_name').thenBy('name')
@@ -690,6 +697,7 @@ export default {
         try {
           await this.saveTaskScheduleItem(item)
           this.refreshPersonRootDates(item.parentElement)
+          this.personTasksCache.delete(item.parentElement.id)
         } catch (err) {
           console.error(err)
         }
@@ -698,6 +706,7 @@ export default {
 
     onScheduleItemAssigned(item, person) {
       if (item.type === 'Task') {
+        this.personTasksCache.delete(person.id)
         person.children.sort(
           firstBy('startDate').thenBy('project_name').thenBy('name')
         )
@@ -710,6 +719,7 @@ export default {
 
     onScheduleItemUnassigned(item, person) {
       if (item.type === 'Task') {
+        this.personTasksCache.delete(person.id)
         this.unassignPersonFromTask({
           person,
           task: item
@@ -727,7 +737,11 @@ export default {
       element.loading = true
       element.children = []
       try {
-        const tasks = await this.fetchPersonTasks(element.id)
+        let tasks = this.personTasksCache.get(element.id)
+        if (!tasks) {
+          tasks = await this.fetchPersonTasks(element.id)
+          this.personTasksCache.set(element.id, tasks)
+        }
         element.children = tasks
           .map(task => this.buildTaskScheduleItem(element, task))
           .filter(Boolean)
