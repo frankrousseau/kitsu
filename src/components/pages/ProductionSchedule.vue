@@ -104,6 +104,7 @@
             icon="list"
             :text="$t('menu.assign_tasks')"
             @click="toggleSidePanel"
+            v-if="!isAllEpisodes"
           />
         </div>
       </div>
@@ -119,9 +120,10 @@
         clip-children
         is-estimation-linked
         hide-man-days
+        :multiline="isAllEpisodes"
         :reassignable="!isLockedSchedule"
         show-expand-all
-        subchildren
+        :subchildren="!isAllEpisodes"
         :type="mode"
         @expand-all="onScheduleExpandAll"
         @item-assign="onScheduleItemAssigned"
@@ -136,7 +138,10 @@
       />
     </div>
 
-    <div class="column side-column" v-if="isSidePanelOpen && !isLockedSchedule">
+    <div
+      class="column side-column"
+      v-if="isSidePanelOpen && !isLockedSchedule && !isAllEpisodes"
+    >
       <div class="side">
         <a
           class="close-button"
@@ -749,6 +754,13 @@ export default {
       return this.isTVShow && id && !['all', 'main'].includes(id) ? id : null
     },
 
+    // The 'all' pseudo-episode displays the production-wide planning: one row
+    // per episode with its own dates, instead of the per-episode entity /
+    // assignee / task tree.
+    isAllEpisodes() {
+      return this.isTVShow && this.currentEpisode?.id === 'all'
+    },
+
     taskTypeMap() {
       return taskTypeStore.cache.taskTypeMap
     },
@@ -1043,7 +1055,63 @@ export default {
       return filters
     },
 
-    async expandTaskTypeElement(
+    expandTaskTypeElement(
+      taskTypeElement,
+      refreshScheduleCallBack = null,
+      expanded = false,
+      resetAssignments = true
+    ) {
+      return this.isAllEpisodes
+        ? this.expandEpisodeRows(
+            taskTypeElement,
+            refreshScheduleCallBack,
+            expanded
+          )
+        : this.expandTaskTypeDrillDown(
+            taskTypeElement,
+            refreshScheduleCallBack,
+            expanded,
+            resetAssignments
+          )
+    },
+
+    // The production-wide planning stops at the episode level: one row per
+    // episode, with no entity, assignee or task row to load below it.
+    async expandEpisodeRows(
+      taskTypeElement,
+      refreshScheduleCallBack = null,
+      expanded = false
+    ) {
+      taskTypeElement.expanded = expanded || !taskTypeElement.expanded
+
+      if (taskTypeElement.expanded) {
+        try {
+          taskTypeElement.loading = true
+          taskTypeElement.children = []
+
+          // The episodes endpoint aggregates a task type schedule per episode,
+          // whatever the entity it applies to.
+          const scheduleItems = await this.loadEpisodeScheduleItems({
+            production: this.currentProduction,
+            taskType: this.taskTypeMap.get(taskTypeElement.task_type_id)
+          })
+          taskTypeElement.children = sortByName(
+            this.convertScheduleItems(taskTypeElement, scheduleItems)
+          )
+        } catch (err) {
+          console.error(err)
+          taskTypeElement.children = []
+        } finally {
+          taskTypeElement.loading = false
+        }
+
+        if (refreshScheduleCallBack) {
+          refreshScheduleCallBack(taskTypeElement)
+        }
+      }
+    },
+
+    async expandTaskTypeDrillDown(
       taskTypeElement,
       refreshScheduleCallBack = null,
       expanded = false,
@@ -1614,6 +1682,11 @@ export default {
       selectedEntityType = undefined,
       resetAssignments = true
     ) {
+      // No assignment panel on the production-wide planning.
+      if (this.isAllEpisodes) {
+        return
+      }
+
       this.selectedTaskType = taskType
 
       if (resetAssignments) {
@@ -2513,7 +2586,9 @@ export default {
     },
 
     currentEpisode(value) {
-      if (!value || ['all', 'main'].includes(value.id)) return
+      // 'main' is only a transient state on the schedule: the topbar coerces it
+      // to a concrete episode, which triggers this watcher again.
+      if (!value || value.id === 'main') return
       if (this.isTVShow) this.reset()
     }
   },

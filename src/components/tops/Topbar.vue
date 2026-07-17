@@ -435,6 +435,10 @@ export default {
       return ['breakdown']
     },
 
+    scheduleSections() {
+      return ['schedule']
+    },
+
     // Asset pages require a all section and a main pack section.
     currentEpisodeOptionGroups() {
       let section = this.isCurrentUserClient ? 'playlists' : 'assets'
@@ -467,6 +471,17 @@ export default {
       } else if (['breakdown'].includes(section)) {
         const episodeList = this.getBaseEpisodeOptionGroups('shots.episodes')
         return [{ name: '', episodeList }].concat(this.episodeOptionGroups)
+      } else if (this.scheduleSections.includes(section)) {
+        // The schedule offers the production-wide planning through 'all', but
+        // has no main pack.
+        return [
+          {
+            name: '',
+            episodeList: [
+              { label: this.$t('episodes.all_episodes'), value: 'all' }
+            ]
+          }
+        ].concat(this.episodeOptionGroups)
       } else {
         return this.episodeOptionGroups
       }
@@ -819,7 +834,7 @@ export default {
                   ? routeEpisodeId
                   : 'all'
             } else if (
-              this.currentProjectSection === 'playlists' &&
+              ['playlists', 'schedule'].includes(this.currentProjectSection) &&
               routeEpisodeId === 'all'
             ) {
               this.currentEpisodeId = 'all'
@@ -913,6 +928,9 @@ export default {
       const isAssetSection = this.assetSections.includes(section)
       const isEditSection = this.editSections.includes(section)
       const isBreakdownSection = this.breakdownSections.includes(section)
+      // The schedule keeps 'all' to display its production-wide planning.
+      const isScheduleAllEpisodes =
+        this.scheduleSections.includes(section) && episodeId === 'all'
       // Plugin pages keep the all / main pseudo-episodes: coercing to the
       // first episode desyncs the combobox from the episode_id actually
       // forwarded to the plugin iframe.
@@ -921,6 +939,7 @@ export default {
         !isAssetSection &&
         !isEditSection &&
         !isBreakdownSection &&
+        !isScheduleAllEpisodes &&
         ['all', 'main'].includes(episodeId) &&
         this.episodes.length > 0
       ) {
