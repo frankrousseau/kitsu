@@ -259,7 +259,7 @@ export default {
     this.init = true
   },
 
-  afterDestroy() {
+  unmounted() {
     this.$store.commit('LOAD_PERSON_TASKS_END', {
       tasks: [],
       userFilters: {},
