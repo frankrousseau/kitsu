@@ -1596,9 +1596,22 @@ const buildPersonElement = (
       moment(schedule.taskTypeStartDate)
     )
 
+    if (startDate.isAfter(productionEndDate.value)) {
+      startDate = productionEndDate.value.clone().add(-1, 'days')
+    }
+    if (startDate.isBefore(productionStartDate.value)) {
+      startDate = productionStartDate.value.clone()
+    }
+
     if (!endDate || endDate.isBefore(startDate)) {
       const nbDays = startDate.isoWeekday() === 5 ? 3 : 1
       endDate = startDate.clone().add(nbDays, 'days')
+    }
+    if (endDate.isAfter(productionEndDate.value)) {
+      endDate = productionEndDate.value.clone().add(-1, 'days')
+      if (startDate.isAfter(endDate)) {
+        startDate = endDate.clone().add(-1, 'days')
+      }
     }
 
     if (estimation) manDays += estimation
