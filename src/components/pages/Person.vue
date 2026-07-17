@@ -622,6 +622,9 @@ export default {
       }
 
       const taskType = this.taskTypeMap.get(task.task_type_id)
+      if (!taskType) {
+        return null
+      }
       return {
         ...task,
         name: `${task.full_entity_name} / ${taskType.name}`,

@@ -256,8 +256,9 @@ export const entityMixin = {
           if (!endDate || endDate.isBefore(startDate)) {
             endDate = startDate.clone().add(1, 'days')
           }
-          if (estimation) manDays += task.estimation
           const taskType = this.taskTypeMap.get(task.task_type_id)
+          if (!taskType) return null
+          if (estimation) manDays += task.estimation
 
           return {
             ...task,

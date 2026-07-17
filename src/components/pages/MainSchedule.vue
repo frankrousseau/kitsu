@@ -146,23 +146,25 @@ export default {
     },
 
     convertTaskTypeScheduleItems(scheduleItems) {
-      return scheduleItems.map(item => {
-        const startDate = getStartDateFromString(item.start_date)
-        const endDate = getEndDateFromString(startDate, item.end_date)
-        const taskType = this.taskTypeMap.get(item.task_type_id)
+      return scheduleItems
+        .filter(item => this.taskTypeMap.get(item.task_type_id))
+        .map(item => {
+          const startDate = getStartDateFromString(item.start_date)
+          const endDate = getEndDateFromString(startDate, item.end_date)
+          const taskType = this.taskTypeMap.get(item.task_type_id)
 
-        return {
-          ...item,
-          name: taskType.name,
-          color: taskType.color,
-          startDate: startDate,
-          endDate: endDate,
-          expanded: false,
-          loading: false,
-          editable: true,
-          children: []
-        }
-      })
+          return {
+            ...item,
+            name: taskType.name,
+            color: taskType.color,
+            startDate: startDate,
+            endDate: endDate,
+            expanded: false,
+            loading: false,
+            editable: true,
+            children: []
+          }
+        })
     },
 
     expandProductionElement(productionElement) {

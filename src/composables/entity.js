@@ -219,8 +219,9 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
         if (!endDate || endDate.isBefore(startDate)) {
           endDate = startDate.clone().add(1, 'days')
         }
-        if (estimation) manDays += task.estimation
         const taskType = taskTypeMap.value.get(task.task_type_id)
+        if (!taskType) return null
+        if (estimation) manDays += task.estimation
 
         return {
           ...task,

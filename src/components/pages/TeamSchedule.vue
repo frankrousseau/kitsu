@@ -588,6 +588,9 @@ export default {
         endDate = startDate.clone().add(1, 'days')
       }
       const taskType = this.taskTypeMap.get(task.task_type_id)
+      if (!taskType) {
+        return null
+      }
       return {
         ...task,
         name: `${task.full_entity_name} / ${taskType.name}`,
@@ -635,6 +638,9 @@ export default {
     async onScheduleItemDropped(item, person, refreshScheduleCallBack) {
       if (item.type === 'Task') {
         const task = this.buildTaskScheduleItem(person, item)
+        if (!task) {
+          return
+        }
         person.children.push(task)
         person.children.sort(
           firstBy('startDate').thenBy('project_name').thenBy('name')
