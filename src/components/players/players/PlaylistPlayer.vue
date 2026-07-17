@@ -1395,8 +1395,11 @@ const frameNumber = computed(() => {
 // Production start frame of the playing shot (data.frame_in, e.g. 1001).
 // Forwarded to the playback bar / progress bar as a display-only offset —
 // currentFrame stays 1-based since annotation seeks round-trip on it.
+// Opt-in through the production option; a missing field means disabled.
 const frameStart = computed(() =>
-  getEntityFrameStart(shotMap.value.get(currentEntity.value?.id))
+  currentProduction.value?.is_frame_in_numbering
+    ? getEntityFrameStart(shotMap.value.get(currentEntity.value?.id))
+    : undefined
 )
 
 const currentFrame = computed(() => formatFrame(frameNumber.value + 2))

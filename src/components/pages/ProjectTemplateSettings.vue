@@ -176,6 +176,10 @@
                 :label="$t('productions.fields.is_publish_default')"
                 v-model="params.is_publish_default_for_artists"
               />
+              <combobox-boolean
+                :label="$t('productions.fields.is_frame_in_numbering')"
+                v-model="params.is_frame_in_numbering"
+              />
               <text-field
                 type="number"
                 :step="1"
@@ -465,6 +469,7 @@ const params = ref({
   is_set_preview_automated: 'false',
   is_single_preview_per_revision: 'false',
   is_publish_default_for_artists: 'false',
+  is_frame_in_numbering: 'false',
   max_retakes: 0
 })
 
@@ -531,6 +536,7 @@ const loadTemplateData = async () => {
     is_publish_default_for_artists: tmpl.is_publish_default_for_artists
       ? 'true'
       : 'false',
+    is_frame_in_numbering: tmpl.is_frame_in_numbering ? 'true' : 'false',
     max_retakes: tmpl.max_retakes || 0
   }
   // Build roles map from task status link data (if available from API)
@@ -579,7 +585,8 @@ const saveParameters = async () => {
       is_single_preview_per_revision:
         params.value.is_single_preview_per_revision === 'true',
       is_publish_default_for_artists:
-        params.value.is_publish_default_for_artists === 'true'
+        params.value.is_publish_default_for_artists === 'true',
+      is_frame_in_numbering: params.value.is_frame_in_numbering === 'true'
     })
   } catch {
     errors.parameters = true
