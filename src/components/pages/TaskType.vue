@@ -1639,19 +1639,23 @@ const buildPersonElement = (
 
     if (withBeforeAfter) {
       const entity = entityMap.value.get(task.entity_id)
+      // copies: the ghost blocks below mutate name, dates and color,
+      // which must not leak into the taskMap objects
       const siblingElements = entity?.tasks
         .map(taskId => taskMap.value.get(taskId))
         .filter(Boolean)
 
       if (schedule.taskTypeBefore) {
-        data.previousElement = siblingElements.find(
+        const previousTask = siblingElements.find(
           item => item.task_type_id === schedule.taskTypeBefore
         )
+        data.previousElement = previousTask ? { ...previousTask } : null
       }
       if (schedule.taskTypeAfter) {
-        data.nextElement = siblingElements.find(
+        const nextTask = siblingElements.find(
           item => item.task_type_id === schedule.taskTypeAfter
         )
+        data.nextElement = nextTask ? { ...nextTask } : null
       }
     }
 
