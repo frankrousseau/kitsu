@@ -539,6 +539,8 @@ const activeTab = ref('tasks')
 const currentScheduleItem = ref(null)
 const currentSort = ref('entity_name')
 const daysOffByPerson = ref({})
+// not a ref: only read inside prepareScheduleData, never rendered
+let daysOffRangeKey = null
 const timesheetByPerson = ref({})
 const displaySettings = ref({
   contactSheetMode: false,
@@ -1350,11 +1352,15 @@ const prepareScheduleData = async () => {
   const startDate = currentScheduleItem.value.start_date
   const endDate = currentScheduleItem.value.end_date
 
-  const daysOffPromise = store
-    .dispatch('loadProductionDaysOff', { startDate, endDate })
-    .catch(
-      () => ({}) // fallback if not allowed to fetch days off
-    )
+  // every task:update socket event rebuilds the schedule, so the days off
+  // fetch is cached per range to avoid one HTTP call per event
+  const daysOffKey = `${currentProduction.value.id}_${startDate}_${endDate}`
+  const daysOffPromise =
+    daysOffKey === daysOffRangeKey
+      ? Promise.resolve(daysOffByPerson.value)
+      : store.dispatch('loadProductionDaysOff', { startDate, endDate }).catch(
+          () => ({}) // fallback if not allowed to fetch days off
+        )
 
   if (dataDisplay.value.timesheets) {
     const assignees = Object.keys(taskAssignationMap).filter(
@@ -1369,6 +1375,7 @@ const prepareScheduleData = async () => {
   } else {
     daysOffByPerson.value = await daysOffPromise
   }
+  daysOffRangeKey = daysOffKey
 
   return taskAssignationMap
 }
