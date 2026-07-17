@@ -1317,6 +1317,38 @@ describe('composables/annotation', () => {
     })
   })
 
+  describe('compositeLiveAnnotationsOntoCanvas', () => {
+    // Regression (#pixelated snapshots): the composite must re-render the
+    // scene at the target resolution through toCanvasElement, not upscale
+    // the display-sized live canvas pixels.
+    it('re-renders the scene at the target resolution', async () => {
+      const exportedCanvas = {}
+      const toCanvasElement = vi.fn(() => exportedCanvas)
+      const canvas = createFakeCanvas({ toCanvasElement })
+      const { api, wrapper } = mountAnnotation({ canvas })
+      const drawImage = vi.fn()
+      const target = {
+        width: 1920,
+        height: 1080,
+        getContext: () => ({ drawImage })
+      }
+
+      await api.compositeLiveAnnotationsOntoCanvas(target)
+
+      expect(toCanvasElement).toHaveBeenCalledWith(1920 / 800)
+      expect(drawImage).toHaveBeenCalledWith(exportedCanvas, 0, 0, 1920, 1080)
+      wrapper.unmount()
+    })
+
+    it('resolves without drawing when there is no live canvas', async () => {
+      const { api, wrapper } = mountAnnotation({ skipCanvas: true })
+      await expect(
+        api.compositeLiveAnnotationsOntoCanvas({ width: 100, height: 100 })
+      ).resolves.toBeUndefined()
+      wrapper.unmount()
+    })
+  })
+
   describe('Fabric v6 regressions', () => {
     it('patches the text-dimension override onto Text.prototype, not every object', () => {
       // Regression: the v6 port put _getNonTransformedDimensions /
