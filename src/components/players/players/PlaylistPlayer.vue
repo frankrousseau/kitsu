@@ -4424,6 +4424,9 @@ watch(playingEntityIndex, () => {
     })
   } else if (wavesurfer && isWaveformDisplayed.value) {
     wavesurfer.destroy()
+    // Null it like loadWaveForm does, or the next load double-destroys
+    // the dead instance inside its try and skips rebuilding the waveform.
+    wavesurfer = null
   }
   if (currentEntity.value) {
     annotations.value = currentEntity.value.preview_file_annotations || []
