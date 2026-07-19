@@ -607,7 +607,7 @@ export const usePreviewRoom = options => {
     const r = unref(room)
     if (!isValidRoomId(r) || !joinedRoom.value) return
     if (r.localId === eventData.data?.local_id) return
-    const annotation = getAnnotation(eventData.time)
+    const annotation = getAnnotation(eventData.data.time)
     const obj = eventData.data.obj
     if (getObjectById(obj.id)) return
     if (unref(isLaserModeOn)) {
@@ -633,7 +633,7 @@ export const usePreviewRoom = options => {
     const r = unref(room)
     if (!isValidRoomId(r) || !joinedRoom.value) return
     if (r.localId === eventData.data?.local_id) return
-    const annotation = getAnnotation(eventData.time)
+    const annotation = getAnnotation(eventData.data.time)
     const obj = eventData.data.obj
     updateObjectInCanvas(annotation, obj)
   }
@@ -647,7 +647,7 @@ export const usePreviewRoom = options => {
     [PREVIEW_ROOM_EVENTS.comparisonPanzoomChanged, onComparisonPanzoomChanged],
     [PREVIEW_ROOM_EVENTS.addAnnotation, onAddAnnotation],
     [PREVIEW_ROOM_EVENTS.removeAnnotation, onRemoveAnnotation],
-    ['preview-update-annotation', onUpdateAnnotation]
+    [PREVIEW_ROOM_EVENTS.updateAnnotation, onUpdateAnnotation]
   ]
 
   onMounted(() => {

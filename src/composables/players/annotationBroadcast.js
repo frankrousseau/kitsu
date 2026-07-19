@@ -49,6 +49,6 @@ export const useAnnotationBroadcast = ({ room, userId, socket }) => {
     postAnnotationDeletion: (time, obj) =>
       emitAnnotationEvent(PREVIEW_ROOM_EVENTS.removeAnnotation, time, obj),
     postAnnotationUpdate: (time, obj) =>
-      emitAnnotationEvent('preview-update-annotation', time, obj)
+      emitAnnotationEvent(PREVIEW_ROOM_EVENTS.updateAnnotation, time, obj)
   }
 }
