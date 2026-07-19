@@ -164,12 +164,18 @@ export const usePreviewShortcuts = handlers => {
         handlers.onNextAnnotation?.()
         break
       case 'd':
-        pauseEvent(event)
-        handlers.onAnnotate?.()
+        // Bare-key tool toggles: leave Ctrl+D (bookmark) / Ctrl+E and
+        // the Alt combos to the browser and other handlers.
+        if (!alt && !mod) {
+          pauseEvent(event)
+          handlers.onAnnotate?.()
+        }
         break
       case 'e':
-        pauseEvent(event)
-        handlers.onErase?.()
+        if (!alt && !mod) {
+          pauseEvent(event)
+          handlers.onErase?.()
+        }
         break
       case 'z':
         if (mod) handlers.onUndo?.()
