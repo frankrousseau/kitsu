@@ -305,7 +305,10 @@ const play = () => {
 const pause = () => {
   isPlaying = false
   if (isMovie.value) videoViewer.value.pause()
-  if (isSound.value) soundViewer.value.pause()
+  // Not gated on isSound: when a preview switch triggers this pause, the
+  // computeds already describe the NEW preview, and a still-playing sound
+  // (kept mounted by v-show) would otherwise never be stopped.
+  soundViewer.value?.pause()
 }
 
 const playModelAnimation = animationName => {
