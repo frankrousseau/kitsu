@@ -2285,6 +2285,20 @@ watch(taskTypeId, () => {
   setDefaultComparisonPreview()
 })
 
+// The comparison lookup map is non-reactive and was only rebuilt on
+// task-type changes: switching tasks in TaskInfo (same task type id) or
+// receiving a new revision left it resolving stale preview files, which
+// blanked the comparison viewer. Rebuild it whenever the payload changes.
+watch(
+  () => props.entityPreviewFiles,
+  () => {
+    resetPreviewFileMap()
+    if (previewToCompareId.value) {
+      previewToCompare.value = resolvePreviewToCompare(previewToCompareId.value)
+    }
+  }
+)
+
 watch(isComparing, () => {
   endAnnotationSaving()
   if (!isComparing.value) {
