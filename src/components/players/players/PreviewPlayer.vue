@@ -2353,8 +2353,9 @@ watch(isTyping, () => {
     isAnnotationsDisplayed.value = true
   }
   const clickarea =
-    canvasWrapper.value.getElementsByClassName('upper-canvas')[0]
-  if (isTyping.value && clickarea) {
+    canvasWrapper.value?.getElementsByClassName('upper-canvas')[0]
+  if (!clickarea) return
+  if (isTyping.value) {
     clickarea.addEventListener('dblclick', addText)
   } else {
     clickarea.removeEventListener('dblclick', addText)
