@@ -13,13 +13,19 @@
         <div v-show="isGif">
           <img ref="pictureGif" :src="pictureGifPath" />
         </div>
+        <!-- Bind only the displayed variant's src: with both bound, every
+             viewer downloaded the preview AND the original at once. -->
         <div v-show="!isGif">
           <img
             ref="pictureBig"
-            :src="pictureDlPath"
+            :src="fullScreen || big ? pictureDlPath : null"
             v-show="fullScreen || big"
           />
-          <img ref="picture" :src="picturePath" v-show="!fullScreen && !big" />
+          <img
+            ref="picture"
+            :src="!fullScreen && !big ? picturePath : null"
+            v-show="!fullScreen && !big"
+          />
         </div>
       </div>
       <spinner v-if="isLoading" />
