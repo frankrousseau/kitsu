@@ -3809,7 +3809,7 @@ const setPlaylistProgress = time => {
   const pos = playlistShotPosition.value[frame]
   if (pos) {
     const entityIndex = pos.index
-    if (entityIndex !== playingEntityIndex.value && entityIndex) {
+    if (entityIndex !== playingEntityIndex.value) {
       playEntity(entityIndex)
     }
   }
