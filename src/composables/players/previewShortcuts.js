@@ -196,14 +196,22 @@ export const usePreviewShortcuts = handlers => {
     }
   }
 
+  // Alt+Tab away swallows the keyup: without this reset the overlay
+  // stays pointer-transparent after coming back until Alt is tapped.
+  const onWindowBlur = () => {
+    isAltHeld.value = false
+  }
+
   onMounted(() => {
     window.addEventListener('keydown', onKeyDown, false)
     window.addEventListener('keyup', onKeyUp, false)
+    window.addEventListener('blur', onWindowBlur)
   })
 
   onBeforeUnmount(() => {
     window.removeEventListener('keydown', onKeyDown)
     window.removeEventListener('keyup', onKeyUp)
+    window.removeEventListener('blur', onWindowBlur)
   })
 
   return { isAltHeld }
