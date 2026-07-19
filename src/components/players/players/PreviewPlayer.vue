@@ -470,6 +470,7 @@ import { useComparison } from '@/composables/players/comparison'
 import { useOnionSkin } from '@/composables/players/onionSkin'
 import { usePreviewShortcuts } from '@/composables/players/previewShortcuts'
 import { usePlayerTransport } from '@/composables/players/transport'
+import func from '@/lib/func'
 import { getEntityPath } from '@/lib/path'
 import { mergeAnnotationsByFrame } from '@/lib/players/annotation'
 import localPreferences from '@/lib/preferences'
@@ -2463,10 +2464,14 @@ onMounted(() => {
   // viewer's transform through the panzoom-changed sync.
   previewViewer.value?.resumeZoom()
 
-  containerResizeObserver = new ResizeObserver(() => {
+  // Debounced: a live window resize (or the fullscreen transition) fires
+  // this continuously, and each tick cleared and rebuilt the annotation
+  // objects (async PSStroke deserialization).
+  const onContainerResized = func.debounce(() => {
     resetPlayerPositions()
     if (isPicture.value || isMovie.value) loadAnnotation()
-  })
+  }, 200)
+  containerResizeObserver = new ResizeObserver(onContainerResized)
   containerResizeObserver.observe(container.value)
 
   window.addEventListener('resize', onWindowResize)
