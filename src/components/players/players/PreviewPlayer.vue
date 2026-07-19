@@ -1676,7 +1676,14 @@ const loadComparisonAnnotation = time => {
   }
   let annotation = null
   if (isMovie.value) {
-    annotation = anns.find(a => a.time === time)
+    // Tolerant match like getAnnotation: callers derive `time` from raw
+    // frame math while stored times are rounded (legacy ones not even
+    // that), so strict float equality mostly missed and the comparison
+    // overlay stayed empty.
+    const target = roundToFrame(time, fps.value)
+    annotation = anns.find(
+      a => Math.abs(roundToFrame(a.time, fps.value) - target) < 0.0001
+    )
   } else if (isPicture.value) {
     annotation = anns.find(a => a.time === 0)
   }

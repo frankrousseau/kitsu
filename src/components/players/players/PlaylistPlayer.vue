@@ -2887,7 +2887,13 @@ const loadComparisonAnnotation = time => {
   if (!isMovieComparison.value) return
   const compared = currentRevisionToCompare.value
   const anns = compared?.annotations || []
-  const annotation = anns.find(a => a.time === time)
+  // Tolerant match like getAnnotation: `time` can be a raw rVFC media
+  // time while stored times are rounded (legacy ones not even that), so
+  // strict float equality mostly missed and the overlay stayed empty.
+  const target = roundToFrame(time, fps.value)
+  const annotation = anns.find(
+    a => Math.abs(roundToFrame(a.time, fps.value) - target) < 0.0001
+  )
   if (annotation) loadSingleAnnotationComparison(annotation)
 }
 
