@@ -2439,7 +2439,6 @@ const onScrubEnd = () => {
 
 const onProgressChanged = (frame, updatePlaylistProgress = true) => {
   clearCanvas()
-  reloadAnnotations(false)
   if (isCurrentPreviewPicture.value) {
     framesSeenOfPicture.value = frame + 1
   } else {
