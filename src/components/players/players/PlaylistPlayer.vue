@@ -926,10 +926,12 @@ import {
   computed,
   defineAsyncComponent,
   getCurrentInstance,
+  markRaw,
   nextTick,
   onBeforeUnmount,
   onMounted,
   ref,
+  shallowRef,
   useTemplateRef,
   watch
 } from 'vue'
@@ -1153,7 +1155,10 @@ const pictureDefaultHeight = ref(0)
 const playingEntityIndex = ref(0)
 const playlistDuration = ref(0)
 const playlistProgress = ref(0)
-const playlistShotPosition = ref({})
+// Frame -> entity lookup for the strip. Non-reactive on purpose: one
+// entry per frame of the whole playlist made Vue proxy tens of
+// thousands of objects; consumers re-render on the shallowRef swap.
+const playlistShotPosition = shallowRef({})
 const room = ref({
   people: [],
   newComer: true
@@ -3999,6 +4004,7 @@ const resetHandles = entity => {
 const resetPlaylistFrameData = () => {
   let playlistDur = 0
   let curFrame = 0
+  const positions = {}
   entityList.value.forEach((entity, index) => {
     // An entity without preview still spans its edit length (like a slug
     // in a conform): playback holds the slot, the strip shows it in grey.
@@ -4020,16 +4026,21 @@ const resetPlaylistFrameData = () => {
     // the *current* entity's rate, durations refresh after this pass).
     entity.playlist_start_frame = curFrame
     entity.playlist_nb_frames = n
+    // One shared entry per entity (the fields are identical for all its
+    // frames), written into a fresh map: per-frame objects multiplied
+    // memory by the frame count, and stale frames from a longer previous
+    // playlist were never purged.
+    const entry = {
+      index,
+      name: entity.name,
+      extension: entity.preview_file_extension,
+      start: entity.start_duration,
+      width: entity.preview_file_width,
+      height: entity.preview_file_height,
+      id: entity.preview_file_id
+    }
     for (let i = 0; i < n; i++) {
-      playlistShotPosition.value[curFrame + i] = {
-        index,
-        name: entity.name,
-        extension: entity.preview_file_extension,
-        start: entity.start_duration,
-        width: entity.preview_file_width,
-        height: entity.preview_file_height,
-        id: entity.preview_file_id
-      }
+      positions[curFrame + i] = entry
     }
     curFrame += n
     playlistDur += n / fps.value
@@ -4041,6 +4052,7 @@ const resetPlaylistFrameData = () => {
       entity.task_status_color = taskStatus?.color
     }
   })
+  playlistShotPosition.value = markRaw(positions)
   playlistDuration.value = playlistDur
   return playlistDur
 }
