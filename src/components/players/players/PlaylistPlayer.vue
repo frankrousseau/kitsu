@@ -1107,6 +1107,9 @@ let lastResizeCall = 0
 let playingPictureTimeout = null
 let autoHideTimer = null
 let wavesurfer = null
+// Annotation painted by the show-annotations-while-playing path; reset
+// wherever the canvas is cleared outside that path.
+let lastShownWhilePlaying = null
 
 // — Reactive
 const annotations = ref([])
@@ -2116,6 +2119,7 @@ const play = () => {
     if (isComparing.value) rawPlayerComparison.value?.play()
     isPlaying.value = rawPlayer.value.isPlaying
   }
+  lastShownWhilePlaying = null
   clearCanvas()
 }
 
@@ -2187,6 +2191,7 @@ const playEntity = (entityIndex, updateFullPlaylist = true, frame = -1) => {
   ensureEntityRendered(entityIndex)
   const entity = entityList.value[entityIndex]
   const wasDrawing = isDrawing.value === true
+  lastShownWhilePlaying = null
   clearCanvas()
   framesSeenOfPicture.value = 1
   playingEntityIndex.value = entityIndex
@@ -2676,10 +2681,16 @@ const onFrameUpdate = frame => {
   updateProgressBar()
   if (isShowAnnotationsWhilePlaying.value) {
     const ann = getAnnotation(currentTimeRaw.value)
-    clearCanvas()
-    if (ann) loadSingleAnnotation(ann)
-    if (isComparing.value && !isComparisonOverlay.value) {
-      loadComparisonAnnotation(currentTimeRaw.value)
+    // Repaint only when the displayed annotation changes: clearing and
+    // rebuilding fabric objects (async PSStroke deserialization) on
+    // EVERY frame tick churned constantly with the option enabled.
+    if (ann !== lastShownWhilePlaying) {
+      lastShownWhilePlaying = ann || null
+      clearCanvas()
+      if (ann) loadSingleAnnotation(ann)
+      if (isComparing.value && !isComparisonOverlay.value) {
+        loadComparisonAnnotation(currentTimeRaw.value)
+      }
     }
   }
   if (props.playlist && isPlaying.value) {
@@ -2868,6 +2879,7 @@ const onMainCanvasResized = () => {
   // objects that already have a fabric instance, so without this
   // the wrongly-scaled strokes drawn at mount-time (when the anchor
   // had no size yet) would stay on screen forever.
+  lastShownWhilePlaying = null
   clearCanvas()
   reloadAnnotations(false)
   const ann = getAnnotation(currentTimeRaw.value)
@@ -4403,6 +4415,10 @@ watch(
     }
   }
 )
+
+watch(isShowAnnotationsWhilePlaying, () => {
+  lastShownWhilePlaying = null
+})
 
 watch(framesSeenOfPicture, () => {
   if (isCurrentPreviewPicture.value) {
