@@ -602,10 +602,16 @@ export const useAnnotation = ({
     // Adding PSStrokes / shapes is async, so load sequentially and bail if a
     // clear (or newer load) superseded us — otherwise late adds repopulate a
     // canvas that was just cleared, leaving an incomplete/garbled overlay.
+    // Like the main-canvas path, an object whose async build was already in
+    // flight when the clear hit is removed right after it lands.
     const token = comparisonLoadToken
     for (const obj of annotation.drawing.objects) {
       if (token !== comparisonLoadToken) return
-      await addObjectToCanvas(annotation, obj, canvas)
+      const built = await addObjectToCanvas(annotation, obj, canvas)
+      if (token !== comparisonLoadToken) {
+        if (built) canvas.remove(built)
+        return
+      }
     }
   }
 
@@ -1301,10 +1307,17 @@ export const useAnnotation = ({
 
   // Add one ghost annotation's objects at the given opacity. Sequential
   // because object creation is async and addObjectToCanvas mutates shared
-  // state (so it can't run in parallel).
-  const renderOnionGhost = async (canvas, { annotation, opacity }) => {
+  // state (so it can't run in parallel). Token-checked around every await
+  // so a clear or a fresher load mid-ghost can't leave a partial ghost
+  // painted on the cleared canvas.
+  const renderOnionGhost = async (canvas, { annotation, opacity }, token) => {
     for (const obj of annotation.drawing.objects) {
+      if (token !== onionLoadToken) return
       const built = await addObjectToCanvas(annotation, obj, canvas)
+      if (token !== onionLoadToken) {
+        if (built) canvas.remove(built)
+        return
+      }
       built?.set('opacity', opacity)
     }
   }
@@ -1321,7 +1334,7 @@ export const useAnnotation = ({
     canvas.clear()
     for (const ghost of ghosts) {
       if (token !== onionLoadToken) return
-      await renderOnionGhost(canvas, ghost)
+      await renderOnionGhost(canvas, ghost, token)
     }
     if (token === onionLoadToken && isFabricReady(canvas)) {
       canvas.requestRenderAll()
