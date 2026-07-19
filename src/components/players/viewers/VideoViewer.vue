@@ -354,7 +354,6 @@ const getFrameFromPlayer = () => {
         : 0
   if (raw === 0) return 0
   let frame = Math.ceil(raw / frameDuration.value) + 1
-  frame = Number(frame.toPrecision(4))
   frame = Math.min(frame, props.nbFrames)
   return frame
 }

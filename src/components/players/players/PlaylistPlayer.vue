@@ -2244,7 +2244,7 @@ const syncComparisonPlayer = () => {
     isComparing.value &&
     rawPlayerComparison.value.currentPlayer
   ) {
-    const t = Number(rawPlayer.value.getCurrentTimeRaw().toPrecision(4))
+    const t = rawPlayer.value.getCurrentTimeRaw()
     rawPlayerComparison.value.setCurrentTimeRaw(t)
   }
 }
@@ -2560,8 +2560,9 @@ const getCurrentTime = () => {
   // scrub position leaks into the annotation key and strokes drawn
   // mid-shot disappear when the user comes back to the start.
   if (!isCurrentPreviewMovie.value) return 0
-  const time = roundToFrame(currentTimeRaw.value, fps.value) || 0
-  return Number(time.toPrecision(4))
+  // 4-decimal rounding only: toPrecision(4) keeps 4 significant digits and
+  // quantized times past 100s, landing annotations on neighbouring frames.
+  return roundToFrame(currentTimeRaw.value, fps.value) || 0
 }
 
 const getCurrentFrame = () => {
@@ -2581,7 +2582,7 @@ const setCurrentTimeRaw = time => {
     syncComparisonPlayer()
     const isChromium = !!window.chrome
     const change = isChromium ? 0.0001 : 0
-    currentTimeRaw.value = Number((roundedTime + change).toPrecision(4))
+    currentTimeRaw.value = roundedTime + change
     updateProgressBar()
   }
   return roundedTime
@@ -2650,9 +2651,7 @@ const setPlayerSpeed = rate => {
 const onFrameUpdate = frame => {
   const isChromium = !!window.chrome
   const change = isChromium ? 0.0001 : 0
-  currentTimeRaw.value = Number(
-    (frame * frameDuration.value + change).toPrecision(4)
-  )
+  currentTimeRaw.value = frame * frameDuration.value + change
   currentTime.value = formatTime(currentTimeRaw.value, fps.value)
   updateProgressBar()
   if (isShowAnnotationsWhilePlaying.value) {

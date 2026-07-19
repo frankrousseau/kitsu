@@ -1131,8 +1131,9 @@ const changeMaxDuration = duration => {
 
 const getCurrentTime = () => {
   if (!isMovie.value) return 0
-  const time = roundToFrame(currentTimeRaw.value, fps.value)
-  return Number(time.toPrecision(4))
+  // 4-decimal rounding only: toPrecision(4) keeps 4 significant digits and
+  // quantized times past 100s, landing annotations on neighbouring frames.
+  return roundToFrame(currentTimeRaw.value, fps.value)
 }
 
 const getCurrentFrame = () => {
@@ -1621,9 +1622,10 @@ const onAnnotationDisplayedClicked = () => {
 const saveAnnotations = () => {
   let currentTimeVal = 0
   if (isMovie.value) {
-    currentTimeVal = currentFrame.value * frameDuration.value
-    currentTimeVal = roundToFrame(currentTimeVal, fps.value)
-    currentTimeVal = Number(currentTimeVal.toPrecision(4))
+    currentTimeVal = roundToFrame(
+      currentFrame.value * frameDuration.value,
+      fps.value
+    )
   }
   const annotation = getAnnotation(currentTimeVal)
   const newAnnotations = getNewAnnotations(
