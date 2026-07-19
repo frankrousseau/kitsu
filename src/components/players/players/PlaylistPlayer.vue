@@ -3203,7 +3203,8 @@ const onFocusToggle = event => {
 }
 
 const onTimeCodeClicked = ({ versionRevision, frame }) => {
-  const previews = currentEntity.value?.preview_files[task.value?.task_type_id]
+  const previews =
+    currentEntity.value?.preview_files?.[task.value?.task_type_id]
   if (!previews) return
   const previewFile = previews.find(
     p => p.revision === parseInt(versionRevision)
