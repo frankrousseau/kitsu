@@ -2008,7 +2008,13 @@ const scheduleRenderStep = step => {
 const startProgressiveRender = () => {
   cancelProgressiveRender()
   const total = entityList.value.length
-  renderedEntityCount.value = Math.min(RENDER_BATCH_SIZE, total)
+  // Keep whatever is already mounted: a same-content list replacement
+  // (reorder) must not unmount the strip beyond the first batch. Fresh
+  // playlists reset the count through resetPlaylist.
+  renderedEntityCount.value = Math.min(
+    Math.max(RENDER_BATCH_SIZE, renderedEntityCount.value),
+    total
+  )
   const step = () => {
     renderHandle = null
     const total = entityList.value.length
@@ -3682,16 +3688,16 @@ const moveSelectedEntity = (entityToMove, toMoveIndex, targetIndex) => {
   if (!currentEntity.value) return
   if (playingEntityIndex.value >= 0) {
     if (toMoveIndex >= 0 && targetIndex >= 0) {
+      // Single replacement: the transient empty list unmounted every
+      // PlaylistedEntity and remounted the whole strip on each reorder
+      // (the keyed v-for just moves nodes on a same-content swap).
       const tmp = [...entityList.value]
       tmp.splice(toMoveIndex, 1)
       tmp.splice(targetIndex, 0, entityToMove)
-      entityList.value = []
+      entityList.value = tmp
       nextTick(() => {
-        entityList.value = tmp
-        nextTick(() => {
-          playingEntityIndex.value = targetIndex
-          scrollToEntity(playingEntityIndex.value)
-        })
+        playingEntityIndex.value = targetIndex
+        scrollToEntity(playingEntityIndex.value)
       })
     }
   }
@@ -4137,6 +4143,7 @@ const onComparisonPanZoomChanged = ({ x, y, scale }) => {
 const resetPlaylist = () => {
   currentPreviewIndex.value = 0
   currentComparisonPreviewIndex.value = 0
+  renderedEntityCount.value = 0
   entityList.value = props.entities
   resetPlaylistFrameData()
 
