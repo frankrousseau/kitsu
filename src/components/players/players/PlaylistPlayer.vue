@@ -2806,10 +2806,9 @@ const updateMainAnchor = () => {
           height: currentPreview.value.height
         }
       : picturePlayer.value?.getNaturalDimensions?.()
-    if (!naturalDimensions) return
+    if (!naturalDimensions?.width || !naturalDimensions?.height) return
     const naturalWidth = naturalDimensions.width
     const naturalHeight = naturalDimensions.height
-    const ratio = naturalWidth / naturalHeight
 
     let fullWidth = videoContainer.value.offsetWidth
     const fullHeight = videoContainer.value.offsetHeight
@@ -2817,33 +2816,21 @@ const updateMainAnchor = () => {
       fullWidth = Math.round(fullWidth / 2)
     }
 
-    let width = ratio ? fullHeight * ratio : fullWidth
-    let height = ratio ? Math.round(fullWidth / ratio) : fullHeight
-    let left = 0
-    let top = 0
+    // Contain fit, never upscaled: one uniform scale keeps the anchor at
+    // the image's aspect ratio in every container shape. The previous
+    // independent width/height clamps produced a wrong-aspect box when
+    // the container was narrower but taller than the image, misaligning
+    // the annotation canvas.
+    const scale = Math.min(
+      fullWidth / naturalWidth,
+      fullHeight / naturalHeight,
+      1
+    )
+    const width = Math.round(naturalWidth * scale)
+    const height = Math.round(naturalHeight * scale)
 
-    if (fullWidth > naturalWidth) {
-      left = Math.round((fullWidth - naturalWidth) / 2)
-      width = naturalWidth
-    } else if (fullWidth > width) {
-      left = Math.round((fullWidth - width) / 2)
-    } else {
-      width = fullWidth
-    }
-
-    if (fullHeight > naturalHeight) {
-      top = Math.round((fullHeight - naturalHeight) / 2)
-      height = naturalHeight
-    } else if (fullHeight > height) {
-      top = Math.round((fullHeight - height) / 2)
-    } else {
-      height = fullHeight
-      width = Math.round(height * ratio)
-      left = Math.round((fullWidth - width) / 2)
-    }
-
-    anchor.style.left = `${left}px`
-    anchor.style.top = `${top}px`
+    anchor.style.left = `${Math.round((fullWidth - width) / 2)}px`
+    anchor.style.top = `${Math.round((fullHeight - height) / 2)}px`
     anchor.style.width = `${width}px`
     anchor.style.height = `${height}px`
   }

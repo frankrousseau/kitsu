@@ -139,33 +139,20 @@ const videoBounds = computed(() => {
 
   // Pictures: mirror the studio player's sizing — the image is centered and
   // never upscaled beyond its natural size, so the overlay box matches the
-  // actually displayed <img>. A plain contain-fit (used for movies) would
-  // upscale small images and misalign the annotations on top of them.
+  // actually displayed <img>. One uniform scale: independent width/height
+  // clamps produced a wrong-aspect box when the container was narrower but
+  // taller than the image, and strokes then SAVED with those dimensions
+  // misalign everywhere else.
   if (props.isPicture) {
-    const ratio = mw / mh
-    let width = ratio ? ch * ratio : cw
-    let height = ratio ? Math.round(cw / ratio) : ch
-    let left = 0
-    let top = 0
-    if (cw > mw) {
-      left = Math.round((cw - mw) / 2)
-      width = mw
-    } else if (cw > width) {
-      left = Math.round((cw - width) / 2)
-    } else {
-      width = cw
+    const scale = Math.min(cw / mw, ch / mh, 1)
+    const width = Math.round(mw * scale)
+    const height = Math.round(mh * scale)
+    return {
+      width,
+      height,
+      left: Math.round((cw - width) / 2),
+      top: Math.round((ch - height) / 2)
     }
-    if (ch > mh) {
-      top = Math.round((ch - mh) / 2)
-      height = mh
-    } else if (ch > height) {
-      top = Math.round((ch - height) / 2)
-    } else {
-      height = ch
-      width = Math.round(height * ratio)
-      left = Math.round((cw - width) / 2)
-    }
-    return { width, height, left, top }
   }
 
   // Movies: contain-fit — matches the canvas, which fills the container.
