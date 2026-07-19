@@ -311,12 +311,15 @@ const pause = () => {
   soundViewer.value?.pause()
 }
 
+// The object viewer is only mounted for ready previews: play/pause can
+// arrive while a glb is still processing (or broken), where the parent's
+// extension-based is3DModel is true but the ref is null.
 const playModelAnimation = animationName => {
-  objectViewer.value.play(animationName)
+  objectViewer.value?.play(animationName)
 }
 
 const pauseModelAnimation = () => {
-  objectViewer.value.pause()
+  objectViewer.value?.pause()
 }
 
 const goPreviousFrame = () => {
@@ -336,7 +339,7 @@ const onPlayPauseClicked = () => {
 }
 
 const get3DAnimations = () => {
-  return objectViewer.value.getAnimations()
+  return objectViewer.value?.getAnimations() || []
 }
 
 const getNaturalDimensions = () => {
