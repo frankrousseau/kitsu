@@ -1771,7 +1771,9 @@ const extractVideoAnnotationSnapshots = async ({ withLabel = false } = {}) => {
       await getFileFromCanvas(canvas, snapshotFilename({ revision, frame }))
     )
   }
-  previewViewer.value.setCurrentFrame(currentFrame.value - 1)
+  // currentFrame is 0-based here (unlike PlaylistPlayer's 1-based label
+  // this restore was copied from): no -1, or the playhead steps back.
+  previewViewer.value.setCurrentFrame(currentFrame.value)
   nextTick(() => {
     clearCanvas()
   })
