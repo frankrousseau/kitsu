@@ -335,6 +335,7 @@ export const useAnnotation = ({
         time: getCurrentTime()
       })
     }
+    if (activeObject) clearUndoneOnUserAction()
     saveAnnotationsCb()
   }
 
@@ -798,6 +799,7 @@ export const useAnnotation = ({
     } else {
       addToAdditions(o)
       stackAddAction(obj)
+      clearUndoneOnUserAction()
     }
   }
 
@@ -873,6 +875,14 @@ export const useAnnotation = ({
   const isStaleAction = action =>
     action?.time !== undefined && action.time !== getCurrentTime()
 
+  // Any NEW user action invalidates the redo stack (a kept one would
+  // replay stale history on top of the new state) — but not the re-adds
+  // and re-deletes performed by undo/redo themselves.
+  let replayingHistory = false
+  const clearUndoneOnUserAction = () => {
+    if (!replayingHistory) clearUndoneStack()
+  }
+
   // After a canvas reload (e.g. Esc-exit fullscreen) the stack entry
   // holds a stale fabric.Object that's no longer on the live canvas;
   // look it up by id. Groups (_objects) aren't on the canvas as a
@@ -945,31 +955,36 @@ export const useAnnotation = ({
       resetUndoStacks()
       return
     }
-    if (lastAction.type === 'erase') {
+    replayingHistory = true
+    try {
+      if (lastAction.type === 'erase') {
+        const action = doneActionStack.pop()
+        undoEraseAction(action)
+        undoneActionStack.push(action)
+        return
+      }
       const action = doneActionStack.pop()
-      undoEraseAction(action)
+      if (!action?.obj) return
+      const obj = resolveActionObject(action)
+      // Snapshot length so the side-effect pushes addObject / deleteObject
+      // make (object:added → stackAddAction for re-adds, per-child remove
+      // for groups) are dropped before we move the action to the undone
+      // stack — otherwise undo grows the done stack instead of shrinking it.
+      const stackLengthBefore = doneActionStack.length
+      if (action.type === 'add') {
+        deleteObject(obj)
+        removeFromAdditions(obj)
+      } else if (action.type === 'remove') {
+        // addObject's 'object:added' already fires addToAdditions; no
+        // explicit call needed (it would double-record the addition).
+        addObject(obj)
+        removeFromDeletions(obj)
+      }
+      doneActionStack.length = stackLengthBefore
       undoneActionStack.push(action)
-      return
+    } finally {
+      replayingHistory = false
     }
-    const action = doneActionStack.pop()
-    if (!action?.obj) return
-    const obj = resolveActionObject(action)
-    // Snapshot length so the side-effect pushes addObject / deleteObject
-    // make (object:added → stackAddAction for re-adds, per-child remove
-    // for groups) are dropped before we move the action to the undone
-    // stack — otherwise undo grows the done stack instead of shrinking it.
-    const stackLengthBefore = doneActionStack.length
-    if (action.type === 'add') {
-      deleteObject(obj)
-      removeFromAdditions(obj)
-    } else if (action.type === 'remove') {
-      // addObject's 'object:added' already fires addToAdditions; no
-      // explicit call needed (it would double-record the addition).
-      addObject(obj)
-      removeFromDeletions(obj)
-    }
-    doneActionStack.length = stackLengthBefore
-    undoneActionStack.push(action)
   }
 
   const redoLastAction = () => {
@@ -979,23 +994,28 @@ export const useAnnotation = ({
       resetUndoStacks()
       return
     }
-    if (lastUndone.type === 'erase') {
+    replayingHistory = true
+    try {
+      if (lastUndone.type === 'erase') {
+        const action = undoneActionStack.pop()
+        redoEraseAction(action)
+        doneActionStack.push(action)
+        return
+      }
       const action = undoneActionStack.pop()
-      redoEraseAction(action)
+      if (!action?.obj) return
+      const obj = resolveActionObject(action)
+      const stackLengthBefore = doneActionStack.length
+      if (action.type === 'add') {
+        addObject(obj)
+      } else if (action.type === 'remove') {
+        deleteObject(obj)
+      }
+      doneActionStack.length = stackLengthBefore
       doneActionStack.push(action)
-      return
+    } finally {
+      replayingHistory = false
     }
-    const action = undoneActionStack.pop()
-    if (!action?.obj) return
-    const obj = resolveActionObject(action)
-    const stackLengthBefore = doneActionStack.length
-    if (action.type === 'add') {
-      addObject(obj)
-    } else if (action.type === 'remove') {
-      deleteObject(obj)
-    }
-    doneActionStack.length = stackLengthBefore
-    doneActionStack.push(action)
   }
 
   const clearUndoneStack = () => {
@@ -1101,6 +1121,7 @@ export const useAnnotation = ({
         })
         addToAdditions(shape)
         stackAddAction({ target: shape })
+        clearUndoneOnUserAction()
         // Push the shape into annotations.value (and trigger the
         // backend save). The pencil flow gets this from `endDrawing`
         // via the canvas's mouse:up handler, but `endDrawing` only
