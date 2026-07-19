@@ -610,7 +610,10 @@ export const usePreviewRoom = options => {
     const annotation = getAnnotation(eventData.data.time)
     const obj = eventData.data.obj
     if (getObjectById(obj.id)) return
-    if (unref(isLaserModeOn)) {
+    // Fade on the SENDER's laser flag: keying off the receiver's own
+    // toggle made presenter laser gestures permanent on every other
+    // screen, and faded real notes for a laser-holding viewer.
+    if (eventData.data.laser) {
       const result = addObjectToCanvas(annotation, obj)
       if (result && typeof result.then === 'function') {
         result.then(o => fadeObject(o))

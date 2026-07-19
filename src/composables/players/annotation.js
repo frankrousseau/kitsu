@@ -762,9 +762,10 @@ export const useAnnotation = ({
     }
     if (isLaserModeOn.value) {
       // Laser strokes fade out locally and are broadcast as ephemeral
-      // events; they are intentionally not added to the additions stack.
+      // events (flagged so receivers fade them too); they are
+      // intentionally not added to the additions stack.
       fadeObject(o)
-      postAnnotationAddition(getCurrentTime(), o.serialize())
+      postAnnotationAddition(getCurrentTime(), o.serialize(), { laser: true })
     } else {
       addToAdditions(o)
       stackAddAction(obj)
