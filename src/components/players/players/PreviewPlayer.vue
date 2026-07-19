@@ -1414,7 +1414,6 @@ const onRepeatClicked = () => {
 const onToggleSoundClicked = () => {
   clearFocus()
   isMuted.value = !isMuted.value
-  localPreferences.setPreference('player:muted', isMuted.value)
 }
 
 // Screen
@@ -2392,6 +2391,13 @@ watch(speed, () => {
 watch(volume, () => {
   previewViewer.value.setVolume(volume.value)
   localPreferences.setPreference('player:volume', volume.value)
+})
+
+// Persist through a watcher: ButtonSound drives isMuted via v-model and
+// never emits change-sound, so a click handler on the toggle chain never
+// runs and the preference was never written.
+watch(isMuted, () => {
+  localPreferences.setPreference('player:muted', isMuted.value)
 })
 
 // Lifecycle
