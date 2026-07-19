@@ -213,9 +213,22 @@ const render = async () => {
   const fabricCanvas = annotation.getCanvas()
   if (!fabricCanvas) return
   const token = ++renderToken
+  // Unsaved guest strokes must survive re-renders (resize, comments-panel
+  // toggle, frame stepping): capture the pending diff before the reset
+  // wipes it. This is an explicit-save UX, a silent wipe loses work.
+  const pendingAdditions = annotation.hasChanges()
+    ? annotation.getDiff().additions
+    : []
   fabricCanvas.clear()
   annotation.reset()
-  if (props.isPlaying) return
+  if (props.isPlaying) {
+    // Keep the pending data armed (save button, reappearance on pause)
+    // even though nothing is painted during playback.
+    if (pendingAdditions.length) {
+      annotation.restoreUnsaved(pendingAdditions, [])
+    }
+    return
+  }
   const current = findAnnotationAtTime(
     props.annotations,
     currentTime.value,
@@ -226,8 +239,7 @@ const render = async () => {
     current?.width || props.movieDimensions?.width || fabricCanvas.width,
     current?.height || props.movieDimensions?.height || fabricCanvas.height
   )
-  if (!current) return
-  const objects = current.drawing?.objects || []
+  const objects = current ? current.drawing?.objects || [] : []
   const shapes = await Promise.all(
     objects.map(obj => buildReadOnlyShape(current, obj, fabricCanvas))
   )
@@ -235,6 +247,24 @@ const render = async () => {
   shapes.forEach(shape => {
     if (shape) fabricCanvas.add(shape)
   })
+  if (pendingAdditions.length) {
+    // Repaint the unsaved strokes of the displayed frame; entries drawn
+    // on other frames stay data-only until their frame shows again.
+    const rebuilt = []
+    for (const entry of pendingAdditions) {
+      if (entry.time === currentTime.value) {
+        for (const obj of entry.drawing.objects) {
+          const shape = await buildReadOnlyShape(entry, obj, fabricCanvas)
+          if (token !== renderToken) return
+          if (shape) {
+            fabricCanvas.add(shape)
+            rebuilt.push(shape)
+          }
+        }
+      }
+    }
+    annotation.restoreUnsaved(pendingAdditions, rebuilt)
+  }
   fabricCanvas.requestRenderAll()
 }
 
@@ -299,6 +329,10 @@ const save = async () => {
         deletions: diff.deletions
       }
     })
+    // Drop the local copies now that they are persisted: render() keeps
+    // unsaved work across resets, so a stale diff would repaint the just
+    // saved strokes as pending duplicates.
+    annotation.clearLocal()
     emit('saved', updated.annotations || [])
   } catch (error) {
     // Keep the toolbar so the user can retry; surface the failure for logs.
