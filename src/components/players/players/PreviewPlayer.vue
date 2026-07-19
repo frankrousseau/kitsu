@@ -146,7 +146,7 @@
         <task-info
           ref="task-info-player"
           class="flexrow-item task-info-column"
-          :current-frame="currentFrame"
+          :current-frame="taskInfoFrame"
           :current-parent-preview="currentPreview"
           :entity-type="entityType"
           :extendable="false"
@@ -770,6 +770,21 @@ const currentFrameLabel = computed(() => {
   const frame = Math.min(nbFrames.value, currentFrame.value)
   return formatFrame(frame + 1)
 })
+
+// TaskInfo renders the frame chip in its template: feeding it the live
+// frame re-rendered the whole comments panel dozens of times a second
+// during playback, even while hidden (v-show). Freeze the prop while
+// playing or hidden; it refreshes on pause and when the panel opens.
+const taskInfoFrame = ref(0)
+watch(
+  [currentFrame, isPlaying, isCommentsHidden],
+  () => {
+    if (!isPlaying.value && !isCommentsHidden.value) {
+      taskInfoFrame.value = currentFrame.value
+    }
+  },
+  { immediate: true }
+)
 
 const currentPreview = computed(() => {
   if (
