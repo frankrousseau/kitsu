@@ -245,7 +245,11 @@ export const useAnnotation = ({
       popOwnAddEntry(activeObject)
     }
     if (persist) {
-      doneActionStack.push({ type: 'add', obj: activeObject })
+      doneActionStack.push({
+        type: 'add',
+        obj: activeObject,
+        time: getCurrentTime()
+      })
       saveAnnotationsCb()
     }
   }
@@ -320,12 +324,16 @@ export const useAnnotation = ({
       children.forEach(obj => {
         fabricCanvas.value.remove(obj)
         addToDeletions(obj)
-        doneActionStack.push({ type: 'remove', obj })
+        doneActionStack.push({ type: 'remove', obj, time: getCurrentTime() })
       })
     } else if (activeObject) {
       fabricCanvas.value.remove(activeObject)
       addToDeletions(activeObject)
-      doneActionStack.push({ type: 'remove', obj: activeObject })
+      doneActionStack.push({
+        type: 'remove',
+        obj: activeObject,
+        time: getCurrentTime()
+      })
     }
     saveAnnotationsCb()
   }
@@ -790,7 +798,8 @@ export const useAnnotation = ({
       type: 'erase',
       targets: affected,
       removedTargets,
-      path
+      path,
+      time: getCurrentTime()
     })
     clearUndoneStack()
     saveAnnotationsCb()
@@ -835,8 +844,15 @@ export const useAnnotation = ({
   // Undo / Redo
 
   const stackAddAction = ({ target }) => {
-    doneActionStack.push({ type: 'add', obj: target })
+    doneActionStack.push({ type: 'add', obj: target, time: getCurrentTime() })
   }
+
+  // History entries belong to the frame they were made on: replayed after
+  // a seek, they would graft objects onto the wrong frame's annotation
+  // entry (deltas are keyed on the CURRENT time). Stale history is
+  // dropped instead of replayed.
+  const isStaleAction = action =>
+    action?.time !== undefined && action.time !== getCurrentTime()
 
   // After a canvas reload (e.g. Esc-exit fullscreen) the stack entry
   // holds a stale fabric.Object that's no longer on the live canvas;
@@ -904,7 +920,13 @@ export const useAnnotation = ({
   }
 
   const undoLastAction = () => {
-    if (doneActionStack[doneActionStack.length - 1]?.type === 'erase') {
+    const lastAction = doneActionStack[doneActionStack.length - 1]
+    if (!lastAction) return
+    if (isStaleAction(lastAction)) {
+      resetUndoStacks()
+      return
+    }
+    if (lastAction.type === 'erase') {
       const action = doneActionStack.pop()
       undoEraseAction(action)
       undoneActionStack.push(action)
@@ -932,7 +954,13 @@ export const useAnnotation = ({
   }
 
   const redoLastAction = () => {
-    if (undoneActionStack[undoneActionStack.length - 1]?.type === 'erase') {
+    const lastUndone = undoneActionStack[undoneActionStack.length - 1]
+    if (!lastUndone) return
+    if (isStaleAction(lastUndone)) {
+      resetUndoStacks()
+      return
+    }
+    if (lastUndone.type === 'erase') {
       const action = undoneActionStack.pop()
       redoEraseAction(action)
       doneActionStack.push(action)
