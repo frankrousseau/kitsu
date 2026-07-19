@@ -749,6 +749,12 @@ const onProgressPlaylistChanged = frameNumber => {
 
 const onPlayNext = () => {
   if (!isPlaying.value) return
+  // Repeat loops the current movie like the studio player; without this
+  // the toggle did nothing (the viewer's own trim loop is inactive here).
+  if (isRepeating.value && isMovie.value) {
+    rawPlayer.value?.playNext()
+    return
+  }
   // Step through sub-previews first, then the next entity (handles images
   // too, which MultiVideoViewer's own playNext would skip).
   advancePlaylist()
