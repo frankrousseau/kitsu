@@ -226,14 +226,23 @@ export const useAnnotation = ({
     return object
   }
 
+  // add() fires object:added whose handler stacks the action already;
+  // drop that entry (and only that one — the laser branch stacks
+  // nothing) so addObject's explicit push stays the single one.
+  const popOwnAddEntry = obj => {
+    const top = doneActionStack[doneActionStack.length - 1]
+    if (top?.type === 'add' && top.obj === obj) doneActionStack.pop()
+  }
+
   const addObject = (activeObject, persist = true) => {
     if (activeObject._objects) {
       activeObject._objects.forEach(obj => {
         fabricCanvas.value.add(obj)
-        doneActionStack.pop()
+        popOwnAddEntry(obj)
       })
     } else {
       fabricCanvas.value.add(activeObject)
+      popOwnAddEntry(activeObject)
     }
     if (persist) {
       doneActionStack.push({ type: 'add', obj: activeObject })
@@ -1264,29 +1273,40 @@ export const useAnnotation = ({
       })
     } else {
       clipboard.copyAnnotations({
-        mainObject: Object.create(activeObject),
+        mainObject: activeObject,
         subObjects: []
       })
     }
     return activeObject
   }
 
-  const pasteAnnotations = () => {
+  // Pasting must produce REAL copies. Re-adding the source instances (or
+  // an Object.create wrapper inheriting the original's id) made every
+  // later move post an update under the ORIGINAL's id (server and remote
+  // viewers moved the original, the local duplicate vanished on reload)
+  // and stacked duplicate entries of one instance in fabric's _objects.
+  const PASTE_OFFSET = 10
+
+  const pasteAnnotations = async () => {
     if (!fabricCanvas.value) return
+    // Restores absolute coordinates on selection children before cloning.
     fabricCanvas.value.discardActiveObject()
     const { mainObject, subObjects } = clipboard.pasteAnnotations()
-    if (subObjects?.length > 0) {
-      subObjects.forEach(obj => {
-        obj = applyGroupChanges(mainObject, obj)
-        obj.group = null
-        addObject(obj)
-      })
-      fabricCanvas.value.requestRenderAll()
-    } else if (mainObject) {
-      addObject(mainObject)
-      fabricCanvas.value.setActiveObject(mainObject)
-      fabricCanvas.value.requestRenderAll()
+    const sources =
+      subObjects?.length > 0 ? subObjects : mainObject ? [mainObject] : []
+    let lastClone = null
+    for (const source of sources) {
+      const clone = await source.clone()
+      clone.set('id', uuidv4())
+      clone.set('left', clone.left + PASTE_OFFSET)
+      clone.set('top', clone.top + PASTE_OFFSET)
+      addObject(clone)
+      lastClone = clone
     }
+    if (lastClone && sources.length === 1) {
+      fabricCanvas.value.setActiveObject(lastClone)
+    }
+    fabricCanvas.value.requestRenderAll()
   }
 
   const applyGroupChanges = (group, obj) => {
