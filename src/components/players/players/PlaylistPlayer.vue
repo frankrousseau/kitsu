@@ -3981,7 +3981,7 @@ const resetPlaylistFrameData = () => {
     // An entity without preview still spans its edit length (like a slug
     // in a conform): playback holds the slot, the strip shows it in grey.
     const defaultNbFrames =
-      entity.preview_nb_frames || 2 * fps.value * frameDuration.value
+      entity.preview_nb_frames || Math.round(2 * fps.value)
     framesPerImage.value[index] = defaultNbFrames
     // Duration only counts for movie mains: a picture revision holding a
     // video sub-preview carries that video's duration, and using it here
