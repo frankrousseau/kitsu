@@ -738,7 +738,10 @@ const onProgressPlaylistChanged = frameNumber => {
   const position = playlistShotPosition.value[frameNumber]
   if (!position) return
   const { index, start } = position
-  const localFrame = Math.round(frameNumber - start * fps.value)
+  // start carries the strip's +1 slot convention ((firstGlobalFrame + 1)
+  // / fps): compensate like the studio player, or every strip click
+  // seeks one frame early.
+  const localFrame = Math.round(frameNumber - start * fps.value) + 1
   if (index !== playingEntityIndex.value) {
     selectEntity(index)
     nextTick(() => rawPlayer.value?.setCurrentFrame(Math.max(localFrame, 0)))
