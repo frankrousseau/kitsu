@@ -465,6 +465,40 @@ export const useAnnotation = ({
 
   // Annotations
 
+  // Serialize a selection child with its ABSOLUTE transform: serialize()
+  // reads the group-relative state, and the previous manual compensations
+  // wrote live-canvas pixels over the normalized result (wrong reference
+  // frame whenever the canvas differs from the authored size) while
+  // ignoring the group's scale and rotation entirely.
+  const GROUP_TRANSFORM_KEYS = [
+    'left',
+    'top',
+    'angle',
+    'scaleX',
+    'scaleY',
+    'skewX',
+    'skewY',
+    'flipX',
+    'flipY'
+  ]
+
+  const serializeAbsolute = obj => {
+    const group = obj.group
+    if (!group) return obj.serialize()
+    const saved = {}
+    GROUP_TRANSFORM_KEYS.forEach(key => {
+      saved[key] = obj[key]
+    })
+    const matrix = obj.calcTransformMatrix()
+    obj.group = undefined
+    util.applyTransformToObject(obj, matrix)
+    const result = obj.serialize()
+    obj.group = group
+    obj.set(saved)
+    obj.setCoords()
+    return result
+  }
+
   const getNewAnnotations = (currentTime, currentFrame, annotation) => {
     fabricCanvas.value.getObjects().forEach(obj => {
       setObjectData(obj)
@@ -487,13 +521,8 @@ export const useAnnotation = ({
 
     if (annotation) {
       const canvasObjects = fabricCanvas.value._objects.map(obj => {
-        const result = obj.serialize()
-        if (obj.group) {
-          const group = obj.group
-          result.left = group.left + Math.round(group.width / 2) + obj.left
-          result.top = group.top + Math.round(group.height / 2) + obj.top
-          result.group = null
-        }
+        const result = serializeAbsolute(obj)
+        if (obj.group) result.group = null
         return result
       })
       // Fast navigation can run a save while this frame's previously-saved
@@ -815,20 +844,9 @@ export const useAnnotation = ({
     } else {
       const group = movedObject
       group._objects.forEach(groupObj => {
-        const canvasObj = getObjectById(groupObj.id)
+        const canvasObj = getObjectById(groupObj.id) ?? groupObj
         setObjectData(canvasObj)
-        const targetObj = canvasObj.serialize()
-        const point = new Point(groupObj.left, groupObj.top)
-        const transformedPoint = util.transformPoint(
-          point,
-          group.calcTransformMatrix()
-        )
-        targetObj.left = transformedPoint.x
-        targetObj.top = transformedPoint.y
-        targetObj.angle += group.angle
-        targetObj.scaleX *= group.scaleX
-        targetObj.scaleY *= group.scaleY
-        addToUpdatesSerializedObject(targetObj)
+        addToUpdatesSerializedObject(serializeAbsolute(canvasObj))
       })
       saveAnnotationsCb()
     }
