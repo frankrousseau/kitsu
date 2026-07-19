@@ -1845,20 +1845,24 @@ const getLinkedEntities = concept => {
 
 // Events
 
+// The playlist modal mounts a PlaylistPlayer above this (still mounted)
+// player: while it is open, its instance owns every shortcut.
+const isPlayerActive = () => {
+  const playlistModal = document.getElementById('temp-playlist-modal')
+  const styles = playlistModal && window.getComputedStyle(playlistModal)
+  return !styles || styles.display === 'none'
+}
+
 const { isAltHeld } = usePreviewShortcuts({
   // Escape is not wired — the browser exits fullscreen on it and the
   // useFullScreen listener picks up the resulting fullscreenchange.
+  isActive: isPlayerActive,
   onDelete: () => deleteSelection(),
   onPrevFrame: () => goPreviousFrame(),
   onNextFrame: () => goNextFrame(),
   onFirstFrame: () => goToFirstFrame(),
   onLastFrame: () => goToLastFrame(),
-  onPlayPause: () => {
-    // Don't toggle play/pause while a shared playlist modal is open.
-    const playlistModal = document.getElementById('temp-playlist-modal')
-    const styles = playlistModal && window.getComputedStyle(playlistModal)
-    if (!styles || styles.display === 'none') togglePlayPause()
-  },
+  onPlayPause: () => togglePlayPause(),
   onPrevAnnotation: () => goPreviousDrawing(),
   onNextAnnotation: () => goNextDrawing(),
   onAnnotate: () => {
