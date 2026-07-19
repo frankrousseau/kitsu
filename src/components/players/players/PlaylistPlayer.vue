@@ -3825,7 +3825,7 @@ const configureFullPlayer = () => {
   if (!fullPlaylistPlayer.value) return
   fullPlaylistPlayer.value.addEventListener('loadedmetadata', () => {
     playlistDuration.value = entityList.value.reduce(
-      (acc, e) => acc + e.preview_file_duration,
+      (acc, e) => acc + (e.preview_file_duration || 0),
       0
     )
   })
