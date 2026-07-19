@@ -32,6 +32,7 @@ import {
   reviveObjectEraser
 } from '@/lib/players/eraserbrush'
 import clipboard from '@/lib/clipboard'
+import func from '@/lib/func'
 import { formatFullDate } from '@/lib/time'
 import localPreferences from '@/lib/preferences'
 
@@ -860,6 +861,16 @@ export const useAnnotation = ({
     }
   }
 
+  // text:changed fires per keystroke and onObjectModified serializes the
+  // whole canvas and dispatches the store each time (plus one socket emit
+  // per keystroke in review rooms): batch it trailing-edge. The final
+  // state is never lost — exiting text editing fires object:modified
+  // directly. The canvas guard drops a pending call whose object was
+  // cleared away (preview or frame switch) while the debounce ran.
+  const onTextChangedDebounced = func.debounce(event => {
+    if (event.target?.canvas === fabricCanvas.value) onObjectModified(event)
+  }, 400)
+
   const onWindowsClosed = event => {
     if (notSaved.value) {
       const confirmationMessage = 'Your annotations are not saved yet.'
@@ -1081,7 +1092,7 @@ export const useAnnotation = ({
     fabricCanvas.value.off('mouse:up', onCanvasReleasedCb)
     fabricCanvas.value.on('object:moved', onObjectModified)
     fabricCanvas.value.on('object:modified', onObjectModified)
-    fabricCanvas.value.on('text:changed', onObjectModified)
+    fabricCanvas.value.on('text:changed', onTextChangedDebounced)
     fabricCanvas.value.on('object:added', onObjectAdded)
     fabricCanvas.value.on('erasing:end', onErasingEnd)
     fabricCanvas.value.on('mouse:down', initializeMouseDrawing)
