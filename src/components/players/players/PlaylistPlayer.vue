@@ -1110,6 +1110,7 @@ let wavesurfer = null
 // Annotation painted by the show-annotations-while-playing path; reset
 // wherever the canvas is cleared outside that path.
 let lastShownWhilePlaying = null
+let lastWaveformSeek = 0
 
 // — Reactive
 const annotations = ref([])
@@ -2731,7 +2732,13 @@ const onFrameUpdate = frame => {
     // Guard the divisor: while a playlist reset is in flight the next
     // media's duration isn't known yet (maxDurationRaw is 0), and seeking
     // to a non-finite position throws in WaveSurfer's currentTime setter.
-    wavesurfer.seekTo(currentTimeRaw.value / maxDurationRaw.value)
+    // Throttled: seekTo repaints wavesurfer internals, and a per-frame
+    // call is invisible on a 60px strip.
+    const now = performance.now()
+    if (now - lastWaveformSeek > 200) {
+      lastWaveformSeek = now
+      wavesurfer.seekTo(currentTimeRaw.value / maxDurationRaw.value)
+    }
   }
   nextTick(() => {
     const actions = onNextTimeUpdateActions.value
