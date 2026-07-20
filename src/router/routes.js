@@ -101,7 +101,7 @@ export const routes = [
         // see https://vitejs.dev/guide/build.html#browser-compatibility + ES2020 support
         chrome: '>=87',
         firefox: '>=79',
-        edge: '>90',
+        edge: '>=91',
         vivaldi: '>=3.5',
         opera: '>=73',
         safari: '>=14'
