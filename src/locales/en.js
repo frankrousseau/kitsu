@@ -1485,6 +1485,7 @@ export default {
       number: 'Number',
       string: 'Text',
       tags: 'List of tags',
+      url: 'Link',
       target_project: 'Project',
       title: 'Add metadata column'
     },

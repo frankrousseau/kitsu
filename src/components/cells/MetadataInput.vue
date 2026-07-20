@@ -1,11 +1,24 @@
 <template>
   <div class="metadata-input" :class="metadataInputClass">
+    <!-- read-only URL: clickable link until the row is selected -->
+    <a
+      class="metadata-readonly align-left metadata-link"
+      :href="displayValue"
+      target="_blank"
+      rel="noopener noreferrer"
+      @click.stop
+      v-if="
+        selected === false && descriptor.data_type === 'url' && displayValue
+      "
+    >
+      {{ displayValue }}
+    </a>
     <!-- read-only value: editors only appear once the row is selected.
          Boolean keeps its checkbox (disabled below), so it is excluded here. -->
     <div
       class="metadata-readonly"
       :class="{ 'align-left': isTextType }"
-      v-if="selected === false && descriptor.data_type !== 'boolean'"
+      v-else-if="selected === false && descriptor.data_type !== 'boolean'"
     >
       {{ displayValue }}
     </div>
@@ -41,6 +54,15 @@
         value => onMetadataFieldChanged(entity, descriptor, value ?? '')
       "
       v-else-if="descriptor.data_type === 'date'"
+    />
+    <!-- url input -->
+    <input
+      class="input-editor"
+      :readonly="!isEditable"
+      type="url"
+      @input="event => onMetadataFieldChanged(entity, descriptor, event)"
+      :value="getMetadataFieldValue(descriptor, entity)"
+      v-else-if="descriptor.data_type === 'url'"
     />
     <!-- boolean input -->
     <input
@@ -175,7 +197,9 @@ const isEditable = computed(
 const isReadonly = computed(() => props.selected === false)
 
 const isTextType = computed(
-  () => !props.descriptor.data_type || props.descriptor.data_type === 'string'
+  () =>
+    !props.descriptor.data_type ||
+    ['string', 'url'].includes(props.descriptor.data_type)
 )
 
 // The read-only value uses a plain display, so the editor-specific layout
@@ -297,6 +321,7 @@ const onNumberFieldKeyDown = event => {
 
 .metadata-readonly {
   box-sizing: border-box;
+  display: block;
   overflow: hidden;
   padding: 0.35rem 0.5rem;
   text-align: center;
@@ -307,6 +332,11 @@ const onNumberFieldKeyDown = event => {
 
 .metadata-readonly.align-left {
   text-align: left;
+}
+
+.metadata-link {
+  color: inherit;
+  text-decoration: underline;
 }
 
 /* Let the datepicker flow like the schedule/task date cells instead of being

@@ -1050,6 +1050,7 @@
         "number": "Nombre",
         "string": "Texte",
         "date": "Date",
+        "url": "Lien",
         "tags": "Liste des étiquettes",
         "applies_to_all_projects": "Cette colonne est ajoutée à tous les projets de la liste. Chaque projet peut avoir sa propre valeur dans la vue en liste.",
         "target_project": "Projet"
