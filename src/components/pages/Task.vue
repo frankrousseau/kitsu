@@ -253,6 +253,30 @@
                     </td>
                     <td>{{ formatDisplayDate(task.done_date) }}</td>
                   </tr>
+                  <tr
+                    class="datatable-row"
+                    :key="descriptor.id"
+                    v-for="descriptor in taskMetadata"
+                  >
+                    <td class="field-label">{{ descriptor.name }}</td>
+                    <td>
+                      <a
+                        :href="task.data[descriptor.field_name]"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        v-if="
+                          descriptor.data_type === 'url' &&
+                          task.data &&
+                          task.data[descriptor.field_name]
+                        "
+                      >
+                        {{ task.data[descriptor.field_name] }}
+                      </a>
+                      <template v-else>
+                        {{ getTaskMetadataValue(descriptor) }}
+                      </template>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -590,9 +614,17 @@ export default {
       'taskStatus',
       'taskStatusForCurrentUser',
       'taskMap',
+      'taskMetadataDescriptors',
       'taskTypeMap',
       'user'
     ]),
+
+    taskMetadata() {
+      if (!this.task) return []
+      return this.taskMetadataDescriptors.filter(
+        descriptor => descriptor.task_type_id === this.task.task_type_id
+      )
+    },
 
     assetList() {
       return assetsStore.cache.assets
@@ -973,6 +1005,18 @@ export default {
   },
 
   methods: {
+    getTaskMetadataValue(descriptor) {
+      const value = this.task?.data?.[descriptor.field_name]
+      if (value == null || value === '') return ''
+      if (descriptor.data_type === 'date') {
+        return this.formatDisplayDate(value)
+      }
+      if (descriptor.data_type === 'boolean') {
+        return value === 'true' ? this.$t('main.yes') : this.$t('main.no')
+      }
+      return value
+    },
+
     ...mapActions([
       'addAttachmentToComment',
       'ackComment',
