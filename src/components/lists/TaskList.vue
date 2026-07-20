@@ -74,7 +74,11 @@
           </tr>
         </thead>
 
-        <tbody class="datatable-body">
+        <tbody
+          class="datatable-body"
+          @mousedown="startBrowsing"
+          @touchstart="startBrowsing"
+        >
           <tr
             :ref="el => setTaskRow(task.id, el)"
             :key="task.id"
@@ -370,6 +374,7 @@ import { useStore } from 'vuex'
 
 import { pauseEvent } from '@/composables/dom'
 import { useFormat } from '@/composables/format'
+import { useGrabList } from '@/composables/grabList'
 import {
   daysToMinutes,
   formatSimpleDate,
@@ -454,6 +459,8 @@ const selectionGrid = ref({})
 const bodyRef = useTemplateRef('body')
 // Row elements for scrollToLine, no reactivity needed
 const taskRows = new Map()
+
+const { startBrowsing } = useGrabList(bodyRef)
 
 // Computed
 const isCurrentUserManager = computed(() => store.getters.isCurrentUserManager)
