@@ -543,6 +543,7 @@ import { firstBy } from 'thenby'
 import { mapGetters, mapActions } from 'vuex'
 
 import colors from '@/lib/colors'
+import { downloadBlob } from '@/lib/download'
 import { getTaskTypeSchedulePath } from '@/lib/path'
 import {
   sortByName,
@@ -2540,8 +2541,7 @@ export default {
           ({ value }) => value === this.version
         )?.label
         const release = this.isVersioned ? `${mode} - ${version}` : mode
-        const FileSaver = await import('file-saver')
-        FileSaver.saveAs(new Blob([buffer]), `${filename} (${release}).xlsx`)
+        downloadBlob(new Blob([buffer]), `${filename} (${release}).xlsx`)
       } catch (err) {
         console.error(err)
         alert(this.$t('schedule.export_error'))

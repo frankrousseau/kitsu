@@ -44,7 +44,6 @@
     "exceljs": "4.4.0",
     "fabric": "7.4.0",
     "fabricjs-psbrush": "cgwire/fabricjs-psbrush",
-    "file-saver": "2.0.5",
     "lucide-vue-next": "0.577.0",
     "marked": "18.0.6",
     "marked-emoji": "2.0.3",
