@@ -1218,6 +1218,9 @@ const getTasks = entities => {
   entities.forEach(entity => {
     if (
       entity.canceled ||
+      // Episodes carry their cancellation in status, not in the
+      // entity-level canceled boolean.
+      entity.status === 'canceled' ||
       !entity.tasks?.length ||
       (isTVShow.value &&
         !displaySettings.value.showLinkedAssets &&
