@@ -10,74 +10,64 @@
       v-if="!isContactSheet"
     >
       <table class="datatable">
-        <thead ref="thead" class="datatable-head">
+        <thead class="datatable-head">
           <tr class="row-header">
-            <th class="thumbnail" ref="th-thumbnail"></th>
-            <th class="asset-type" ref="th-type" v-if="isAssets">
+            <th class="thumbnail"></th>
+            <th class="asset-type" v-if="isAssets">
               {{ $t('tasks.fields.asset_type') }}
             </th>
             <th
               class="sequence"
-              ref="th-type"
               v-else-if="!isEpisodes && !isSequences && !isEdits"
             >
               {{ $t('tasks.fields.sequence') }}
             </th>
-            <th class="name" ref="th-name">
+            <th class="name">
               {{ $t('tasks.fields.entity_name') }}
             </th>
-            <th class="status" ref="th-status">
+            <th class="status">
               {{ $t('tasks.fields.task_status') }}
             </th>
-            <th class="assignees" ref="th-assignees">
+            <th class="assignees">
               {{ $t('tasks.fields.assignees') }}
             </th>
-            <th
-              ref="th-frames"
-              class="frames number-cell"
-              v-if="isShots && !isPaperProduction"
-            >
+            <th class="frames number-cell" v-if="isShots && !isPaperProduction">
               {{ $t('tasks.fields.frames') }}
             </th>
             <th
-              ref="th-drawings"
               class="drawings number-cell"
               v-if="isShots && isPaperProduction"
             >
               {{ $t('tasks.fields.drawings') }}
             </th>
-            <th class="difficulty number-cell" ref="th-difficulty">
+            <th class="difficulty number-cell">
               {{ $t('tasks.fields.difficulty') }}
             </th>
-            <th
-              ref="th-estimation"
-              class="estimation number-cell"
-              :title="$t('main.estimation')"
-            >
+            <th class="estimation number-cell" :title="$t('main.estimation')">
               {{ $t('tasks.fields.estimation').substring(0, 3) }}.
             </th>
-            <th class="duration number-cell" ref="th-duration">
+            <th class="duration number-cell">
               {{ $t('tasks.fields.duration').substring(0, 3) }}.
             </th>
-            <th class="retake-count number-cell" ref="th-retake-count">
+            <th class="retake-count number-cell">
               {{ $t('tasks.fields.retake_count') }}
             </th>
-            <th class="start-date" ref="th-estimation" v-if="!withSchedule">
+            <th class="start-date" v-if="!withSchedule">
               {{ $t('tasks.fields.start_date') }}
             </th>
-            <th class="due-date" ref="th-estimation" v-if="!withSchedule">
+            <th class="due-date" v-if="!withSchedule">
               {{ $t('tasks.fields.due_date') }}
             </th>
-            <th class="real-start-date" ref="th-status" v-if="!withSchedule">
+            <th class="real-start-date" v-if="!withSchedule">
               {{ $t('tasks.fields.real_start_date') }}
             </th>
-            <th class="real-end-date" ref="th-status" v-if="!withSchedule">
+            <th class="real-end-date" v-if="!withSchedule">
               {{ $t('tasks.fields.real_end_date') }}
             </th>
-            <th class="done-date" ref="th-status" v-if="!withSchedule">
+            <th class="done-date" v-if="!withSchedule">
               {{ $t('tasks.fields.done_date') }}
             </th>
-            <th class="last-comment-date" ref="th-status" v-if="!withSchedule">
+            <th class="last-comment-date" v-if="!withSchedule">
               {{ $t('tasks.fields.last_comment_date') }}
             </th>
             <th class="empty" v-if="!withSchedule">&nbsp;</th>
@@ -86,7 +76,7 @@
 
         <tbody class="datatable-body">
           <tr
-            :ref="`task-${task.id}`"
+            :ref="el => setTaskRow(task.id, el)"
             :key="task.id"
             :class="{
               'task-line': true,
@@ -160,7 +150,6 @@
                 min="0"
                 step="1"
                 type="number"
-                :ref="`${task.id}-drawings`"
                 :value="task.nb_drawings"
                 @change="updateNbDrawings($event.target.value)"
                 v-if="isInDepartment(task) && selectionGrid[task.id]"
@@ -195,7 +184,6 @@
                 min="0"
                 step="any"
                 type="number"
-                :ref="`${task.id}-estimation`"
                 :value="formatDuration(task.estimation, false)"
                 @change="updateEstimation($event.target.value)"
                 v-if="isInDepartment(task) && selectionGrid[task.id]"
@@ -366,9 +354,22 @@
   <task-list-numbers :is-shots="isShots" :tasks="tasks" v-if="!isLoading" />
 </template>
 
-<script>
-import { mapGetters, mapActions } from 'vuex'
+<script setup>
+// Imports
 import moment from 'moment-timezone'
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  useTemplateRef,
+  watch
+} from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useStore } from 'vuex'
+
+import { pauseEvent } from '@/composables/dom'
+import { useFormat } from '@/composables/format'
 import {
   daysToMinutes,
   formatSimpleDate,
@@ -378,9 +379,13 @@ import {
   minutesToDays,
   range
 } from '@/lib/time'
-import { formatListMixin } from '@/components/mixins/format'
-import { domMixin } from '@/components/mixins/dom'
+import assetStore from '@/store/modules/assets'
+import editStore from '@/store/modules/edits'
+import episodeStore from '@/store/modules/episodes'
+import sequenceStore from '@/store/modules/sequences'
+import shotStore from '@/store/modules/shots'
 
+import ValidationCell from '@/components/cells/ValidationCell.vue'
 import Combobox from '@/components/widgets/Combobox.vue'
 import DateField from '@/components/widgets/DateField.vue'
 import EntityPreview from '@/components/widgets/EntityPreview.vue'
@@ -388,581 +393,512 @@ import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import PeopleAvatarWithMenu from '@/components/widgets/PeopleAvatarWithMenu.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
 import TaskListNumbers from '@/components/widgets/TaskListNumbers.vue'
-import ValidationCell from '@/components/cells/ValidationCell.vue'
 import ValidationTag from '@/components/widgets/ValidationTag.vue'
 
-import assetStore from '@/store/modules/assets'
-import editStore from '@/store/modules/edits'
-import episodeStore from '@/store/modules/episodes'
-import sequenceStore from '@/store/modules/sequences'
-import shotStore from '@/store/modules/shots'
+// Composables
+const { t } = useI18n()
+const store = useStore()
+const { formatDuration, formatDisplayDate, organisation } = useFormat()
 
-export default {
-  name: 'task-list',
-
-  mixins: [domMixin, formatListMixin],
-
-  components: {
-    Combobox,
-    DateField,
-    EntityPreview,
-    EntityThumbnail,
-    PeopleAvatarWithMenu,
-    TableInfo,
-    TaskListNumbers,
-    ValidationCell,
-    ValidationTag
+// Props / Emits
+const props = defineProps({
+  disabledDates: {
+    type: Object,
+    default: () => {}
   },
+  entityType: {
+    type: String,
+    default: 'Asset'
+  },
+  isContactSheet: {
+    type: Boolean,
+    default: false
+  },
+  isError: {
+    type: Boolean,
+    default: false
+  },
+  isGrouped: {
+    type: Boolean,
+    default: false
+  },
+  isLoading: {
+    type: Boolean,
+    default: false
+  },
+  tasks: {
+    type: Array,
+    default: () => []
+  },
+  withSchedule: {
+    type: Boolean,
+    default: false
+  }
+})
 
-  emits: ['scroll', 'task-selected'],
+const emit = defineEmits(['scroll', 'task-selected'])
 
-  data() {
-    return {
-      difficultyOptions: [
-        { label: '•', value: 1 },
-        { label: '••', value: 2 },
-        { label: '•••', value: 3 },
-        { label: '••••', value: 4 },
-        { label: '•••••', value: 5 }
-      ],
-      lastSelection: null,
-      page: 1,
-      selectionGrid: {},
-      selectedDate: moment().toDate() // By default current day.
+// State
+const difficultyOptions = [
+  { label: '•', value: 1 },
+  { label: '••', value: 2 },
+  { label: '•••', value: 3 },
+  { label: '••••', value: 4 },
+  { label: '•••••', value: 5 }
+]
+
+const lastSelection = ref(null)
+const page = ref(1)
+const selectionGrid = ref({})
+
+const bodyRef = useTemplateRef('body')
+// Row elements for scrollToLine, no reactivity needed
+const taskRows = new Map()
+
+// Computed
+const isCurrentUserManager = computed(() => store.getters.isCurrentUserManager)
+const isCurrentUserSupervisor = computed(
+  () => store.getters.isCurrentUserSupervisor
+)
+const isPaperProduction = computed(() => store.getters.isPaperProduction)
+const nbSelectedTasks = computed(() => store.getters.nbSelectedTasks)
+const personMap = computed(() => store.getters.personMap)
+const selectedTasks = computed(() => store.getters.selectedTasks)
+const taskMap = computed(() => store.getters.taskMap)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
+const user = computed(() => store.getters.user)
+
+const isAssets = computed(() => props.entityType === 'Asset')
+const isEdits = computed(() => props.entityType === 'Edit')
+const isEpisodes = computed(() => props.entityType === 'Episode')
+const isSequences = computed(() => props.entityType === 'Sequence')
+const isShots = computed(() => props.entityType === 'Shot')
+
+const entityMap = computed(() => {
+  const caches = {
+    asset: assetStore.cache.assetMap,
+    edit: editStore.cache.editMap,
+    episode: episodeStore.cache.episodeMap,
+    sequence: sequenceStore.cache.sequenceMap,
+    shot: shotStore.cache.shotMap
+  }
+  return caches[props.entityType.toLowerCase()]
+})
+
+const displayedTasks = computed(() => {
+  if (props.tasks && props.tasks.length > 0) {
+    return props.tasks.slice(0, 60 * page.value)
+  }
+  return []
+})
+
+const tasksByParent = computed(() => {
+  if (props.tasks.length === 0) return []
+  if (isShots.value) {
+    return groupTasks(shotStore.cache.shotMap, 'sequence_id', 'sequence_name')
+  }
+  if (isAssets.value) {
+    return groupTasks(
+      assetStore.cache.assetMap,
+      'asset_type_id',
+      'entity_type_name'
+    )
+  }
+  return []
+})
+
+// Functions
+const groupTasks = (entityMap, groupKey, nameField) => {
+  const result = []
+  let currentGroup = {
+    name: props.tasks[0][nameField],
+    tasks: []
+  }
+  let previousTask = null
+  props.tasks.forEach(task => {
+    const entity = entityMap.get(task.entity.id)
+    if (previousTask) {
+      const previousEntity = entityMap.get(previousTask.entity.id)
+      if (previousEntity?.[groupKey] !== entity?.[groupKey]) {
+        result.push(currentGroup)
+        currentGroup = {
+          name: task[nameField],
+          tasks: []
+        }
+      }
     }
-  },
+    currentGroup.tasks.push(task)
+    previousTask = task
+  })
+  result.push(currentGroup)
+  return result
+}
 
-  props: {
-    disabledDates: {
-      type: Object,
-      default: () => {}
-    },
-    entityType: {
-      type: String,
-      default: 'Asset'
-    },
-    isContactSheet: {
-      type: Boolean,
-      default: false
-    },
-    isError: {
-      type: Boolean,
-      default: false
-    },
-    isGrouped: {
-      type: Boolean,
-      default: false
-    },
-    isLoading: {
-      type: Boolean,
-      default: false
-    },
-    tasks: {
-      type: Array,
-      default: () => []
-    },
-    withSchedule: {
-      type: Boolean,
-      default: false
-    }
-  },
+const getEntity = entityId => entityMap.value.get(entityId) || {}
 
-  mounted() {
-    window.addEventListener('keydown', this.onKeyDown, false)
-  },
+const setTaskRow = (taskId, el) => {
+  if (el) {
+    taskRows.set(taskId, el)
+  } else {
+    taskRows.delete(taskId)
+  }
+}
 
-  beforeUnmount() {
-    window.removeEventListener('keydown', this.onKeyDown)
-  },
+const getTaskName = task => {
+  if (props.entityType === 'Shot') {
+    return `${task.sequence_name} / ${getEntity(task.entity.id).name}`
+  }
+  return task.entity_name
+}
 
-  computed: {
-    ...mapGetters([
-      'isCurrentUserManager',
-      'isCurrentUserSupervisor',
-      'isPaperProduction',
-      'nbSelectedTasks',
-      'personMap',
-      'user',
-      'selectedTasks',
-      'taskMap',
-      'taskTypeMap'
-    ]),
+const isTaskChanged = (task, data) => {
+  const taskStart = task.start_date ? task.start_date.substring(0, 10) : ''
+  const taskDue = task.due_date ? task.due_date.substring(0, 10) : ''
+  return (
+    (data.start_date !== undefined && taskStart !== data.start_date) ||
+    (data.due_date !== undefined && taskDue !== data.due_date) ||
+    (data.estimation !== undefined && task.estimation !== data.estimation) ||
+    (data.difficulty !== undefined && task.difficulty !== data.difficulty) ||
+    (data.nb_drawings !== undefined && task.nb_drawings !== data.nb_drawings)
+  )
+}
 
-    assetMap() {
-      return assetStore.cache.assetMap
-    },
+const getDate = date => (date ? moment(date, 'YYYY-MM-DD').toDate() : null)
 
-    editMap() {
-      return editStore.cache.editMap
-    },
+const updateEstimation = duration => {
+  const estimation = organisation.value.format_duration_in_hours
+    ? duration * 60
+    : daysToMinutes(organisation.value, duration)
 
-    episodeMap() {
-      return episodeStore.cache.episodeMap
-    },
+  updateTasksEstimation({ estimation })
+}
 
-    sequenceMap() {
-      return sequenceStore.cache.sequenceMap
-    },
+const onUnassign = (task, person) => {
+  const tasks = Array.from(selectedTasks.value.values())
+  if (!selectedTasks.value.has(task.id)) {
+    tasks.push(task)
+  }
+  store.dispatch('unassignPersonFromTasks', { tasks, person })
+}
 
-    shotMap() {
-      return shotStore.cache.shotMap
-    },
-
-    isAssets() {
-      return this.entityType === 'Asset'
-    },
-
-    isEdits() {
-      return this.entityType === 'Edit'
-    },
-
-    isEpisodes() {
-      return this.entityType === 'Episode'
-    },
-
-    isSequences() {
-      return this.entityType === 'Sequence'
-    },
-
-    isShots() {
-      return this.entityType === 'Shot'
-    },
-
-    displayedTasks() {
-      if (this.tasks && this.tasks.length > 0) {
-        return this.tasks.slice(0, 60 * this.page)
-      }
-      return []
-    },
-
-    tasksByParent() {
-      const result = []
-      if (this.tasks.length > 0) {
-        if (this.isShots) {
-          let currentTasks = {
-            name: this.tasks[0].sequence_name,
-            tasks: []
-          }
-          let previousTask = null
-          this.tasks.forEach(task => {
-            const entity = this.shotMap.get(task.entity.id)
-            if (previousTask) {
-              const previousEntity = this.shotMap.get(previousTask.entity.id)
-              if (previousEntity?.sequence_id !== entity?.sequence_id) {
-                result.push(currentTasks)
-                currentTasks = {
-                  name: task.sequence_name,
-                  tasks: []
-                }
-              }
-            }
-            currentTasks.tasks.push(task)
-            previousTask = task
-          })
-          result.push(currentTasks)
-        } else if (this.isAssets) {
-          let currentTasks = {
-            name: this.tasks[0].entity_type_name,
-            tasks: []
-          }
-          let previousTask = null
-          this.tasks.forEach(task => {
-            const entity = this.assetMap.get(task.entity.id)
-            if (previousTask) {
-              const previousEntity = this.assetMap.get(previousTask.entity.id)
-              if (previousEntity?.asset_type_id !== entity?.asset_type_id) {
-                result.push(currentTasks)
-                currentTasks = {
-                  name: task.entity_type_name,
-                  tasks: []
-                }
-              }
-            }
-            currentTasks.tasks.push(task)
-            previousTask = task
-          })
-          result.push(currentTasks)
-        }
-      }
-      return result
-    }
-  },
-
-  methods: {
-    ...mapActions([
-      'addSelectedTask',
-      'addSelectedTasks',
-      'clearSelectedTasks',
-      'updateTask',
-      'unassignPersonFromTasks',
-      'removeSelectedTask'
-    ]),
-
-    getTaskName(task) {
-      if (this.entityType === 'Shot') {
-        return `${task.sequence_name} / ${this.getEntity(task.entity.id).name}`
-      }
-      return task.entity_name
-    },
-
-    isTaskChanged(task, data) {
-      const taskStart = task.start_date ? task.start_date.substring(0, 10) : ''
-      const taskDue = task.due_date ? task.due_date.substring(0, 10) : ''
-      return (
-        (data.start_date !== undefined && taskStart !== data.start_date) ||
-        (data.due_date !== undefined && taskDue !== data.due_date) ||
-        (data.estimation !== undefined &&
-          task.estimation !== data.estimation) ||
-        (data.difficulty !== undefined &&
-          task.difficulty !== data.difficulty) ||
-        (data.nb_drawings !== undefined &&
-          task.nb_drawings !== data.nb_drawings)
-      )
-    },
-
-    getDate(date) {
-      return date ? moment(date, 'YYYY-MM-DD').toDate() : null
-    },
-
-    updateEstimation(duration) {
-      const estimation = this.organisation.format_duration_in_hours
-        ? duration * 60
-        : daysToMinutes(this.organisation, duration)
-
-      this.updateTasksEstimation({ estimation })
-    },
-
-    onUnassign(task, person) {
-      const tasks = Array.from(this.selectedTasks.values())
-      if (!this.selectedTasks.has(task.id)) {
-        tasks.push(task)
-      }
-      this.unassignPersonFromTasks({ tasks, person })
-    },
-
-    updateStartDate(date) {
-      Object.keys(this.selectionGrid).forEach(taskId => {
-        const task = this.taskMap.get(taskId)
-        const dueDate = task.due_date ? parseSimpleDate(task.due_date) : null
-        let data
-        if (date) {
-          const startDate = moment(date)
-          if (
-            task.start_date &&
-            task.start_date.substring(0, 10) === formatSimpleDate(startDate)
-          )
-            return
-          data = getDatesFromStartDate(
-            this.organisation,
-            startDate,
-            dueDate,
-            minutesToDays(this.organisation, task.estimation)
-          )
-        } else {
-          data = {
-            start_date: null,
-            due_date: task.due_date
-          }
-        }
-        if (task.difficulty) {
-          data.difficulty = task.difficulty
-        }
-        if (this.isTaskChanged(task, data)) {
-          this.updateTask({ taskId, data }).catch(console.error)
-        }
-      })
-    },
-
-    updateDueDate(date) {
-      Object.keys(this.selectionGrid).forEach(taskId => {
-        const task = this.taskMap.get(taskId)
-        const startDate = task.start_date
-          ? parseSimpleDate(task.start_date)
-          : null
-        let data
-        if (date) {
-          const dueDate = moment(date)
-          if (
-            task.due_date &&
-            task.due_date.substring(0, 10) === formatSimpleDate(dueDate)
-          )
-            return
-          data = getDatesFromEndDate(
-            this.organisation,
-            startDate,
-            dueDate,
-            minutesToDays(this.organisation, task.estimation)
-          )
-        } else {
-          data = {
-            start_date: task.start_date,
-            due_date: null
-          }
-        }
-        if (this.isTaskChanged(task, data)) {
-          this.updateTask({ taskId, data }).catch(console.error)
-        }
-      })
-    },
-
-    updateTasksEstimation({ estimation }) {
-      Object.keys(this.selectionGrid).forEach(taskId => {
-        const task = this.taskMap.get(taskId)
-        let data = { estimation }
-        if (task.start_date) {
-          const startDate = moment(task.start_date)
-          const dueDate = task.due_date ? moment(task.due_date) : null
-          data = getDatesFromStartDate(
-            this.organisation,
-            startDate,
-            dueDate,
-            minutesToDays(this.organisation, estimation)
-          )
-          data.estimation = estimation
-        }
-        if (this.isTaskChanged(task, data)) {
-          this.updateTask({ taskId, data }).catch(console.error)
-        }
-      })
-    },
-
-    updateDifficulty(difficulty) {
-      this.updateTasksData({ difficulty })
-    },
-
-    updateNbDrawings(nbDrawings) {
-      this.updateTasksData({ nb_drawings: nbDrawings })
-    },
-
-    updateTasksData(data) {
-      Object.keys(this.selectionGrid).forEach(taskId => {
-        const task = this.taskMap.get(taskId)
-        if (this.isTaskChanged(task, data)) {
-          this.updateTask({ taskId, data }).catch(console.error)
-        }
-      })
-    },
-
-    formatDate(date) {
-      if (date) return moment(date).format('YYYY-MM-DD')
-      return ''
-    },
-
-    isEstimationBurned(task) {
-      return (
-        task.estimation &&
-        task.estimation > 0 &&
-        task.duration > task.estimation
-      )
-    },
-
-    onBodyScroll(event) {
-      if (!this.$refs.body) return
-      const position = event.target
-      const maxHeight =
-        this.$refs.body.scrollHeight - this.$refs.body.offsetHeight
-      if (maxHeight < position.scrollTop + 100) {
-        this.page++
-      }
-
-      this.$emit('scroll', { top: position.scrollTop })
-    },
-
-    getEntity(entityId) {
-      return this[`${this.entityType.toLowerCase()}Map`].get(entityId) || {}
-    },
-
-    onKeyDown(event) {
-      if (this.tasks.length > 0 && event.altKey) {
-        let index = this.lastSelection ? this.lastSelection : 0
-        if ([37, 38].includes(event.keyCode)) {
-          index = index - 1 < 0 ? this.tasks.length - 1 : index - 1
-          this.selectTask({}, index, this.tasks[index])
-          this.pauseEvent(event)
-        } else if ([39, 40].includes(event.keyCode)) {
-          index = index + 1 >= this.tasks.length ? 0 : index + 1
-          this.selectTask({}, index, this.tasks[index])
-          this.pauseEvent(event)
-        }
-      }
-    },
-
-    selectTask(event, index, task) {
+const updateStartDate = date => {
+  Object.keys(selectionGrid.value).forEach(taskId => {
+    const task = taskMap.value.get(taskId)
+    const dueDate = task.due_date ? parseSimpleDate(task.due_date) : null
+    let data
+    if (date) {
+      const startDate = moment(date)
       if (
-        event &&
-        event.target &&
-        // Dirty hack needed to make date picker and inputs work properly
-        (['INPUT'].includes(event.target.nodeName) ||
-          // Combo box should not trigger selection
-          event.target.className.indexOf('selected-line') >= 0 ||
-          event.target.className.indexOf('down-icon') >= 0 ||
-          event.target.className.indexOf('flexrow') >= 0 ||
-          event.target.className.indexOf('c-mask') >= 0 ||
-          event.target.className.indexOf('option-line') >= 0 ||
-          event.target.className.indexOf('combobox') >= 0 ||
-          event.target.className === '' ||
-          (event.target.parentNode &&
-            ['difficulty'].includes(event.target.className)) ||
-          (event.target.parentNode &&
-            ['HEADER'].includes(event.target.parentNode.nodeName)) ||
-          ['cell day selected'].includes(event.target.className))
+        task.start_date &&
+        task.start_date.substring(0, 10) === formatSimpleDate(startDate)
       )
         return
-      const isSelected = this.selectionGrid[task.id]
-      const isManySelection = Object.keys(this.selectionGrid).length > 1
-      if (!(event.ctrlKey || event.metaKey) && !event.shiftKey) {
-        this.clearSelectedTasks()
-        this.resetSelection()
+      data = getDatesFromStartDate(
+        organisation.value,
+        startDate,
+        dueDate,
+        minutesToDays(organisation.value, task.estimation)
+      )
+    } else {
+      data = {
+        start_date: null,
+        due_date: task.due_date
       }
-
-      if (!event.shiftKey) {
-        if (isSelected) {
-          this.removeSelectedTask({ task })
-          this.selectionGrid[task.id] = undefined
-        } else if (!isSelected || isManySelection) {
-          this.addSelectedTask({ task })
-          this.$emit('task-selected', task)
-          this.selectionGrid[task.id] = true
-          this.lastSelection = index
-        }
-      } else {
-        this.selectionGrid = {}
-        const taskIndices =
-          this.lastSelection > index
-            ? range(index, this.lastSelection)
-            : range(this.lastSelection, index)
-        const selection = taskIndices.map(i => ({ task: this.tasks[i] }))
-        selection.forEach(task => {
-          this.selectionGrid[task.task.id] = true
-        })
-        this.addSelectedTasks(selection)
-      }
-      this.scrollToLine(task.id)
-    },
-
-    setScrollPosition(top) {
-      if (this.$refs.body) {
-        this.$refs.body.scrollTop = top
-      }
-    },
-
-    scrollToLine(taskId) {
-      const taskLine = this.$refs[`task-${taskId}`]
-      if (taskLine && this.$refs.body) {
-        const margin = 30
-        const rect = taskLine[0].getBoundingClientRect()
-        const listRect = this.$refs.body.getBoundingClientRect()
-        const isBelow = rect.bottom > listRect.bottom - margin
-        const isAbove = rect.top < listRect.top + margin
-
-        if (isBelow) {
-          const scrollingRequired = rect.bottom - listRect.bottom + margin
-          this.setScrollPosition(this.$refs.body.scrollTop + scrollingRequired)
-        } else if (isAbove) {
-          const scrollingRequired = listRect.top - rect.top + margin
-          this.setScrollPosition(this.$refs.body.scrollTop - scrollingRequired)
-        }
-      }
-    },
-
-    isInDepartment(task) {
-      if (this.isCurrentUserManager) {
-        return true
-      } else if (this.isCurrentUserSupervisor) {
-        if (this.user.departments.length === 0) {
-          return true
-        }
-        const taskType = this.taskTypeMap.get(task.task_type_id)
-        return (
-          taskType.department_id &&
-          this.user.departments.includes(taskType.department_id)
-        )
-      }
-      return false
-    },
-
-    resetSelection() {
-      this.selectionGrid = {}
-      this.lastSelection = null
-    },
-
-    getTableData() {
-      const headers = [
-        this.isAssets
-          ? this.$t('tasks.fields.asset_type')
-          : this.$t('tasks.fields.sequence'),
-        this.$t('tasks.fields.entity_name'),
-        this.$t('tasks.fields.task_status'),
-        this.$t('tasks.fields.assignees'),
-        this.$t('tasks.fields.difficulty'),
-        this.$t('tasks.fields.estimation'),
-        this.$t('tasks.fields.duration'),
-        this.$t('tasks.fields.retake_count'),
-        this.$t('tasks.fields.start_date'),
-        this.$t('tasks.fields.due_date'),
-        this.$t('tasks.fields.real_start_date'),
-        this.$t('tasks.fields.real_end_date'),
-        this.$t('tasks.fields.done_date'),
-        this.$t('tasks.fields.last_comment_date')
-      ]
-      if (this.isShots) {
-        const value = !this.isPaperProduction
-          ? this.$t('tasks.fields.frames')
-          : this.$t('tasks.fields.drawings')
-        headers.splice(4, 0, value)
-      }
-      const taskLines = [headers]
-      this.tasks.forEach(task => {
-        if (!task) return
-        const assignees = task.assignees
-          .map(personId => {
-            const person = this.personMap.get(personId)
-            if (person) return person.name
-            return ''
-          })
-          .join(', ')
-
-        const line = [
-          this.isAssets
-            ? this.getEntity(task.entity.id).asset_type_name
-            : this.getEntity(task.entity.id).sequence_name,
-          this.getEntity(task.entity.id).name,
-          task.task_status_short_name,
-          assignees,
-          task.difficulty,
-          this.formatDuration(task.estimation, false),
-          this.formatDuration(task.duration, false),
-          task.retake_count,
-          this.formatDate(task.start_date),
-          this.formatDate(task.due_date),
-          this.formatDate(task.real_start_date),
-          this.formatDate(task.end_date),
-          this.formatDate(task.done_date),
-          this.formatDate(task.last_comment_date)
-        ]
-        if (this.isShots) {
-          const value = !this.isPaperProduction
-            ? this.getEntity(task.entity.id).nb_frames
-            : task.nb_drawings || 0
-          line.splice(4, 0, value)
-        }
-        taskLines.push(line)
-      })
-      return taskLines
     }
-  },
+    if (task.difficulty) {
+      data.difficulty = task.difficulty
+    }
+    if (isTaskChanged(task, data)) {
+      store.dispatch('updateTask', { taskId, data }).catch(console.error)
+    }
+  })
+}
 
-  watch: {
-    tasks() {
-      this.page = 1
-      this.resetSelection()
-    },
+const updateDueDate = date => {
+  Object.keys(selectionGrid.value).forEach(taskId => {
+    const task = taskMap.value.get(taskId)
+    const startDate = task.start_date ? parseSimpleDate(task.start_date) : null
+    let data
+    if (date) {
+      const dueDate = moment(date)
+      if (
+        task.due_date &&
+        task.due_date.substring(0, 10) === formatSimpleDate(dueDate)
+      )
+        return
+      data = getDatesFromEndDate(
+        organisation.value,
+        startDate,
+        dueDate,
+        minutesToDays(organisation.value, task.estimation)
+      )
+    } else {
+      data = {
+        start_date: task.start_date,
+        due_date: null
+      }
+    }
+    if (isTaskChanged(task, data)) {
+      store.dispatch('updateTask', { taskId, data }).catch(console.error)
+    }
+  })
+}
 
-    nbSelectedTasks() {
-      if (this.nbSelectedTasks === 0) this.resetSelection()
+const updateTasksEstimation = ({ estimation }) => {
+  Object.keys(selectionGrid.value).forEach(taskId => {
+    const task = taskMap.value.get(taskId)
+    let data = { estimation }
+    if (task.start_date) {
+      const startDate = moment(task.start_date)
+      const dueDate = task.due_date ? moment(task.due_date) : null
+      data = getDatesFromStartDate(
+        organisation.value,
+        startDate,
+        dueDate,
+        minutesToDays(organisation.value, estimation)
+      )
+      data.estimation = estimation
+    }
+    if (isTaskChanged(task, data)) {
+      store.dispatch('updateTask', { taskId, data }).catch(console.error)
+    }
+  })
+}
+
+const updateDifficulty = difficulty => {
+  updateTasksData({ difficulty })
+}
+
+const updateNbDrawings = nbDrawings => {
+  updateTasksData({ nb_drawings: nbDrawings })
+}
+
+const updateTasksData = data => {
+  Object.keys(selectionGrid.value).forEach(taskId => {
+    const task = taskMap.value.get(taskId)
+    if (isTaskChanged(task, data)) {
+      store.dispatch('updateTask', { taskId, data }).catch(console.error)
+    }
+  })
+}
+
+const formatDate = date => (date ? moment(date).format('YYYY-MM-DD') : '')
+
+const isEstimationBurned = task =>
+  task.estimation && task.estimation > 0 && task.duration > task.estimation
+
+const onBodyScroll = event => {
+  if (!bodyRef.value) return
+  const position = event.target
+  const maxHeight = bodyRef.value.scrollHeight - bodyRef.value.offsetHeight
+  if (maxHeight < position.scrollTop + 100) {
+    page.value++
+  }
+
+  emit('scroll', { top: position.scrollTop })
+}
+
+const onKeyDown = event => {
+  if (props.tasks.length > 0 && event.altKey) {
+    let index = lastSelection.value ? lastSelection.value : 0
+    if ([37, 38].includes(event.keyCode)) {
+      index = index - 1 < 0 ? props.tasks.length - 1 : index - 1
+      selectTask({}, index, props.tasks[index])
+      pauseEvent(event)
+    } else if ([39, 40].includes(event.keyCode)) {
+      index = index + 1 >= props.tasks.length ? 0 : index + 1
+      selectTask({}, index, props.tasks[index])
+      pauseEvent(event)
     }
   }
 }
+
+const selectTask = (event, index, task) => {
+  if (
+    event &&
+    event.target &&
+    // Dirty hack needed to make date picker and inputs work properly
+    (['INPUT'].includes(event.target.nodeName) ||
+      // Combo box should not trigger selection
+      event.target.className.indexOf('selected-line') >= 0 ||
+      event.target.className.indexOf('down-icon') >= 0 ||
+      event.target.className.indexOf('flexrow') >= 0 ||
+      event.target.className.indexOf('c-mask') >= 0 ||
+      event.target.className.indexOf('option-line') >= 0 ||
+      event.target.className.indexOf('combobox') >= 0 ||
+      event.target.className === '' ||
+      (event.target.parentNode &&
+        ['difficulty'].includes(event.target.className)) ||
+      (event.target.parentNode &&
+        ['HEADER'].includes(event.target.parentNode.nodeName)) ||
+      ['cell day selected'].includes(event.target.className))
+  )
+    return
+  const isSelected = selectionGrid.value[task.id]
+  const isManySelection = Object.keys(selectionGrid.value).length > 1
+  if (!(event.ctrlKey || event.metaKey) && !event.shiftKey) {
+    store.dispatch('clearSelectedTasks')
+    resetSelection()
+  }
+
+  if (!event.shiftKey) {
+    if (isSelected) {
+      store.dispatch('removeSelectedTask', { task })
+      selectionGrid.value[task.id] = undefined
+    } else if (!isSelected || isManySelection) {
+      store.dispatch('addSelectedTask', { task })
+      emit('task-selected', task)
+      selectionGrid.value[task.id] = true
+      lastSelection.value = index
+    }
+  } else {
+    selectionGrid.value = {}
+    const taskIndices =
+      lastSelection.value > index
+        ? range(index, lastSelection.value)
+        : range(lastSelection.value, index)
+    const selection = taskIndices.map(i => ({ task: props.tasks[i] }))
+    selection.forEach(task => {
+      selectionGrid.value[task.task.id] = true
+    })
+    store.dispatch('addSelectedTasks', selection)
+  }
+  scrollToLine(task.id)
+}
+
+const setScrollPosition = top => {
+  if (bodyRef.value) {
+    bodyRef.value.scrollTop = top
+  }
+}
+
+const scrollToLine = taskId => {
+  const taskLine = taskRows.get(taskId)
+  if (taskLine && bodyRef.value) {
+    const margin = 30
+    const rect = taskLine.getBoundingClientRect()
+    const listRect = bodyRef.value.getBoundingClientRect()
+    const isBelow = rect.bottom > listRect.bottom - margin
+    const isAbove = rect.top < listRect.top + margin
+
+    if (isBelow) {
+      const scrollingRequired = rect.bottom - listRect.bottom + margin
+      setScrollPosition(bodyRef.value.scrollTop + scrollingRequired)
+    } else if (isAbove) {
+      const scrollingRequired = listRect.top - rect.top + margin
+      setScrollPosition(bodyRef.value.scrollTop - scrollingRequired)
+    }
+  }
+}
+
+const isInDepartment = task => {
+  if (isCurrentUserManager.value) {
+    return true
+  } else if (isCurrentUserSupervisor.value) {
+    if (user.value.departments.length === 0) {
+      return true
+    }
+    const taskType = taskTypeMap.value.get(task.task_type_id)
+    return (
+      taskType.department_id &&
+      user.value.departments.includes(taskType.department_id)
+    )
+  }
+  return false
+}
+
+const resetSelection = () => {
+  selectionGrid.value = {}
+  lastSelection.value = null
+}
+
+const getTableData = () => {
+  const headers = [
+    isAssets.value ? t('tasks.fields.asset_type') : t('tasks.fields.sequence'),
+    t('tasks.fields.entity_name'),
+    t('tasks.fields.task_status'),
+    t('tasks.fields.assignees'),
+    t('tasks.fields.difficulty'),
+    t('tasks.fields.estimation'),
+    t('tasks.fields.duration'),
+    t('tasks.fields.retake_count'),
+    t('tasks.fields.start_date'),
+    t('tasks.fields.due_date'),
+    t('tasks.fields.real_start_date'),
+    t('tasks.fields.real_end_date'),
+    t('tasks.fields.done_date'),
+    t('tasks.fields.last_comment_date')
+  ]
+  if (isShots.value) {
+    const value = !isPaperProduction.value
+      ? t('tasks.fields.frames')
+      : t('tasks.fields.drawings')
+    headers.splice(4, 0, value)
+  }
+  const taskLines = [headers]
+  props.tasks.forEach(task => {
+    if (!task) return
+    const assignees = task.assignees
+      .map(personId => personMap.value.get(personId)?.name || '')
+      .join(', ')
+
+    const line = [
+      isAssets.value
+        ? getEntity(task.entity.id).asset_type_name
+        : getEntity(task.entity.id).sequence_name,
+      getEntity(task.entity.id).name,
+      task.task_status_short_name,
+      assignees,
+      task.difficulty,
+      formatDuration(task.estimation, false),
+      formatDuration(task.duration, false),
+      task.retake_count,
+      formatDate(task.start_date),
+      formatDate(task.due_date),
+      formatDate(task.real_start_date),
+      formatDate(task.end_date),
+      formatDate(task.done_date),
+      formatDate(task.last_comment_date)
+    ]
+    if (isShots.value) {
+      const value = !isPaperProduction.value
+        ? getEntity(task.entity.id).nb_frames
+        : task.nb_drawings || 0
+      line.splice(4, 0, value)
+    }
+    taskLines.push(line)
+  })
+  return taskLines
+}
+
+// Watchers
+watch(
+  () => props.tasks,
+  () => {
+    page.value = 1
+    resetSelection()
+  }
+)
+
+watch(nbSelectedTasks, () => {
+  if (nbSelectedTasks.value === 0) resetSelection()
+})
+
+// Lifecycle
+onMounted(() => {
+  window.addEventListener('keydown', onKeyDown, false)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeyDown)
+})
+
+defineExpose({
+  getTableData,
+  resetSelection,
+  selectTask,
+  setScrollPosition
+})
 </script>
 
 <style lang="scss" scoped>
@@ -1057,18 +993,6 @@ td.retake-count {
   padding: 0.5em;
 }
 
-.table-header th {
-  padding: 0.5em 0;
-
-  &.retake-count {
-    padding-right: 1em;
-  }
-
-  &.status {
-    padding-left: 1em;
-  }
-}
-
 .datatable-head {
   th {
     padding-left: 5px;
@@ -1128,7 +1052,6 @@ td.retake-count {
 .task-grid {
   display: grid;
   gap: 10px;
-  // grid-template-columns: repeat(auto-fill, 202px);
   grid-template-columns: 204px 204px 204px 204px 204px 204px;
 
   .task-card {
