@@ -1024,6 +1024,12 @@ td.retake-count {
   min-height: calc(100% - 50px);
   transition: margin-top 0.3s ease;
 
+  // Without the schedule beside it, the wrapper is the only child of
+  // the flex row and must claim the remaining page width itself.
+  &:not(.with-schedule) {
+    flex: 1;
+  }
+
   &.with-schedule {
     margin-top: 54px;
     margin-bottom: 0;
