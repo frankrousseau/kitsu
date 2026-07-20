@@ -38,7 +38,13 @@
         ></span>
         <chevron-down-icon class="down-icon flexrow-item" />
       </div>
-      <div class="select-input" ref="listRef" role="listbox" v-if="showList">
+      <div
+        class="select-input"
+        :class="{ 'open-left': openLeft }"
+        ref="listRef"
+        role="listbox"
+        v-if="showList"
+      >
         <div
           :id="optionId(index)"
           :key="option.id"
@@ -132,6 +138,10 @@ const props = defineProps({
     type: Boolean
   },
   keepOrder: {
+    default: false,
+    type: Boolean
+  },
+  openLeft: {
     default: false,
     type: Boolean
   },
@@ -336,6 +346,19 @@ watch(
   width: inherit;
   top: 38px;
   z-index: 2000;
+
+  // Anchor the list to the right edge so it grows leftward instead of
+  // overflowing the viewport when the combo sits near the right border.
+  // The part extending past the combo needs its own top-left rounding.
+  &.open-left {
+    border-top-left-radius: 1em;
+    left: auto;
+    margin-left: 0;
+    margin-right: -1px;
+    right: 0;
+    width: max-content;
+    min-width: 100%;
+  }
 
   .option-line {
     padding-right: 0.4em;
