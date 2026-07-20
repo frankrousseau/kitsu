@@ -130,6 +130,7 @@ const isCurrentUserSupervisor = computed(
 const selectedAssets = computed(() => store.getters.selectedAssets)
 const selectedEdits = computed(() => store.getters.selectedEdits)
 const selectedShots = computed(() => store.getters.selectedShots)
+const selectedTasks = computed(() => store.getters.selectedTasks)
 const user = computed(() => store.getters.user)
 
 const isEditable = computed(
@@ -184,6 +185,10 @@ const onMetadataFieldChanged = (entity, descriptor, event) => {
   } else if (selectedEdits.value.has(entity.id)) {
     selectedEdits.value.forEach(edit =>
       emitMetadataChanged(edit, descriptor, value)
+    )
+  } else if (selectedTasks.value.has(entity.id)) {
+    selectedTasks.value.forEach(task =>
+      emitMetadataChanged(task, descriptor, value)
     )
   } else {
     emitMetadataChanged(entity, descriptor, value)

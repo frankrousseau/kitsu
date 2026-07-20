@@ -1475,6 +1475,8 @@ export default {
       choices: 'List of values',
       delete_list_column_text:
         'This will remove the column “{name}” from all projects, including stored values. Continue?',
+      delete_task_text:
+        'Are you sure you want to delete this column and related data for all tasks of this task type?',
       delete_text: 'Are you sure you want to delete this column and related data for all assets of this production?',
       delete_error: 'An error occurred while deleting this metadata column.',
       edit_title: 'Edit metadata column',

@@ -1,5 +1,13 @@
 <template>
   <div class="data-list">
+    <table-metadata-header-menu
+      ref="header-metadata-menu"
+      :is-edit-allowed="isMetadataMenuEditAllowed"
+      :show-sort="false"
+      :show-stick="false"
+      @edit-clicked="onEditMetadataClicked"
+      @delete-clicked="onDeleteMetadataClicked"
+    />
     <div
       ref="body"
       class="datatable-wrapper"
@@ -52,6 +60,14 @@
             <th class="retake-count number-cell">
               {{ $t('tasks.fields.retake_count') }}
             </th>
+            <metadata-header
+              :key="descriptor.id"
+              :descriptor="descriptor"
+              @show-metadata-header-menu="
+                event => showMetadataHeaderMenu(descriptor.id, event)
+              "
+              v-for="descriptor in metadataDescriptors"
+            />
             <th class="start-date" v-if="!withSchedule">
               {{ $t('tasks.fields.start_date') }}
             </th>
@@ -209,6 +225,17 @@
                 &bull;
               </template>
             </td>
+            <td
+              class="metadata-descriptor"
+              :key="`${task.id}-${descriptor.id}`"
+              v-for="descriptor in metadataDescriptors"
+            >
+              <metadata-input
+                :entity="task"
+                :descriptor="descriptor"
+                @metadata-changed="onMetadataChanged"
+              />
+            </td>
             <td class="start-date" v-if="!withSchedule">
               <date-field
                 class="flexrow-item"
@@ -331,7 +358,10 @@ import { pauseEvent } from '@/composables/dom'
 import { getEntityMap } from '@/composables/entity'
 import { useFormat } from '@/composables/format'
 import { useGrabList } from '@/composables/grabList'
-import { isSupervisorInDepartments } from '@/lib/descriptors'
+import {
+  getMetadataFieldValue,
+  isSupervisorInDepartments
+} from '@/lib/descriptors'
 import {
   daysToMinutes,
   formatSimpleDate,
@@ -342,6 +372,8 @@ import {
   range
 } from '@/lib/time'
 
+import MetadataHeader from '@/components/cells/MetadataHeader.vue'
+import MetadataInput from '@/components/cells/MetadataInput.vue'
 import ValidationCell from '@/components/cells/ValidationCell.vue'
 import Combobox from '@/components/widgets/Combobox.vue'
 import DateField from '@/components/widgets/DateField.vue'
@@ -349,6 +381,7 @@ import EntityPreview from '@/components/widgets/EntityPreview.vue'
 import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import PeopleAvatarWithMenu from '@/components/widgets/PeopleAvatarWithMenu.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
+import TableMetadataHeaderMenu from '@/components/widgets/TableMetadataHeaderMenu.vue'
 import TaskListNumbers from '@/components/widgets/TaskListNumbers.vue'
 import ValidationTag from '@/components/widgets/ValidationTag.vue'
 
@@ -384,6 +417,10 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  metadataDescriptors: {
+    type: Array,
+    default: () => []
+  },
   tasks: {
     type: Array,
     default: () => []
@@ -394,7 +431,12 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['scroll', 'task-selected'])
+const emit = defineEmits([
+  'delete-metadata',
+  'edit-metadata',
+  'scroll',
+  'task-selected'
+])
 
 // State
 const difficultyOptions = [
@@ -410,6 +452,8 @@ const page = ref(1)
 const selectionGrid = ref({})
 
 const bodyRef = useTemplateRef('body')
+const headerMetadataMenuRef = useTemplateRef('header-metadata-menu')
+const lastMetadataHeaderMenuDisplayed = ref(null)
 // Row elements for scrollToLine, no reactivity needed
 const taskRows = new Map()
 
@@ -654,7 +698,7 @@ const selectTask = (event, index, task) => {
     event &&
     event.target &&
     // Dirty hack needed to make date picker and inputs work properly
-    (['INPUT'].includes(event.target.nodeName) ||
+    (['INPUT', 'LABEL', 'SELECT', 'TEXTAREA'].includes(event.target.nodeName) ||
       // Combo box should not trigger selection
       event.target.className.indexOf('selected-line') >= 0 ||
       event.target.className.indexOf('down-icon') >= 0 ||
@@ -746,6 +790,58 @@ const isInDepartment = task =>
     taskTypeMap.value.get(task.task_type_id)?.department_id
   )
 
+const isMetadataMenuEditAllowed = computed(() => {
+  const descriptor = props.metadataDescriptors.find(
+    d => d.id === lastMetadataHeaderMenuDisplayed.value
+  )
+  return (
+    isCurrentUserManager.value ||
+    isSupervisorInDepartments(
+      user.value,
+      isCurrentUserSupervisor.value,
+      descriptor?.departments
+    )
+  )
+})
+
+const showMetadataHeaderMenu = (descriptorId, event) => {
+  const menuEl = headerMetadataMenuRef.value?.$el
+  if (!menuEl) return
+  if (!event || !menuEl.classList.contains('hidden')) {
+    menuEl.classList.add('hidden')
+    return
+  }
+  menuEl.classList.remove('hidden')
+  let headerElement = event.srcElement.parentNode.parentNode
+  if (headerElement.tagName !== 'TH') {
+    headerElement = headerElement.parentNode
+  }
+  const headerBox = headerElement.getBoundingClientRect()
+  menuEl.style.left = `${headerBox.left - 3}px`
+  menuEl.style.top = `${headerBox.bottom + 11}px`
+  menuEl.style.width = `${Math.max(100, headerBox.width - 1)}px`
+  lastMetadataHeaderMenuDisplayed.value = descriptorId
+}
+
+const onEditMetadataClicked = () => {
+  emit('edit-metadata', lastMetadataHeaderMenuDisplayed.value)
+  showMetadataHeaderMenu()
+}
+
+const onDeleteMetadataClicked = () => {
+  emit('delete-metadata', lastMetadataHeaderMenuDisplayed.value)
+  showMetadataHeaderMenu()
+}
+
+const onMetadataChanged = ({ entry, descriptor, value }) => {
+  store
+    .dispatch('updateTask', {
+      taskId: entry.id,
+      data: { data: { [descriptor.field_name]: value } }
+    })
+    .catch(console.error)
+}
+
 const resetSelection = () => {
   selectionGrid.value = {}
   lastSelection.value = null
@@ -761,6 +857,7 @@ const getTableData = () => {
     t('tasks.fields.estimation'),
     t('tasks.fields.duration'),
     t('tasks.fields.retake_count'),
+    ...props.metadataDescriptors.map(descriptor => descriptor.name),
     t('tasks.fields.start_date'),
     t('tasks.fields.due_date'),
     t('tasks.fields.real_start_date'),
@@ -791,6 +888,9 @@ const getTableData = () => {
       formatDuration(task.estimation, false),
       formatDuration(task.duration, false),
       task.retake_count,
+      ...props.metadataDescriptors.map(descriptor =>
+        getMetadataFieldValue(descriptor, task)
+      ),
       formatSimpleDate(task.start_date),
       formatSimpleDate(task.due_date),
       formatSimpleDate(task.real_start_date),
@@ -912,6 +1012,11 @@ td.due-date {
 .retake-count {
   min-width: 90px;
   width: 90px;
+}
+
+td.metadata-descriptor {
+  height: 3.1rem;
+  padding: 0;
 }
 
 td.retake-count {

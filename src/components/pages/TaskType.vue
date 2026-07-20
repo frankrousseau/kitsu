@@ -23,6 +23,16 @@
             />
             <div
               class="flexrow-item"
+              v-if="isActiveTab('tasks') && isSupervisorInDepartment"
+            >
+              <button-simple
+                icon="plus"
+                :title="$t('productions.metadata.title')"
+                @click="onAddMetadataClicked"
+              />
+            </div>
+            <div
+              class="flexrow-item"
               v-if="
                 !isActiveTab('schedule') &&
                 !isActiveTab('estimation') &&
@@ -264,8 +274,11 @@
           :is-error="errors.entities"
           :is-grouped="currentSort === 'entity_name'"
           :is-loading="loading.entities"
+          :metadata-descriptors="taskMetadataDescriptors"
           :tasks="tasks"
           :with-schedule="isScheduleVisible"
+          @delete-metadata="onDeleteMetadataClicked"
+          @edit-metadata="onEditMetadataClicked"
           @task-selected="updateTaskInQuery"
           @scroll="onTaskListScroll"
           v-if="isActiveTab('tasks')"
@@ -364,6 +377,26 @@
           @cancel="hideImportModal"
           @confirm="renderImport"
         />
+
+        <add-metadata-modal
+          :active="modals.isAddMetadataDisplayed"
+          :is-loading="loading.addMetadata"
+          :is-error="errors.addMetadata"
+          :descriptor-to-edit="descriptorToEdit"
+          entity-type="Task"
+          @confirm="confirmAddMetadata"
+          @cancel="modals.isAddMetadataDisplayed = false"
+        />
+
+        <delete-modal
+          :active="modals.isDeleteMetadataDisplayed"
+          :is-loading="loading.deleteMetadata"
+          :is-error="errors.deleteMetadata"
+          :text="$t('productions.metadata.delete_task_text')"
+          :error-text="$t('productions.metadata.delete_error')"
+          @confirm="confirmDeleteMetadata"
+          @cancel="modals.isDeleteMetadataDisplayed = false"
+        />
       </div>
     </div>
 
@@ -421,6 +454,8 @@ import taskStatusStore from '@/store/modules/taskstatus.js'
 import taskTypeStore from '@/store/modules/tasktypes.js'
 
 import TaskList from '@/components/lists/TaskList.vue'
+import AddMetadataModal from '@/components/modals/AddMetadataModal.vue'
+import DeleteModal from '@/components/modals/DeleteModal.vue'
 import ImportModal from '@/components/modals/ImportModal.vue'
 import ImportRenderModal from '@/components/modals/ImportRenderModal.vue'
 import EstimationHelper from '@/components/pages/tasktype/EstimationHelper.vue'
@@ -513,6 +548,8 @@ const dataDisplay = ref({
   timesheets: false,
   beforeAfterTasks: false
 })
+const descriptorIdToDelete = ref(null)
+const descriptorToEdit = ref({})
 const difficultyFilter = ref('-1')
 const dueDateFilter = ref('all')
 const entityType = ref('Asset')
@@ -583,18 +620,24 @@ const sortOptions = [
 ].map(name => ({ label: name, value: name }))
 
 const errors = reactive({
+  addMetadata: false,
+  deleteMetadata: false,
   entities: false,
   importing: false,
   importingError: null
 })
 
 const loading = reactive({
+  addMetadata: false,
+  deleteMetadata: false,
   entities: false,
   importing: false,
   savingSearch: false
 })
 
 const modals = reactive({
+  isAddMetadataDisplayed: false,
+  isDeleteMetadataDisplayed: false,
   isImportRenderDisplayed: false,
   importing: false
 })
@@ -710,6 +753,12 @@ const isSupervisorInDepartment = computed(
       isCurrentUserSupervisor.value,
       currentTaskType.value?.department_id
     )
+)
+
+const taskMetadataDescriptors = computed(() =>
+  store.getters.taskMetadataDescriptors.filter(
+    descriptor => descriptor.task_type_id === currentTaskType.value?.id
+  )
 )
 
 const optionalColumns = computed(() =>
@@ -971,7 +1020,10 @@ const onSearchChange = query => {
   if (query && query.length !== 1) {
     query = query.toLowerCase().trim()
     const descriptors = (currentProduction.value.descriptors || []).filter(
-      d => d.entity_type === entityType.value
+      d =>
+        d.entity_type === entityType.value ||
+        (d.entity_type === 'Task' &&
+          d.task_type_id === currentTaskType.value.id)
     )
     const keywords = getKeyWords(query) || []
     const excludingKeyWords = getExcludingKeyWords(query) || []
@@ -1647,6 +1699,59 @@ const expandPersonElement = personElement => {
 }
 
 // Import
+
+const onAddMetadataClicked = () => {
+  descriptorToEdit.value = {}
+  modals.isAddMetadataDisplayed = true
+}
+
+const onEditMetadataClicked = descriptorId => {
+  descriptorToEdit.value = currentProduction.value.descriptors.find(
+    descriptor => descriptor.id === descriptorId
+  )
+  modals.isAddMetadataDisplayed = true
+}
+
+const onDeleteMetadataClicked = descriptorId => {
+  descriptorIdToDelete.value = descriptorId
+  modals.isDeleteMetadataDisplayed = true
+}
+
+const confirmAddMetadata = form => {
+  loading.addMetadata = true
+  errors.addMetadata = false
+  store
+    .dispatch('addMetadataDescriptor', {
+      ...form,
+      entity_type: 'Task',
+      task_type_id: currentTaskType.value.id
+    })
+    .then(() => {
+      loading.addMetadata = false
+      modals.isAddMetadataDisplayed = false
+    })
+    .catch(err => {
+      console.error(err)
+      loading.addMetadata = false
+      errors.addMetadata = true
+    })
+}
+
+const confirmDeleteMetadata = () => {
+  loading.deleteMetadata = true
+  errors.deleteMetadata = false
+  store
+    .dispatch('deleteMetadataDescriptor', descriptorIdToDelete.value)
+    .then(() => {
+      loading.deleteMetadata = false
+      modals.isDeleteMetadataDisplayed = false
+    })
+    .catch(err => {
+      console.error(err)
+      loading.deleteMetadata = false
+      errors.deleteMetadata = true
+    })
+}
 
 const showImportModal = () => {
   modals.importing = true

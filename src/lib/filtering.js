@@ -88,7 +88,11 @@ const applyFiltersFunctions = {
 
   descriptor(entry, filter, taskMap) {
     let isOk = false
-    let dataValue = entry.data?.[filter.descriptor.field_name]
+    // Tasks carry their own metadata in data and the linked entity's in
+    // entity_data: match on either, like getMetadataFieldValue does.
+    let dataValue =
+      entry.data?.[filter.descriptor.field_name] ??
+      entry.entity_data?.[filter.descriptor.field_name]
     if ((dataValue || dataValue === 0) && filter.values) {
       if (typeof dataValue === 'string') dataValue = dataValue.toLowerCase()
 
