@@ -798,10 +798,6 @@ const disabledDates = computed(() => ({
   days: [6, 0]
 }))
 
-const entityTasks = computed(() =>
-  getTasks(Array.from(entityMap.value.values()))
-)
-
 const title = computed(() => {
   if (currentProduction.value) {
     if (isTVShow.value && currentEpisode.value) {
@@ -1198,15 +1194,20 @@ const updateTaskInQuery = () => {
   }
 }
 
+// Read at call time, not through a computed: the entity caches are
+// non-reactive Maps that start empty on a hard refresh, so a computed
+// evaluated before they fill never reads an invalidating dependency
+// and latches the empty result forever.
+const getEntityTasks = () => getTasks(Array.from(entityMap.value.values()))
+
 const resetTasks = () => {
-  tasks.value = sortTasks(entityTasks.value)
+  tasks.value = sortTasks(getEntityTasks())
   resetTaskIndex()
 }
 
 const resetTaskIndex = () => {
-  if (!entityTasks.value) return
   taskIndex = buildSupervisorTaskIndex(
-    entityTasks.value,
+    getEntityTasks(),
     personMap.value,
     taskStatusMap.value
   )
