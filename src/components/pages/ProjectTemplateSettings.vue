@@ -755,6 +755,7 @@ const cleanDescriptors = () =>
   descriptors.value.map(d => ({
     name: d.name,
     entity_type: d.entity_type,
+    task_type_id: d.task_type_id || null,
     data_type: d.data_type,
     choices: d.choices || [],
     for_client: Boolean(d.for_client),
@@ -818,6 +819,7 @@ const confirmMetadataModal = async form => {
     if (descriptorToEditIndex.value >= 0) {
       const existing = descriptors.value[descriptorToEditIndex.value]
       entry.entity_type = existing.entity_type
+      entry.task_type_id = existing.task_type_id
       entry.field_name = existing.field_name
       entry.position = existing.position
       descriptors.value[descriptorToEditIndex.value] = entry
