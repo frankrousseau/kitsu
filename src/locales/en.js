@@ -1473,6 +1473,7 @@ export default {
       boolean: 'Checkbox',
       checklist: 'Checklist',
       choices: 'List of values',
+      date: 'Date',
       delete_list_column_text:
         'This will remove the column “{name}” from all projects, including stored values. Continue?',
       delete_task_text:

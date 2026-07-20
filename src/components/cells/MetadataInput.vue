@@ -1,12 +1,21 @@
 <template>
   <div class="metadata-input" :class="metadataInputClass">
+    <!-- read-only value: editors only appear once the row is selected.
+         Boolean keeps its checkbox (disabled below), so it is excluded here. -->
+    <div
+      class="metadata-readonly"
+      :class="{ 'align-left': isTextType }"
+      v-if="selected === false && descriptor.data_type !== 'boolean'"
+    >
+      {{ displayValue }}
+    </div>
     <!-- text input -->
     <input
       class="input-editor"
       :readonly="!isEditable"
       @input="event => onMetadataFieldChanged(entity, descriptor, event)"
       :value="getMetadataFieldValue(descriptor, entity)"
-      v-if="!descriptor.data_type || descriptor.data_type === 'string'"
+      v-else-if="!descriptor.data_type || descriptor.data_type === 'string'"
     />
     <!-- number input -->
     <input
@@ -19,10 +28,24 @@
       :value="getMetadataFieldValue(descriptor, entity)"
       v-else-if="descriptor.data_type === 'number'"
     />
+    <!-- date input -->
+    <date-field
+      class="date-editor"
+      model-type="yyyy-MM-dd"
+      :disabled="!isEditable"
+      :format="dateInputFormat"
+      :model-value="getMetadataFieldValue(descriptor, entity) || null"
+      :placeholder="''"
+      :with-margin="false"
+      @update:model-value="
+        value => onMetadataFieldChanged(entity, descriptor, value ?? '')
+      "
+      v-else-if="descriptor.data_type === 'date'"
+    />
     <!-- boolean input -->
     <input
       class="input-editor"
-      :disabled="!isEditable"
+      :disabled="!isEditable || selected === false"
       @input="event => onMetadataFieldChanged(entity, descriptor, event)"
       type="checkbox"
       :checked="getMetadataFieldValue(descriptor, entity) === 'true'"
@@ -100,6 +123,7 @@
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 
+import { useFormat } from '@/composables/format'
 import {
   getDescriptorChecklistValues,
   getDescriptorChoicesOptions,
@@ -109,17 +133,22 @@ import {
 } from '@/lib/descriptors'
 
 import ComboboxTag from '@/components/widgets/ComboboxTag.vue'
+import DateField from '@/components/widgets/DateField.vue'
 
 const props = defineProps({
   descriptor: { type: Object, required: true },
   entity: { type: Object, required: true },
   // eslint-disable-next-line vue/no-unused-properties
-  indexes: { type: Object, default: () => ({}) }
+  indexes: { type: Object, default: () => ({}) },
+  // null: always editable (assets/shots lists). true/false: gate the editor
+  // on row selection (task list), showing a read-only value until selected.
+  selected: { type: Boolean, default: null }
 })
 
 const emit = defineEmits(['metadata-changed'])
 
 const store = useStore()
+const { dateFormat, formatDisplayDate } = useFormat()
 
 // Computed
 
@@ -143,14 +172,41 @@ const isEditable = computed(
     )
 )
 
+const isReadonly = computed(() => props.selected === false)
+
+const isTextType = computed(
+  () => !props.descriptor.data_type || props.descriptor.data_type === 'string'
+)
+
+// The read-only value uses a plain display, so the editor-specific layout
+// classes must not apply (is-date/is-checklist flip the wrapper to static
+// flow, which would break the centering). Boolean keeps its checkbox even
+// read-only, so is-boolean stays.
 const metadataInputClass = computed(() => ({
+  'is-readonly': isReadonly.value,
   'is-boolean': props.descriptor.data_type === 'boolean',
   'is-checklist':
+    !isReadonly.value &&
     props.descriptor.data_type === 'checklist' &&
     getDescriptorChecklistValues(props.descriptor).length,
-  'is-list': props.descriptor.data_type === 'list',
-  'is-taglist': props.descriptor.data_type === 'taglist'
+  'is-date': !isReadonly.value && props.descriptor.data_type === 'date',
+  'is-list': !isReadonly.value && props.descriptor.data_type === 'list',
+  'is-taglist': !isReadonly.value && props.descriptor.data_type === 'taglist'
 }))
+
+const displayValue = computed(() => {
+  const value = getMetadataFieldValue(props.descriptor, props.entity)
+  if (props.descriptor.data_type === 'date') {
+    return formatDisplayDate(value)
+  }
+  return value
+})
+
+// VueDatePicker's input format uses date-fns tokens; the stored date format
+// option (dateFormat) uses moment tokens. Only YYYY/MM/DD tokens are in play.
+const dateInputFormat = computed(() =>
+  dateFormat.value.replace(/YYYY/g, 'yyyy').replace(/DD/g, 'dd')
+)
 
 // Functions
 
@@ -233,6 +289,35 @@ const onNumberFieldKeyDown = event => {
 
 .metadata-input.is-checklist {
   position: static;
+}
+
+.metadata-input.is-readonly {
+  justify-content: center;
+}
+
+.metadata-readonly {
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 0.35rem 0.5rem;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.metadata-readonly.align-left {
+  text-align: left;
+}
+
+/* Let the datepicker flow like the schedule/task date cells instead of being
+   pinned by the absolute wrapper, and fill the column width. */
+.metadata-input.is-date {
+  position: static;
+
+  :deep(.datepicker) {
+    max-width: none;
+    width: 100%;
+  }
 }
 
 .metadata-input.is-checklist .metadata-value,

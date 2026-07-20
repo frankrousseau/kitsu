@@ -233,6 +233,7 @@
               <metadata-input
                 :entity="task"
                 :descriptor="descriptor"
+                :selected="Boolean(selectionGrid[task.id])"
                 @metadata-changed="onMetadataChanged"
               />
             </td>
