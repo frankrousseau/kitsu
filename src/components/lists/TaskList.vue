@@ -288,6 +288,7 @@
               :empty-width="200"
               :empty-height="133"
               :show-movie="false"
+              is-rounded-top-border
               no-preview
               v-if="task.entity"
             />
@@ -332,6 +333,7 @@
           :empty-width="200"
           :empty-height="133"
           :show-movie="false"
+          is-rounded-top-border
           no-preview
           v-if="task.entity"
         />
@@ -1064,21 +1066,29 @@ td.retake-count {
 
 .task-grid {
   display: grid;
-  gap: 10px;
-  grid-template-columns: 204px 204px 204px 204px 204px 204px;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, 204px);
 
   .task-card {
     border: 2px solid transparent;
-    border-radius: 5px;
-    box-shadow: 0 0 2px var(--box-shadow);
+    border-radius: 10px;
+    box-shadow: 0 1px 3px var(--box-shadow);
     background: var(--background-alt);
     cursor: pointer;
     display: flex;
     font-weight: bold;
     flex-direction: column;
     padding: 0;
-    padding-bottom: 0.2em;
-    transition: border 0.3s ease;
+    padding-bottom: 0.4em;
+    transition:
+      border 0.3s ease,
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
+
+    &:hover {
+      box-shadow: 0 3px 8px var(--box-shadow);
+      transform: translateY(-2px);
+    }
 
     &.selected {
       border: 2px solid $dark-purple;
@@ -1087,12 +1097,12 @@ td.retake-count {
     .task-name {
       font-size: 0.9em;
       margin-bottom: 0.5em;
-      margin-top: 0.3em;
-      padding: 0 0.5em;
+      margin-top: 0.4em;
+      padding: 0 0.6em;
       word-break: break-word;
     }
     .task-data {
-      padding: 0 0.1em 0 0.3em;
+      padding: 0 0.3em 0 0.5em;
 
       .avatar-wrapper:last-child {
         margin-right: 0;
