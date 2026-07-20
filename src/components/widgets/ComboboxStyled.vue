@@ -159,7 +159,7 @@ const optionList = computed(() => {
 })
 
 const getOptionLabel = option => {
-  if (props.localeKeyPrefix && option.label) {
+  if (props.localeKeyPrefix && option.label && !option.raw) {
     return t(props.localeKeyPrefix + option.label.toLowerCase())
   }
   return option.label

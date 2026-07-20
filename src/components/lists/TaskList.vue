@@ -3,10 +3,10 @@
     <table-metadata-header-menu
       ref="header-metadata-menu"
       :is-edit-allowed="isMetadataMenuEditAllowed"
-      :show-sort="false"
       :show-stick="false"
       @edit-clicked="onEditMetadataClicked"
       @delete-clicked="onDeleteMetadataClicked"
+      @sort-by-clicked="onSortByMetadataClicked"
     />
     <div
       ref="body"
@@ -435,6 +435,7 @@ const emit = defineEmits([
   'delete-metadata',
   'edit-metadata',
   'scroll',
+  'sort-metadata',
   'task-selected'
 ])
 
@@ -830,6 +831,11 @@ const onEditMetadataClicked = () => {
 
 const onDeleteMetadataClicked = () => {
   emit('delete-metadata', lastMetadataHeaderMenuDisplayed.value)
+  showMetadataHeaderMenu()
+}
+
+const onSortByMetadataClicked = () => {
+  emit('sort-metadata', lastMetadataHeaderMenuDisplayed.value)
   showMetadataHeaderMenu()
 }
 

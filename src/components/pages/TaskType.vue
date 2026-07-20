@@ -279,6 +279,7 @@
           :with-schedule="isScheduleVisible"
           @delete-metadata="onDeleteMetadataClicked"
           @edit-metadata="onEditMetadataClicked"
+          @sort-metadata="onSortByMetadata"
           @task-selected="updateTaskInQuery"
           @scroll="onTaskListScroll"
           v-if="isActiveTab('tasks')"
@@ -440,7 +441,7 @@ import {
 import { buildSupervisorTaskIndex, indexSearch } from '@/lib/indexing'
 import { getPersonPath } from '@/lib/path'
 import preferences from '@/lib/preferences'
-import { sortByName, sortPeople } from '@/lib/sorting'
+import { sortByMetadata, sortByName, sortPeople } from '@/lib/sorting'
 import stringHelpers from '@/lib/string'
 import {
   addBusinessDays,
@@ -603,7 +604,8 @@ const retakeCountOptions = [
   { label: 'retake_filter_none', value: 'none' },
   { label: 'retake_filter_with_retakes', value: 'with_retakes' }
 ]
-const sortOptions = [
+const METADATA_SORT_PREFIX = 'metadata.'
+const staticSortOptions = [
   'entity_name',
   'task_status_short_name',
   'priority',
@@ -760,6 +762,15 @@ const taskMetadataDescriptors = computed(() =>
     descriptor => descriptor.task_type_id === currentTaskType.value?.id
   )
 )
+
+const sortOptions = computed(() => [
+  ...staticSortOptions,
+  ...taskMetadataDescriptors.value.map(descriptor => ({
+    label: descriptor.name,
+    value: METADATA_SORT_PREFIX + descriptor.field_name,
+    raw: true
+  }))
+])
 
 const optionalColumns = computed(() =>
   isPaperProduction.value
@@ -1218,6 +1229,20 @@ const getTasks = entities => {
 }
 
 const sortTasks = (list = tasks.value) => {
+  if (currentSort.value.startsWith(METADATA_SORT_PREFIX)) {
+    const fieldName = currentSort.value.slice(METADATA_SORT_PREFIX.length)
+    const descriptor = taskMetadataDescriptors.value.find(
+      d => d.field_name === fieldName
+    )
+    return list.sort(
+      firstBy(
+        sortByMetadata({
+          column: fieldName,
+          data_type: descriptor?.data_type
+        })
+      ).thenBy('entity_name')
+    )
+  }
   if (currentSort.value === 'nb_frames') {
     return list.sort((ta, tb) => {
       const nbFramesA = getEntity(ta.entity.id)?.nb_frames || 0
@@ -1715,6 +1740,15 @@ const onEditMetadataClicked = descriptorId => {
 const onDeleteMetadataClicked = descriptorId => {
   descriptorIdToDelete.value = descriptorId
   modals.isDeleteMetadataDisplayed = true
+}
+
+const onSortByMetadata = descriptorId => {
+  const descriptor = taskMetadataDescriptors.value.find(
+    d => d.id === descriptorId
+  )
+  if (descriptor) {
+    currentSort.value = METADATA_SORT_PREFIX + descriptor.field_name
+  }
 }
 
 const confirmAddMetadata = form => {
