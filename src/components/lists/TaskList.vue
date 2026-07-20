@@ -1056,6 +1056,9 @@ td.retake-count {
 }
 
 .list-wrapper {
+  // Same flex-row constraint as the datatable wrapper: without a flex
+  // basis the auto-fill grid shrinks to a single column.
+  flex: 1;
   overflow-x: auto;
   overflow-y: auto;
 }
