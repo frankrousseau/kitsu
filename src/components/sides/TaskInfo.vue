@@ -1,5 +1,5 @@
 <template>
-  <div class="side-wrapper">
+  <div class="side-wrapper" ref="side-wrapper">
     <div
       class="extend-bar"
       @mousedown.prevent="onExtendDown"
@@ -111,7 +111,7 @@
           />
         </div>
 
-        <div class="task-columns pa1 pt0" ref="task-columns">
+        <div class="task-columns pa1 pt0">
           <div class="task-column preview-column" v-if="isPreview">
             <div class="preview-column-content">
               <div class="flexrow" v-if="!isConceptTask">
@@ -189,11 +189,11 @@
                   :is-error="errors.addComment"
                   :is-max-retakes-error="errors.addCommentMaxRetakes"
                   :fps="currentFps"
-                  :frame="currentFrame || currentFrameRaw"
+                  :frame="displayedFrame"
                   :revision="currentRevision"
                   :is-movie="isMoviePreview"
                   :is-picture="isPicturePreview"
-                  @add-comment="addComment"
+                  @add-comment="postComment"
                   @add-preview="onAddPreviewClicked"
                   @file-drop="selectFile"
                   @clear-files="clearPreviewFiles"
@@ -219,7 +219,7 @@
                       :key="`comment-${comment.id}`"
                       :comment="comment"
                       :fps="currentFps"
-                      :frame="currentFrame || currentFrameRaw"
+                      :frame="displayedFrame"
                       :is-change="isStatusChange(index)"
                       :is-checkable="
                         user.id === comment.person?.id ||
@@ -298,7 +298,7 @@
           :active="modals.editComment"
           :comment-to-edit="commentToEdit"
           :fps="currentFps"
-          :frame="currentFrame || currentFrameRaw"
+          :frame="displayedFrame"
           :is-loading="loading.editComment"
           :is-error="errors.editComment"
           :revision="currentRevision"
@@ -371,13 +371,33 @@
   </div>
 </template>
 
-<script>
+<script setup>
+// Imports
 import { CornerRightUpIcon, XIcon } from 'lucide-vue-next'
 import moment from 'moment'
-import { mapGetters, mapActions } from 'vuex'
+import {
+  computed,
+  getCurrentInstance,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  provide,
+  reactive,
+  ref,
+  useTemplateRef,
+  watch
+} from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
+import { useStore } from 'vuex'
 
+import { addEvents, getClientX, removeEvents } from '@/composables/dom'
+import { getEntityMap } from '@/composables/entity'
+import { useTime } from '@/composables/time'
 import csv from '@/lib/csv'
+import { isSupervisorInDepartments } from '@/lib/descriptors'
 import drafts from '@/lib/drafts'
+import func from '@/lib/func'
 import {
   getDownloadAttachmentPath,
   getTaskEntityPath,
@@ -386,1385 +406,1246 @@ import {
 import preferences from '@/lib/preferences'
 import { formatRevision } from '@/lib/preview'
 import { getTaskTypeWithUrl } from '@/lib/productions'
-import { getTaskTypeStyle } from '@/lib/render'
 import { sortPeople, sortTaskNames } from '@/lib/sorting'
 import stringHelpers from '@/lib/string'
-import { formatFrame } from '@/lib/video'
+import { formatSimpleDate } from '@/lib/time'
+import { DEFAULT_FPS, formatFrame } from '@/lib/video'
 
-import { domMixin } from '@/components/mixins/dom'
-import { taskMixin } from '@/components/mixins/task'
-import { timeMixin } from '@/components/mixins/time'
-
-import ActionPanel from '@/components/tops/ActionPanel.vue'
-import AddComment from '@/components/widgets/AddComment.vue'
 import AddPreviewModal from '@/components/modals/AddPreviewModal.vue'
-import Comment from '@/components/widgets/Comment.vue'
-import ComboboxActions from '@/components/widgets/ComboboxActions.vue'
-import ComboboxStyled from '@/components/widgets/ComboboxStyled.vue'
 import DeleteModal from '@/components/modals/DeleteModal.vue'
 import EditCommentModal from '@/components/modals/EditCommentModal.vue'
 import MoveCommentModal from '@/components/modals/MoveCommentModal.vue'
-import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
 import PreviewPlayer from '@/components/players/players/PreviewPlayer.vue'
+import ActionPanel from '@/components/tops/ActionPanel.vue'
+// eslint-disable-next-line no-unused-vars
+import AddComment from '@/components/widgets/AddComment.vue'
+import ComboboxActions from '@/components/widgets/ComboboxActions.vue'
+import ComboboxStyled from '@/components/widgets/ComboboxStyled.vue'
+import Comment from '@/components/widgets/Comment.vue'
+import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
 import Spinner from '@/components/widgets/Spinner.vue'
 import TaskTypeName from '@/components/widgets/TaskTypeName.vue'
 
 const DEFAULT_PANEL_WIDTH = 400
 
-export default {
-  name: 'task-info',
+// Composables
+const { t } = useI18n()
+const route = useRoute()
+const store = useStore()
+const { formatDate } = useTime()
 
-  mixins: [domMixin, taskMixin, timeMixin],
+const instance = getCurrentInstance()
+const socket = instance.appContext.config.globalProperties.$socket
 
-  components: {
-    ActionPanel,
-    AddComment,
-    AddPreviewModal,
-    ComboboxActions,
-    ComboboxStyled,
-    Comment,
-    CornerRightUpIcon,
-    DeleteModal,
-    EditCommentModal,
-    MoveCommentModal,
-    PeopleAvatar,
-    PreviewPlayer,
-    Spinner,
-    TaskTypeName,
-    XIcon
+// Props / Emits
+const props = defineProps({
+  currentFrame: {
+    type: Number,
+    default: 0
   },
+  currentParentPreview: {
+    type: Object,
+    default: null
+  },
+  entityType: {
+    type: String,
+    default: 'Asset'
+  },
+  extendable: {
+    type: Boolean,
+    default: true
+  },
+  inPlaylist: {
+    type: Boolean,
+    default: false
+  },
+  isLoading: {
+    type: Boolean,
+    default: true
+  },
+  isPreview: {
+    type: Boolean,
+    default: true
+  },
+  silent: {
+    type: Boolean,
+    default: false
+  },
+  showAssignees: {
+    type: Boolean,
+    default: false
+  },
+  task: {
+    type: Object,
+    default: () => {}
+  },
+  withActions: {
+    type: Boolean,
+    default: false
+  },
+  player: {
+    type: Object,
+    default: null
+  },
+  root: {
+    type: Boolean,
+    default: true
+  }
+})
 
-  props: {
-    currentFrame: {
-      type: Number,
-      default: 0
-    },
-    currentParentPreview: {
-      type: Object,
-      default: null
-    },
-    entityType: {
-      type: String,
-      default: 'Asset'
-    },
-    extendable: {
-      type: Boolean,
-      default: true
-    },
-    inPlaylist: {
-      type: Boolean,
-      default: false
-    },
-    isLoading: {
-      type: Boolean,
-      default: true
-    },
-    isPreview: {
-      type: Boolean,
-      default: true
-    },
-    silent: {
-      type: Boolean,
-      default: false
-    },
-    showAssignees: {
-      type: Boolean,
-      default: false
-    },
-    task: {
-      type: Object,
-      default: () => {}
-    },
-    withActions: {
-      type: Boolean,
-      default: false
-    },
-    player: {
-      type: Object,
-      default: null
-    },
-    root: {
-      type: Boolean,
-      default: true
+const emit = defineEmits(['comment-added', 'task-removed', 'time-code-clicked'])
+
+// State
+const draftComment = reactive({})
+// Only the root panel provides the draft: nested TaskInfo instances inject
+// it so the comment draft survives switching between panels.
+if (props.root) {
+  provide('draftComment', draftComment)
+}
+
+const addExtraPreviewFormData = ref(null)
+const animOn = ref(false)
+const previewForms = ref([])
+const currentFrameRaw = ref(0)
+const currentPreviewIndex = ref(0)
+const commentToEdit = ref(null)
+const commentToMove = ref(null)
+const isWide = ref(false)
+const isExtraWide = ref(false)
+const taskComments = ref([])
+const taskPreviews = ref([])
+
+// Extend-drag bookkeeping, read only inside event handlers
+let currentExtraPreviewId = null
+let lastWidth = 0
+let lastWidthX = 0
+
+const errors = reactive({
+  addComment: false,
+  addCommentMaxRetakes: false,
+  addPreview: false,
+  addExtraPreview: false,
+  editComment: false,
+  deleteComment: false,
+  moveComment: false,
+  deleteExtraPreview: false,
+  task: false
+})
+
+const loading = reactive({
+  addComment: false,
+  addPreview: false,
+  addExtraPreview: false,
+  editComment: false,
+  deleteComment: false,
+  moveComment: false,
+  deleteExtraPreview: false,
+  task: false,
+  setFrameThumbnail: false
+})
+
+const modals = reactive({
+  addPreview: false,
+  addExtraPreview: false,
+  editComment: false,
+  deleteComment: false,
+  moveComment: false,
+  deleteExtraPreview: false
+})
+
+const addCommentRef = useTemplateRef('add-comment')
+const addExtraPreviewModalRef = useTemplateRef('add-extra-preview-modal')
+const addPreviewModalRef = useTemplateRef('add-preview-modal')
+const previewPlayerRef = useTemplateRef('preview-player')
+const sideWrapperRef = useTemplateRef('side-wrapper')
+
+// Computed
+const currentEpisode = computed(() => store.getters.currentEpisode)
+const currentProduction = computed(() => store.getters.currentProduction)
+const isCurrentUserArtist = computed(() => store.getters.isCurrentUserArtist)
+const isCurrentUserClient = computed(() => store.getters.isCurrentUserClient)
+const isCurrentUserManager = computed(() => store.getters.isCurrentUserManager)
+const isCurrentUserSupervisor = computed(
+  () => store.getters.isCurrentUserSupervisor
+)
+const isTVShow = computed(() => store.getters.isTVShow)
+const nbSelectedTasks = computed(() => store.getters.nbSelectedTasks)
+const nbSelectedValidations = computed(
+  () => store.getters.nbSelectedValidations
+)
+const personMap = computed(() => store.getters.personMap)
+const productionMap = computed(() => store.getters.productionMap)
+const selectedConcepts = computed(() => store.getters.selectedConcepts)
+const selectedTasks = computed(() => store.getters.selectedTasks)
+const shotMap = computed(() => store.getters.shotMap)
+const taskEntityPreviews = computed(() => store.getters.taskEntityPreviews)
+const taskMap = computed(() => store.getters.taskMap)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
+const user = computed(() => store.getters.user)
+
+const sideColumnParent = computed(() => {
+  const parent = sideWrapperRef.value?.parentElement
+  return parent?.classList.contains('side-column') ? parent : undefined
+})
+
+const selectedEntities = computed(() => {
+  const byType = {
+    Asset: store.getters.selectedAssets,
+    Concept: store.getters.selectedConcepts,
+    Edit: store.getters.selectedEdits,
+    Shot: store.getters.selectedShots
+  }
+  return byType[props.entityType]
+})
+
+const nbSelectedEntities = computed(() => selectedEntities.value?.size || 0)
+
+const currentProductionId = computed(
+  () => props.task?.project_id || currentProduction.value?.id
+)
+
+const currentTeam = computed(() => {
+  if (!props.task) return []
+  const production = productionMap.value.get(props.task.project_id)
+  if (!production?.team) return []
+  return sortPeople(
+    production.team
+      .map(personId => personMap.value.get(personId))
+      .filter(Boolean)
+  )
+})
+
+// Task types of the same project, filtered by the current task entity type
+// (Shot or Asset), each with a url pointing to the matching task.
+const currentTaskTypes = computed(() => {
+  if (!props.task || !currentProduction.value) return []
+
+  const taskTypeEntity = taskTypeMap.value.get(
+    props.task.task_type_id
+  ).for_entity
+  const taskTypeEntitySlug = taskTypeEntity.toLowerCase() + 's'
+
+  const entityTasks = {}
+  taskMap.value.forEach(task => {
+    if (task.entity_id === props.task.entity_id) {
+      entityTasks[task.task_type_id] = task
     }
-  },
+  })
 
-  emits: ['comment-added', 'task-removed', 'time-code-clicked'],
+  return currentProduction.value.task_types
+    .map(taskTypeId => taskTypeMap.value.get(taskTypeId))
+    .filter(taskType => taskType?.for_entity === taskTypeEntity)
+    .filter(taskType => entityTasks[taskType.id])
+    .map(taskType =>
+      getTaskTypeWithUrl(taskType, entityTasks[taskType.id], taskTypeEntitySlug)
+    )
+})
 
-  provide() {
-    if (this.root) {
-      return {
-        draftComment: this.draftComment
-      }
+const title = computed(() => {
+  if (props.task) {
+    return props.task.full_entity_name || props.task.entity_name
+  }
+  return t('main.loading')
+})
+
+const isAssigned = computed(
+  () => props.task?.assignees.includes(user.value.id) ?? false
+)
+
+const isCommentingAllowed = computed(
+  () =>
+    props.task &&
+    (isAssigned.value ||
+      isCurrentUserClient.value ||
+      isDepartmentSupervisor.value ||
+      isCurrentUserManager.value)
+)
+
+const isConceptTask = computed(() => props.entityType === 'Concept')
+
+const isDepartmentSupervisor = computed(() =>
+  isSupervisorInDepartments(
+    user.value,
+    isCurrentUserSupervisor.value,
+    currentTaskType.value?.department_id
+  )
+)
+
+const isPreviewPlayerReadOnly = computed(
+  () =>
+    !props.task ||
+    !(
+      isCurrentUserManager.value ||
+      isCurrentUserClient.value ||
+      isDepartmentSupervisor.value
+    )
+)
+
+const currentTaskType = computed(() =>
+  taskTypeMap.value.get(props.task?.task_type_id)
+)
+
+const currentFps = computed(() => {
+  if (!props.task) return 25
+  // An entity can override the production fps via data.fps; use it so
+  // the player builds its frame model on the rate the video was
+  // actually rendered at (otherwise frames get duplicated/dropped).
+  // The entity may be a Shot, Edit, Sequence, Episode or Asset, each
+  // in its own store map — task.entity is only { id } here.
+  const entityFps = parseFloat(getTaskEntity(props.task)?.data?.fps)
+  if (entityFps) return entityFps
+  return (
+    parseInt(productionMap.value.get(props.task.project_id)?.fps) || DEFAULT_FPS
+  )
+})
+
+const entityFrames = computed(() => {
+  if (!props.task?.entity) return 0
+  return shotMap.value.get(props.task.entity.id)?.nb_frames || 0
+})
+
+const currentPreview = computed(
+  () => taskPreviews.value[currentPreviewIndex.value] ?? null
+)
+
+const currentPreviewComment = computed(() =>
+  taskComments.value.find(comment =>
+    comment.previews?.some(
+      preview => preview.revision === currentRevision.value
+    )
+  )
+)
+
+const currentPreviewId = computed(() => currentPreview.value?.id ?? null)
+
+const canDownloadAnnotations = computed(
+  () =>
+    isCurrentUserManager.value &&
+    currentPreviewId.value &&
+    (currentPreview.value?.annotations?.length || 0) > 0
+)
+
+const annotationsPath = suffix =>
+  currentPreviewId.value
+    ? `/api/actions/preview-files/${currentPreviewId.value}/extract-annotated-frames${suffix}`
+    : null
+
+const exportActions = computed(() =>
+  [
+    {
+      label: 'annotations.zip',
+      href: annotationsPath(''),
+      visible: canDownloadAnnotations.value
+    },
+    {
+      label: 'annotations.pdf',
+      href: annotationsPath('-pdf'),
+      visible: canDownloadAnnotations.value
+    },
+    {
+      label: 'comments.csv',
+      handler: () => onExportClick(),
+      visible: !props.withActions && !isCurrentUserClient.value
     }
-    return {}
-  },
+  ].filter(action => action.visible !== false)
+)
 
-  data() {
-    return {
-      draftComment: {},
-      addExtraPreviewFormData: null,
-      animOn: false,
-      previewForms: [],
-      currentFrameRaw: 0,
-      currentPreviewIndex: 0,
-      currentPreviewPath: '',
-      currentPreviewDlPath: '',
-      currentTask: null,
-      commentToEdit: null,
-      commentToMove: null,
-      isWide: false,
-      isExtraWide: false,
-      otherPreviews: [],
-      panelWidth: 800,
-      selectedEpisodes: null,
-      selectedSequences: null,
-      taskComments: [],
-      taskPreviews: [],
-      domEvents: [
-        ['mousemove', this.onExtendMove],
-        ['touchmove', this.onExtendMove],
-        ['mouseup', this.onExtendUp],
-        ['mouseleave', this.onExtendUp],
-        ['touchend', this.onExtendUp],
-        ['touchcancel', this.onExtendUp]
-      ],
-      errors: {
-        addComment: false,
-        addCommentMaxRetakes: false,
-        addPreview: false,
-        addExtraPreview: false,
-        editComment: false,
-        deleteComment: false,
-        moveComment: false,
-        confirmDeleteTaskPreview: false,
-        task: false
-      },
-      loading: {
-        addComment: false,
-        addPreview: false,
-        addExtraPreview: false,
-        editComment: false,
-        deleteComment: false,
-        moveComment: false,
-        confirmDeleteTaskPreview: false,
-        task: false,
-        setFrameThumbnail: false
-      },
-      modals: {
-        addPreview: false,
-        addExtraPreview: false,
-        editComment: false,
-        deleteComment: false,
-        moveComment: false,
-        deleteExtraPreview: false
-      }
-    }
-  },
+const currentRevision = computed(
+  () =>
+    props.currentParentPreview?.revision || currentPreview.value?.revision || 0
+)
 
-  mounted() {
-    if (this.sideColumnParent) {
-      const panelWidth = preferences.getIntPreference(
-        'task:panel-width',
-        DEFAULT_PANEL_WIDTH
-      )
-      this.setWidth(panelWidth)
-      this.refreshPreviewPlay()
-    }
-  },
+const displayedFrame = computed(
+  () => props.currentFrame || currentFrameRaw.value
+)
 
-  beforeUnmount() {
-    this.removeEvents(this.domEvents)
-  },
+const extension = computed(() => currentPreview.value?.extension ?? '')
 
-  computed: {
-    ...mapGetters([
-      'currentEpisode',
-      'currentProduction',
-      'getTaskComment',
-      'getTaskComments',
-      'getTaskPreviews',
-      'getTaskStatusForCurrentUser',
-      'isCurrentUserArtist',
-      'isCurrentUserClient',
-      'isCurrentUserManager',
-      'isCurrentUserSupervisor',
-      'isSavingCommentPreview',
-      'isSingleEpisode',
-      'isTVShow',
-      'nbSelectedTasks',
-      'personMap',
-      'productionMap',
-      'selectedAssets',
-      'selectedConcepts',
-      'selectedEdits',
-      'selectedShots',
-      'selectedTasks',
-      'shotMap',
-      'nbSelectedValidations',
-      'taskEntityPreviews',
-      'taskMap',
-      'taskTypeMap',
-      'user'
-    ]),
+const isMoviePreview = computed(() => extension.value === 'mp4')
 
-    sideColumnParent() {
-      if (this.$el.parentElement.classList.contains('side-column')) {
-        return this.$el.parentElement
-      }
-      return undefined
-    },
+const isPicturePreview = computed(() =>
+  ['png', 'gif'].includes(extension.value)
+)
 
-    nbSelectedEntities() {
-      return this.selectedEntities?.size || 0
-    },
+const taskStatuses = computed(() =>
+  store.getters.getTaskStatusForCurrentUser(
+    props.task.project_id,
+    isConceptTask.value
+  )
+)
 
-    selectedEntities() {
-      return this[`selected${this.entityType}s`]
-    },
+const taskPath = computed(() =>
+  getTaskPath(
+    props.task,
+    null,
+    isTVShow.value,
+    currentEpisode.value,
+    taskTypeMap.value
+  )
+)
 
-    currentProductionId() {
-      return this.task?.project_id || this.currentProduction?.id
-    },
+const taskEntityPath = computed(() =>
+  getTaskEntityPath(props.task, route.params.episode_id)
+)
 
-    currentTeam() {
-      if (!this.task) return []
-      const production = this.productionMap.get(this.task.project_id)
-      if (!production?.team) return []
-      return sortPeople(
-        production.team
-          .map(personId => this.personMap.get(personId))
-          .filter(Boolean)
-      )
-    },
+const previewOptions = computed(() => {
+  if (!taskPreviews.value) return []
+  return [...taskPreviews.value]
+    .sort((a, b) => b.revision - a.revision)
+    .map(preview => ({
+      value: preview.id,
+      label: formatRevision(preview.revision, currentProduction.value),
+      validation_status: preview.validation_status
+    }))
+})
 
-    // get current task types for this project filtered by current task entity type (Shot or Asset)
-    currentTaskTypes() {
-      if (!this.task || !this.currentProduction) return []
+const selectedTasksToDisplay = computed(() =>
+  sortTaskNames(Array.from(selectedTasks.value.values()), taskTypeMap.value)
+)
 
-      // task types for this project
-      const task_types = this.currentProduction.task_types
+// Functions
+const getTaskEntity = task => {
+  if (!task?.entity_type_name || !task?.entity?.id) return null
+  return getEntityMap(task.entity_type_name)?.get(task.entity.id) || null
+}
 
-      // get the current task entity type eg. 'Shot' or 'Asset'
-      const current_task_type = this.taskTypeMap.get(this.task.task_type_id)
-      const task_type_entity = current_task_type.for_entity
-      const task_type_entity_slug = task_type_entity.toLowerCase() + 's'
+const getCurrentTaskComments = () =>
+  store.getters.getTaskComments(props.task.id)
 
-      // lets get a map of all tasks that are the same entity
-      // where the key is the task type id
-      const entity_tasks = {}
-      for (const keyValue of this.taskMap) {
-        const task = keyValue[1]
-        if (task.entity_id === this.task.entity_id)
-          entity_tasks[task.task_type_id] = task
-      }
+const loadTaskData = () => {
+  if (props.task) {
+    loading.task = true
+    errors.task = false
+    store
+      .dispatch('loadTaskComments', {
+        taskId: props.task.id,
+        entityId: props.task.entity_id
+      })
+      .then(() => {
+        loading.task = false
+        reset()
+      })
+      .catch(err => {
+        console.error(err)
+        errors.task = true
+      })
+  }
+}
 
-      const filtered = task_types
-        // get all task type objects
-        .map(taskTypeId => this.taskTypeMap.get(taskTypeId))
-
-        // filter down to just those that match this task entity type Shot, Asset etc.
-        .filter(taskType => taskType?.for_entity === task_type_entity)
-
-        // filter to tasks that exist
-        .filter(taskType => entity_tasks[taskType.id])
-
-        // add a url that points to the task
-        .map(taskType =>
-          getTaskTypeWithUrl(
-            taskType,
-            entity_tasks[taskType.id],
-            task_type_entity_slug
-          )
-        )
-      return filtered
-    },
-
-    title() {
-      if (this.task) {
-        const entityName = this.task.full_entity_name || this.task.entity_name
-        return `${entityName}`
-      } else {
-        return this.$t('main.loading')
-      }
-    },
-
-    isAssigned() {
-      return (
-        this.task?.assignees.some(personId => personId === this.user.id) ??
-        false
-      )
-    },
-
-    isCommentingAllowed() {
-      return (
-        this.task &&
-        (this.isAssigned ||
-          this.isCurrentUserClient ||
-          this.isDepartmentSupervisor ||
-          this.isCurrentUserManager)
-      )
-    },
-
-    isConceptTask() {
-      return this.entityType === 'Concept'
-    },
-
-    isDepartmentSupervisor() {
-      if (!this.isCurrentUserSupervisor) {
-        return false
-      }
-      if (this.user.departments.length === 0) {
-        return true
-      }
-      return this.user.departments.includes(this.currentTaskType?.department_id)
-    },
-
-    isPreviewPlayerReadOnly() {
-      if (this.task) {
-        if (this.isCurrentUserManager || this.isCurrentUserClient) {
-          return false
-        } else if (this.isCurrentUserSupervisor) {
-          if (this.user.departments.length === 0) {
-            return false
-          } else {
-            return !this.user.departments.includes(
-              this.currentTaskType?.department_id
-            )
-          }
-        }
-      }
-      return true
-    },
-
-    isSetThumbnailAllowed() {
-      return (
-        this.currentPreviewId &&
-        this.task &&
-        this.task.entity &&
-        this.currentPreviewId !== this.task.entity.preview_file_id &&
-        this.extension !== 'gif'
-      )
-    },
-
-    currentTaskType() {
-      return this.taskTypeMap.get(this.task?.task_type_id)
-    },
-
-    currentPreview() {
-      const index = this.currentPreviewIndex
-      return this.taskPreviews && this.taskPreviews.length > 0
-        ? this.taskPreviews[index]
-        : null
-    },
-
-    currentPreviewComment() {
-      return this.taskComments.find(comment =>
-        comment.previews?.some(
-          preview => preview.revision === this.currentRevision
-        )
-      )
-    },
-
-    currentPreviewId() {
-      const index = this.currentPreviewIndex
-      if (
-        this.taskPreviews &&
-        this.taskPreviews.length > 0 &&
-        this.taskPreviews[index]
-      ) {
-        return this.taskPreviews[index].id
-      } else {
-        return null
-      }
-    },
-
-    canDownloadAnnotations() {
-      return (
-        this.isCurrentUserManager &&
-        this.currentPreviewId &&
-        (this.currentPreview?.annotations?.length || 0) > 0
-      )
-    },
-
-    annotationsZipPath() {
-      return this.currentPreviewId
-        ? `/api/actions/preview-files/${this.currentPreviewId}/extract-annotated-frames`
-        : null
-    },
-
-    annotationsPdfPath() {
-      return this.currentPreviewId
-        ? `/api/actions/preview-files/${this.currentPreviewId}/extract-annotated-frames-pdf`
-        : null
-    },
-
-    exportActions() {
-      return [
-        {
-          label: 'annotations.zip',
-          href: this.annotationsZipPath,
-          visible: this.canDownloadAnnotations
-        },
-        {
-          label: 'annotations.pdf',
-          href: this.annotationsPdfPath,
-          visible: this.canDownloadAnnotations
-        },
-        {
-          label: 'comments.csv',
-          handler: () => this.onExportClick(),
-          visible: !this.withActions && !this.isCurrentUserClient
-        }
-      ].filter(action => action.visible !== false)
-    },
-
-    currentRevision() {
-      return this.currentParentPreview && this.currentParentPreview.revision
-        ? this.currentParentPreview.revision
-        : this.currentPreview
-          ? this.currentPreview.revision
-          : 0
-    },
-
-    extension() {
-      const index = this.currentPreviewIndex
-      return this.taskPreviews && this.taskPreviews.length > 0
-        ? this.taskPreviews[index].extension
-        : ''
-    },
-
-    isStandardPreview() {
-      return (
-        this.taskPreviews &&
-        this.taskPreviews.length > 0 &&
-        [
-          'ai',
-          'blend',
-          'ma',
-          'mb',
-          'pdf',
-          'psd',
-          'rar',
-          'ae',
-          'fla',
-          'flv',
-          'swf',
-          'zip'
-        ].includes(this.extension)
-      )
-    },
-
-    isMoviePreview() {
-      return (
-        this.taskPreviews &&
-        this.taskPreviews.length > 0 &&
-        this.extension === 'mp4'
-      )
-    },
-
-    isPicturePreview() {
-      return (
-        this.taskPreviews &&
-        this.taskPreviews.length > 0 &&
-        ['png', 'gif'].includes(this.extension)
-      )
-    },
-
-    is3DModelPreview() {
-      return (
-        this.taskPreviews &&
-        this.taskPreviews.length > 0 &&
-        this.extension === 'obj'
-      )
-    },
-
-    moviePath() {
-      const previewId = this.currentPreview.id
-      return `/api/movies/originals/preview-files/${previewId}.mp4`
-    },
-
-    taskStatuses() {
-      return this.getTaskStatusForCurrentUser(
-        this.task.project_id,
-        this.isConceptTask
-      )
-    },
-
-    taskTypeStyle() {
-      return getTaskTypeStyle(this.task)
-    },
-
-    taskPath() {
-      return getTaskPath(
-        this.task,
-        null,
-        this.isTVShow,
-        this.currentEpisode,
-        this.taskTypeMap
-      )
-    },
-
-    taskEntityPath() {
-      const episodeId = this.$route.params.episode_id
-      return getTaskEntityPath(this.task, episodeId)
-    },
-
-    previewOptions() {
-      if (!this.taskPreviews) return []
-      return [...this.taskPreviews]
-        .sort((a, b) => b.revision - a.revision)
-        .map(preview => ({
-          value: preview.id,
-          label: formatRevision(preview.revision, this.currentProduction),
-          validation_status: preview.validation_status
-        }))
-    },
-
-    selectedTasksToDisplay() {
-      return sortTaskNames(
-        Array.from(this.selectedTasks.values()),
-        this.taskTypeMap
-      )
-    }
-  },
-
-  methods: {
-    ...mapActions([
-      'addAttachmentToComment',
-      'ackComment',
-      'addCommentExtraPreview',
-      'commentTask',
-      'commentTaskWithPreview',
-      'deleteAttachment',
-      'deleteTaskComment',
-      'deleteTaskPreview',
-      'editTaskComment',
-      'loadComment',
-      'loadPreviewFileFormData',
-      'loadTask',
-      'loadTaskComments',
-      'loadTaskSubscribed',
-      'refreshPreview',
-      'pinComment',
-      'refreshComment',
-      'removeSelectedTask',
-      'setPreview',
-      'subscribeToTask',
-      'unsubscribeFromTask',
-      'updatePreviewAnnotation'
-    ]),
-
-    loadTaskData() {
-      if (this.task) {
-        this.loading.task = true
-        this.errors.task = false
-        this.loadTaskComments({
-          taskId: this.task.id,
-          entityId: this.task.entity_id
-        })
-          .then(() => {
-            this.loading.task = false
-            this.reset()
-          })
-          .catch(err => {
-            console.error(err)
-            this.errors.task = true
-          })
-      }
-    },
-
-    addComment(
-      comment,
+// Named postComment, not addComment: in script setup a binding whose
+// camelCase matches a component tag shadows the component (camelize
+// wins over capitalize during template resolution), so an addComment
+// function would replace the <add-comment> widget itself.
+const postComment = (
+  comment,
+  attachment,
+  checklist,
+  taskStatusId,
+  revision = undefined,
+  link = undefined,
+  forClient = false
+) => {
+  animOn.value = true
+  nextTick(() => {
+    const params = {
+      taskId: props.task.id,
+      taskStatusId,
       attachment,
       checklist,
-      taskStatusId,
-      revision = undefined,
-      link = undefined,
-      forClient = false
-    ) {
-      this.animOn = true
-      this.$nextTick(() => {
-        let preview = this.currentParentPreview
-          ? this.currentParentPreview
-          : this.currentPreview
-        // find real preview, which contains the `revision`
-        preview = this.taskPreviews.find(p => p.id === preview.id)
-        const params = {
-          taskId: this.task.id,
-          taskStatusId,
-          attachment,
-          checklist,
-          comment,
-          links: link ? [link] : null,
-          revision,
-          forClient
-        }
-        const action =
-          this.previewForms.length > 0
-            ? 'commentTaskWithPreview'
-            : 'commentTask'
-        this.loading.addComment = true
-        this.errors.addComment = false
-        this.errors.addCommentMaxRetakes = false
-        this.$store
-          .dispatch(action, params)
-          .then(() => {
-            drafts.clearTaskDraft(this.task.id)
-            this.$refs['add-comment']?.reset()
-            this.reset()
-            this.loading.addComment = false
-            this.$emit('comment-added')
-          })
-          .catch(err => {
-            console.error(err)
-            const isRetakeError = err.body?.message?.includes('retake') ?? false
-            this.errors.addComment = !isRetakeError
-            this.errors.addCommentMaxRetakes = isRetakeError
-            this.loading.addComment = false
-          })
+      comment,
+      links: link ? [link] : null,
+      revision,
+      forClient
+    }
+    const action =
+      previewForms.value.length > 0 ? 'commentTaskWithPreview' : 'commentTask'
+    loading.addComment = true
+    errors.addComment = false
+    errors.addCommentMaxRetakes = false
+    store
+      .dispatch(action, params)
+      .then(() => {
+        drafts.clearTaskDraft(props.task.id)
+        addCommentRef.value?.reset()
+        reset()
+        loading.addComment = false
+        emit('comment-added')
       })
-    },
-
-    reset({ keepPreviewFiles = false } = {}) {
-      this.resetModals()
-      if (!keepPreviewFiles) {
-        this.clearPreviewFiles()
-      }
-      if (this.task) {
-        this.taskComments = this.getTaskComments(this.task.id)
-        this.taskPreviews = this.getTaskPreviews(this.task.id)
-        this.setOtherPreviews()
-        this.currentPreviewPath = this.getOriginalPath()
-        this.currentPreviewDlPath = this.getOriginalDlPath()
-        this.$nextTick(() => {
-          this.$refs['preview-player']?.focus()
-        })
-      }
-    },
-
-    focusCommentTextarea() {
-      this.$refs['add-comment']?.focus()
-    },
-
-    getOriginalPath() {
-      const previewId = this.currentPreviewId
-      const extension = this.extension ? this.extension : 'png'
-      return `/api/pictures/originals/preview-files/${previewId}.${extension}`
-    },
-
-    getOriginalDlPath() {
-      const previewId = this.currentPreviewId
-      return `/api/pictures/originals/preview-files/${previewId}/download`
-    },
-
-    setOtherPreviews() {
-      if (this.taskPreviews) {
-        this.otherPreviews = this.taskPreviews.filter(p => {
-          return p.id !== this.currentPreviewId && p.extension === 'mp4'
-        })
-      }
-      return this.otherPreviews
-    },
-
-    selectFile(forms) {
-      this.previewForms = this.previewForms.concat(forms)
-      this.loadPreviewFileFormData(this.previewForms)
-    },
-
-    onPreviewFormRemoved(previewForm) {
-      this.previewForms = this.previewForms.filter(f => f !== previewForm)
-      this.loadPreviewFileFormData(this.previewForms)
-    },
-
-    clearPreviewFiles() {
-      this.previewForms = []
-      this.loadPreviewFileFormData(this.previewForms)
-      this.$store.commit('CLEAR_UPLOAD_PROGRESS')
-    },
-
-    createExtraPreview(forms) {
-      this.selectFile(forms)
-      this.errors.addExtraPreview = false
-      this.loading.addExtraPreview = true
-      const comment = this.taskComments.find(comment =>
-        comment.previews.find(preview => preview.id === this.currentPreviewId)
-      )
-      this.addCommentExtraPreview({
-        taskId: this.task.id,
-        commentId: comment?.id,
-        previewId: this.currentPreviewId
-      })
-        .then(() => {
-          this.loading.addExtraPreview = false
-          this.$refs['add-extra-preview-modal'].reset()
-          this.reset()
-          setTimeout(() => {
-            this.$refs['preview-player']?.displayLast()
-          }, 0)
-          this.modals.addExtraPreview = false
-        })
-        .catch(err => {
-          console.error(err)
-          this.loading.addExtraPreview = false
-          this.errors.addExtraPreview = true
-        })
-    },
-
-    onPreviewAdded(eventData) {
-      const taskId = eventData.task_id
-      const commentId = eventData.comment_id
-      const previewId = eventData.preview_file_id
-      const revision = eventData.revision
-      const extension = eventData.extension
-      const comment = this.getTaskComment(taskId, commentId)
-
-      if (this.task) {
-        if (
-          taskId === this.task.id &&
-          comment &&
-          (comment.previews.length === 0 ||
-            comment.previews[0].id !== previewId)
-        ) {
-          this.$store.commit('ADD_PREVIEW_END', {
-            preview: {
-              id: previewId,
-              revision,
-              extension
-            },
-            taskId,
-            commentId,
-            comment
-          })
-          this.reset({ keepPreviewFiles: true })
-        }
-      }
-    },
-
-    onPreviewsOrderChange() {
-      this.taskPreviews = this.getTaskPreviews(this.task.id)
-      this.setOtherPreviews()
-      this.currentPreviewPath = this.getOriginalPath()
-      this.currentPreviewDlPath = this.getOriginalDlPath()
-    },
-
-    async onAnnotationChanged({ preview, additions, deletions, updates }) {
-      let taskId = this.task ? this.task.id : this.previousTaskId
-      taskId = taskId || preview.task_id
-      if (!taskId) return
-      const previewPlayer = this.$refs['preview-player']
-      try {
-        await this.updatePreviewAnnotation({
-          taskId,
-          preview,
-          additions,
-          deletions,
-          updates
-        })
-        previewPlayer?.confirmAnnotationsSaved()
-      } catch {
-        previewPlayer?.restoreFailedAnnotations()
-      }
-    },
-
-    onAddPreviewClicked() {
-      this.modals.addPreview = true
-    },
-
-    onAddExtraPreview() {
-      this.clearPreviewFiles()
-      this.modals.addExtraPreview = true
-    },
-
-    onRemoveExtraPreview(preview) {
-      this.currentExtraPreviewId = preview.id
-      this.modals.deleteExtraPreview = true
-    },
-
-    onCommentAdded() {
-      this.taskComments = this.getTaskComments(this.task.id)
-    },
-
-    onCancelRemoveExtraPreview() {
-      this.modals.deleteExtraPreview = false
-    },
-
-    closeAddPreviewModal() {
-      this.modals.addPreview = false
-    },
-
-    confirmAddPreviewModal(forms) {
-      this.selectFile(forms)
-      this.closeAddPreviewModal()
-    },
-
-    onCloseExtraPreview() {
-      this.modals.addExtraPreview = false
-    },
-
-    onPreviewChanged(previewId) {
-      this.currentPreviewIndex = this.taskPreviews.findIndex(
-        p => p.id === previewId
-      )
-      this.currentPreviewPath = this.getOriginalPath()
-      this.currentPreviewDlPath = this.getOriginalDlPath()
-    },
-
-    changeCurrentPreview(previewFile) {
-      const index = this.taskPreviews.findIndex(p => p.id === previewFile.id)
-      if (index || index === 0) {
-        this.currentPreviewIndex = index
-        this.currentPreviewPath = this.getOriginalPath()
-        this.currentPreviewDlPath = this.getOriginalDlPath()
-      }
-    },
-
-    setCurrentPreviewAsEntityThumbnail(frame) {
-      const previewPlayer = this.$refs['preview-player']
-      const previewId = previewPlayer.currentPreview.id
-      this.setPreview({
-        taskId: this.task.id,
-        entityId: this.task.entity_id,
-        previewId,
-        frame
-      }).finally(() => {
-        this.loading.setFrameThumbnail = false
-      })
-    },
-
-    onAckComment(comment) {
-      this.ackComment(comment)
-    },
-
-    onDuplicateComment(comment) {
-      this.$refs['add-comment'].setValue(comment)
-    },
-
-    onPinComment(comment) {
-      this.pinComment(comment)
-    },
-
-    onToggleForClient(comment) {
-      this.$store.dispatch('toggleCommentForClient', comment)
-    },
-
-    onEditComment(comment) {
-      this.commentToEdit = comment
-      this.modals.editComment = true
-    },
-
-    onDeleteComment(comment) {
-      this.commentToEdit = comment
-      this.modals.deleteComment = true
-    },
-
-    onMoveComment(comment) {
-      this.commentToMove = comment
-      this.errors.moveComment = false
-      this.modals.moveComment = true
-    },
-
-    onCancelEditComment() {
-      this.modals.editComment = false
-    },
-
-    onCancelDeleteComment() {
-      this.modals.deleteComment = false
-    },
-
-    onCancelMoveComment() {
-      this.modals.moveComment = false
-    },
-
-    async confirmMoveComment(targetTaskId) {
-      this.animOn = true
-      this.loading.moveComment = true
-      this.errors.moveComment = false
-      try {
-        await this.$store.dispatch('moveCommentToTask', {
-          taskId: this.task.id,
-          commentId: this.commentToMove.id,
-          targetTaskId
-        })
-        this.taskComments = this.getTaskComments(this.task.id)
-        this.modals.moveComment = false
-        this.commentToMove = null
-      } catch (err) {
+      .catch(err => {
         console.error(err)
-        this.errors.moveComment = true
-      } finally {
-        this.loading.moveComment = false
-      }
-    },
-
-    isClientFromSameStudio(person) {
-      return (
-        this.isCurrentUserClient &&
-        this.user.studio_id === person.studio_id &&
-        person.role === 'client'
-      )
-    },
-
-    async saveComment(comment) {
-      try {
-        await this.editTaskComment({
-          taskId: this.task.id,
-          comment
-        })
-      } catch (err) {
-        console.error(err)
-        await this.loadTaskData()
-      }
-    },
-
-    confirmDeleteTaskComment() {
-      this.animOn = true
-      this.loading.deleteComment = true
-      this.errors.deleteComment = false
-      const commentId = this.commentToEdit.id
-
-      this.deleteTaskComment({
-        taskId: this.task.id,
-        commentId
+        const isRetakeError = err.body?.message?.includes('retake') ?? false
+        errors.addComment = !isRetakeError
+        errors.addCommentMaxRetakes = isRetakeError
+        loading.addComment = false
       })
-        .then(() => {
-          this.reset()
-          this.loading.deleteComment = false
-          this.modals.deleteComment = false
-        })
-        .catch(err => {
-          console.error(err)
-          this.loading.deleteComment = false
-          this.errors.deleteComment = true
-        })
-        .finally(() => {
-          this.animOn = false
-        })
-    },
+  })
+}
 
-    getCurrentTaskComments() {
-      return this.getTaskComments(this.task.id)
-    },
+const resetModals = () => {
+  addPreviewModalRef.value?.reset()
+}
 
-    confirmDeleteTaskPreview() {
-      this.loading.deleteExtraPreview = true
-      this.errors.deleteExtraPreview = false
-      const previewId = this.currentExtraPreviewId
-      const comment = this.getCurrentTaskComments().find(comment => {
-        return comment.previews.findIndex(p => p.id === previewId) >= 0
-      })
+const resetComments = () => {
+  taskComments.value = getCurrentTaskComments()
+}
 
-      this.$refs['preview-player'].displayFirst()
-      this.deleteTaskPreview({
-        taskId: this.task.id,
-        commentId: comment?.id,
-        previewId
-      })
-        .then(() => {
-          this.loading.deleteExtraPreview = false
-          this.modals.deleteExtraPreview = false
-        })
-        .catch(err => {
-          console.error(err)
-          this.loading.deleteExtraPreview = false
-          this.errors.deleteExtraPreview = true
-        })
-    },
+const reset = ({ keepPreviewFiles = false } = {}) => {
+  resetModals()
+  if (!keepPreviewFiles) {
+    clearPreviewFiles()
+  }
+  if (props.task) {
+    resetComments()
+    taskPreviews.value = store.getters.getTaskPreviews(props.task.id)
+    nextTick(() => {
+      previewPlayerRef.value?.focus()
+    })
+  }
+}
 
-    onRemoteAcknowledge(eventData, type) {
-      if (this.task) {
-        const comment = this.getTaskComment(this.task.id, eventData.comment_id)
-        const user = this.personMap.get(eventData.person_id)
-        if (comment && user) {
-          if (this.user.id === user.id) {
-            if (
-              (type === 'ack' && !comment.acknowledgements.includes(user.id)) ||
-              (type === 'unack' && comment.acknowledgements.includes(user.id))
-            ) {
-              this.$store.commit('ACK_COMMENT', { comment, user })
-            }
-          } else {
-            this.$store.commit('ACK_COMMENT', { comment, user })
-          }
-        }
-      }
-    },
+const focusCommentTextarea = () => {
+  addCommentRef.value?.focus()
+}
 
-    isStatusChange(index) {
-      const comment = this.taskComments[index]
-      return (
-        index === this.taskComments.length - 1 ||
-        comment.task_status_id !== this.taskComments[index + 1].task_status_id
-      )
-    },
+const selectFile = forms => {
+  previewForms.value = previewForms.value.concat(forms)
+  store.dispatch('loadPreviewFileFormData', previewForms.value)
+}
 
-    timeCodeClicked({
-      versionRevision,
-      minutes,
-      seconds,
-      milliseconds,
-      frame
-    }) {
-      if (!this.isPreview) {
-        this.$emit('time-code-clicked', {
-          versionRevision,
-          minutes,
-          seconds,
-          milliseconds,
-          frame
-        })
-        return
-      }
-      this.changeCurrentPreview(
-        this.taskPreviews.find(p => p.revision === parseInt(versionRevision))
-      )
+const onPreviewFormRemoved = previewForm => {
+  previewForms.value = previewForms.value.filter(f => f !== previewForm)
+  store.dispatch('loadPreviewFileFormData', previewForms.value)
+}
+
+const clearPreviewFiles = () => {
+  previewForms.value = []
+  store.dispatch('loadPreviewFileFormData', previewForms.value)
+  store.commit('CLEAR_UPLOAD_PROGRESS')
+}
+
+const createExtraPreview = forms => {
+  selectFile(forms)
+  errors.addExtraPreview = false
+  loading.addExtraPreview = true
+  const comment = taskComments.value.find(comment =>
+    comment.previews.find(preview => preview.id === currentPreviewId.value)
+  )
+  store
+    .dispatch('addCommentExtraPreview', {
+      taskId: props.task.id,
+      commentId: comment?.id,
+      previewId: currentPreviewId.value
+    })
+    .then(() => {
+      loading.addExtraPreview = false
+      addExtraPreviewModalRef.value.reset()
+      reset()
       setTimeout(() => {
-        this.$refs['preview-player']?.setCurrentFrame(frame)
-        this.$refs['preview-player']?.focus()
-      }, 20)
-    },
+        previewPlayerRef.value?.displayLast()
+      }, 0)
+      modals.addExtraPreview = false
+    })
+    .catch(err => {
+      console.error(err)
+      loading.addExtraPreview = false
+      errors.addExtraPreview = true
+    })
+}
 
-    onFrameUpdated(frame) {
-      this.currentFrameRaw = frame
-    },
+const onPreviewAdded = eventData => {
+  const taskId = eventData.task_id
+  const commentId = eventData.comment_id
+  const previewId = eventData.preview_file_id
+  const revision = eventData.revision
+  const extension = eventData.extension
+  const comment = store.getters.getTaskComment(taskId, commentId)
 
-    async extractAnnotationSnapshots(withLabel = false) {
-      let previewPlayer = this.$refs['preview-player']
-      if (!previewPlayer) previewPlayer = this.player
-      this.$refs['add-comment'].showAnnotationLoading(
-        withLabel ? 'label' : 'standard'
-      )
-      const files = await previewPlayer.extractAnnotationSnapshots({
-        withLabel
+  if (props.task) {
+    if (
+      taskId === props.task.id &&
+      comment &&
+      (comment.previews.length === 0 || comment.previews[0].id !== previewId)
+    ) {
+      store.commit('ADD_PREVIEW_END', {
+        preview: {
+          id: previewId,
+          revision,
+          extension
+        },
+        taskId,
+        commentId,
+        comment
       })
-      this.$refs['add-comment'].hideAnnotationLoading()
-      this.$refs['add-comment'].setAnnotationSnapshots(files)
-      return files
-    },
+      reset({ keepPreviewFiles: true })
+    }
+  }
+}
 
-    onExportClick() {
-      const nameData = [
-        moment().format('YYYY-MM-DD'),
-        'kitsu',
-        this.productionMap.get(this.task.project_id)?.name,
-        this.task.entity_name.replaceAll(' / ', '_'),
-        this.taskTypeMap.get(this.task.task_type_id).name,
-        'comments'
-      ]
-      const name = stringHelpers.slugify(nameData.join('_'))
-      const headers = [
-        this.$t('comments.fields.created_at'),
-        this.$t('comments.fields.task_status'),
-        this.$t('comments.fields.person'),
-        this.$t('comments.fields.text'),
-        this.$t('comments.fields.checklist'),
-        this.$t('comments.fields.acknowledgements'),
-        this.$t('comments.fields.revision'),
-        this.$t('comments.fields.attachments')
-      ]
-      const commentLines = []
-      this.getCurrentTaskComments().forEach(comment => {
+const onPreviewsOrderChange = () => {
+  taskPreviews.value = store.getters.getTaskPreviews(props.task.id)
+}
+
+const onAnnotationChanged = async ({
+  preview,
+  additions,
+  deletions,
+  updates
+}) => {
+  const taskId = props.task?.id || preview.task_id
+  if (!taskId) return
+  try {
+    await store.dispatch('updatePreviewAnnotation', {
+      taskId,
+      preview,
+      additions,
+      deletions,
+      updates
+    })
+    previewPlayerRef.value?.confirmAnnotationsSaved()
+  } catch {
+    previewPlayerRef.value?.restoreFailedAnnotations()
+  }
+}
+
+const onAddPreviewClicked = () => {
+  modals.addPreview = true
+}
+
+const onAddExtraPreview = () => {
+  clearPreviewFiles()
+  modals.addExtraPreview = true
+}
+
+const onRemoveExtraPreview = preview => {
+  currentExtraPreviewId = preview.id
+  modals.deleteExtraPreview = true
+}
+
+const onCommentAdded = () => {
+  resetComments()
+}
+
+const onCancelRemoveExtraPreview = () => {
+  modals.deleteExtraPreview = false
+}
+
+const closeAddPreviewModal = () => {
+  modals.addPreview = false
+}
+
+const confirmAddPreviewModal = forms => {
+  selectFile(forms)
+  closeAddPreviewModal()
+}
+
+const onCloseExtraPreview = () => {
+  modals.addExtraPreview = false
+}
+
+const onPreviewChanged = previewId => {
+  currentPreviewIndex.value = taskPreviews.value.findIndex(
+    p => p.id === previewId
+  )
+}
+
+const changeCurrentPreview = previewFile => {
+  currentPreviewIndex.value = taskPreviews.value.findIndex(
+    p => p.id === previewFile.id
+  )
+}
+
+const setCurrentPreviewAsEntityThumbnail = frame => {
+  const previewId = previewPlayerRef.value.currentPreview.id
+  store
+    .dispatch('setPreview', {
+      taskId: props.task.id,
+      entityId: props.task.entity_id,
+      previewId,
+      frame
+    })
+    .finally(() => {
+      loading.setFrameThumbnail = false
+    })
+}
+
+const onAckComment = comment => {
+  store.dispatch('ackComment', comment)
+}
+
+const onDuplicateComment = comment => {
+  addCommentRef.value.setValue(comment)
+}
+
+const onPinComment = comment => {
+  store.dispatch('pinComment', comment)
+}
+
+const onToggleForClient = comment => {
+  store.dispatch('toggleCommentForClient', comment)
+}
+
+const onEditComment = comment => {
+  commentToEdit.value = comment
+  modals.editComment = true
+}
+
+const onDeleteComment = comment => {
+  commentToEdit.value = comment
+  modals.deleteComment = true
+}
+
+const onMoveComment = comment => {
+  commentToMove.value = comment
+  errors.moveComment = false
+  modals.moveComment = true
+}
+
+const onCancelEditComment = () => {
+  modals.editComment = false
+}
+
+const onCancelDeleteComment = () => {
+  modals.deleteComment = false
+}
+
+const onCancelMoveComment = () => {
+  modals.moveComment = false
+}
+
+const confirmEditTaskComment = comment => {
+  loading.editComment = true
+  errors.editComment = false
+  const attachmentFilesToDelete = comment.attachmentFilesToDelete || []
+  const newAttachmentFiles = comment.newAttachmentFiles || []
+  delete comment.attachmentFilesToDelete
+  delete comment.newAttachmentFiles
+  func
+    .runPromiseMapAsSeries(attachmentFilesToDelete, attachment =>
+      store.dispatch('deleteAttachment', {
+        attachment,
+        comment: commentToEdit.value
+      })
+    )
+    .then(() =>
+      store.dispatch('addAttachmentToComment', {
+        comment: commentToEdit.value,
+        files: newAttachmentFiles
+      })
+    )
+    .then(() =>
+      store.dispatch('editTaskComment', {
+        taskId: props.task.id,
+        comment
+      })
+    )
+    .then(() => {
+      nextTick(() => {
+        resetComments()
+      })
+      loading.editComment = false
+      modals.editComment = false
+    })
+    .catch(err => {
+      console.error(err)
+      loading.editComment = false
+      errors.editComment = true
+    })
+}
+
+const confirmMoveComment = async targetTaskId => {
+  animOn.value = true
+  loading.moveComment = true
+  errors.moveComment = false
+  try {
+    await store.dispatch('moveCommentToTask', {
+      taskId: props.task.id,
+      commentId: commentToMove.value.id,
+      targetTaskId
+    })
+    resetComments()
+    modals.moveComment = false
+    commentToMove.value = null
+  } catch (err) {
+    console.error(err)
+    errors.moveComment = true
+  } finally {
+    loading.moveComment = false
+  }
+}
+
+const isClientFromSameStudio = person =>
+  isCurrentUserClient.value &&
+  user.value.studio_id === person.studio_id &&
+  person.role === 'client'
+
+const saveComment = async comment => {
+  try {
+    await store.dispatch('editTaskComment', {
+      taskId: props.task.id,
+      comment
+    })
+  } catch (err) {
+    console.error(err)
+    await loadTaskData()
+  }
+}
+
+const confirmDeleteTaskComment = () => {
+  animOn.value = true
+  loading.deleteComment = true
+  errors.deleteComment = false
+  const commentId = commentToEdit.value.id
+
+  store
+    .dispatch('deleteTaskComment', {
+      taskId: props.task.id,
+      commentId
+    })
+    .then(() => {
+      reset()
+      loading.deleteComment = false
+      modals.deleteComment = false
+    })
+    .catch(err => {
+      console.error(err)
+      loading.deleteComment = false
+      errors.deleteComment = true
+    })
+    .finally(() => {
+      animOn.value = false
+    })
+}
+
+const confirmDeleteTaskPreview = () => {
+  loading.deleteExtraPreview = true
+  errors.deleteExtraPreview = false
+  const previewId = currentExtraPreviewId
+  const comment = getCurrentTaskComments().find(comment => {
+    return comment.previews.findIndex(p => p.id === previewId) >= 0
+  })
+
+  previewPlayerRef.value.displayFirst()
+  store
+    .dispatch('deleteTaskPreview', {
+      taskId: props.task.id,
+      commentId: comment?.id,
+      previewId
+    })
+    .then(() => {
+      loading.deleteExtraPreview = false
+      modals.deleteExtraPreview = false
+    })
+    .catch(err => {
+      console.error(err)
+      loading.deleteExtraPreview = false
+      errors.deleteExtraPreview = true
+    })
+}
+
+const onRemoteAcknowledge = (eventData, type) => {
+  if (!props.task) return
+  const comment = store.getters.getTaskComment(
+    props.task.id,
+    eventData.comment_id
+  )
+  const person = personMap.value.get(eventData.person_id)
+  if (!comment || !person) return
+  const hasAck = comment.acknowledgements.includes(person.id)
+  // For the current user's own events, skip commits that would double
+  // apply an acknowledgement already reflected locally.
+  if (user.value.id !== person.id || (type === 'ack') !== hasAck) {
+    store.commit('ACK_COMMENT', { comment, user: person })
+  }
+}
+
+const isStatusChange = index => {
+  const comment = taskComments.value[index]
+  return (
+    index === taskComments.value.length - 1 ||
+    comment.task_status_id !== taskComments.value[index + 1].task_status_id
+  )
+}
+
+const timeCodeClicked = payload => {
+  if (!props.isPreview) {
+    emit('time-code-clicked', payload)
+    return
+  }
+  const { versionRevision, frame } = payload
+  changeCurrentPreview(
+    taskPreviews.value.find(p => p.revision === parseInt(versionRevision))
+  )
+  setTimeout(() => {
+    previewPlayerRef.value?.setCurrentFrame(frame)
+    previewPlayerRef.value?.focus()
+  }, 20)
+}
+
+const onFrameUpdated = frame => {
+  currentFrameRaw.value = frame
+}
+
+const extractAnnotationSnapshots = async (withLabel = false) => {
+  const previewPlayer = previewPlayerRef.value || props.player
+  addCommentRef.value.showAnnotationLoading(withLabel ? 'label' : 'standard')
+  const files = await previewPlayer.extractAnnotationSnapshots({
+    withLabel
+  })
+  addCommentRef.value.hideAnnotationLoading()
+  addCommentRef.value.setAnnotationSnapshots(files)
+  return files
+}
+
+const onExportClick = () => {
+  const nameData = [
+    formatSimpleDate(moment()),
+    'kitsu',
+    productionMap.value.get(props.task.project_id)?.name,
+    props.task.entity_name.replaceAll(' / ', '_'),
+    taskTypeMap.value.get(props.task.task_type_id).name,
+    'comments'
+  ]
+  const name = stringHelpers.slugify(nameData.join('_'))
+  const headers = [
+    t('comments.fields.created_at'),
+    t('comments.fields.task_status'),
+    t('comments.fields.person'),
+    t('comments.fields.text'),
+    t('comments.fields.checklist'),
+    t('comments.fields.acknowledgements'),
+    t('comments.fields.revision'),
+    t('comments.fields.attachments')
+  ]
+  const commentLines = []
+  getCurrentTaskComments().forEach(comment => {
+    commentLines.push([
+      formatDate(comment.created_at),
+      comment.task_status.name,
+      comment.person.name,
+      comment.text,
+      comment.checklist
+        ? comment.checklist
+            .map(item => {
+              const checked = item.checked ? 'x' : ' '
+              const revision =
+                item.revision > -1
+                  ? `(${formatRevision(item.revision, currentProduction.value)} - ${formatFrame(item.frame)}) `
+                  : ''
+              return `[${checked}] ${revision}${item.text}`
+            })
+            .join('\n')
+        : '',
+      comment.acknowledgements
+        ? comment.acknowledgements
+            .map(personId => personMap.value.get(personId).name)
+            .join(',')
+        : '',
+      comment.previews[0]?.revision,
+      comment.attachment_files
+        ? comment.attachment_files
+            .filter(attachment => !attachment.reply_id)
+            .map(attachment => getDownloadAttachmentPath(attachment, true))
+            .join('\n')
+        : ''
+    ])
+    if (comment.replies) {
+      comment.replies.forEach(reply =>
         commentLines.push([
-          this.formatDate(comment.created_at),
-          comment.task_status.name,
-          comment.person.name,
-          comment.text,
-          comment.checklist
-            ? comment.checklist
-                .map(item => {
-                  const checked = item.checked ? 'x' : ' '
-                  const revision =
-                    item.revision > -1
-                      ? `(${formatRevision(item.revision, this.currentProduction)} - ${formatFrame(item.frame)}) `
-                      : ''
-                  return `[${checked}] ${revision}${item.text}`
-                })
-                .join('\n')
-            : '',
-          comment.acknowledgements
-            ? comment.acknowledgements
-                .map(personId => this.personMap.get(personId).name)
-                .join(',')
-            : '',
-          comment.previews[0]?.revision,
+          formatDate(reply.date),
+          t('main.reply'),
+          personMap.value.get(reply.person_id).name,
+          reply.text,
+          null,
+          null,
+          null,
           comment.attachment_files
             ? comment.attachment_files
-                .filter(attachment => !attachment.reply_id)
+                .filter(attachment => attachment.reply_id === reply.id)
                 .map(attachment => getDownloadAttachmentPath(attachment, true))
                 .join('\n')
             : ''
         ])
-        if (comment.replies) {
-          comment.replies.forEach(reply =>
-            commentLines.push([
-              this.formatDate(reply.date),
-              this.$t('main.reply'),
-              this.personMap.get(reply.person_id).name,
-              reply.text,
-              null,
-              null,
-              null,
-              comment.attachment_files
-                ? comment.attachment_files
-                    .filter(attachment => attachment.reply_id === reply.id)
-                    .map(attachment =>
-                      getDownloadAttachmentPath(attachment, true)
-                    )
-                    .join('\n')
-                : ''
-            ])
-          )
-        }
+      )
+    }
+  })
+  csv.buildCsvFile(name, [headers, ...commentLines])
+}
+
+const onExtendDown = event => {
+  if (!sideColumnParent.value) {
+    return
+  }
+  lastWidthX = getClientX(event)
+  lastWidth = sideColumnParent.value.offsetWidth
+  addEvents(domEvents)
+}
+
+const onExtendMove = event => {
+  const diff = lastWidthX - getClientX(event)
+  let panelWidth = Math.max(lastWidth + diff, DEFAULT_PANEL_WIDTH)
+  if (panelWidth > 900) panelWidth = 900
+  setWidth(panelWidth)
+  refreshPreviewPlay()
+}
+
+const onExtendUp = () => {
+  removeEvents(domEvents)
+  refreshPreviewPlay()
+  if (sideColumnParent.value) {
+    preferences.setPreference(
+      'task:panel-width',
+      sideColumnParent.value.offsetWidth
+    )
+  }
+}
+
+const domEvents = [
+  ['mousemove', onExtendMove],
+  ['touchmove', onExtendMove],
+  ['mouseup', onExtendUp],
+  ['mouseleave', onExtendUp],
+  ['touchend', onExtendUp],
+  ['touchcancel', onExtendUp]
+]
+
+const setWidth = width => {
+  if (!sideColumnParent.value) {
+    return
+  }
+  sideColumnParent.value.style['min-width'] = `${width}px`
+  isWide.value = width > 699
+  isExtraWide.value = width >= 900
+}
+
+const onSetCurrentFrameAsThumbnail = isUseCurrentFrame => {
+  if (previewPlayerRef.value) {
+    loading.setFrameThumbnail = true
+    const frame = isUseCurrentFrame ? currentFrameRaw.value + 1 : null
+    return setCurrentPreviewAsEntityThumbnail(frame)
+  }
+}
+
+const refreshPreviewPlay = () => {
+  previewPlayerRef.value?.resize()
+}
+
+const removeTaskFromSelection = task => {
+  const data = {
+    column: { id: task.task_type_id },
+    entity: { id: task.entity_id },
+    task
+  }
+  store.dispatch('removeSelectedTask', { task: data }) // remove list selection
+  store.dispatch('removeSelectedTask', { task }) // remove
+  emit('task-removed', task)
+}
+
+const onRemotePreviewUpdate = eventData => {
+  const comment = taskComments.value.find(
+    c =>
+      c.previews &&
+      c.previews.length > 0 &&
+      c.previews[0].id === eventData.preview_file_id
+  )
+  if (comment && props.task) {
+    store
+      .dispatch('refreshPreview', {
+        taskId: props.task.id,
+        previewId: eventData.preview_file_id
       })
-      csv.buildCsvFile(name, [headers].concat(commentLines))
-    },
+      .then(preview => {
+        comment.previews[0].validation_status = preview.validation_status
+      })
+  }
+}
 
-    onExtendDown(event) {
-      if (!this.sideColumnParent) {
-        return
+const onRemoteTaskUpdate = eventData => {
+  // Wait for data to be reinitialized by App.vue to update comments.
+  if (props.task && eventData.task_id === props.task.id) {
+    setTimeout(() => {
+      // in case the task changed during the timeout
+      if (props.task && eventData.task_id === props.task.id) {
+        resetComments()
       }
-      this.lastWidthX = this.getClientX(event)
-      const panelWidth = this.sideColumnParent.offsetWidth
-      this.lastWidth = panelWidth
-      this.addEvents(this.domEvents)
-    },
+    }, 1000)
+  }
+}
 
-    onExtendMove(event) {
-      const diff = this.lastWidthX - this.getClientX(event)
-      let panelWidth = Math.max(this.lastWidth + diff, DEFAULT_PANEL_WIDTH)
-      if (panelWidth > 900) panelWidth = 900
-      this.setWidth(panelWidth)
-      this.refreshPreviewPlay()
-    },
-
-    onExtendUp() {
-      this.removeEvents(this.domEvents)
-      this.refreshPreviewPlay()
-      if (this.sideColumnParent) {
-        const panelWidth = this.sideColumnParent.offsetWidth
-        preferences.setPreference('task:panel-width', panelWidth)
-      }
-    },
-
-    setWidth(width) {
-      if (!this.sideColumnParent) {
-        return
-      }
-      this.sideColumnParent.style['min-width'] = `${width}px`
-      this.isWide = width > 699
-      this.isExtraWide = width >= 900
-    },
-
-    onSetCurrentFrameAsThumbnail(isUseCurrentFrame) {
-      if (this.$refs['preview-player']) {
-        this.loading.setFrameThumbnail = true
-        let frame = null
-        if (isUseCurrentFrame) {
-          frame = this.currentFrameRaw + 1
-        }
-        return this.setCurrentPreviewAsEntityThumbnail(frame)
-      }
-    },
-
-    refreshPreviewPlay() {
-      this.$refs['preview-player']?.resize()
-    },
-
-    removeTaskFromSelection(task) {
-      const data = {
-        column: { id: task.task_type_id },
-        entity: { id: task.entity_id },
-        task
-      }
-      this.removeSelectedTask({ task: data }) // remove list selection
-      this.removeSelectedTask({ task }) // remove
-      this.$emit('task-removed', task)
+const onRemoteCommentNew = eventData => {
+  setTimeout(() => {
+    animOn.value = true
+    const comments = props.task
+      ? store.getters.getTaskComments(props.task.id)
+      : null
+    if (
+      props.task &&
+      comments &&
+      comments.length !== taskComments.value.length &&
+      eventData.task_id === props.task.id &&
+      !loading.task
+    ) {
+      taskComments.value = comments
+      taskPreviews.value = store.getters.getTaskPreviews(props.task.id)
     }
-  },
+    animOn.value = false
+  }, 1000)
+}
 
-  watch: {
-    task() {
-      this.clearPreviewFiles()
-      this.currentPreviewIndex = 0
-      if (!this.silent) {
-        this.loadTaskData()
-      }
-    },
+const onRemoteCommentUpdate = eventData => {
+  const commentId = eventData.comment_id
+  if (
+    store.getters.isSavingCommentPreview ||
+    (!props.task && !taskComments.value.some(({ id }) => id === commentId))
+  ) {
+    return
+  }
+  store.dispatch('loadComment', { commentId }).catch(console.error)
+}
 
-    silent: {
-      immediate: true,
-      handler() {
-        if (!this.silent) {
-          this.loadTaskData()
-        }
-      }
-    },
+const onRemoteCommentAck = eventData => onRemoteAcknowledge(eventData, 'ack')
 
-    currentFrame() {
-      this.currentFrameRaw = this.currentFrame
-    }
-  },
+const onRemoteCommentUnack = eventData =>
+  onRemoteAcknowledge(eventData, 'unack')
 
-  socket: {
-    events: {
-      'preview-file:add-file'(eventData) {
-        this.onPreviewAdded(eventData)
-      },
-
-      'preview-file:update'(eventData) {
-        const comment = this.taskComments.find(
-          c =>
-            c.previews &&
-            c.previews.length > 0 &&
-            c.previews[0].id === eventData.preview_file_id
-        )
-        if (comment && this.task) {
-          this.refreshPreview({
-            taskId: this.task.id,
-            previewId: eventData.preview_file_id
-          }).then(preview => {
-            comment.previews[0].validation_status = preview.validation_status
+const onRemoteCommentReply = eventData => {
+  if (props.task) {
+    const comment = taskComments.value.find(c => c.id === eventData.comment_id)
+    if (comment) {
+      if (!comment.replies) comment.replies = []
+      const reply = comment.replies.find(r => r.id === eventData.reply_id)
+      if (!reply) {
+        store
+          .dispatch('refreshComment', {
+            commentId: eventData.comment_id
           })
-        }
-      },
-
-      'task:update'(eventData) {
-        const task = this.getTask()
-        // Wait for data to be reinitialized by App.vue to update comments.
-        if (task && eventData.task_id === task.id) {
-          setTimeout(() => {
-            const task = this.getTask()
-            // in case the task changed during the timeout
-            if (task && eventData.task_id === task.id) {
-              this.taskComments = this.getTaskComments(task.id)
-            }
-          }, 1000)
-        }
-      },
-
-      'comment:new'(eventData) {
-        setTimeout(() => {
-          this.animOn = true
-          const comments = this.task ? this.getTaskComments(this.task.id) : null
-          if (
-            this.task &&
-            comments &&
-            comments.length !== this.taskComments.length &&
-            eventData.task_id === this.task.id &&
-            !this.loading.task
-          ) {
-            this.taskComments = comments
-            this.taskPreviews = this.getTaskPreviews(this.task.id)
-          }
-          this.animOn = false
-        }, 1000)
-      },
-
-      'comment:update'(eventData) {
-        const commentId = eventData.comment_id
-        if (
-          this.isSavingCommentPreview ||
-          (!this.task && !this.taskComments.some(({ id }) => id === commentId))
-        ) {
-          return
-        }
-        this.loadComment({ commentId }).catch(console.error)
-      },
-
-      'comment:acknowledge'(eventData) {
-        this.onRemoteAcknowledge(eventData, 'ack')
-      },
-
-      'comment:unacknowledge'(eventData) {
-        this.onRemoteAcknowledge(eventData, 'unack')
-      },
-
-      'comment:reply'(eventData) {
-        if (this.task) {
-          const comment = this.taskComments.find(
-            c => c.id === eventData.comment_id
-          )
-          if (comment) {
-            if (!comment.replies) comment.replies = []
-            const reply = comment.replies.find(r => r.id === eventData.reply_id)
-            if (!reply) {
-              this.refreshComment({
-                commentId: eventData.comment_id
-              })
-                .then(remoteComment => {
-                  comment.replies = remoteComment.replies
-                })
-                .catch(console.error)
-            }
-          }
-        }
-      },
-
-      'comment:delete'(eventData) {
-        const task = this.getTask()
-        this.animOn = true
-        if (task) {
-          const comments = this.getComments()
-          const comment = comments.find(c => c.id === eventData.comment_id)
-          if (comment) {
-            this.$store.commit('REMOVE_TASK_COMMENT', { task, comment })
-            this.taskComments = this.getTaskComments(this.task.id)
-            this.taskPreviews = this.getTaskPreviews(this.task.id)
-          }
-          this.animOn = false
-        }
-      },
-
-      'comment:delete-reply'(eventData) {
-        if (this.task) {
-          const comment = this.taskComments.find(
-            c => c.id === eventData.comment_id
-          )
-          if (comment) {
-            if (!comment.replies) comment.replies = []
-            this.$store.commit('REMOVE_REPLY_FROM_COMMENT', {
-              comment,
-              reply: { id: eventData.reply_id }
-            })
-          }
-        }
-      },
-
-      'preview-file:annotation-update'(eventData) {
-        const previewPlayer = this.$refs['preview-player']
-        if (!previewPlayer) return
-        const isValid = previewPlayer.isValidPreviewModification(
-          eventData.preview_file_id,
-          eventData.updated_at
-        )
-        if (isValid) {
-          this.refreshPreview({
-            previewId: previewPlayer.currentPreview.id,
-            taskId: previewPlayer.currentPreview.task_id
-          }).then(() => {
-            if (!previewPlayer.notSaved) {
-              this.taskPreviews = this.getTaskPreviews(this.task.id)
-              // Wait for the refreshed previews prop to propagate to the
-              // player before reloading — otherwise reloadAnnotations
-              // reads the stale currentPreview and the remote drawing
-              // never shows up outside a review room.
-              this.$nextTick(() => {
-                previewPlayer.reloadAnnotations()
-                previewPlayer.loadAnnotation()
-              })
-            }
+          .then(remoteComment => {
+            comment.replies = remoteComment.replies
           })
-        }
-      }
-    },
-
-    head() {
-      return {
-        title: this.title
+          .catch(console.error)
       }
     }
   }
 }
+
+const onRemoteCommentDelete = eventData => {
+  animOn.value = true
+  if (props.task) {
+    const comment = taskComments.value.find(c => c.id === eventData.comment_id)
+    if (comment) {
+      store.commit('REMOVE_TASK_COMMENT', { task: props.task, comment })
+      resetComments()
+      taskPreviews.value = store.getters.getTaskPreviews(props.task.id)
+    }
+    animOn.value = false
+  }
+}
+
+const onRemoteCommentDeleteReply = eventData => {
+  if (props.task) {
+    const comment = taskComments.value.find(c => c.id === eventData.comment_id)
+    if (comment) {
+      if (!comment.replies) comment.replies = []
+      store.commit('REMOVE_REPLY_FROM_COMMENT', {
+        comment,
+        reply: { id: eventData.reply_id }
+      })
+    }
+  }
+}
+
+const onRemoteAnnotationUpdate = eventData => {
+  const previewPlayer = previewPlayerRef.value
+  if (!previewPlayer) return
+  const isValid = previewPlayer.isValidPreviewModification(
+    eventData.preview_file_id,
+    eventData.updated_at
+  )
+  if (isValid) {
+    store
+      .dispatch('refreshPreview', {
+        previewId: previewPlayer.currentPreview.id,
+        taskId: previewPlayer.currentPreview.task_id
+      })
+      .then(() => {
+        if (!previewPlayer.notSaved) {
+          taskPreviews.value = store.getters.getTaskPreviews(props.task.id)
+          // Wait for the refreshed previews prop to propagate to the
+          // player before reloading — otherwise reloadAnnotations
+          // reads the stale currentPreview and the remote drawing
+          // never shows up outside a review room.
+          nextTick(() => {
+            previewPlayer.reloadAnnotations()
+            previewPlayer.loadAnnotation()
+          })
+        }
+      })
+  }
+}
+
+const socketEvents = [
+  ['preview-file:add-file', onPreviewAdded],
+  ['preview-file:update', onRemotePreviewUpdate],
+  ['preview-file:annotation-update', onRemoteAnnotationUpdate],
+  ['task:update', onRemoteTaskUpdate],
+  ['comment:new', onRemoteCommentNew],
+  ['comment:update', onRemoteCommentUpdate],
+  ['comment:acknowledge', onRemoteCommentAck],
+  ['comment:unacknowledge', onRemoteCommentUnack],
+  ['comment:reply', onRemoteCommentReply],
+  ['comment:delete', onRemoteCommentDelete],
+  ['comment:delete-reply', onRemoteCommentDeleteReply]
+]
+
+// Watchers
+watch(
+  () => props.task,
+  () => {
+    clearPreviewFiles()
+    currentPreviewIndex.value = 0
+    if (!props.silent) {
+      loadTaskData()
+    }
+  }
+)
+
+watch(
+  () => props.silent,
+  () => {
+    if (!props.silent) {
+      loadTaskData()
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => props.currentFrame,
+  () => {
+    currentFrameRaw.value = props.currentFrame
+  }
+)
+
+// Lifecycle
+onMounted(() => {
+  if (sideColumnParent.value) {
+    const panelWidth = preferences.getIntPreference(
+      'task:panel-width',
+      DEFAULT_PANEL_WIDTH
+    )
+    setWidth(panelWidth)
+    refreshPreviewPlay()
+  }
+  socketEvents.forEach(([event, handler]) => socket.on(event, handler))
+})
+
+onBeforeUnmount(() => {
+  removeEvents(domEvents)
+  socketEvents.forEach(([event, handler]) => socket.off(event, handler))
+})
+
+defineExpose({
+  focusCommentTextarea
+})
 </script>
 
 <style lang="scss" scoped>
@@ -1796,18 +1677,15 @@ export default {
 
 .side {
   background: #f8f8f8;
+  flex: 1;
   min-height: 100%;
+  overflow: auto;
 }
 
 .add-comment {
   padding: 0.5em;
   margin-bottom: 0.5em;
   box-shadow: 0 0 6px #e0e0e0;
-}
-
-.page-header {
-  padding: 0;
-  margin-top: 0;
 }
 
 .header-title .flexrow-item {
@@ -1853,37 +1731,8 @@ export default {
   box-shadow: 0 0 6px #e0e0e0;
 }
 
-.add-preview-button {
-  margin-top: 0.5em;
-  width: 100%;
-}
-
-.no-comment {
-  background: white;
-  box-shadow: 0 0 6px #e0e0e0;
-}
-
 .comments {
   padding-bottom: 1em;
-}
-
-.preview-colum-content {
-  box-shadow: 0 0 6px #e0e0e0;
-}
-
-.preview-standard-file {
-  text-align: center;
-  padding: 1em;
-}
-
-.model-viewer {
-  padding: 0.3em;
-}
-
-.change-wideness-button,
-.set-thumbnail-button,
-.subscribe-button {
-  margin-right: 0.2em;
 }
 
 .preview {
@@ -1912,50 +1761,11 @@ export default {
   min-height: 100%;
 }
 
-.side {
-  flex: 1;
-  overflow: auto;
-}
-
 .extend-bar {
   width: 3px;
   margin-left: 3px;
   background: #ccc;
   cursor: ew-resize;
-}
-
-.revision-thumbnail {
-  border: 2px solid transparent;
-  border-radius: 3px;
-  height: 33px;
-  margin-bottom: 4px;
-  position: relative;
-
-  &:hover {
-    border: 2px solid $grey;
-  }
-
-  &.selected {
-    border: 2px solid $dark-purple;
-  }
-
-  span {
-    background: $dark-purple;
-    border-radius: 0;
-    border-bottom-right-radius: 4px;
-    color: $white;
-    font-size: 0.8em;
-    height: 14px;
-    line-height: 1.1em;
-    margin: 0;
-    opacity: 0.8;
-    left: 0;
-    padding: 0;
-    position: absolute;
-    text-align: center;
-    top: 0;
-    width: 14px;
-  }
 }
 
 .empty {
@@ -1979,19 +1789,5 @@ export default {
 
 .task-type {
   margin-right: 1em;
-}
-
-.extra-buttons {
-  img {
-    width: 16px;
-  }
-}
-
-.annotation-dl {
-  color: inherit;
-  display: inline-flex;
-  align-items: center;
-  margin-right: 0.5em;
-  text-decoration: none;
 }
 </style>

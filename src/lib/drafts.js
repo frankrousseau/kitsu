@@ -18,7 +18,9 @@ const normalize = draft => {
     return { text: draft, checklist: [] }
   }
   return {
-    text: draft.text || '',
+    // Coerce non-strings to '' so a corrupted stored draft cannot feed
+    // an object back into the comment form after a reload.
+    text: typeof draft.text === 'string' ? draft.text : '',
     checklist: Array.isArray(draft.checklist) ? draft.checklist : []
   }
 }

@@ -10,83 +10,77 @@
       v-if="!isContactSheet"
     >
       <table class="datatable">
-        <thead ref="thead" class="datatable-head">
+        <thead class="datatable-head">
           <tr class="row-header">
-            <th class="thumbnail" ref="th-thumbnail"></th>
-            <th class="asset-type" ref="th-type" v-if="isAssets">
+            <th class="thumbnail"></th>
+            <th class="asset-type" v-if="isAssets">
               {{ $t('tasks.fields.asset_type') }}
             </th>
             <th
               class="sequence"
-              ref="th-type"
               v-else-if="!isEpisodes && !isSequences && !isEdits"
             >
               {{ $t('tasks.fields.sequence') }}
             </th>
-            <th class="name" ref="th-name">
+            <th class="name">
               {{ $t('tasks.fields.entity_name') }}
             </th>
-            <th class="status" ref="th-status">
+            <th class="status">
               {{ $t('tasks.fields.task_status') }}
             </th>
-            <th class="assignees" ref="th-assignees">
+            <th class="assignees">
               {{ $t('tasks.fields.assignees') }}
             </th>
-            <th
-              ref="th-frames"
-              class="frames number-cell"
-              v-if="isShots && !isPaperProduction"
-            >
+            <th class="frames number-cell" v-if="isShots && !isPaperProduction">
               {{ $t('tasks.fields.frames') }}
             </th>
             <th
-              ref="th-drawings"
               class="drawings number-cell"
               v-if="isShots && isPaperProduction"
             >
               {{ $t('tasks.fields.drawings') }}
             </th>
-            <th class="difficulty number-cell" ref="th-difficulty">
+            <th class="difficulty number-cell">
               {{ $t('tasks.fields.difficulty') }}
             </th>
-            <th
-              ref="th-estimation"
-              class="estimation number-cell"
-              :title="$t('main.estimation')"
-            >
+            <th class="estimation number-cell" :title="$t('main.estimation')">
               {{ $t('tasks.fields.estimation').substring(0, 3) }}.
             </th>
-            <th class="duration number-cell" ref="th-duration">
+            <th class="duration number-cell">
               {{ $t('tasks.fields.duration').substring(0, 3) }}.
             </th>
-            <th class="retake-count number-cell" ref="th-retake-count">
+            <th class="retake-count number-cell">
               {{ $t('tasks.fields.retake_count') }}
             </th>
-            <th class="start-date" ref="th-estimation" v-if="!withSchedule">
+            <th class="start-date" v-if="!withSchedule">
               {{ $t('tasks.fields.start_date') }}
             </th>
-            <th class="due-date" ref="th-estimation" v-if="!withSchedule">
+            <th class="due-date" v-if="!withSchedule">
               {{ $t('tasks.fields.due_date') }}
             </th>
-            <th class="real-start-date" ref="th-status" v-if="!withSchedule">
+            <th class="real-start-date" v-if="!withSchedule">
               {{ $t('tasks.fields.real_start_date') }}
             </th>
-            <th class="real-end-date" ref="th-status" v-if="!withSchedule">
+            <th class="real-end-date" v-if="!withSchedule">
               {{ $t('tasks.fields.real_end_date') }}
             </th>
-            <th class="done-date" ref="th-status" v-if="!withSchedule">
+            <th class="done-date" v-if="!withSchedule">
               {{ $t('tasks.fields.done_date') }}
             </th>
-            <th class="last-comment-date" ref="th-status" v-if="!withSchedule">
+            <th class="last-comment-date" v-if="!withSchedule">
               {{ $t('tasks.fields.last_comment_date') }}
             </th>
             <th class="empty" v-if="!withSchedule">&nbsp;</th>
           </tr>
         </thead>
 
-        <tbody class="datatable-body">
+        <tbody
+          class="datatable-body"
+          @mousedown="startBrowsing"
+          @touchstart="startBrowsing"
+        >
           <tr
-            :ref="`task-${task.id}`"
+            :ref="el => setTaskRow(task.id, el)"
             :key="task.id"
             :class="{
               'task-line': true,
@@ -160,7 +154,6 @@
                 min="0"
                 step="1"
                 type="number"
-                :ref="`${task.id}-drawings`"
                 :value="task.nb_drawings"
                 @change="updateNbDrawings($event.target.value)"
                 v-if="isInDepartment(task) && selectionGrid[task.id]"
@@ -174,7 +167,6 @@
                 class="difficulty-combobox"
                 :options="difficultyOptions"
                 :with-margin="false"
-                :value="task.difficulty"
                 @update:model-value="updateDifficulty($event)"
                 v-if="isInDepartment(task) && selectionGrid[task.id]"
                 v-model="task.difficulty"
@@ -195,7 +187,6 @@
                 min="0"
                 step="any"
                 type="number"
-                :ref="`${task.id}-estimation`"
                 :value="formatDuration(task.estimation, false)"
                 @change="updateEstimation($event.target.value)"
                 v-if="isInDepartment(task) && selectionGrid[task.id]"
@@ -267,12 +258,9 @@
         :with-actions="false"
       />
     </div>
-    <div
-      class="list-wrapper"
-      v-else-if="tasksByParent && tasksByParent.length > 0 && isGrouped"
-    >
-      <div :key="`task-section-${i}`" v-for="(taskGroup, i) in tasksByParent">
-        <h2>
+    <div class="list-wrapper" v-else>
+      <div :key="`task-section-${i}`" v-for="(taskGroup, i) in cardGroups">
+        <h2 v-if="taskGroup.name">
           {{ taskGroup.name }}
         </h2>
         <div class="task-grid">
@@ -284,8 +272,8 @@
             :key="task.id"
             role="button"
             tabindex="0"
-            @click="selectTask($event, index, task)"
-            @keydown.enter.prevent="selectTask($event, index, task)"
+            @click="selectTaskFromCard($event, index, task)"
+            @keydown.enter.prevent="selectTaskFromCard($event, index, task)"
             v-for="(task, index) in taskGroup.tasks"
           >
             <entity-preview
@@ -296,6 +284,7 @@
               :empty-width="200"
               :empty-height="133"
               :show-movie="false"
+              is-rounded-top-border
               no-preview
               v-if="task.entity"
             />
@@ -319,56 +308,30 @@
         </div>
       </div>
     </div>
-    <div class="task-grid list-wrapper" v-else>
-      <div
-        :class="{
-          'task-card': true,
-          selected: selectionGrid[task.id]
-        }"
-        :key="task.id"
-        role="button"
-        tabindex="0"
-        @click="selectTask($event, index, task)"
-        @keydown.enter.prevent="selectTask($event, index, task)"
-        v-for="(task, index) in displayedTasks"
-      >
-        <entity-preview
-          class="flexrow-item"
-          :entity="getEntity(task.entity.id)"
-          :height="133"
-          :width="200"
-          :empty-width="200"
-          :empty-height="133"
-          :show-movie="false"
-          no-preview
-          v-if="task.entity"
-        />
-        <span class="task-name">
-          {{ getTaskName(task) }}
-        </span>
-        <div class="flexrow task-data">
-          <validation-tag class="flexrow-item" :task="task" thin />
-          <div class="filler"></div>
-          <people-avatar-with-menu
-            class="flexrow-item"
-            :key="`${task.id}-${personId}`"
-            :person="personMap.get(personId)"
-            :size="20"
-            :font-size="10"
-            @unassign="person => onUnassign(task, person)"
-            v-for="personId in task.assignees"
-          />
-        </div>
-      </div>
-    </div>
     <slot></slot>
   </div>
   <task-list-numbers :is-shots="isShots" :tasks="tasks" v-if="!isLoading" />
 </template>
 
-<script>
-import { mapGetters, mapActions } from 'vuex'
+<script setup>
+// Imports
 import moment from 'moment-timezone'
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  useTemplateRef,
+  watch
+} from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useStore } from 'vuex'
+
+import { pauseEvent } from '@/composables/dom'
+import { getEntityMap } from '@/composables/entity'
+import { useFormat } from '@/composables/format'
+import { useGrabList } from '@/composables/grabList'
+import { isSupervisorInDepartments } from '@/lib/descriptors'
 import {
   daysToMinutes,
   formatSimpleDate,
@@ -378,9 +341,8 @@ import {
   minutesToDays,
   range
 } from '@/lib/time'
-import { formatListMixin } from '@/components/mixins/format'
-import { domMixin } from '@/components/mixins/dom'
 
+import ValidationCell from '@/components/cells/ValidationCell.vue'
 import Combobox from '@/components/widgets/Combobox.vue'
 import DateField from '@/components/widgets/DateField.vue'
 import EntityPreview from '@/components/widgets/EntityPreview.vue'
@@ -388,581 +350,493 @@ import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import PeopleAvatarWithMenu from '@/components/widgets/PeopleAvatarWithMenu.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
 import TaskListNumbers from '@/components/widgets/TaskListNumbers.vue'
-import ValidationCell from '@/components/cells/ValidationCell.vue'
 import ValidationTag from '@/components/widgets/ValidationTag.vue'
 
-import assetStore from '@/store/modules/assets'
-import editStore from '@/store/modules/edits'
-import episodeStore from '@/store/modules/episodes'
-import sequenceStore from '@/store/modules/sequences'
-import shotStore from '@/store/modules/shots'
+// Composables
+const { t } = useI18n()
+const store = useStore()
+const { formatDuration, formatDisplayDate, isDurationInHours, organisation } =
+  useFormat()
 
-export default {
-  name: 'task-list',
-
-  mixins: [domMixin, formatListMixin],
-
-  components: {
-    Combobox,
-    DateField,
-    EntityPreview,
-    EntityThumbnail,
-    PeopleAvatarWithMenu,
-    TableInfo,
-    TaskListNumbers,
-    ValidationCell,
-    ValidationTag
+// Props / Emits
+const props = defineProps({
+  disabledDates: {
+    type: Object,
+    default: () => {}
   },
+  entityType: {
+    type: String,
+    default: 'Asset'
+  },
+  isContactSheet: {
+    type: Boolean,
+    default: false
+  },
+  isError: {
+    type: Boolean,
+    default: false
+  },
+  isGrouped: {
+    type: Boolean,
+    default: false
+  },
+  isLoading: {
+    type: Boolean,
+    default: false
+  },
+  tasks: {
+    type: Array,
+    default: () => []
+  },
+  withSchedule: {
+    type: Boolean,
+    default: false
+  }
+})
 
-  emits: ['scroll', 'task-selected'],
+const emit = defineEmits(['scroll', 'task-selected'])
 
-  data() {
-    return {
-      difficultyOptions: [
-        { label: '•', value: 1 },
-        { label: '••', value: 2 },
-        { label: '•••', value: 3 },
-        { label: '••••', value: 4 },
-        { label: '•••••', value: 5 }
-      ],
-      lastSelection: null,
-      page: 1,
-      selectionGrid: {},
-      selectedDate: moment().toDate() // By default current day.
+// State
+const difficultyOptions = [
+  { label: '•', value: 1 },
+  { label: '••', value: 2 },
+  { label: '•••', value: 3 },
+  { label: '••••', value: 4 },
+  { label: '•••••', value: 5 }
+]
+
+const lastSelection = ref(null)
+const page = ref(1)
+const selectionGrid = ref({})
+
+const bodyRef = useTemplateRef('body')
+// Row elements for scrollToLine, no reactivity needed
+const taskRows = new Map()
+
+const { startBrowsing } = useGrabList(bodyRef)
+
+// Computed
+const isCurrentUserManager = computed(() => store.getters.isCurrentUserManager)
+const isCurrentUserSupervisor = computed(
+  () => store.getters.isCurrentUserSupervisor
+)
+const isPaperProduction = computed(() => store.getters.isPaperProduction)
+const nbSelectedTasks = computed(() => store.getters.nbSelectedTasks)
+const personMap = computed(() => store.getters.personMap)
+const selectedTasks = computed(() => store.getters.selectedTasks)
+const taskMap = computed(() => store.getters.taskMap)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
+const user = computed(() => store.getters.user)
+
+const isAssets = computed(() => props.entityType === 'Asset')
+const isEdits = computed(() => props.entityType === 'Edit')
+const isEpisodes = computed(() => props.entityType === 'Episode')
+const isSequences = computed(() => props.entityType === 'Sequence')
+const isShots = computed(() => props.entityType === 'Shot')
+
+const entityMap = computed(() => getEntityMap(props.entityType))
+
+const displayedTasks = computed(() => props.tasks.slice(0, 60 * page.value))
+
+const cardGroups = computed(() =>
+  props.isGrouped && tasksByParent.value.length > 0
+    ? tasksByParent.value
+    : [{ name: null, tasks: displayedTasks.value }]
+)
+
+const tasksByParent = computed(() => {
+  if (props.tasks.length === 0) return []
+  if (isShots.value) {
+    return groupTasks(getEntityMap('Shot'), 'sequence_id', 'sequence_name')
+  }
+  if (isAssets.value) {
+    return groupTasks(
+      getEntityMap('Asset'),
+      'asset_type_id',
+      'entity_type_name'
+    )
+  }
+  return []
+})
+
+// Functions
+const groupTasks = (entityMap, groupKey, nameField) => {
+  const result = []
+  let currentGroup = {
+    name: props.tasks[0][nameField],
+    tasks: []
+  }
+  let previousTask = null
+  props.tasks.forEach(task => {
+    const entity = entityMap.get(task.entity.id)
+    if (previousTask) {
+      const previousEntity = entityMap.get(previousTask.entity.id)
+      if (previousEntity?.[groupKey] !== entity?.[groupKey]) {
+        result.push(currentGroup)
+        currentGroup = {
+          name: task[nameField],
+          tasks: []
+        }
+      }
     }
-  },
+    currentGroup.tasks.push(task)
+    previousTask = task
+  })
+  result.push(currentGroup)
+  return result
+}
 
-  props: {
-    disabledDates: {
-      type: Object,
-      default: () => {}
-    },
-    entityType: {
-      type: String,
-      default: 'Asset'
-    },
-    isContactSheet: {
-      type: Boolean,
-      default: false
-    },
-    isError: {
-      type: Boolean,
-      default: false
-    },
-    isGrouped: {
-      type: Boolean,
-      default: false
-    },
-    isLoading: {
-      type: Boolean,
-      default: false
-    },
-    tasks: {
-      type: Array,
-      default: () => []
-    },
-    withSchedule: {
-      type: Boolean,
-      default: false
+const getEntity = entityId => entityMap.value.get(entityId) || {}
+
+const setTaskRow = (taskId, el) => {
+  if (el) {
+    taskRows.set(taskId, el)
+  } else {
+    taskRows.delete(taskId)
+  }
+}
+
+const getTaskName = task => {
+  if (props.entityType === 'Shot') {
+    return `${task.sequence_name} / ${getEntity(task.entity.id).name}`
+  }
+  return task.entity_name
+}
+
+const isTaskChanged = (task, data) => {
+  const taskStart = task.start_date ? task.start_date.substring(0, 10) : ''
+  const taskDue = task.due_date ? task.due_date.substring(0, 10) : ''
+  return (
+    (data.start_date !== undefined && taskStart !== data.start_date) ||
+    (data.due_date !== undefined && taskDue !== data.due_date) ||
+    (data.estimation !== undefined && task.estimation !== data.estimation) ||
+    (data.difficulty !== undefined && task.difficulty !== data.difficulty) ||
+    (data.nb_drawings !== undefined && task.nb_drawings !== data.nb_drawings)
+  )
+}
+
+const getDate = date => (date ? moment(date, 'YYYY-MM-DD').toDate() : null)
+
+// Dispatch an update built per selected task; a null build skips the task.
+const applyToSelection = buildData => {
+  Object.keys(selectionGrid.value).forEach(taskId => {
+    const task = taskMap.value.get(taskId)
+    const data = buildData(task)
+    if (data && isTaskChanged(task, data)) {
+      store.dispatch('updateTask', { taskId, data }).catch(console.error)
     }
-  },
+  })
+}
 
-  mounted() {
-    window.addEventListener('keydown', this.onKeyDown, false)
-  },
+const updateEstimation = duration => {
+  const estimation = isDurationInHours.value
+    ? duration * 60
+    : daysToMinutes(organisation.value, duration)
 
-  beforeUnmount() {
-    window.removeEventListener('keydown', this.onKeyDown)
-  },
+  updateTasksEstimation({ estimation })
+}
 
-  computed: {
-    ...mapGetters([
-      'isCurrentUserManager',
-      'isCurrentUserSupervisor',
-      'isPaperProduction',
-      'nbSelectedTasks',
-      'personMap',
-      'user',
-      'selectedTasks',
-      'taskMap',
-      'taskTypeMap'
-    ]),
+const onUnassign = (task, person) => {
+  const tasks = Array.from(selectedTasks.value.values())
+  if (!selectedTasks.value.has(task.id)) {
+    tasks.push(task)
+  }
+  store.dispatch('unassignPersonFromTasks', { tasks, person })
+}
 
-    assetMap() {
-      return assetStore.cache.assetMap
-    },
-
-    editMap() {
-      return editStore.cache.editMap
-    },
-
-    episodeMap() {
-      return episodeStore.cache.episodeMap
-    },
-
-    sequenceMap() {
-      return sequenceStore.cache.sequenceMap
-    },
-
-    shotMap() {
-      return shotStore.cache.shotMap
-    },
-
-    isAssets() {
-      return this.entityType === 'Asset'
-    },
-
-    isEdits() {
-      return this.entityType === 'Edit'
-    },
-
-    isEpisodes() {
-      return this.entityType === 'Episode'
-    },
-
-    isSequences() {
-      return this.entityType === 'Sequence'
-    },
-
-    isShots() {
-      return this.entityType === 'Shot'
-    },
-
-    displayedTasks() {
-      if (this.tasks && this.tasks.length > 0) {
-        return this.tasks.slice(0, 60 * this.page)
-      }
-      return []
-    },
-
-    tasksByParent() {
-      const result = []
-      if (this.tasks.length > 0) {
-        if (this.isShots) {
-          let currentTasks = {
-            name: this.tasks[0].sequence_name,
-            tasks: []
-          }
-          let previousTask = null
-          this.tasks.forEach(task => {
-            const entity = this.shotMap.get(task.entity.id)
-            if (previousTask) {
-              const previousEntity = this.shotMap.get(previousTask.entity.id)
-              if (previousEntity?.sequence_id !== entity?.sequence_id) {
-                result.push(currentTasks)
-                currentTasks = {
-                  name: task.sequence_name,
-                  tasks: []
-                }
-              }
-            }
-            currentTasks.tasks.push(task)
-            previousTask = task
-          })
-          result.push(currentTasks)
-        } else if (this.isAssets) {
-          let currentTasks = {
-            name: this.tasks[0].entity_type_name,
-            tasks: []
-          }
-          let previousTask = null
-          this.tasks.forEach(task => {
-            const entity = this.assetMap.get(task.entity.id)
-            if (previousTask) {
-              const previousEntity = this.assetMap.get(previousTask.entity.id)
-              if (previousEntity?.asset_type_id !== entity?.asset_type_id) {
-                result.push(currentTasks)
-                currentTasks = {
-                  name: task.entity_type_name,
-                  tasks: []
-                }
-              }
-            }
-            currentTasks.tasks.push(task)
-            previousTask = task
-          })
-          result.push(currentTasks)
-        }
-      }
-      return result
+const updateStartDate = date => {
+  applyToSelection(task => {
+    if (!date) {
+      const data = { start_date: null, due_date: task.due_date }
+      if (task.difficulty) data.difficulty = task.difficulty
+      return data
     }
-  },
-
-  methods: {
-    ...mapActions([
-      'addSelectedTask',
-      'addSelectedTasks',
-      'clearSelectedTasks',
-      'updateTask',
-      'unassignPersonFromTasks',
-      'removeSelectedTask'
-    ]),
-
-    getTaskName(task) {
-      if (this.entityType === 'Shot') {
-        return `${task.sequence_name} / ${this.getEntity(task.entity.id).name}`
-      }
-      return task.entity_name
-    },
-
-    isTaskChanged(task, data) {
-      const taskStart = task.start_date ? task.start_date.substring(0, 10) : ''
-      const taskDue = task.due_date ? task.due_date.substring(0, 10) : ''
-      return (
-        (data.start_date !== undefined && taskStart !== data.start_date) ||
-        (data.due_date !== undefined && taskDue !== data.due_date) ||
-        (data.estimation !== undefined &&
-          task.estimation !== data.estimation) ||
-        (data.difficulty !== undefined &&
-          task.difficulty !== data.difficulty) ||
-        (data.nb_drawings !== undefined &&
-          task.nb_drawings !== data.nb_drawings)
-      )
-    },
-
-    getDate(date) {
-      return date ? moment(date, 'YYYY-MM-DD').toDate() : null
-    },
-
-    updateEstimation(duration) {
-      const estimation = this.organisation.format_duration_in_hours
-        ? duration * 60
-        : daysToMinutes(this.organisation, duration)
-
-      this.updateTasksEstimation({ estimation })
-    },
-
-    onUnassign(task, person) {
-      const tasks = Array.from(this.selectedTasks.values())
-      if (!this.selectedTasks.has(task.id)) {
-        tasks.push(task)
-      }
-      this.unassignPersonFromTasks({ tasks, person })
-    },
-
-    updateStartDate(date) {
-      Object.keys(this.selectionGrid).forEach(taskId => {
-        const task = this.taskMap.get(taskId)
-        const dueDate = task.due_date ? parseSimpleDate(task.due_date) : null
-        let data
-        if (date) {
-          const startDate = moment(date)
-          if (
-            task.start_date &&
-            task.start_date.substring(0, 10) === formatSimpleDate(startDate)
-          )
-            return
-          data = getDatesFromStartDate(
-            this.organisation,
-            startDate,
-            dueDate,
-            minutesToDays(this.organisation, task.estimation)
-          )
-        } else {
-          data = {
-            start_date: null,
-            due_date: task.due_date
-          }
-        }
-        if (task.difficulty) {
-          data.difficulty = task.difficulty
-        }
-        if (this.isTaskChanged(task, data)) {
-          this.updateTask({ taskId, data }).catch(console.error)
-        }
-      })
-    },
-
-    updateDueDate(date) {
-      Object.keys(this.selectionGrid).forEach(taskId => {
-        const task = this.taskMap.get(taskId)
-        const startDate = task.start_date
-          ? parseSimpleDate(task.start_date)
-          : null
-        let data
-        if (date) {
-          const dueDate = moment(date)
-          if (
-            task.due_date &&
-            task.due_date.substring(0, 10) === formatSimpleDate(dueDate)
-          )
-            return
-          data = getDatesFromEndDate(
-            this.organisation,
-            startDate,
-            dueDate,
-            minutesToDays(this.organisation, task.estimation)
-          )
-        } else {
-          data = {
-            start_date: task.start_date,
-            due_date: null
-          }
-        }
-        if (this.isTaskChanged(task, data)) {
-          this.updateTask({ taskId, data }).catch(console.error)
-        }
-      })
-    },
-
-    updateTasksEstimation({ estimation }) {
-      Object.keys(this.selectionGrid).forEach(taskId => {
-        const task = this.taskMap.get(taskId)
-        let data = { estimation }
-        if (task.start_date) {
-          const startDate = moment(task.start_date)
-          const dueDate = task.due_date ? moment(task.due_date) : null
-          data = getDatesFromStartDate(
-            this.organisation,
-            startDate,
-            dueDate,
-            minutesToDays(this.organisation, estimation)
-          )
-          data.estimation = estimation
-        }
-        if (this.isTaskChanged(task, data)) {
-          this.updateTask({ taskId, data }).catch(console.error)
-        }
-      })
-    },
-
-    updateDifficulty(difficulty) {
-      this.updateTasksData({ difficulty })
-    },
-
-    updateNbDrawings(nbDrawings) {
-      this.updateTasksData({ nb_drawings: nbDrawings })
-    },
-
-    updateTasksData(data) {
-      Object.keys(this.selectionGrid).forEach(taskId => {
-        const task = this.taskMap.get(taskId)
-        if (this.isTaskChanged(task, data)) {
-          this.updateTask({ taskId, data }).catch(console.error)
-        }
-      })
-    },
-
-    formatDate(date) {
-      if (date) return moment(date).format('YYYY-MM-DD')
-      return ''
-    },
-
-    isEstimationBurned(task) {
-      return (
-        task.estimation &&
-        task.estimation > 0 &&
-        task.duration > task.estimation
-      )
-    },
-
-    onBodyScroll(event) {
-      if (!this.$refs.body) return
-      const position = event.target
-      const maxHeight =
-        this.$refs.body.scrollHeight - this.$refs.body.offsetHeight
-      if (maxHeight < position.scrollTop + 100) {
-        this.page++
-      }
-
-      this.$emit('scroll', { top: position.scrollTop })
-    },
-
-    getEntity(entityId) {
-      return this[`${this.entityType.toLowerCase()}Map`].get(entityId) || {}
-    },
-
-    onKeyDown(event) {
-      if (this.tasks.length > 0 && event.altKey) {
-        let index = this.lastSelection ? this.lastSelection : 0
-        if ([37, 38].includes(event.keyCode)) {
-          index = index - 1 < 0 ? this.tasks.length - 1 : index - 1
-          this.selectTask({}, index, this.tasks[index])
-          this.pauseEvent(event)
-        } else if ([39, 40].includes(event.keyCode)) {
-          index = index + 1 >= this.tasks.length ? 0 : index + 1
-          this.selectTask({}, index, this.tasks[index])
-          this.pauseEvent(event)
-        }
-      }
-    },
-
-    selectTask(event, index, task) {
-      if (
-        event &&
-        event.target &&
-        // Dirty hack needed to make date picker and inputs work properly
-        (['INPUT'].includes(event.target.nodeName) ||
-          // Combo box should not trigger selection
-          event.target.className.indexOf('selected-line') >= 0 ||
-          event.target.className.indexOf('down-icon') >= 0 ||
-          event.target.className.indexOf('flexrow') >= 0 ||
-          event.target.className.indexOf('c-mask') >= 0 ||
-          event.target.className.indexOf('option-line') >= 0 ||
-          event.target.className.indexOf('combobox') >= 0 ||
-          event.target.className === '' ||
-          (event.target.parentNode &&
-            ['difficulty'].includes(event.target.className)) ||
-          (event.target.parentNode &&
-            ['HEADER'].includes(event.target.parentNode.nodeName)) ||
-          ['cell day selected'].includes(event.target.className))
-      )
-        return
-      const isSelected = this.selectionGrid[task.id]
-      const isManySelection = Object.keys(this.selectionGrid).length > 1
-      if (!(event.ctrlKey || event.metaKey) && !event.shiftKey) {
-        this.clearSelectedTasks()
-        this.resetSelection()
-      }
-
-      if (!event.shiftKey) {
-        if (isSelected) {
-          this.removeSelectedTask({ task })
-          this.selectionGrid[task.id] = undefined
-        } else if (!isSelected || isManySelection) {
-          this.addSelectedTask({ task })
-          this.$emit('task-selected', task)
-          this.selectionGrid[task.id] = true
-          this.lastSelection = index
-        }
-      } else {
-        this.selectionGrid = {}
-        const taskIndices =
-          this.lastSelection > index
-            ? range(index, this.lastSelection)
-            : range(this.lastSelection, index)
-        const selection = taskIndices.map(i => ({ task: this.tasks[i] }))
-        selection.forEach(task => {
-          this.selectionGrid[task.task.id] = true
-        })
-        this.addSelectedTasks(selection)
-      }
-      this.scrollToLine(task.id)
-    },
-
-    setScrollPosition(top) {
-      if (this.$refs.body) {
-        this.$refs.body.scrollTop = top
-      }
-    },
-
-    scrollToLine(taskId) {
-      const taskLine = this.$refs[`task-${taskId}`]
-      if (taskLine && this.$refs.body) {
-        const margin = 30
-        const rect = taskLine[0].getBoundingClientRect()
-        const listRect = this.$refs.body.getBoundingClientRect()
-        const isBelow = rect.bottom > listRect.bottom - margin
-        const isAbove = rect.top < listRect.top + margin
-
-        if (isBelow) {
-          const scrollingRequired = rect.bottom - listRect.bottom + margin
-          this.setScrollPosition(this.$refs.body.scrollTop + scrollingRequired)
-        } else if (isAbove) {
-          const scrollingRequired = listRect.top - rect.top + margin
-          this.setScrollPosition(this.$refs.body.scrollTop - scrollingRequired)
-        }
-      }
-    },
-
-    isInDepartment(task) {
-      if (this.isCurrentUserManager) {
-        return true
-      } else if (this.isCurrentUserSupervisor) {
-        if (this.user.departments.length === 0) {
-          return true
-        }
-        const taskType = this.taskTypeMap.get(task.task_type_id)
-        return (
-          taskType.department_id &&
-          this.user.departments.includes(taskType.department_id)
-        )
-      }
-      return false
-    },
-
-    resetSelection() {
-      this.selectionGrid = {}
-      this.lastSelection = null
-    },
-
-    getTableData() {
-      const headers = [
-        this.isAssets
-          ? this.$t('tasks.fields.asset_type')
-          : this.$t('tasks.fields.sequence'),
-        this.$t('tasks.fields.entity_name'),
-        this.$t('tasks.fields.task_status'),
-        this.$t('tasks.fields.assignees'),
-        this.$t('tasks.fields.difficulty'),
-        this.$t('tasks.fields.estimation'),
-        this.$t('tasks.fields.duration'),
-        this.$t('tasks.fields.retake_count'),
-        this.$t('tasks.fields.start_date'),
-        this.$t('tasks.fields.due_date'),
-        this.$t('tasks.fields.real_start_date'),
-        this.$t('tasks.fields.real_end_date'),
-        this.$t('tasks.fields.done_date'),
-        this.$t('tasks.fields.last_comment_date')
-      ]
-      if (this.isShots) {
-        const value = !this.isPaperProduction
-          ? this.$t('tasks.fields.frames')
-          : this.$t('tasks.fields.drawings')
-        headers.splice(4, 0, value)
-      }
-      const taskLines = [headers]
-      this.tasks.forEach(task => {
-        if (!task) return
-        const assignees = task.assignees
-          .map(personId => {
-            const person = this.personMap.get(personId)
-            if (person) return person.name
-            return ''
-          })
-          .join(', ')
-
-        const line = [
-          this.isAssets
-            ? this.getEntity(task.entity.id).asset_type_name
-            : this.getEntity(task.entity.id).sequence_name,
-          this.getEntity(task.entity.id).name,
-          task.task_status_short_name,
-          assignees,
-          task.difficulty,
-          this.formatDuration(task.estimation, false),
-          this.formatDuration(task.duration, false),
-          task.retake_count,
-          this.formatDate(task.start_date),
-          this.formatDate(task.due_date),
-          this.formatDate(task.real_start_date),
-          this.formatDate(task.end_date),
-          this.formatDate(task.done_date),
-          this.formatDate(task.last_comment_date)
-        ]
-        if (this.isShots) {
-          const value = !this.isPaperProduction
-            ? this.getEntity(task.entity.id).nb_frames
-            : task.nb_drawings || 0
-          line.splice(4, 0, value)
-        }
-        taskLines.push(line)
-      })
-      return taskLines
+    const startDate = moment(date)
+    if (
+      task.start_date &&
+      task.start_date.substring(0, 10) === formatSimpleDate(startDate)
+    ) {
+      return null
     }
-  },
+    const dueDate = task.due_date ? parseSimpleDate(task.due_date) : null
+    const data = getDatesFromStartDate(
+      organisation.value,
+      startDate,
+      dueDate,
+      minutesToDays(organisation.value, task.estimation)
+    )
+    if (task.difficulty) data.difficulty = task.difficulty
+    return data
+  })
+}
 
-  watch: {
-    tasks() {
-      this.page = 1
-      this.resetSelection()
-    },
+const updateDueDate = date => {
+  applyToSelection(task => {
+    if (!date) {
+      return { start_date: task.start_date, due_date: null }
+    }
+    const dueDate = moment(date)
+    if (
+      task.due_date &&
+      task.due_date.substring(0, 10) === formatSimpleDate(dueDate)
+    ) {
+      return null
+    }
+    const startDate = task.start_date ? parseSimpleDate(task.start_date) : null
+    return getDatesFromEndDate(
+      organisation.value,
+      startDate,
+      dueDate,
+      minutesToDays(organisation.value, task.estimation)
+    )
+  })
+}
 
-    nbSelectedTasks() {
-      if (this.nbSelectedTasks === 0) this.resetSelection()
+const updateTasksEstimation = ({ estimation }) => {
+  applyToSelection(task => {
+    if (!task.start_date) return { estimation }
+    const startDate = moment(task.start_date)
+    const dueDate = task.due_date ? moment(task.due_date) : null
+    const data = getDatesFromStartDate(
+      organisation.value,
+      startDate,
+      dueDate,
+      minutesToDays(organisation.value, estimation)
+    )
+    data.estimation = estimation
+    return data
+  })
+}
+
+const updateDifficulty = difficulty => {
+  updateTasksData({ difficulty })
+}
+
+const updateNbDrawings = nbDrawings => {
+  updateTasksData({ nb_drawings: nbDrawings })
+}
+
+const updateTasksData = data => {
+  applyToSelection(() => data)
+}
+
+const isEstimationBurned = task =>
+  task.estimation && task.estimation > 0 && task.duration > task.estimation
+
+const onBodyScroll = event => {
+  if (!bodyRef.value) return
+  const position = event.target
+  const maxHeight = bodyRef.value.scrollHeight - bodyRef.value.offsetHeight
+  if (maxHeight < position.scrollTop + 100) {
+    page.value++
+  }
+
+  emit('scroll', { top: position.scrollTop })
+}
+
+const onKeyDown = event => {
+  if (props.tasks.length > 0 && event.altKey) {
+    let index = lastSelection.value || 0
+    if ([37, 38].includes(event.keyCode)) {
+      index = index - 1 < 0 ? props.tasks.length - 1 : index - 1
+      selectTask({}, index, props.tasks[index])
+      pauseEvent(event)
+    } else if ([39, 40].includes(event.keyCode)) {
+      index = index + 1 >= props.tasks.length ? 0 : index + 1
+      selectTask({}, index, props.tasks[index])
+      pauseEvent(event)
     }
   }
 }
+
+const selectTask = (event, index, task) => {
+  if (
+    event &&
+    event.target &&
+    // Dirty hack needed to make date picker and inputs work properly
+    (['INPUT'].includes(event.target.nodeName) ||
+      // Combo box should not trigger selection
+      event.target.className.indexOf('selected-line') >= 0 ||
+      event.target.className.indexOf('down-icon') >= 0 ||
+      event.target.className.indexOf('flexrow') >= 0 ||
+      event.target.className.indexOf('c-mask') >= 0 ||
+      event.target.className.indexOf('option-line') >= 0 ||
+      event.target.className.indexOf('combobox') >= 0 ||
+      event.target.className === '' ||
+      (event.target.parentNode &&
+        ['difficulty'].includes(event.target.className)) ||
+      (event.target.parentNode &&
+        ['HEADER'].includes(event.target.parentNode.nodeName)) ||
+      ['cell day selected'].includes(event.target.className))
+  )
+    return
+  applySelection(event, index, task)
+}
+
+// Card clicks skip the table-oriented guard above (it swallows most of
+// the card surface); only the avatar and its unassign menu must not
+// select.
+const selectTaskFromCard = (event, index, task) => {
+  if (event.target?.closest?.('.avatar-wrapper')) return
+  applySelection(event, index, task)
+}
+
+const applySelection = (event, index, task) => {
+  const isSelected = selectionGrid.value[task.id]
+  if (!(event.ctrlKey || event.metaKey) && !event.shiftKey) {
+    store.dispatch('clearSelectedTasks')
+    resetSelection()
+  }
+
+  if (!event.shiftKey) {
+    if (isSelected) {
+      store.dispatch('removeSelectedTask', { task })
+      selectionGrid.value[task.id] = undefined
+    } else {
+      store.dispatch('addSelectedTask', { task })
+      emit('task-selected', task)
+      selectionGrid.value[task.id] = true
+      lastSelection.value = index
+    }
+  } else {
+    selectionGrid.value = {}
+    const taskIndices =
+      lastSelection.value > index
+        ? range(index, lastSelection.value)
+        : range(lastSelection.value, index)
+    const selection = taskIndices.map(i => ({ task: props.tasks[i] }))
+    selection.forEach(task => {
+      selectionGrid.value[task.task.id] = true
+    })
+    store.dispatch('addSelectedTasks', selection)
+  }
+  scrollToLine(task.id)
+}
+
+const setScrollPosition = top => {
+  if (bodyRef.value) {
+    bodyRef.value.scrollTop = top
+  }
+}
+
+const scrollToLine = taskId => {
+  const taskLine = taskRows.get(taskId)
+  if (taskLine && bodyRef.value) {
+    const margin = 30
+    const rect = taskLine.getBoundingClientRect()
+    const listRect = bodyRef.value.getBoundingClientRect()
+    const isBelow = rect.bottom > listRect.bottom - margin
+    const isAbove = rect.top < listRect.top + margin
+
+    if (isBelow) {
+      const scrollingRequired = rect.bottom - listRect.bottom + margin
+      setScrollPosition(bodyRef.value.scrollTop + scrollingRequired)
+    } else if (isAbove) {
+      const scrollingRequired = listRect.top - rect.top + margin
+      setScrollPosition(bodyRef.value.scrollTop - scrollingRequired)
+    }
+  }
+}
+
+const isInDepartment = task =>
+  isCurrentUserManager.value ||
+  isSupervisorInDepartments(
+    user.value,
+    isCurrentUserSupervisor.value,
+    taskTypeMap.value.get(task.task_type_id)?.department_id
+  )
+
+const resetSelection = () => {
+  selectionGrid.value = {}
+  lastSelection.value = null
+}
+
+const getTableData = () => {
+  const headers = [
+    isAssets.value ? t('tasks.fields.asset_type') : t('tasks.fields.sequence'),
+    t('tasks.fields.entity_name'),
+    t('tasks.fields.task_status'),
+    t('tasks.fields.assignees'),
+    t('tasks.fields.difficulty'),
+    t('tasks.fields.estimation'),
+    t('tasks.fields.duration'),
+    t('tasks.fields.retake_count'),
+    t('tasks.fields.start_date'),
+    t('tasks.fields.due_date'),
+    t('tasks.fields.real_start_date'),
+    t('tasks.fields.real_end_date'),
+    t('tasks.fields.done_date'),
+    t('tasks.fields.last_comment_date')
+  ]
+  if (isShots.value) {
+    const value = !isPaperProduction.value
+      ? t('tasks.fields.frames')
+      : t('tasks.fields.drawings')
+    headers.splice(4, 0, value)
+  }
+  const taskLines = [headers]
+  props.tasks.forEach(task => {
+    if (!task) return
+    const entity = getEntity(task.entity.id)
+    const assignees = task.assignees
+      .map(personId => personMap.value.get(personId)?.name || '')
+      .join(', ')
+
+    const line = [
+      isAssets.value ? entity.asset_type_name : entity.sequence_name,
+      entity.name,
+      task.task_status_short_name,
+      assignees,
+      task.difficulty,
+      formatDuration(task.estimation, false),
+      formatDuration(task.duration, false),
+      task.retake_count,
+      formatSimpleDate(task.start_date),
+      formatSimpleDate(task.due_date),
+      formatSimpleDate(task.real_start_date),
+      formatSimpleDate(task.end_date),
+      formatSimpleDate(task.done_date),
+      formatSimpleDate(task.last_comment_date)
+    ]
+    if (isShots.value) {
+      const value = !isPaperProduction.value
+        ? entity.nb_frames
+        : task.nb_drawings || 0
+      line.splice(4, 0, value)
+    }
+    taskLines.push(line)
+  })
+  return taskLines
+}
+
+// Watchers
+watch(
+  () => props.tasks,
+  () => {
+    page.value = 1
+    resetSelection()
+  }
+)
+
+watch(nbSelectedTasks, () => {
+  if (nbSelectedTasks.value === 0) resetSelection()
+})
+
+// Lifecycle
+onMounted(() => {
+  window.addEventListener('keydown', onKeyDown, false)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeyDown)
+})
+
+defineExpose({
+  getTableData,
+  resetSelection,
+  selectTask,
+  setScrollPosition
+})
 </script>
 
 <style lang="scss" scoped>
@@ -1057,18 +931,6 @@ td.retake-count {
   padding: 0.5em;
 }
 
-.table-header th {
-  padding: 0.5em 0;
-
-  &.retake-count {
-    padding-right: 1em;
-  }
-
-  &.status {
-    padding-left: 1em;
-  }
-}
-
 .datatable-head {
   th {
     padding-left: 5px;
@@ -1100,6 +962,12 @@ td.retake-count {
   min-height: calc(100% - 50px);
   transition: margin-top 0.3s ease;
 
+  // Without the schedule beside it, the wrapper is the only child of
+  // the flex row and must claim the remaining page width itself.
+  &:not(.with-schedule) {
+    flex: 1;
+  }
+
   &.with-schedule {
     margin-top: 54px;
     margin-bottom: 0;
@@ -1117,6 +985,9 @@ td.retake-count {
 }
 
 .list-wrapper {
+  // Same flex-row constraint as the datatable wrapper: without a flex
+  // basis the auto-fill grid shrinks to a single column.
+  flex: 1;
   overflow-x: auto;
   overflow-y: auto;
 }
@@ -1127,22 +998,29 @@ td.retake-count {
 
 .task-grid {
   display: grid;
-  gap: 10px;
-  // grid-template-columns: repeat(auto-fill, 202px);
-  grid-template-columns: 204px 204px 204px 204px 204px 204px;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, 204px);
 
   .task-card {
     border: 2px solid transparent;
-    border-radius: 5px;
-    box-shadow: 0 0 2px var(--box-shadow);
+    border-radius: 10px;
+    box-shadow: 0 1px 3px var(--box-shadow);
     background: var(--background-alt);
     cursor: pointer;
     display: flex;
     font-weight: bold;
     flex-direction: column;
     padding: 0;
-    padding-bottom: 0.2em;
-    transition: border 0.3s ease;
+    padding-bottom: 0.4em;
+    transition:
+      border 0.3s ease,
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
+
+    &:hover {
+      box-shadow: 0 3px 8px var(--box-shadow);
+      transform: translateY(-2px);
+    }
 
     &.selected {
       border: 2px solid $dark-purple;
@@ -1151,12 +1029,12 @@ td.retake-count {
     .task-name {
       font-size: 0.9em;
       margin-bottom: 0.5em;
-      margin-top: 0.3em;
-      padding: 0 0.5em;
+      margin-top: 0.4em;
+      padding: 0 0.6em;
       word-break: break-word;
     }
     .task-data {
-      padding: 0 0.1em 0 0.3em;
+      padding: 0 0.3em 0 0.5em;
 
       .avatar-wrapper:last-child {
         margin-right: 0;

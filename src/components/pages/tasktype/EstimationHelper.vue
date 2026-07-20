@@ -1,7 +1,7 @@
 <template>
   <div class="estimation-wrapper">
     <div class="estimation-helper columns">
-      <div ref="body" class="task-list column datatable-wrapper">
+      <div class="task-list column datatable-wrapper">
         <table class="datatable">
           <thead class="datatable-head">
             <tr>
@@ -32,7 +32,6 @@
 
           <tbody class="datatable-body">
             <tr
-              :ref="'task-' + task.id"
               :key="task.id"
               :class="{
                 'datatable-row': true,
@@ -94,13 +93,13 @@
                 class="estimation numeric-cell"
               >
                 <input
-                  :ref="task.id + '-estimation'"
+                  :ref="el => setEstimationInput(task.id, el)"
                   class="input stylehidden"
                   min="0"
                   step="any"
                   type="number"
                   @blur="onInputBlur"
-                  @change="estimationUpdated($event, task, index)"
+                  @change="estimationUpdated($event, task)"
                   @keydown="onKeyDown"
                   @mouseout="onInputMouseOut"
                   @mouseover="onInputMouseOver"
@@ -118,7 +117,7 @@
 
       <div class="person-list column datatable-wrapper">
         <table class="datatable">
-          <thead ref="thead" class="datatable-head">
+          <thead class="datatable-head">
             <tr>
               <th class="assignees">
                 {{ $t('tasks.fields.assignees') }}
@@ -228,321 +227,250 @@
   </div>
 </template>
 
-<script>
+<script setup>
+// Imports
 import { CornerDownRightIcon } from 'lucide-vue-next'
 import { firstBy } from 'thenby'
-import { mapGetters, mapActions } from 'vuex'
+import { computed, ref } from 'vue'
+import { useStore } from 'vuex'
 
-import assetsStore from '@/store/modules/assets.js'
-import editsStore from '@/store/modules/edits.js'
-import episodesStore from '@/store/modules/episodes.js'
-import sequencesStore from '@/store/modules/sequences.js'
-import shotsStore from '@/store/modules/shots.js'
+import {
+  focusInput,
+  onInputBlur,
+  onInputMouseOut,
+  onInputMouseOver,
+  pauseEvent
+} from '@/composables/dom'
+import { getEntityMap } from '@/composables/entity'
+import { useFormat } from '@/composables/format'
+import { isSupervisorInDepartments } from '@/lib/descriptors'
+import { minutesToDays, range } from '@/lib/time'
+import { frameToSeconds } from '@/lib/video'
 
 import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
 import PeopleName from '@/components/widgets/PeopleName.vue'
 
-import { domMixin } from '@/components/mixins/dom'
-import { formatListMixin } from '@/components/mixins/format'
-import { minutesToDays, range } from '@/lib/time'
-import { frameToSeconds } from '@/lib/video'
+// Composables
+const store = useStore()
+const { formatDuration, organisation } = useFormat()
 
-export default {
-  name: 'estimation-helper',
-
-  mixins: [domMixin, formatListMixin],
-
-  components: {
-    CornerDownRightIcon,
-    EntityThumbnail,
-    PeopleAvatar,
-    PeopleName
+// Props / Emits
+const props = defineProps({
+  entityType: {
+    type: String,
+    default: 'Asset'
   },
+  tasks: {
+    type: Array,
+    default: () => []
+  }
+})
 
-  props: {
-    entityType: {
-      type: String,
-      default: 'Asset'
-    },
-    tasks: {
-      type: Array,
-      default: () => []
+const emit = defineEmits(['estimation-changed'])
+
+// State
+const lastSelection = ref(0)
+const lastShiftSelection = ref(0)
+const selectionGrid = ref({})
+// Imperative focus targets only, no reactivity needed
+const estimationInputs = new Map()
+
+// Computed
+const currentProduction = computed(() => store.getters.currentProduction)
+const isCurrentUserManager = computed(() => store.getters.isCurrentUserManager)
+const isCurrentUserSupervisor = computed(
+  () => store.getters.isCurrentUserSupervisor
+)
+const personMap = computed(() => store.getters.personMap)
+const taskStatusMap = computed(() => store.getters.taskStatusMap)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
+const user = computed(() => store.getters.user)
+
+const isAssets = computed(() => props.entityType === 'Asset')
+const isShots = computed(() => props.entityType === 'Shot')
+
+const entityMap = computed(() => getEntityMap(props.entityType))
+
+const tasksByPerson = computed(() =>
+  [...props.tasks].sort(compareFirstAssignees)
+)
+
+const assignees = computed(() => {
+  const allTasksStats = new Map()
+  const remainingStats = new Map()
+  const assigneeSet = new Set()
+  props.tasks.forEach(task => {
+    const entity = getEntity(task.entity_id)
+    task.assignees.forEach(personId => {
+      assigneeSet.add(personId)
+      addTaskToStats(allTasksStats, personId, task, entity)
+      const status = taskStatusMap.value.get(task.task_status_id)
+      if (!status.is_done && !status.is_feedback_request) {
+        addTaskToStats(remainingStats, personId, task, entity)
+      }
+    })
+  })
+  return [...assigneeSet]
+    .map(personId => personMap.value.get(personId))
+    .sort(firstBy('name'))
+    .map(person => ({
+      ...person,
+      alltasks: formatStats(allTasksStats.get(person.id)),
+      remaining: formatStats(remainingStats.get(person.id))
+    }))
+})
+
+// Functions
+const getEntity = entityId => entityMap.value.get(entityId)
+
+const setEstimationInput = (taskId, el) => {
+  if (el) {
+    estimationInputs.set(taskId, el)
+  } else {
+    estimationInputs.delete(taskId)
+  }
+}
+
+const compareFirstAssignees = (a, b) => {
+  if (a.assignees.length > 0 && b.assignees.length > 0) {
+    const personA = personMap.value.get(a.assignees[0])
+    const personB = personMap.value.get(b.assignees[0])
+    return personA.name.localeCompare(personB.name)
+  }
+  return a.assignees.length > 0 || b.assignees.length === 0 ? -1 : 1
+}
+
+const getSeconds = task => {
+  const shot = getEntity(task.entity_id)
+  return frameToSeconds(shot.nb_frames, currentProduction.value, shot)
+}
+
+const estimationUpdated = (event, task) => {
+  const value = event.target.value
+  if (value) {
+    saveEstimations(parseFloat(value), task)
+  }
+}
+
+const saveEstimations = (days, task) => {
+  const selection = Object.keys(selectionGrid.value)
+  if (selection.length > 1) {
+    selection.forEach(taskId => {
+      emit('estimation-changed', { taskId, days })
+    })
+  } else {
+    emit('estimation-changed', { taskId: task.id, days })
+  }
+}
+
+const onKeyDown = event => {
+  if (event.key === 'Tab') {
+    pauseEvent(event)
+    if (event.shiftKey) {
+      selectPrevious()
+    } else {
+      selectNext()
     }
-  },
+  } else if (event.key === 'ArrowDown') {
+    pauseEvent(event)
+    selectNext(event.shiftKey)
+  } else if (event.key === 'ArrowUp') {
+    pauseEvent(event)
+    selectPrevious(event.shiftKey)
+  }
+}
 
-  emits: ['estimation-changed'],
+const clearSelection = () => {
+  selectionGrid.value = {}
+}
 
-  data() {
-    return {
-      lastSelection: 0,
-      lastShiftSelection: 0,
-      selectionGrid: {}
-    }
-  },
+const addToSelection = taskId => {
+  selectionGrid.value[taskId] = true
+}
 
-  computed: {
-    ...mapGetters([
-      'currentProduction',
-      'isCurrentUserManager',
-      'isCurrentUserSupervisor',
-      'organisation',
-      'personMap',
-      'taskStatusMap',
-      'taskTypeMap',
-      'user'
-    ]),
+const selectTask = (event, task, index) => {
+  if (!(event.ctrlKey || event.metaKey)) clearSelection()
+  if (event.shiftKey) {
+    selectTaskRange(index)
+  } else {
+    selectSingleTask(index)
+  }
+  if (isInDepartment(task)) {
+    focusInput(estimationInputs.get(tasksByPerson.value[index].id))
+  }
+}
 
-    isAssets() {
-      return this.entityType === 'Asset'
-    },
+const selectPrevious = shiftKey => {
+  const index =
+    lastSelection.value - 1 < 0
+      ? tasksByPerson.value.length - 1
+      : lastSelection.value - 1
+  selectTask({ shiftKey }, tasksByPerson.value[index], index)
+}
 
-    isShots() {
-      return this.entityType === 'Shot'
-    },
+const selectNext = shiftKey => {
+  const index =
+    lastSelection.value + 1 >= tasksByPerson.value.length
+      ? 0
+      : lastSelection.value + 1
+  selectTask({ shiftKey }, tasksByPerson.value[index], index)
+}
 
-    tasksByPerson() {
-      return [...this.tasks].sort(this.compareFirstAssignees)
-    },
+const selectSingleTask = index => {
+  addToSelection(tasksByPerson.value[index].id)
+  lastSelection.value = index
+  lastShiftSelection.value = index
+}
 
-    assetMap() {
-      return assetsStore.cache.assetMap
-    },
+const selectTaskRange = index => {
+  lastSelection.value = index
+  const taskIndices =
+    lastShiftSelection.value > index
+      ? range(index, lastShiftSelection.value)
+      : range(lastShiftSelection.value, index)
+  taskIndices.forEach(i => {
+    addToSelection(tasksByPerson.value[i].id)
+  })
+}
 
-    editMap() {
-      return editsStore.cache.editMap
-    },
+const isInDepartment = task =>
+  isCurrentUserManager.value ||
+  isSupervisorInDepartments(
+    user.value,
+    isCurrentUserSupervisor.value,
+    taskTypeMap.value.get(task.task_type_id)?.department_id
+  )
 
-    episodeMap() {
-      return episodesStore.cache.episodeMap
-    },
+const addTaskToStats = (statsMap, personId, task, entity) => {
+  if (!statsMap.has(personId)) {
+    statsMap.set(personId, { count: 0, estimation: 0, frames: 0, seconds: 0 })
+  }
+  const stats = statsMap.get(personId)
+  stats.count += 1
+  stats.estimation += task.estimation
+  if (!isAssets.value) {
+    const frames = entity.nb_frames || 0
+    stats.frames += frames
+    stats.seconds += frameToSeconds(frames, currentProduction.value, entity)
+  }
+}
 
-    sequenceMap() {
-      return sequencesStore.cache.sequenceMap
-    },
+const formatStats = stats => {
+  const { count = 0, estimation = 0, frames = 0, seconds = 0 } = stats || {}
+  const estimationDays = minutesToDays(organisation.value, estimation)
+  const quota = estimation > 0 ? seconds / estimationDays : 0
+  const quotaCount = estimation > 0 ? count / estimationDays : 0
+  const quotaFrames = estimation > 0 ? frames / estimationDays : 0
 
-    shotMap() {
-      return shotsStore.cache.shotMap
-    },
-
-    entityMap() {
-      return this[`${this.entityType.toLowerCase()}Map`]
-    },
-
-    assignees() {
-      const assigneeSet = new Set()
-      const alltasks = {
-        countMap: new Map(),
-        frameMap: new Map(),
-        estimationMap: new Map(),
-        secondMap: new Map()
-      }
-      const remaining = {
-        countMap: new Map(),
-        frameMap: new Map(),
-        estimationMap: new Map(),
-        secondMap: new Map()
-      }
-      const assignees = []
-      this.tasks.forEach(task => {
-        const entity = this.getEntity(task.entity_id)
-        task.assignees.forEach(personId => {
-          assigneeSet.add(personId)
-          this.addAssigneeStatsToMaps(alltasks, personId, task, entity)
-          const status = this.taskStatusMap.get(task.task_status_id)
-          if (!status.is_done && !status.is_feedback_request) {
-            this.addAssigneeStatsToMaps(remaining, personId, task, entity)
-          }
-        })
-      })
-      assigneeSet.forEach((val, personId) =>
-        assignees.push(this.personMap.get(personId))
-      )
-      return assignees.sort(firstBy('name')).map(person => {
-        const allTasksStats = this.getAssigneeStats(person, alltasks)
-        const remainingStats = this.getAssigneeStats(person, remaining)
-        return {
-          ...person,
-          alltasks: allTasksStats,
-          remaining: remainingStats
-        }
-      })
-    }
-  },
-
-  methods: {
-    ...mapActions(['updateTask']),
-
-    frameToSeconds,
-
-    getEntity(entityId) {
-      return this.entityMap.get(entityId)
-    },
-
-    compareFirstAssignees(a, b) {
-      if (a.assignees.length > 0 && b.assignees.length > 0) {
-        const personA = this.personMap.get(a.assignees[0])
-        const personB = this.personMap.get(b.assignees[0])
-        return personA.name.localeCompare(personB.name)
-      } else if (a.assignees.length > 0) {
-        return -1
-      } else if (b.assignees.length > 0) {
-        return 1
-      } else {
-        return -1
-      }
-    },
-
-    getSeconds(task) {
-      const shot = this.getEntity(task.entity_id)
-      return frameToSeconds(shot.nb_frames, this.currentProduction, shot)
-    },
-
-    estimationUpdated(event, task) {
-      const value = event.target.value
-      if (value && value.length > 0) {
-        const estimation = parseFloat(event.target.value)
-        this.saveEstimations(estimation, task)
-      }
-    },
-
-    saveEstimations(days, task) {
-      const selection = Object.keys(this.selectionGrid)
-      if (selection.length > 1) {
-        selection.forEach(taskId => {
-          this.$emit('estimation-changed', { taskId, days })
-        })
-      } else {
-        this.$emit('estimation-changed', { taskId: task.id, days })
-      }
-    },
-
-    onKeyDown(event) {
-      if (event.key === 'Tab') {
-        this.pauseEvent(event)
-        if (event.shiftKey) {
-          this.selectPrevious()
-        } else {
-          this.selectNext()
-        }
-      } else if (event.key === 'ArrowDown') {
-        this.pauseEvent(event)
-        this.selectNext(event.shiftKey)
-      } else if (event.key === 'ArrowUp') {
-        this.pauseEvent(event)
-        this.selectPrevious(event.shiftKey)
-      }
-    },
-
-    clearSelection() {
-      this.selectionGrid = {}
-    },
-
-    addToSelection(taskId) {
-      this.selectionGrid[taskId] = true
-    },
-
-    selectTask(event, task, index) {
-      if (event.shiftKey) {
-        if (!(event.ctrlKey || event.metaKey)) this.clearSelection()
-        this.selectTaskRange(index)
-      } else {
-        if (!(event.ctrlKey || event.metaKey)) this.clearSelection()
-        this.selectSingleTask(index)
-      }
-      if (this.isInDepartment(task)) {
-        this.focusInput(
-          this.$refs[this.tasksByPerson[index].id + '-estimation'][0]
-        )
-      }
-    },
-
-    selectPrevious(shiftKey) {
-      let index = this.lastSelection
-      index = index - 1 < 0 ? this.tasksByPerson.length - 1 : index - 1
-      this.selectTask({ shiftKey }, this.tasksByPerson[index], index)
-    },
-
-    selectNext(shiftKey) {
-      let index = this.lastSelection
-      index = index + 1 >= this.tasksByPerson.length ? 0 : index + 1
-      this.selectTask({ shiftKey }, this.tasksByPerson[index], index)
-    },
-
-    selectSingleTask(index) {
-      const task = this.tasksByPerson[index]
-      this.addToSelection(task.id)
-      this.lastSelection = index
-      this.lastShiftSelection = index
-    },
-
-    selectTaskRange(index) {
-      this.lastSelection = index
-      const taskIndices =
-        this.lastShiftSelection > index
-          ? range(index, this.lastShiftSelection)
-          : range(this.lastShiftSelection, index)
-      const selection = taskIndices.map(i => this.tasksByPerson[i].id)
-      selection.forEach(taskId => {
-        this.addToSelection(taskId)
-      })
-    },
-
-    isInDepartment(task) {
-      if (this.isCurrentUserManager) {
-        return true
-      } else if (this.isCurrentUserSupervisor) {
-        if (this.user.departments.length === 0) {
-          return true
-        } else {
-          const taskType = this.taskTypeMap.get(task.task_type_id)
-          return (
-            taskType.department_id &&
-            this.user.departments.includes(taskType.department_id)
-          )
-        }
-      } else {
-        return false
-      }
-    },
-
-    getAssigneeStats(person, maps) {
-      const estimation = maps.estimationMap.get(person.id) || 0
-      const seconds = maps.secondMap.get(person.id) || 0
-      const frames = maps.frameMap.get(person.id) || 0
-      const count = maps.countMap.get(person.id) || 0
-      const estimationDays = minutesToDays(this.organisation, estimation)
-      const quota = estimation > 0 ? seconds / estimationDays : 0
-      const quotaCount = estimation > 0 ? count / estimationDays : 0
-      const quotaFrames = estimation > 0 ? frames / estimationDays : 0
-
-      return {
-        count: maps.countMap.get(person.id) || 0,
-        estimation: this.formatDuration(estimation),
-        frames,
-        quota: quota.toFixed(2),
-        quotaFrames: quotaFrames.toFixed(2),
-        quotaCount: quotaCount.toFixed(2),
-        seconds: seconds.toFixed(2)
-      }
-    },
-
-    addAssigneeStatsToMaps(maps, personId, task, entity) {
-      maps.countMap.set(personId, (maps.countMap.get(personId) || 0) + 1)
-      maps.estimationMap.set(
-        personId,
-        (maps.estimationMap.get(personId) || 0) + task.estimation
-      )
-      if (!this.isAssets) {
-        const frames = entity.nb_frames || 0
-        const seconds = frameToSeconds(frames, this.currentProduction, entity)
-        maps.secondMap.set(
-          personId,
-          (maps.secondMap.get(personId) || 0) + seconds
-        )
-        maps.frameMap.set(personId, (maps.frameMap.get(personId) || 0) + frames)
-      }
-    }
+  return {
+    count,
+    estimation: formatDuration(estimation),
+    frames,
+    quota: quota.toFixed(2),
+    quotaFrames: quotaFrames.toFixed(2),
+    quotaCount: quotaCount.toFixed(2),
+    seconds: seconds.toFixed(2)
   }
 }
 </script>
@@ -607,12 +535,6 @@ td {
   width: 60px;
 }
 
-.number {
-  min-width: 80px;
-  width: 80px;
-  text-align: right;
-}
-
 .estimation-helper {
   max-height: 100%;
 }
@@ -627,12 +549,6 @@ td {
 
 .column {
   padding: 0 1em 1em 1em;
-}
-
-.task-list {
-  .empty {
-    border-left: 0 solid transparent;
-  }
 }
 
 .task-list .numeric-cell,
