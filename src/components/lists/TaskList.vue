@@ -808,7 +808,11 @@ const isMetadataMenuEditAllowed = computed(() => {
 const showMetadataHeaderMenu = (descriptorId, event) => {
   const menuEl = headerMetadataMenuRef.value?.$el
   if (!menuEl) return
-  if (!event || !menuEl.classList.contains('hidden')) {
+  const isHidden = menuEl.classList.contains('hidden')
+  if (
+    !event ||
+    (!isHidden && descriptorId === lastMetadataHeaderMenuDisplayed.value)
+  ) {
     menuEl.classList.add('hidden')
     return
   }
@@ -819,7 +823,7 @@ const showMetadataHeaderMenu = (descriptorId, event) => {
   }
   const headerBox = headerElement.getBoundingClientRect()
   menuEl.style.left = `${headerBox.left - 3}px`
-  menuEl.style.top = `${headerBox.bottom + 11}px`
+  menuEl.style.top = `${headerBox.bottom + 4}px`
   menuEl.style.width = `${Math.max(100, headerBox.width - 1)}px`
   lastMetadataHeaderMenuDisplayed.value = descriptorId
 }
@@ -837,6 +841,15 @@ const onDeleteMetadataClicked = () => {
 const onSortByMetadataClicked = () => {
   emit('sort-metadata', lastMetadataHeaderMenuDisplayed.value)
   showMetadataHeaderMenu()
+}
+
+const onClickOutsideMenu = event => {
+  const menuEl = headerMetadataMenuRef.value?.$el
+  if (!menuEl || menuEl.classList.contains('hidden')) return
+  // The chevron buttons drive the menu themselves (toggle or reposition).
+  if (menuEl.contains(event.target)) return
+  if (event.target.closest?.('.metadata-menu-button')) return
+  menuEl.classList.add('hidden')
 }
 
 const onMetadataChanged = ({ entry, descriptor, value }) => {
@@ -931,10 +944,12 @@ watch(nbSelectedTasks, () => {
 // Lifecycle
 onMounted(() => {
   window.addEventListener('keydown', onKeyDown, false)
+  window.addEventListener('mousedown', onClickOutsideMenu)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('mousedown', onClickOutsideMenu)
 })
 
 defineExpose({
