@@ -1891,7 +1891,7 @@ const onRemoteTaskUpdate = eventData => {
   if (
     !isActiveTab('schedule') &&
     taskMap.value.get(eventData.task_id) &&
-    selectedTasks.value === 0 &&
+    nbSelectedTasks.value === 0 &&
     searchFieldRef.value &&
     searchFieldRef.value.getValue() === ''
   ) {
