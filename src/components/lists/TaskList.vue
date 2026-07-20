@@ -39,7 +39,10 @@
             <th class="assignees">
               {{ $t('tasks.fields.assignees') }}
             </th>
-            <th class="frames number-cell" v-if="isShots && !isPaperProduction">
+            <th
+              class="frames number-cell"
+              v-if="isShots && !isPaperProduction && isColumnVisible('frames')"
+            >
               {{ $t('tasks.fields.frames') }}
             </th>
             <th
@@ -48,16 +51,26 @@
             >
               {{ $t('tasks.fields.drawings') }}
             </th>
-            <th class="difficulty number-cell">
+            <th
+              class="difficulty number-cell"
+              v-if="isColumnVisible('difficulty')"
+            >
               {{ $t('tasks.fields.difficulty') }}
             </th>
-            <th class="estimation number-cell" :title="$t('main.estimation')">
+            <th
+              class="estimation number-cell"
+              :title="$t('main.estimation')"
+              v-if="isColumnVisible('estimation')"
+            >
               {{ $t('tasks.fields.estimation').substring(0, 3) }}.
             </th>
-            <th class="duration number-cell">
+            <th class="duration number-cell" v-if="isColumnVisible('duration')">
               {{ $t('tasks.fields.duration').substring(0, 3) }}.
             </th>
-            <th class="retake-count number-cell">
+            <th
+              class="retake-count number-cell"
+              v-if="isColumnVisible('retakeCount')"
+            >
               {{ $t('tasks.fields.retake_count') }}
             </th>
             <metadata-header
@@ -66,27 +79,58 @@
               @show-metadata-header-menu="
                 event => showMetadataHeaderMenu(descriptor.id, event)
               "
-              v-for="descriptor in metadataDescriptors"
+              v-for="descriptor in visibleMetadataDescriptors"
             />
-            <th class="start-date" v-if="!withSchedule">
+            <th
+              class="start-date"
+              v-if="!withSchedule && isColumnVisible('startDate')"
+            >
               {{ $t('tasks.fields.start_date') }}
             </th>
-            <th class="due-date" v-if="!withSchedule">
+            <th
+              class="due-date"
+              v-if="!withSchedule && isColumnVisible('dueDate')"
+            >
               {{ $t('tasks.fields.due_date') }}
             </th>
-            <th class="real-start-date" v-if="!withSchedule">
+            <th
+              class="real-start-date"
+              v-if="!withSchedule && isColumnVisible('realStartDate')"
+            >
               {{ $t('tasks.fields.real_start_date') }}
             </th>
-            <th class="real-end-date" v-if="!withSchedule">
+            <th
+              class="real-end-date"
+              v-if="!withSchedule && isColumnVisible('realEndDate')"
+            >
               {{ $t('tasks.fields.real_end_date') }}
             </th>
-            <th class="done-date" v-if="!withSchedule">
+            <th
+              class="done-date"
+              v-if="!withSchedule && isColumnVisible('doneDate')"
+            >
               {{ $t('tasks.fields.done_date') }}
             </th>
-            <th class="last-comment-date" v-if="!withSchedule">
+            <th
+              class="last-comment-date"
+              v-if="!withSchedule && isColumnVisible('lastCommentDate')"
+            >
               {{ $t('tasks.fields.last_comment_date') }}
             </th>
-            <th class="empty" v-if="!withSchedule">&nbsp;</th>
+            <th class="column-selector">
+              <button-simple
+                class="is-small"
+                icon="down"
+                @click="toggleColumnSelector"
+              />
+              <table-metadata-selector-menu
+                :descriptors="metadataDescriptors"
+                :exclude="{ frames: !isShots }"
+                namespace="task-type"
+                v-model="metadataDisplayHeaders"
+                v-model:is-open="columnSelectorDisplayed"
+              />
+            </th>
           </tr>
         </thead>
 
@@ -158,7 +202,10 @@
                 />
               </div>
             </td>
-            <td class="frames number-cell" v-if="isShots && !isPaperProduction">
+            <td
+              class="frames number-cell"
+              v-if="isShots && !isPaperProduction && isColumnVisible('frames')"
+            >
               {{ getEntity(task.entity.id).nb_frames }}
             </td>
             <td
@@ -178,7 +225,10 @@
                 {{ task.nb_drawings || 0 }}
               </template>
             </td>
-            <td class="difficulty number-cell">
+            <td
+              class="difficulty number-cell"
+              v-if="isColumnVisible('difficulty')"
+            >
               <combobox
                 class="difficulty-combobox"
                 :options="difficultyOptions"
@@ -197,7 +247,10 @@
                 </span>
               </template>
             </td>
-            <td class="estimation number-cell">
+            <td
+              class="estimation number-cell"
+              v-if="isColumnVisible('estimation')"
+            >
               <input
                 class="input"
                 min="0"
@@ -217,10 +270,14 @@
                 'number-cell': true,
                 error: isEstimationBurned(task)
               }"
+              v-if="isColumnVisible('duration')"
             >
               {{ formatDuration(task.duration) }}
             </td>
-            <td class="retake-count number-cell">
+            <td
+              class="retake-count number-cell"
+              v-if="isColumnVisible('retakeCount')"
+            >
               <template v-for="index in task.retake_count" :key="index">
                 &bull;
               </template>
@@ -228,7 +285,7 @@
             <td
               class="metadata-descriptor"
               :key="`${task.id}-${descriptor.id}`"
-              v-for="descriptor in metadataDescriptors"
+              v-for="descriptor in visibleMetadataDescriptors"
             >
               <metadata-input
                 :entity="task"
@@ -237,7 +294,10 @@
                 @metadata-changed="onMetadataChanged"
               />
             </td>
-            <td class="start-date" v-if="!withSchedule">
+            <td
+              class="start-date"
+              v-if="!withSchedule && isColumnVisible('startDate')"
+            >
               <date-field
                 class="flexrow-item"
                 :with-margin="false"
@@ -250,7 +310,10 @@
                 {{ formatDisplayDate(task.start_date) }}
               </template>
             </td>
-            <td class="due-date" v-if="!withSchedule">
+            <td
+              class="due-date"
+              v-if="!withSchedule && isColumnVisible('dueDate')"
+            >
               <date-field
                 class="flexrow-item"
                 :with-margin="false"
@@ -263,19 +326,31 @@
                 {{ formatDisplayDate(task.due_date) }}
               </template>
             </td>
-            <td class="real-start-date" v-if="!withSchedule">
+            <td
+              class="real-start-date"
+              v-if="!withSchedule && isColumnVisible('realStartDate')"
+            >
               {{ formatDisplayDate(task.real_start_date) }}
             </td>
-            <td class="real-end-date" v-if="!withSchedule">
+            <td
+              class="real-end-date"
+              v-if="!withSchedule && isColumnVisible('realEndDate')"
+            >
               {{ formatDisplayDate(task.end_date) }}
             </td>
-            <td class="done-date" v-if="!withSchedule">
+            <td
+              class="done-date"
+              v-if="!withSchedule && isColumnVisible('doneDate')"
+            >
               {{ formatDisplayDate(task.done_date) }}
             </td>
-            <td class="last-comment-date" v-if="!withSchedule">
+            <td
+              class="last-comment-date"
+              v-if="!withSchedule && isColumnVisible('lastCommentDate')"
+            >
               {{ formatDisplayDate(task.last_comment_date) }}
             </td>
-            <td v-if="!withSchedule"></td>
+            <td class="column-selector"></td>
           </tr>
         </tbody>
       </table>
@@ -376,6 +451,7 @@ import {
 import MetadataHeader from '@/components/cells/MetadataHeader.vue'
 import MetadataInput from '@/components/cells/MetadataInput.vue'
 import ValidationCell from '@/components/cells/ValidationCell.vue'
+import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
 import Combobox from '@/components/widgets/Combobox.vue'
 import DateField from '@/components/widgets/DateField.vue'
 import EntityPreview from '@/components/widgets/EntityPreview.vue'
@@ -383,6 +459,7 @@ import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import PeopleAvatarWithMenu from '@/components/widgets/PeopleAvatarWithMenu.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
 import TableMetadataHeaderMenu from '@/components/widgets/TableMetadataHeaderMenu.vue'
+import TableMetadataSelectorMenu from '@/components/widgets/TableMetadataSelectorMenu.vue'
 import TaskListNumbers from '@/components/widgets/TaskListNumbers.vue'
 import ValidationTag from '@/components/widgets/ValidationTag.vue'
 
@@ -452,6 +529,37 @@ const difficultyOptions = [
 const lastSelection = ref(null)
 const page = ref(1)
 const selectionGrid = ref({})
+
+// Column show/hide, mirroring the assets/shots lists' selector menu. Keys
+// are the fixed task columns; metadata columns are keyed by field_name and
+// merged in by TableMetadataSelectorMenu (localStorage-backed).
+const columnSelectorDisplayed = ref(false)
+const metadataDisplayHeaders = ref({
+  difficulty: true,
+  estimation: true,
+  duration: true,
+  retakeCount: true,
+  frames: true,
+  startDate: true,
+  dueDate: true,
+  realStartDate: true,
+  realEndDate: true,
+  doneDate: true,
+  lastCommentDate: true
+})
+
+const visibleMetadataDescriptors = computed(() =>
+  props.metadataDescriptors.filter(descriptor => {
+    const header = metadataDisplayHeaders.value[descriptor.field_name]
+    return header === undefined || header
+  })
+)
+
+const isColumnVisible = name => metadataDisplayHeaders.value[name] !== false
+
+const toggleColumnSelector = () => {
+  columnSelectorDisplayed.value = !columnSelectorDisplayed.value
+}
 
 const bodyRef = useTemplateRef('body')
 const headerMetadataMenuRef = useTemplateRef('header-metadata-menu')
@@ -1050,7 +1158,8 @@ td.retake-count {
   white-space: nowrap;
 }
 
-.empty {
+.column-selector {
+  text-align: right;
   width: 100%;
 }
 
