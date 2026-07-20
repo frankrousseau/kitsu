@@ -276,8 +276,8 @@
             :key="task.id"
             role="button"
             tabindex="0"
-            @click="selectTask($event, index, task)"
-            @keydown.enter.prevent="selectTask($event, index, task)"
+            @click="selectTaskFromCard($event, index, task)"
+            @keydown.enter.prevent="selectTaskFromCard($event, index, task)"
             v-for="(task, index) in taskGroup.tasks"
           >
             <entity-preview
@@ -321,8 +321,8 @@
         :key="task.id"
         role="button"
         tabindex="0"
-        @click="selectTask($event, index, task)"
-        @keydown.enter.prevent="selectTask($event, index, task)"
+        @click="selectTaskFromCard($event, index, task)"
+        @keydown.enter.prevent="selectTaskFromCard($event, index, task)"
         v-for="(task, index) in displayedTasks"
       >
         <entity-preview
@@ -743,6 +743,18 @@ const selectTask = (event, index, task) => {
       ['cell day selected'].includes(event.target.className))
   )
     return
+  applySelection(event, index, task)
+}
+
+// Card clicks skip the table-oriented guard above (it swallows most of
+// the card surface); only the avatar and its unassign menu must not
+// select.
+const selectTaskFromCard = (event, index, task) => {
+  if (event.target?.closest?.('.avatar-wrapper')) return
+  applySelection(event, index, task)
+}
+
+const applySelection = (event, index, task) => {
   const isSelected = selectionGrid.value[task.id]
   const isManySelection = Object.keys(selectionGrid.value).length > 1
   if (!(event.ctrlKey || event.metaKey) && !event.shiftKey) {
