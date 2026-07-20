@@ -191,6 +191,7 @@
             <div class="flexrow-item" v-if="isActiveTab('tasks')">
               <combobox-styled
                 :label="$t('main.sorted_by')"
+                open-left
                 :options="sortOptions"
                 locale-key-prefix="tasks.fields."
                 v-model="currentSort"
@@ -763,13 +764,16 @@ const taskMetadataDescriptors = computed(() =>
   )
 )
 
+// Metadata columns come right after the default sort so they stay above
+// the fold of the scrollable option list.
 const sortOptions = computed(() => [
-  ...staticSortOptions,
+  staticSortOptions[0],
   ...taskMetadataDescriptors.value.map(descriptor => ({
     label: descriptor.name,
     value: METADATA_SORT_PREFIX + descriptor.field_name,
     raw: true
-  }))
+  })),
+  ...staticSortOptions.slice(1)
 ])
 
 const optionalColumns = computed(() =>
