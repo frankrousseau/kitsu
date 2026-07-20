@@ -193,7 +193,7 @@
                   :revision="currentRevision"
                   :is-movie="isMoviePreview"
                   :is-picture="isPicturePreview"
-                  @add-comment="addComment"
+                  @add-comment="postComment"
                   @add-preview="onAddPreviewClicked"
                   @file-drop="selectFile"
                   @clear-files="clearPreviewFiles"
@@ -877,7 +877,11 @@ const loadTaskData = () => {
   }
 }
 
-const addComment = (
+// Named postComment, not addComment: in script setup a binding whose
+// camelCase matches a component tag shadows the component (camelize
+// wins over capitalize during template resolution), so an addComment
+// function would replace the <add-comment> widget itself.
+const postComment = (
   comment,
   attachment,
   checklist,
