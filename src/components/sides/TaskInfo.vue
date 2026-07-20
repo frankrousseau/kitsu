@@ -189,7 +189,7 @@
                   :is-error="errors.addComment"
                   :is-max-retakes-error="errors.addCommentMaxRetakes"
                   :fps="currentFps"
-                  :frame="currentFrame || currentFrameRaw"
+                  :frame="displayedFrame"
                   :revision="currentRevision"
                   :is-movie="isMoviePreview"
                   :is-picture="isPicturePreview"
@@ -219,7 +219,7 @@
                       :key="`comment-${comment.id}`"
                       :comment="comment"
                       :fps="currentFps"
-                      :frame="currentFrame || currentFrameRaw"
+                      :frame="displayedFrame"
                       :is-change="isStatusChange(index)"
                       :is-checkable="
                         user.id === comment.person?.id ||
@@ -298,7 +298,7 @@
           :active="modals.editComment"
           :comment-to-edit="commentToEdit"
           :fps="currentFps"
-          :frame="currentFrame || currentFrameRaw"
+          :frame="displayedFrame"
           :is-loading="loading.editComment"
           :is-error="errors.editComment"
           :revision="currentRevision"
@@ -392,8 +392,10 @@ import { useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 
 import { addEvents, getClientX, removeEvents } from '@/composables/dom'
+import { getEntityMap } from '@/composables/entity'
 import { useTime } from '@/composables/time'
 import csv from '@/lib/csv'
+import { isSupervisorInDepartments } from '@/lib/descriptors'
 import drafts from '@/lib/drafts'
 import func from '@/lib/func'
 import {
@@ -406,6 +408,7 @@ import { formatRevision } from '@/lib/preview'
 import { getTaskTypeWithUrl } from '@/lib/productions'
 import { sortPeople, sortTaskNames } from '@/lib/sorting'
 import stringHelpers from '@/lib/string'
+import { formatSimpleDate } from '@/lib/time'
 import { DEFAULT_FPS, formatFrame } from '@/lib/video'
 
 import AddPreviewModal from '@/components/modals/AddPreviewModal.vue'
@@ -646,8 +649,7 @@ const title = computed(() => {
 })
 
 const isAssigned = computed(
-  () =>
-    props.task?.assignees.some(personId => personId === user.value.id) ?? false
+  () => props.task?.assignees.includes(user.value.id) ?? false
 )
 
 const isCommentingAllowed = computed(
@@ -661,32 +663,23 @@ const isCommentingAllowed = computed(
 
 const isConceptTask = computed(() => props.entityType === 'Concept')
 
-const isDepartmentSupervisor = computed(() => {
-  if (!isCurrentUserSupervisor.value) {
-    return false
-  }
-  if (user.value.departments.length === 0) {
-    return true
-  }
-  return user.value.departments.includes(currentTaskType.value?.department_id)
-})
+const isDepartmentSupervisor = computed(() =>
+  isSupervisorInDepartments(
+    user.value,
+    isCurrentUserSupervisor.value,
+    currentTaskType.value?.department_id
+  )
+)
 
-const isPreviewPlayerReadOnly = computed(() => {
-  if (props.task) {
-    if (isCurrentUserManager.value || isCurrentUserClient.value) {
-      return false
-    } else if (isCurrentUserSupervisor.value) {
-      if (user.value.departments.length === 0) {
-        return false
-      } else {
-        return !user.value.departments.includes(
-          currentTaskType.value?.department_id
-        )
-      }
-    }
-  }
-  return true
-})
+const isPreviewPlayerReadOnly = computed(
+  () =>
+    !props.task ||
+    !(
+      isCurrentUserManager.value ||
+      isCurrentUserClient.value ||
+      isDepartmentSupervisor.value
+    )
+)
 
 const currentTaskType = computed(() =>
   taskTypeMap.value.get(props.task?.task_type_id)
@@ -711,10 +704,8 @@ const entityFrames = computed(() => {
   return shotMap.value.get(props.task.entity.id)?.nb_frames || 0
 })
 
-const currentPreview = computed(() =>
-  taskPreviews.value && taskPreviews.value.length > 0
-    ? taskPreviews.value[currentPreviewIndex.value]
-    : null
+const currentPreview = computed(
+  () => taskPreviews.value[currentPreviewIndex.value] ?? null
 )
 
 const currentPreviewComment = computed(() =>
@@ -725,17 +716,7 @@ const currentPreviewComment = computed(() =>
   )
 )
 
-const currentPreviewId = computed(() => {
-  const index = currentPreviewIndex.value
-  if (
-    taskPreviews.value &&
-    taskPreviews.value.length > 0 &&
-    taskPreviews.value[index]
-  ) {
-    return taskPreviews.value[index].id
-  }
-  return null
-})
+const currentPreviewId = computed(() => currentPreview.value?.id ?? null)
 
 const canDownloadAnnotations = computed(
   () =>
@@ -744,28 +725,21 @@ const canDownloadAnnotations = computed(
     (currentPreview.value?.annotations?.length || 0) > 0
 )
 
-const annotationsZipPath = computed(() =>
+const annotationsPath = suffix =>
   currentPreviewId.value
-    ? `/api/actions/preview-files/${currentPreviewId.value}/extract-annotated-frames`
+    ? `/api/actions/preview-files/${currentPreviewId.value}/extract-annotated-frames${suffix}`
     : null
-)
-
-const annotationsPdfPath = computed(() =>
-  currentPreviewId.value
-    ? `/api/actions/preview-files/${currentPreviewId.value}/extract-annotated-frames-pdf`
-    : null
-)
 
 const exportActions = computed(() =>
   [
     {
       label: 'annotations.zip',
-      href: annotationsZipPath.value,
+      href: annotationsPath(''),
       visible: canDownloadAnnotations.value
     },
     {
       label: 'annotations.pdf',
-      href: annotationsPdfPath.value,
+      href: annotationsPath('-pdf'),
       visible: canDownloadAnnotations.value
     },
     {
@@ -776,32 +750,21 @@ const exportActions = computed(() =>
   ].filter(action => action.visible !== false)
 )
 
-const currentRevision = computed(() =>
-  props.currentParentPreview && props.currentParentPreview.revision
-    ? props.currentParentPreview.revision
-    : currentPreview.value
-      ? currentPreview.value.revision
-      : 0
-)
-
-const extension = computed(() =>
-  taskPreviews.value && taskPreviews.value.length > 0
-    ? taskPreviews.value[currentPreviewIndex.value].extension
-    : ''
-)
-
-const isMoviePreview = computed(
+const currentRevision = computed(
   () =>
-    taskPreviews.value &&
-    taskPreviews.value.length > 0 &&
-    extension.value === 'mp4'
+    props.currentParentPreview?.revision || currentPreview.value?.revision || 0
 )
 
-const isPicturePreview = computed(
-  () =>
-    taskPreviews.value &&
-    taskPreviews.value.length > 0 &&
-    ['png', 'gif'].includes(extension.value)
+const displayedFrame = computed(
+  () => props.currentFrame || currentFrameRaw.value
+)
+
+const extension = computed(() => currentPreview.value?.extension ?? '')
+
+const isMoviePreview = computed(() => extension.value === 'mp4')
+
+const isPicturePreview = computed(() =>
+  ['png', 'gif'].includes(extension.value)
 )
 
 const taskStatuses = computed(() =>
@@ -842,16 +805,8 @@ const selectedTasksToDisplay = computed(() =>
 
 // Functions
 const getTaskEntity = task => {
-  const getterByType = {
-    Shot: 'shotMap',
-    Episode: 'episodeMap',
-    Sequence: 'sequenceMap',
-    Edit: 'editMap',
-    Asset: 'assetMap'
-  }
-  const getterName = getterByType[task?.entity_type_name]
-  if (!getterName || !task?.entity?.id) return null
-  return store.getters[getterName]?.get(task.entity.id) || null
+  if (!task?.entity_type_name || !task?.entity?.id) return null
+  return getEntityMap(task.entity_type_name)?.get(task.entity.id) || null
 }
 
 const getCurrentTaskComments = () =>
@@ -931,7 +886,7 @@ const resetModals = () => {
 }
 
 const resetComments = () => {
-  taskComments.value = store.getters.getTaskComments(props.task.id)
+  taskComments.value = getCurrentTaskComments()
 }
 
 const reset = ({ keepPreviewFiles = false } = {}) => {
@@ -940,7 +895,7 @@ const reset = ({ keepPreviewFiles = false } = {}) => {
     clearPreviewFiles()
   }
   if (props.task) {
-    taskComments.value = store.getters.getTaskComments(props.task.id)
+    resetComments()
     taskPreviews.value = store.getters.getTaskPreviews(props.task.id)
     nextTick(() => {
       previewPlayerRef.value?.focus()
@@ -1067,7 +1022,7 @@ const onRemoveExtraPreview = preview => {
 }
 
 const onCommentAdded = () => {
-  taskComments.value = store.getters.getTaskComments(props.task.id)
+  resetComments()
 }
 
 const onCancelRemoveExtraPreview = () => {
@@ -1094,10 +1049,9 @@ const onPreviewChanged = previewId => {
 }
 
 const changeCurrentPreview = previewFile => {
-  const index = taskPreviews.value.findIndex(p => p.id === previewFile.id)
-  if (index || index === 0) {
-    currentPreviewIndex.value = index
-  }
+  currentPreviewIndex.value = taskPreviews.value.findIndex(
+    p => p.id === previewFile.id
+  )
 }
 
 const setCurrentPreviewAsEntityThumbnail = frame => {
@@ -1208,7 +1162,7 @@ const confirmMoveComment = async targetTaskId => {
       commentId: commentToMove.value.id,
       targetTaskId
     })
-    taskComments.value = store.getters.getTaskComments(props.task.id)
+    resetComments()
     modals.moveComment = false
     commentToMove.value = null
   } catch (err) {
@@ -1289,24 +1243,18 @@ const confirmDeleteTaskPreview = () => {
 }
 
 const onRemoteAcknowledge = (eventData, type) => {
-  if (props.task) {
-    const comment = store.getters.getTaskComment(
-      props.task.id,
-      eventData.comment_id
-    )
-    const person = personMap.value.get(eventData.person_id)
-    if (comment && person) {
-      if (user.value.id === person.id) {
-        if (
-          (type === 'ack' && !comment.acknowledgements.includes(person.id)) ||
-          (type === 'unack' && comment.acknowledgements.includes(person.id))
-        ) {
-          store.commit('ACK_COMMENT', { comment, user: person })
-        }
-      } else {
-        store.commit('ACK_COMMENT', { comment, user: person })
-      }
-    }
+  if (!props.task) return
+  const comment = store.getters.getTaskComment(
+    props.task.id,
+    eventData.comment_id
+  )
+  const person = personMap.value.get(eventData.person_id)
+  if (!comment || !person) return
+  const hasAck = comment.acknowledgements.includes(person.id)
+  // For the current user's own events, skip commits that would double
+  // apply an acknowledgement already reflected locally.
+  if (user.value.id !== person.id || (type === 'ack') !== hasAck) {
+    store.commit('ACK_COMMENT', { comment, user: person })
   }
 }
 
@@ -1318,23 +1266,12 @@ const isStatusChange = index => {
   )
 }
 
-const timeCodeClicked = ({
-  versionRevision,
-  minutes,
-  seconds,
-  milliseconds,
-  frame
-}) => {
+const timeCodeClicked = payload => {
   if (!props.isPreview) {
-    emit('time-code-clicked', {
-      versionRevision,
-      minutes,
-      seconds,
-      milliseconds,
-      frame
-    })
+    emit('time-code-clicked', payload)
     return
   }
+  const { versionRevision, frame } = payload
   changeCurrentPreview(
     taskPreviews.value.find(p => p.revision === parseInt(versionRevision))
   )
@@ -1361,7 +1298,7 @@ const extractAnnotationSnapshots = async (withLabel = false) => {
 
 const onExportClick = () => {
   const nameData = [
-    moment().format('YYYY-MM-DD'),
+    formatSimpleDate(moment()),
     'kitsu',
     productionMap.value.get(props.task.project_id)?.name,
     props.task.entity_name.replaceAll(' / ', '_'),
@@ -1483,10 +1420,7 @@ const setWidth = width => {
 const onSetCurrentFrameAsThumbnail = isUseCurrentFrame => {
   if (previewPlayerRef.value) {
     loading.setFrameThumbnail = true
-    let frame = null
-    if (isUseCurrentFrame) {
-      frame = currentFrameRaw.value + 1
-    }
+    const frame = isUseCurrentFrame ? currentFrameRaw.value + 1 : null
     return setCurrentPreviewAsEntityThumbnail(frame)
   }
 }
@@ -1531,7 +1465,7 @@ const onRemoteTaskUpdate = eventData => {
     setTimeout(() => {
       // in case the task changed during the timeout
       if (props.task && eventData.task_id === props.task.id) {
-        taskComments.value = store.getters.getTaskComments(props.task.id)
+        resetComments()
       }
     }, 1000)
   }
@@ -1599,7 +1533,7 @@ const onRemoteCommentDelete = eventData => {
     const comment = taskComments.value.find(c => c.id === eventData.comment_id)
     if (comment) {
       store.commit('REMOVE_TASK_COMMENT', { task: props.task, comment })
-      taskComments.value = store.getters.getTaskComments(props.task.id)
+      resetComments()
       taskPreviews.value = store.getters.getTaskPreviews(props.task.id)
     }
     animOn.value = false

@@ -266,7 +266,7 @@
           :is-loading="loading.entities"
           :tasks="tasks"
           :with-schedule="isScheduleVisible"
-          @task-selected="onTaskSelected"
+          @task-selected="updateTaskInQuery"
           @scroll="onTaskListScroll"
           v-if="isActiveTab('tasks')"
         >
@@ -394,7 +394,9 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
+import { getEntityMap } from '@/composables/entity'
 import csv from '@/lib/csv'
+import { isSupervisorInDepartments } from '@/lib/descriptors'
 import {
   applyFilters,
   getDescFilters,
@@ -415,11 +417,6 @@ import {
   minutesToDays,
   parseDate
 } from '@/lib/time'
-import assetsStore from '@/store/modules/assets.js'
-import editsStore from '@/store/modules/edits.js'
-import episodesStore from '@/store/modules/episodes.js'
-import sequencesStore from '@/store/modules/sequences.js'
-import shotsStore from '@/store/modules/shots.js'
 import taskStatusStore from '@/store/modules/taskstatus.js'
 import taskTypeStore from '@/store/modules/tasktypes.js'
 
@@ -443,103 +440,51 @@ import SearchQueryList from '@/components/widgets/SearchQueryList.vue'
 import TaskListNumbers from '@/components/widgets/TaskListNumbers.vue'
 import TaskTypeName from '@/components/widgets/TaskTypeName.vue'
 
+const dueIn = (offset, unit, period) => tasks => {
+  const target = moment().add(offset, unit)[period]()
+  return tasks.filter(t => parseDate(t.due_date)[period]() === target)
+}
+
 const filters = {
-  all(tasks) {
-    return tasks
+  all: tasks => tasks,
+  dueweek: dueIn(0, 'days', 'isoWeek'),
+  duepreviousweek: dueIn(-7, 'days', 'isoWeek'),
+  duenextweek: dueIn(7, 'days', 'isoWeek'),
+  duemonth: dueIn(0, 'months', 'month'),
+  duepreviousmonth: dueIn(-1, 'months', 'month'),
+  duenextmonth: dueIn(1, 'months', 'month'),
+
+  duebeforetoday: tasks => {
+    const today = moment()
+    return tasks.filter(t => parseDate(t.due_date).isBefore(today))
   },
 
-  dueweek(tasks) {
-    const todayWeek = moment().isoWeek()
-    return tasks.filter(t => {
-      const dueDate = parseDate(t.due_date)
-      return dueDate.isoWeek() === todayWeek
-    })
+  dueaftertoday: tasks => {
+    const today = moment()
+    return tasks.filter(t => parseDate(t.due_date).isAfter(today))
   },
 
-  duepreviousweek(tasks) {
-    const previousWeek = moment().add(-7, 'days').isoWeek()
-    return tasks.filter(t => {
-      const dueDate = parseDate(t.due_date)
-      return dueDate.isoWeek() === previousWeek
-    })
-  },
+  overestimation: tasks =>
+    tasks.filter(t => t.estimation && t.duration > t.estimation),
 
-  duenextweek(tasks) {
-    const nextWeek = moment().add(7, 'days').isoWeek()
-    return tasks.filter(t => {
-      const dueDate = parseDate(t.due_date)
-      return dueDate.isoWeek() === nextWeek
-    })
-  },
-
-  duebeforetoday(tasks) {
+  approvallate: (tasks, taskStatusMap) => {
     const today = moment()
     return tasks.filter(t => {
-      const dueDate = parseDate(t.due_date)
-      return dueDate.isBefore(today)
-    })
-  },
-
-  duemonth(tasks) {
-    const todayMonth = moment().month()
-    return tasks.filter(t => {
-      const dueDate = parseDate(t.due_date)
-      return dueDate.month() === todayMonth
-    })
-  },
-
-  duepreviousmonth(tasks) {
-    const previousMonth = moment().add(-1, 'months').month()
-    return tasks.filter(t => {
-      const dueDate = parseDate(t.due_date)
-      return dueDate.month() === previousMonth
-    })
-  },
-
-  duenextmonth(tasks) {
-    const nextMonth = moment().add(1, 'months').month()
-    return tasks.filter(t => {
-      const dueDate = parseDate(t.due_date)
-      return dueDate.month() === nextMonth
-    })
-  },
-
-  dueaftertoday(tasks) {
-    const today = moment()
-    return tasks.filter(t => {
-      const dueDate = parseDate(t.due_date)
-      return dueDate.isAfter(today)
-    })
-  },
-
-  overestimation(tasks) {
-    return tasks.filter(t => {
-      return t.estimation && t.duration > t.estimation
-    })
-  },
-
-  approvallate(tasks, taskStatusMap) {
-    const today = moment()
-    return tasks.filter(t => {
-      const dueDate = parseDate(t.due_date)
+      const status = taskStatusMap.get(t.task_status_id)
       return (
-        dueDate.isBefore(today) &&
-        !(
-          taskStatusMap.get(t.task_status_id).is_feedback_request ||
-          taskStatusMap.get(t.task_status_id).is_done
-        )
+        parseDate(t.due_date).isBefore(today) &&
+        !(status.is_feedback_request || status.is_done)
       )
     })
   },
 
-  donelate(tasks, taskStatusMap) {
+  donelate: (tasks, taskStatusMap) => {
     const today = moment()
-    return tasks.filter(t => {
-      const dueDate = parseDate(t.due_date)
-      return (
-        dueDate.isBefore(today) && !taskStatusMap.get(t.task_status_id).is_done
-      )
-    })
+    return tasks.filter(
+      t =>
+        parseDate(t.due_date).isBefore(today) &&
+        !taskStatusMap.get(t.task_status_id).is_done
+    )
   }
 }
 
@@ -574,12 +519,6 @@ const entityType = ref('Asset')
 const estimationFilter = ref('all')
 const importCsvFormData = ref({})
 const isScheduleVisible = ref(false)
-const optionalColumns = ref([
-  'Estimation',
-  'Start date',
-  'Due date',
-  'Difficulty'
-])
 const parsedCSV = ref([])
 const priorityFilter = ref('-1')
 const retakeCountFilter = ref('all')
@@ -662,8 +601,6 @@ const modals = reactive({
 
 const schedule = reactive({
   currentColor: 'status',
-  startDate: null,
-  endDate: null,
   scheduleItems: [],
   taskTypeAfter: null,
   taskTypeBefore: null,
@@ -706,16 +643,7 @@ const user = computed(() => store.getters.user)
 const taskStatusMap = computed(() => taskStatusStore.cache.taskStatusMap)
 const taskTypeMap = computed(() => taskTypeStore.cache.taskTypeMap)
 
-const entityMap = computed(() => {
-  const caches = {
-    asset: assetsStore.cache.assetMap,
-    edit: editsStore.cache.editMap,
-    episode: episodesStore.cache.episodeMap,
-    sequence: sequencesStore.cache.sequenceMap,
-    shot: shotsStore.cache.shotMap
-  }
-  return caches[entityType.value.toLowerCase()]
-})
+const entityMap = computed(() => getEntityMap(entityType.value))
 
 const isEpisodesSection = computed(() => route.meta.section === 'episodes')
 
@@ -774,15 +702,21 @@ const taskTypeStartDate = computed(() =>
 
 const taskTypeEndDate = computed(() => moment(schedule.taskTypeEndDate).utc())
 
-const isSupervisorInDepartment = computed(() => {
-  const departments = user.value.departments || []
-  return (
+const isSupervisorInDepartment = computed(
+  () =>
     isCurrentUserManager.value ||
-    (isCurrentUserSupervisor.value &&
-      (!departments.length ||
-        departments.includes((currentTaskType.value || {}).department_id)))
-  )
-})
+    isSupervisorInDepartments(
+      user.value,
+      isCurrentUserSupervisor.value,
+      currentTaskType.value?.department_id
+    )
+)
+
+const optionalColumns = computed(() =>
+  isPaperProduction.value
+    ? ['Drawings', 'Estimation', 'Start date', 'Due date', 'Difficulty']
+    : ['Estimation', 'Start date', 'Due date', 'Difficulty']
+)
 
 const productionStartDate = computed(() =>
   parseDate(currentProduction.value.start_date)
@@ -887,14 +821,6 @@ const zoomOptions = computed(() => [
 ])
 
 // Functions
-const setOptionalImportColumns = () => {
-  const columns = ['Estimation', 'Start date', 'Due date', 'Difficulty']
-  if (isPaperProduction.value) {
-    columns.unshift('Drawings')
-  }
-  optionalColumns.value = columns
-}
-
 const initData = force => {
   resetTasks()
   focusSearchField({ preventScroll: true })
@@ -908,19 +834,11 @@ const initData = force => {
         loading.entities = false
         resetTasks()
         focusSearchField({ preventScroll: true })
-        let searchQuery = route.query.search
-        if (!searchQuery && searchFieldRef.value) {
-          searchQuery = searchFieldRef.value.getValue()
-        }
-        if (searchQuery) onSearchChange(searchQuery)
+        applySearchAndScheduleState()
         setTimeout(() => {
           setSearchFromUrl()
           resetTaskTypeDates()
         }, 200)
-        if (dataDisplay.value.beforeAfterTasks) {
-          setDefaultBeforeAfterTaskTypes()
-        }
-        resetScheduleItems(true)
 
         dueDateFilter.value = route.query.duedate || 'all'
         estimationFilter.value = route.query.late || 'all'
@@ -948,17 +866,18 @@ const initData = force => {
     setCurrentScheduleItem().then(() => {
       resetTaskTypeDates()
       loading.entities = false
-      let searchQuery = route.query.search
-      if (!searchQuery && searchFieldRef.value) {
-        searchQuery = searchFieldRef.value.getValue()
-      }
-      if (searchQuery) onSearchChange(searchQuery)
-      if (dataDisplay.value.beforeAfterTasks) {
-        setDefaultBeforeAfterTaskTypes()
-      }
-      resetScheduleItems(true)
+      applySearchAndScheduleState()
     })
   }
+}
+
+const applySearchAndScheduleState = () => {
+  const searchQuery = route.query.search || searchFieldRef.value?.getValue()
+  if (searchQuery) onSearchChange(searchQuery)
+  if (dataDisplay.value.beforeAfterTasks) {
+    setDefaultBeforeAfterTaskTypes()
+  }
+  resetScheduleItems(true)
 }
 
 const setCurrentScheduleItem = () => {
@@ -1150,16 +1069,12 @@ const updateUrlParams = () => {
 
 // Tasks
 
+// onSearchChange leaves tasks sorted on every path, no extra sort needed.
 const applyTaskFilters = () => {
   onSearchChange(searchFieldRef.value.getValue())
-  sortTasks()
   taskListRef.value?.resetSelection()
   updateUrlParams()
   store.dispatch('clearSelectedTasks')
-}
-
-const onTaskSelected = () => {
-  updateTaskInQuery()
 }
 
 const onTaskListScroll = ({ top }) => {
@@ -1201,13 +1116,14 @@ const updateTaskInQuery = () => {
 const getEntityTasks = () => getTasks(Array.from(entityMap.value.values()))
 
 const resetTasks = () => {
-  tasks.value = sortTasks(getEntityTasks())
-  resetTaskIndex()
+  const entityTasks = getEntityTasks()
+  tasks.value = sortTasks(entityTasks)
+  resetTaskIndex(entityTasks)
 }
 
-const resetTaskIndex = () => {
+const resetTaskIndex = (entityTasks = getEntityTasks()) => {
   taskIndex = buildSupervisorTaskIndex(
-    getEntityTasks(),
+    entityTasks,
     personMap.value,
     taskStatusMap.value
   )
@@ -1249,23 +1165,20 @@ const getTasks = entities => {
   return result
 }
 
-const sortTasks = list => {
-  if (!list) list = tasks.value
-  const isDesc = ['task_status_short_name', 'entity_name', 'due_date'].includes(
-    currentSort.value
-  )
+const sortTasks = (list = tasks.value) => {
   if (currentSort.value === 'nb_frames') {
-    tasks.value = list.sort((ta, tb) => {
+    return list.sort((ta, tb) => {
       const nbFramesA = getEntity(ta.entity.id)?.nb_frames || 0
       const nbFramesB = getEntity(tb.entity.id)?.nb_frames || 0
       return nbFramesB - nbFramesA
     })
-  } else {
-    tasks.value = list.sort(
-      firstBy(currentSort.value, isDesc ? 1 : -1).thenBy('entity_name')
-    )
   }
-  return list
+  const isDesc = ['task_status_short_name', 'entity_name', 'due_date'].includes(
+    currentSort.value
+  )
+  return list.sort(
+    firstBy(currentSort.value, isDesc ? 1 : -1).thenBy('entity_name')
+  )
 }
 
 const getEntity = entityId => entityMap.value.get(entityId) || {}
@@ -1349,14 +1262,14 @@ const resetScheduleItems = async (resetScroll = false) => {
   }
 }
 
-const resetScheduleItemsForScheduleTab = async () => {
-  if (!currentScheduleItem.value) return
-
+// Shared prelude of the two schedule rebuilds: assignation map plus the
+// days-off and timesheet loads (independent requests, run in parallel).
+const prepareScheduleData = async () => {
   const taskAssignationMap = buildAssignationMap()
   const startDate = currentScheduleItem.value.start_date
   const endDate = currentScheduleItem.value.end_date
 
-  daysOffByPerson.value = await store
+  const daysOffPromise = store
     .dispatch('loadProductionDaysOff', { startDate, endDate })
     .catch(
       () => ({}) // fallback if not allowed to fetch days off
@@ -1366,12 +1279,23 @@ const resetScheduleItemsForScheduleTab = async () => {
     const assignees = Object.keys(taskAssignationMap).filter(
       id => id !== 'unassigned' && taskAssignationMap[id].length > 0
     )
-    timesheetByPerson.value = await loadTimesheets(
-      assignees,
-      startDate,
-      endDate
-    )
+    const [daysOff, timesheets] = await Promise.all([
+      daysOffPromise,
+      loadTimesheets(assignees, startDate, endDate)
+    ])
+    daysOffByPerson.value = daysOff
+    timesheetByPerson.value = timesheets
+  } else {
+    daysOffByPerson.value = await daysOffPromise
   }
+
+  return taskAssignationMap
+}
+
+const resetScheduleItemsForScheduleTab = async () => {
+  if (!currentScheduleItem.value) return
+
+  const taskAssignationMap = await prepareScheduleData()
 
   const scheduleItems = team.value
     .map(person =>
@@ -1398,26 +1322,7 @@ const resetScheduleItemsForScheduleTab = async () => {
 const resetScheduleItemsForTasksTab = async () => {
   if (!currentScheduleItem.value) return
 
-  const taskAssignationMap = buildAssignationMap()
-  const startDate = currentScheduleItem.value.start_date
-  const endDate = currentScheduleItem.value.end_date
-
-  daysOffByPerson.value = await store
-    .dispatch('loadProductionDaysOff', { startDate, endDate })
-    .catch(
-      () => ({}) // fallback if not allowed to fetch days off
-    )
-
-  if (dataDisplay.value.timesheets) {
-    const assignees = Object.keys(taskAssignationMap).filter(
-      id => id !== 'unassigned' && taskAssignationMap[id].length > 0
-    )
-    timesheetByPerson.value = await loadTimesheets(
-      assignees,
-      startDate,
-      endDate
-    )
-  }
+  await prepareScheduleData()
 
   const scheduleItems = [
     {
@@ -1478,12 +1383,13 @@ const loadTimesheets = async (personIds, startDate, endDate) => {
       () => ({}) // fallback if not allowed to fetch timesheets
     )
 
+  const taskById = new Map(tasks.value.map(task => [task.id, task]))
   const timesheetByPersonResult = {}
   for (const personId of personIds) {
     const timesheet =
       timesheets[personId]?.sort(firstBy('date').thenBy('task_id')) || []
     timesheet.forEach(entry => {
-      entry.task = tasks.value.find(task => task.id === entry.task_id)
+      entry.task = taskById.get(entry.task_id)
       entry.startDate = parseDate(entry.date)
       entry.endDate = parseDate(entry.date)
     })
@@ -1516,6 +1422,43 @@ const loadTimesheets = async (personIds, startDate, endDate) => {
     timesheetByPersonResult[personId] = mergedTimesheet
   }
   return timesheetByPersonResult
+}
+
+// Resolve a task's schedule dates: explicit dates first, then the real
+// start, then an estimation-based end. Without a default start a task
+// with no dates yields undefined dates (callers drop those elements).
+const getTaskDates = (task, daysOff, defaultStartDate = undefined) => {
+  let startDate = defaultStartDate
+  if (task.start_date) {
+    startDate = parseDate(task.start_date)
+  } else if (task.real_start_date) {
+    startDate = parseDate(task.real_start_date)
+  }
+
+  let endDate
+  if (task.due_date) {
+    endDate = parseDate(task.due_date)
+  } else if (task.end_date) {
+    endDate = parseDate(task.end_date)
+  } else {
+    endDate = addBusinessDays(
+      startDate,
+      Math.ceil(minutesToDays(organisation.value, task.estimation)) - 1,
+      daysOff
+    )
+  }
+  return { startDate, endDate }
+}
+
+const enrichSiblingElement = (element, taskType, daysOff) => {
+  if (!element) return null
+  const { startDate, endDate } = getTaskDates(element, daysOff)
+  if (!startDate || !endDate) return null
+  element.name = `[${taskType.name}] ${element.entity_name}`
+  element.startDate = startDate
+  element.endDate = endDate
+  element.color = getTaskElementColor(element, endDate)
+  return element
 }
 
 const buildPersonElement = (
@@ -1566,43 +1509,15 @@ const buildPersonElement = (
 
   const children = personTasks.map(task => {
     const estimation = task.estimation
-    let endDate
-
-    let startDate = moment(schedule.taskTypeStartDate)
-    if (task.start_date) {
-      startDate = parseDate(task.start_date)
-    } else if (task.real_start_date) {
-      startDate = parseDate(task.real_start_date)
-    }
-
-    if (startDate.isAfter(schedule.endDate)) {
-      startDate = schedule.endDate.clone().add(-1, 'days')
-    }
-    if (startDate.isBefore(schedule.startDate)) {
-      startDate = schedule.startDate.clone()
-    }
-
-    if (task.due_date) {
-      endDate = parseDate(task.due_date)
-    } else if (task.end_date) {
-      endDate = parseDate(task.end_date)
-    } else {
-      endDate = addBusinessDays(
-        startDate,
-        Math.ceil(minutesToDays(organisation.value, task.estimation)) - 1,
-        personElement.daysOff
-      )
-    }
+    let { startDate, endDate } = getTaskDates(
+      task,
+      personElement.daysOff,
+      moment(schedule.taskTypeStartDate)
+    )
 
     if (!endDate || endDate.isBefore(startDate)) {
       const nbDays = startDate.isoWeekday() === 5 ? 3 : 1
       endDate = startDate.clone().add(nbDays, 'days')
-    }
-    if (endDate.isAfter(schedule.endDate)) {
-      endDate = schedule.endDate.clone().add(-1, 'days')
-      if (startDate.isAfter(endDate)) {
-        startDate = endDate.clone().add(-1, 'days')
-      }
     }
 
     if (estimation) manDays += estimation
@@ -1646,67 +1561,16 @@ const buildPersonElement = (
       }
     }
 
-    if (data.previousElement) {
-      const task = data.previousElement
-      let startDate
-      if (task.start_date) {
-        startDate = parseDate(task.start_date)
-      } else if (task.real_start_date) {
-        startDate = parseDate(task.real_start_date)
-      }
-      let endDate
-      if (task.due_date) {
-        endDate = parseDate(task.due_date)
-      } else if (task.end_date) {
-        endDate = parseDate(task.end_date)
-      } else {
-        endDate = addBusinessDays(
-          startDate,
-          Math.ceil(minutesToDays(organisation.value, task.estimation)) - 1,
-          personElement.daysOff
-        )
-      }
-
-      if (startDate && endDate) {
-        data.previousElement.name = `[${currentTaskTypeBefore.value.name}] ${task.entity_name}`
-        data.previousElement.startDate = startDate
-        data.previousElement.endDate = endDate
-        data.previousElement.color = getTaskElementColor(task, endDate)
-      } else {
-        data.previousElement = null
-      }
-    }
-
-    if (data.nextElement) {
-      const task = data.nextElement
-      let startDate
-      if (task.start_date) {
-        startDate = parseDate(task.start_date)
-      } else if (task.real_start_date) {
-        startDate = parseDate(task.real_start_date)
-      }
-      let endDate
-      if (task.due_date) {
-        endDate = parseDate(task.due_date)
-      } else if (task.end_date) {
-        endDate = parseDate(task.end_date)
-      } else {
-        endDate = addBusinessDays(
-          startDate,
-          Math.ceil(minutesToDays(organisation.value, task.estimation)) - 1,
-          personElement.daysOff
-        )
-      }
-
-      if (startDate && endDate) {
-        data.nextElement.name = `[${currentTaskTypeAfter.value.name}] ${task.entity_name}`
-        data.nextElement.startDate = startDate
-        data.nextElement.endDate = endDate
-        data.nextElement.color = getTaskElementColor(task, endDate)
-      } else {
-        data.nextElement = null
-      }
-    }
+    data.previousElement = enrichSiblingElement(
+      data.previousElement,
+      currentTaskTypeBefore.value,
+      personElement.daysOff
+    )
+    data.nextElement = enrichSiblingElement(
+      data.nextElement,
+      currentTaskTypeAfter.value,
+      personElement.daysOff
+    )
 
     return data
   })
@@ -1963,7 +1827,6 @@ watch(
 )
 
 watch(currentProduction, () => {
-  setOptionalImportColumns()
   initData(true)
 })
 
@@ -2022,35 +1885,17 @@ watch(currentScheduleItem, () => {
 })
 
 watch(
-  () => schedule.taskTypeStartDate,
+  [() => schedule.taskTypeStartDate, () => schedule.taskTypeEndDate],
   () => {
-    const newDate = moment(schedule.taskTypeStartDate)
-      .utc()
-      .format('YYYY-MM-DD')
-    if (newDate !== currentScheduleItem.value.start_date) {
+    const startDate = moment(schedule.taskTypeStartDate).utc()
+    const endDate = moment(schedule.taskTypeEndDate).utc()
+    if (
+      startDate.format('YYYY-MM-DD') !== currentScheduleItem.value.start_date ||
+      endDate.format('YYYY-MM-DD') !== currentScheduleItem.value.end_date
+    ) {
       store.commit('SET_SCHEDULE_ITEM_DATES', {
         scheduleItem: currentScheduleItem.value,
-        dates: {
-          startDate: moment(schedule.taskTypeStartDate).utc(),
-          endDate: moment(schedule.taskTypeEndDate).utc()
-        }
-      })
-      store.dispatch('saveScheduleItem', currentScheduleItem.value)
-    }
-  }
-)
-
-watch(
-  () => schedule.taskTypeEndDate,
-  () => {
-    const newDate = moment(schedule.taskTypeEndDate).utc().format('YYYY-MM-DD')
-    if (newDate !== currentScheduleItem.value.end_date) {
-      store.commit('SET_SCHEDULE_ITEM_DATES', {
-        scheduleItem: currentScheduleItem.value,
-        dates: {
-          startDate: moment(schedule.taskTypeStartDate).utc(),
-          endDate: moment(schedule.taskTypeEndDate).utc()
-        }
+        dates: { startDate, endDate }
       })
       store.dispatch('saveScheduleItem', currentScheduleItem.value)
     }
@@ -2072,7 +1917,6 @@ onMounted(() => {
     ...dataDisplay.value,
     ...preferences.getObjectPreference('tasktype:data_display')
   }
-  setOptionalImportColumns()
   searchFieldRef.value?.setValue(route.query.search || '')
   store.dispatch('clearSelectedTasks')
   const isAssets = route.path.includes('assets')

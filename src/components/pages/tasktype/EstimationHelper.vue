@@ -99,7 +99,7 @@
                   step="any"
                   type="number"
                   @blur="onInputBlur"
-                  @change="estimationUpdated($event, task, index)"
+                  @change="estimationUpdated($event, task)"
                   @keydown="onKeyDown"
                   @mouseout="onInputMouseOut"
                   @mouseover="onInputMouseOver"
@@ -241,14 +241,11 @@ import {
   onInputMouseOver,
   pauseEvent
 } from '@/composables/dom'
+import { getEntityMap } from '@/composables/entity'
 import { useFormat } from '@/composables/format'
+import { isSupervisorInDepartments } from '@/lib/descriptors'
 import { minutesToDays, range } from '@/lib/time'
 import { frameToSeconds } from '@/lib/video'
-import assetsStore from '@/store/modules/assets.js'
-import editsStore from '@/store/modules/edits.js'
-import episodesStore from '@/store/modules/episodes.js'
-import sequencesStore from '@/store/modules/sequences.js'
-import shotsStore from '@/store/modules/shots.js'
 
 import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
@@ -293,43 +290,24 @@ const user = computed(() => store.getters.user)
 const isAssets = computed(() => props.entityType === 'Asset')
 const isShots = computed(() => props.entityType === 'Shot')
 
-const entityMap = computed(() => {
-  const caches = {
-    asset: assetsStore.cache.assetMap,
-    edit: editsStore.cache.editMap,
-    episode: episodesStore.cache.episodeMap,
-    sequence: sequencesStore.cache.sequenceMap,
-    shot: shotsStore.cache.shotMap
-  }
-  return caches[props.entityType.toLowerCase()]
-})
+const entityMap = computed(() => getEntityMap(props.entityType))
 
 const tasksByPerson = computed(() =>
   [...props.tasks].sort(compareFirstAssignees)
 )
 
 const assignees = computed(() => {
-  const alltasks = {
-    countMap: new Map(),
-    frameMap: new Map(),
-    estimationMap: new Map(),
-    secondMap: new Map()
-  }
-  const remaining = {
-    countMap: new Map(),
-    frameMap: new Map(),
-    estimationMap: new Map(),
-    secondMap: new Map()
-  }
+  const allTasksStats = new Map()
+  const remainingStats = new Map()
   const assigneeSet = new Set()
   props.tasks.forEach(task => {
     const entity = getEntity(task.entity_id)
     task.assignees.forEach(personId => {
       assigneeSet.add(personId)
-      addAssigneeStatsToMaps(alltasks, personId, task, entity)
+      addTaskToStats(allTasksStats, personId, task, entity)
       const status = taskStatusMap.value.get(task.task_status_id)
       if (!status.is_done && !status.is_feedback_request) {
-        addAssigneeStatsToMaps(remaining, personId, task, entity)
+        addTaskToStats(remainingStats, personId, task, entity)
       }
     })
   })
@@ -338,8 +316,8 @@ const assignees = computed(() => {
     .sort(firstBy('name'))
     .map(person => ({
       ...person,
-      alltasks: getAssigneeStats(person, alltasks),
-      remaining: getAssigneeStats(person, remaining)
+      alltasks: formatStats(allTasksStats.get(person.id)),
+      remaining: formatStats(remainingStats.get(person.id))
     }))
 })
 
@@ -359,13 +337,8 @@ const compareFirstAssignees = (a, b) => {
     const personA = personMap.value.get(a.assignees[0])
     const personB = personMap.value.get(b.assignees[0])
     return personA.name.localeCompare(personB.name)
-  } else if (a.assignees.length > 0) {
-    return -1
-  } else if (b.assignees.length > 0) {
-    return 1
-  } else {
-    return -1
   }
+  return a.assignees.length > 0 || b.assignees.length === 0 ? -1 : 1
 }
 
 const getSeconds = task => {
@@ -375,7 +348,7 @@ const getSeconds = task => {
 
 const estimationUpdated = (event, task) => {
   const value = event.target.value
-  if (value && value.length > 0) {
+  if (value) {
     saveEstimations(parseFloat(value), task)
   }
 }
@@ -461,27 +434,30 @@ const selectTaskRange = index => {
   })
 }
 
-const isInDepartment = task => {
-  if (isCurrentUserManager.value) {
-    return true
-  } else if (isCurrentUserSupervisor.value) {
-    if (user.value.departments.length === 0) {
-      return true
-    }
-    const taskType = taskTypeMap.value.get(task.task_type_id)
-    return (
-      taskType.department_id &&
-      user.value.departments.includes(taskType.department_id)
-    )
+const isInDepartment = task =>
+  isCurrentUserManager.value ||
+  isSupervisorInDepartments(
+    user.value,
+    isCurrentUserSupervisor.value,
+    taskTypeMap.value.get(task.task_type_id)?.department_id
+  )
+
+const addTaskToStats = (statsMap, personId, task, entity) => {
+  if (!statsMap.has(personId)) {
+    statsMap.set(personId, { count: 0, estimation: 0, frames: 0, seconds: 0 })
   }
-  return false
+  const stats = statsMap.get(personId)
+  stats.count += 1
+  stats.estimation += task.estimation
+  if (!isAssets.value) {
+    const frames = entity.nb_frames || 0
+    stats.frames += frames
+    stats.seconds += frameToSeconds(frames, currentProduction.value, entity)
+  }
 }
 
-const getAssigneeStats = (person, maps) => {
-  const estimation = maps.estimationMap.get(person.id) || 0
-  const seconds = maps.secondMap.get(person.id) || 0
-  const frames = maps.frameMap.get(person.id) || 0
-  const count = maps.countMap.get(person.id) || 0
+const formatStats = stats => {
+  const { count = 0, estimation = 0, frames = 0, seconds = 0 } = stats || {}
   const estimationDays = minutesToDays(organisation.value, estimation)
   const quota = estimation > 0 ? seconds / estimationDays : 0
   const quotaCount = estimation > 0 ? count / estimationDays : 0
@@ -495,20 +471,6 @@ const getAssigneeStats = (person, maps) => {
     quotaFrames: quotaFrames.toFixed(2),
     quotaCount: quotaCount.toFixed(2),
     seconds: seconds.toFixed(2)
-  }
-}
-
-const addAssigneeStatsToMaps = (maps, personId, task, entity) => {
-  maps.countMap.set(personId, (maps.countMap.get(personId) || 0) + 1)
-  maps.estimationMap.set(
-    personId,
-    (maps.estimationMap.get(personId) || 0) + task.estimation
-  )
-  if (!isAssets.value) {
-    const frames = entity.nb_frames || 0
-    const seconds = frameToSeconds(frames, currentProduction.value, entity)
-    maps.secondMap.set(personId, (maps.secondMap.get(personId) || 0) + seconds)
-    maps.frameMap.set(personId, (maps.frameMap.get(personId) || 0) + frames)
   }
 }
 </script>

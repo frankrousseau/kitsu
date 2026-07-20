@@ -10,6 +10,28 @@ import {
   parseDate,
   parseSimpleDate
 } from '@/lib/time'
+import assetStore from '@/store/modules/assets'
+import editStore from '@/store/modules/edits'
+import episodeStore from '@/store/modules/episodes'
+import sequenceStore from '@/store/modules/sequences'
+import shotStore from '@/store/modules/shots'
+
+/*
+ * Non-reactive cache Map for a given entity type ('Asset', 'shot', ...).
+ * Plain function on purpose: the caches are module-level Maps mutated in
+ * place, so read them at call time, never iterate them from a computed
+ * (an empty first evaluation would cache [] forever).
+ */
+export const getEntityMap = entityType => {
+  const caches = {
+    asset: assetStore.cache.assetMap,
+    edit: editStore.cache.editMap,
+    episode: episodeStore.cache.episodeMap,
+    sequence: sequenceStore.cache.sequenceMap,
+    shot: shotStore.cache.shotMap
+  }
+  return caches[entityType.toLowerCase()]
+}
 
 /**
  * Composable mirroring src/components/mixins/entity.js for pages that use

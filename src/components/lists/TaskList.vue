@@ -167,7 +167,6 @@
                 class="difficulty-combobox"
                 :options="difficultyOptions"
                 :with-margin="false"
-                :value="task.difficulty"
                 @update:model-value="updateDifficulty($event)"
                 v-if="isInDepartment(task) && selectionGrid[task.id]"
                 v-model="task.difficulty"
@@ -259,12 +258,9 @@
         :with-actions="false"
       />
     </div>
-    <div
-      class="list-wrapper"
-      v-else-if="tasksByParent && tasksByParent.length > 0 && isGrouped"
-    >
-      <div :key="`task-section-${i}`" v-for="(taskGroup, i) in tasksByParent">
-        <h2>
+    <div class="list-wrapper" v-else>
+      <div :key="`task-section-${i}`" v-for="(taskGroup, i) in cardGroups">
+        <h2 v-if="taskGroup.name">
           {{ taskGroup.name }}
         </h2>
         <div class="task-grid">
@@ -312,49 +308,6 @@
         </div>
       </div>
     </div>
-    <div class="task-grid list-wrapper" v-else>
-      <div
-        :class="{
-          'task-card': true,
-          selected: selectionGrid[task.id]
-        }"
-        :key="task.id"
-        role="button"
-        tabindex="0"
-        @click="selectTaskFromCard($event, index, task)"
-        @keydown.enter.prevent="selectTaskFromCard($event, index, task)"
-        v-for="(task, index) in displayedTasks"
-      >
-        <entity-preview
-          class="flexrow-item"
-          :entity="getEntity(task.entity.id)"
-          :height="133"
-          :width="200"
-          :empty-width="200"
-          :empty-height="133"
-          :show-movie="false"
-          is-rounded-top-border
-          no-preview
-          v-if="task.entity"
-        />
-        <span class="task-name">
-          {{ getTaskName(task) }}
-        </span>
-        <div class="flexrow task-data">
-          <validation-tag class="flexrow-item" :task="task" thin />
-          <div class="filler"></div>
-          <people-avatar-with-menu
-            class="flexrow-item"
-            :key="`${task.id}-${personId}`"
-            :person="personMap.get(personId)"
-            :size="20"
-            :font-size="10"
-            @unassign="person => onUnassign(task, person)"
-            v-for="personId in task.assignees"
-          />
-        </div>
-      </div>
-    </div>
     <slot></slot>
   </div>
   <task-list-numbers :is-shots="isShots" :tasks="tasks" v-if="!isLoading" />
@@ -375,8 +328,10 @@ import { useI18n } from 'vue-i18n'
 import { useStore } from 'vuex'
 
 import { pauseEvent } from '@/composables/dom'
+import { getEntityMap } from '@/composables/entity'
 import { useFormat } from '@/composables/format'
 import { useGrabList } from '@/composables/grabList'
+import { isSupervisorInDepartments } from '@/lib/descriptors'
 import {
   daysToMinutes,
   formatSimpleDate,
@@ -386,11 +341,6 @@ import {
   minutesToDays,
   range
 } from '@/lib/time'
-import assetStore from '@/store/modules/assets'
-import editStore from '@/store/modules/edits'
-import episodeStore from '@/store/modules/episodes'
-import sequenceStore from '@/store/modules/sequences'
-import shotStore from '@/store/modules/shots'
 
 import ValidationCell from '@/components/cells/ValidationCell.vue'
 import Combobox from '@/components/widgets/Combobox.vue'
@@ -405,7 +355,8 @@ import ValidationTag from '@/components/widgets/ValidationTag.vue'
 // Composables
 const { t } = useI18n()
 const store = useStore()
-const { formatDuration, formatDisplayDate, organisation } = useFormat()
+const { formatDuration, formatDisplayDate, isDurationInHours, organisation } =
+  useFormat()
 
 // Props / Emits
 const props = defineProps({
@@ -483,32 +434,24 @@ const isEpisodes = computed(() => props.entityType === 'Episode')
 const isSequences = computed(() => props.entityType === 'Sequence')
 const isShots = computed(() => props.entityType === 'Shot')
 
-const entityMap = computed(() => {
-  const caches = {
-    asset: assetStore.cache.assetMap,
-    edit: editStore.cache.editMap,
-    episode: episodeStore.cache.episodeMap,
-    sequence: sequenceStore.cache.sequenceMap,
-    shot: shotStore.cache.shotMap
-  }
-  return caches[props.entityType.toLowerCase()]
-})
+const entityMap = computed(() => getEntityMap(props.entityType))
 
-const displayedTasks = computed(() => {
-  if (props.tasks && props.tasks.length > 0) {
-    return props.tasks.slice(0, 60 * page.value)
-  }
-  return []
-})
+const displayedTasks = computed(() => props.tasks.slice(0, 60 * page.value))
+
+const cardGroups = computed(() =>
+  props.isGrouped && tasksByParent.value.length > 0
+    ? tasksByParent.value
+    : [{ name: null, tasks: displayedTasks.value }]
+)
 
 const tasksByParent = computed(() => {
   if (props.tasks.length === 0) return []
   if (isShots.value) {
-    return groupTasks(shotStore.cache.shotMap, 'sequence_id', 'sequence_name')
+    return groupTasks(getEntityMap('Shot'), 'sequence_id', 'sequence_name')
   }
   if (isAssets.value) {
     return groupTasks(
-      assetStore.cache.assetMap,
+      getEntityMap('Asset'),
       'asset_type_id',
       'entity_type_name'
     )
@@ -574,8 +517,19 @@ const isTaskChanged = (task, data) => {
 
 const getDate = date => (date ? moment(date, 'YYYY-MM-DD').toDate() : null)
 
+// Dispatch an update built per selected task; a null build skips the task.
+const applyToSelection = buildData => {
+  Object.keys(selectionGrid.value).forEach(taskId => {
+    const task = taskMap.value.get(taskId)
+    const data = buildData(task)
+    if (data && isTaskChanged(task, data)) {
+      store.dispatch('updateTask', { taskId, data }).catch(console.error)
+    }
+  })
+}
+
 const updateEstimation = duration => {
-  const estimation = organisation.value.format_duration_in_hours
+  const estimation = isDurationInHours.value
     ? duration * 60
     : daysToMinutes(organisation.value, duration)
 
@@ -591,86 +545,66 @@ const onUnassign = (task, person) => {
 }
 
 const updateStartDate = date => {
-  Object.keys(selectionGrid.value).forEach(taskId => {
-    const task = taskMap.value.get(taskId)
+  applyToSelection(task => {
+    if (!date) {
+      const data = { start_date: null, due_date: task.due_date }
+      if (task.difficulty) data.difficulty = task.difficulty
+      return data
+    }
+    const startDate = moment(date)
+    if (
+      task.start_date &&
+      task.start_date.substring(0, 10) === formatSimpleDate(startDate)
+    ) {
+      return null
+    }
     const dueDate = task.due_date ? parseSimpleDate(task.due_date) : null
-    let data
-    if (date) {
-      const startDate = moment(date)
-      if (
-        task.start_date &&
-        task.start_date.substring(0, 10) === formatSimpleDate(startDate)
-      )
-        return
-      data = getDatesFromStartDate(
-        organisation.value,
-        startDate,
-        dueDate,
-        minutesToDays(organisation.value, task.estimation)
-      )
-    } else {
-      data = {
-        start_date: null,
-        due_date: task.due_date
-      }
-    }
-    if (task.difficulty) {
-      data.difficulty = task.difficulty
-    }
-    if (isTaskChanged(task, data)) {
-      store.dispatch('updateTask', { taskId, data }).catch(console.error)
-    }
+    const data = getDatesFromStartDate(
+      organisation.value,
+      startDate,
+      dueDate,
+      minutesToDays(organisation.value, task.estimation)
+    )
+    if (task.difficulty) data.difficulty = task.difficulty
+    return data
   })
 }
 
 const updateDueDate = date => {
-  Object.keys(selectionGrid.value).forEach(taskId => {
-    const task = taskMap.value.get(taskId)
+  applyToSelection(task => {
+    if (!date) {
+      return { start_date: task.start_date, due_date: null }
+    }
+    const dueDate = moment(date)
+    if (
+      task.due_date &&
+      task.due_date.substring(0, 10) === formatSimpleDate(dueDate)
+    ) {
+      return null
+    }
     const startDate = task.start_date ? parseSimpleDate(task.start_date) : null
-    let data
-    if (date) {
-      const dueDate = moment(date)
-      if (
-        task.due_date &&
-        task.due_date.substring(0, 10) === formatSimpleDate(dueDate)
-      )
-        return
-      data = getDatesFromEndDate(
-        organisation.value,
-        startDate,
-        dueDate,
-        minutesToDays(organisation.value, task.estimation)
-      )
-    } else {
-      data = {
-        start_date: task.start_date,
-        due_date: null
-      }
-    }
-    if (isTaskChanged(task, data)) {
-      store.dispatch('updateTask', { taskId, data }).catch(console.error)
-    }
+    return getDatesFromEndDate(
+      organisation.value,
+      startDate,
+      dueDate,
+      minutesToDays(organisation.value, task.estimation)
+    )
   })
 }
 
 const updateTasksEstimation = ({ estimation }) => {
-  Object.keys(selectionGrid.value).forEach(taskId => {
-    const task = taskMap.value.get(taskId)
-    let data = { estimation }
-    if (task.start_date) {
-      const startDate = moment(task.start_date)
-      const dueDate = task.due_date ? moment(task.due_date) : null
-      data = getDatesFromStartDate(
-        organisation.value,
-        startDate,
-        dueDate,
-        minutesToDays(organisation.value, estimation)
-      )
-      data.estimation = estimation
-    }
-    if (isTaskChanged(task, data)) {
-      store.dispatch('updateTask', { taskId, data }).catch(console.error)
-    }
+  applyToSelection(task => {
+    if (!task.start_date) return { estimation }
+    const startDate = moment(task.start_date)
+    const dueDate = task.due_date ? moment(task.due_date) : null
+    const data = getDatesFromStartDate(
+      organisation.value,
+      startDate,
+      dueDate,
+      minutesToDays(organisation.value, estimation)
+    )
+    data.estimation = estimation
+    return data
   })
 }
 
@@ -683,15 +617,8 @@ const updateNbDrawings = nbDrawings => {
 }
 
 const updateTasksData = data => {
-  Object.keys(selectionGrid.value).forEach(taskId => {
-    const task = taskMap.value.get(taskId)
-    if (isTaskChanged(task, data)) {
-      store.dispatch('updateTask', { taskId, data }).catch(console.error)
-    }
-  })
+  applyToSelection(() => data)
 }
-
-const formatDate = date => (date ? moment(date).format('YYYY-MM-DD') : '')
 
 const isEstimationBurned = task =>
   task.estimation && task.estimation > 0 && task.duration > task.estimation
@@ -709,7 +636,7 @@ const onBodyScroll = event => {
 
 const onKeyDown = event => {
   if (props.tasks.length > 0 && event.altKey) {
-    let index = lastSelection.value ? lastSelection.value : 0
+    let index = lastSelection.value || 0
     if ([37, 38].includes(event.keyCode)) {
       index = index - 1 < 0 ? props.tasks.length - 1 : index - 1
       selectTask({}, index, props.tasks[index])
@@ -756,7 +683,6 @@ const selectTaskFromCard = (event, index, task) => {
 
 const applySelection = (event, index, task) => {
   const isSelected = selectionGrid.value[task.id]
-  const isManySelection = Object.keys(selectionGrid.value).length > 1
   if (!(event.ctrlKey || event.metaKey) && !event.shiftKey) {
     store.dispatch('clearSelectedTasks')
     resetSelection()
@@ -766,7 +692,7 @@ const applySelection = (event, index, task) => {
     if (isSelected) {
       store.dispatch('removeSelectedTask', { task })
       selectionGrid.value[task.id] = undefined
-    } else if (!isSelected || isManySelection) {
+    } else {
       store.dispatch('addSelectedTask', { task })
       emit('task-selected', task)
       selectionGrid.value[task.id] = true
@@ -812,21 +738,13 @@ const scrollToLine = taskId => {
   }
 }
 
-const isInDepartment = task => {
-  if (isCurrentUserManager.value) {
-    return true
-  } else if (isCurrentUserSupervisor.value) {
-    if (user.value.departments.length === 0) {
-      return true
-    }
-    const taskType = taskTypeMap.value.get(task.task_type_id)
-    return (
-      taskType.department_id &&
-      user.value.departments.includes(taskType.department_id)
-    )
-  }
-  return false
-}
+const isInDepartment = task =>
+  isCurrentUserManager.value ||
+  isSupervisorInDepartments(
+    user.value,
+    isCurrentUserSupervisor.value,
+    taskTypeMap.value.get(task.task_type_id)?.department_id
+  )
 
 const resetSelection = () => {
   selectionGrid.value = {}
@@ -859,31 +777,30 @@ const getTableData = () => {
   const taskLines = [headers]
   props.tasks.forEach(task => {
     if (!task) return
+    const entity = getEntity(task.entity.id)
     const assignees = task.assignees
       .map(personId => personMap.value.get(personId)?.name || '')
       .join(', ')
 
     const line = [
-      isAssets.value
-        ? getEntity(task.entity.id).asset_type_name
-        : getEntity(task.entity.id).sequence_name,
-      getEntity(task.entity.id).name,
+      isAssets.value ? entity.asset_type_name : entity.sequence_name,
+      entity.name,
       task.task_status_short_name,
       assignees,
       task.difficulty,
       formatDuration(task.estimation, false),
       formatDuration(task.duration, false),
       task.retake_count,
-      formatDate(task.start_date),
-      formatDate(task.due_date),
-      formatDate(task.real_start_date),
-      formatDate(task.end_date),
-      formatDate(task.done_date),
-      formatDate(task.last_comment_date)
+      formatSimpleDate(task.start_date),
+      formatSimpleDate(task.due_date),
+      formatSimpleDate(task.real_start_date),
+      formatSimpleDate(task.end_date),
+      formatSimpleDate(task.done_date),
+      formatSimpleDate(task.last_comment_date)
     ]
     if (isShots.value) {
       const value = !isPaperProduction.value
-        ? getEntity(task.entity.id).nb_frames
+        ? entity.nb_frames
         : task.nb_drawings || 0
       line.splice(4, 0, value)
     }
