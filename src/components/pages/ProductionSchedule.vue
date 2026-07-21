@@ -638,6 +638,7 @@ export default {
       draggedEntities: [],
       endDate: moment().add(6, 'months').endOf('day'),
       entityType: null,
+      expandAll: false,
       isSidePanelOpen: false,
       resetTimeout: null,
       scheduleItems: [],
@@ -661,6 +662,7 @@ export default {
       version: DEFAULT_VERSION,
       loading: {
         schedule: false,
+        delete: false,
         editScheduleVersion: false,
         applyScheduleVersion: false,
         expandSchedule: false,
@@ -908,75 +910,78 @@ export default {
 
     async loadData() {
       this.loading.schedule = true
+      this.errors.schedule = false
       this.availableTaskTypes = []
 
-      await this.loadScheduleVersions(this.currentProduction)
+      try {
+        await this.loadScheduleVersions(this.currentProduction)
 
-      return this.loadScheduleItems(this.currentProduction)
-        .then(scheduleItems => {
-          const scheduleStartDate = parseDate(this.selectedStartDate)
-          const scheduleEndDate = parseDate(this.selectedEndDate)
-          scheduleItems = scheduleItems.map(item => {
-            const taskType = this.taskTypeMap.get(item.task_type_id)
-            let startDate, endDate
-            if (item.start_date) {
-              startDate = parseDate(item.start_date)
-            } else {
-              startDate = moment()
-            }
-            if (startDate.isSameOrAfter(scheduleEndDate)) {
-              startDate = scheduleEndDate.clone().add(-1, 'days')
-            }
+        const items = await this.loadScheduleItems(this.currentProduction)
+        const scheduleStartDate = parseDate(this.selectedStartDate)
+        const scheduleEndDate = parseDate(this.selectedEndDate)
+        const scheduleItems = items.map(item => {
+          const taskType = this.taskTypeMap.get(item.task_type_id)
+          let startDate, endDate
+          if (item.start_date) {
+            startDate = parseDate(item.start_date)
+          } else {
+            startDate = moment()
+          }
+          if (startDate.isSameOrAfter(scheduleEndDate)) {
+            startDate = scheduleEndDate.clone().add(-1, 'days')
+          }
 
-            if (startDate.isBefore(scheduleStartDate)) {
-              startDate = scheduleStartDate.clone()
-            }
+          if (startDate.isBefore(scheduleStartDate)) {
+            startDate = scheduleStartDate.clone()
+          }
 
-            if (item.end_date) {
-              endDate = parseDate(item.end_date)
-            } else {
-              endDate = startDate.clone().add(1, 'days')
-            }
-            if (endDate.isSameOrAfter(scheduleEndDate)) {
-              endDate = scheduleEndDate.clone()
-            }
+          if (item.end_date) {
+            endDate = parseDate(item.end_date)
+          } else {
+            endDate = startDate.clone().add(1, 'days')
+          }
+          if (endDate.isSameOrAfter(scheduleEndDate)) {
+            endDate = scheduleEndDate.clone()
+          }
 
-            const path = getTaskTypeSchedulePath(
-              taskType.id,
-              this.currentProduction.id,
-              this.linkedEpisodeId,
-              taskType.for_entity
-            )
-
-            return {
-              ...item,
-              color: taskType.color,
-              for_entity: taskType.for_entity,
-              name: `${taskType.for_entity} / ${taskType.name}`,
-              priority: taskType.priority,
-              startDate,
-              endDate,
-              editable: this.isInDepartment(taskType) && !this.isLockedSchedule,
-              expanded: false,
-              loading: false,
-              route: path,
-              children: []
-            }
-          })
-          this.scheduleItems = sortTaskTypeScheduleItems(
-            scheduleItems,
-            this.currentProduction,
-            this.taskTypeMap
+          const path = getTaskTypeSchedulePath(
+            taskType.id,
+            this.currentProduction.id,
+            this.linkedEpisodeId,
+            taskType.for_entity
           )
 
-          this.availableTaskTypes = this.scopedScheduleItems.map(item => ({
-            ...this.taskTypeMap.get(item.task_type_id),
-            name: item.name
-          }))
+          return {
+            ...item,
+            color: taskType.color,
+            for_entity: taskType.for_entity,
+            name: `${taskType.for_entity} / ${taskType.name}`,
+            priority: taskType.priority,
+            startDate,
+            endDate,
+            editable: this.isInDepartment(taskType) && !this.isLockedSchedule,
+            expanded: false,
+            loading: false,
+            route: path,
+            children: []
+          }
         })
-        .finally(() => {
-          this.loading.schedule = false
-        })
+        this.scheduleItems = sortTaskTypeScheduleItems(
+          scheduleItems,
+          this.currentProduction,
+          this.taskTypeMap
+        )
+
+        this.availableTaskTypes = this.scopedScheduleItems.map(item => ({
+          ...this.taskTypeMap.get(item.task_type_id),
+          name: item.name
+        }))
+      } catch (err) {
+        console.error(err)
+        this.errors.schedule = true
+      } finally {
+        this.loading.schedule = false
+      }
     },
 
     reset() {
@@ -1019,6 +1024,17 @@ export default {
       this.zoomLevel = this.zoomOptions.map(o => o.value).includes(zoom)
         ? zoom
         : DEFAULT_ZOOM
+
+      // loadData computed the editable flags with the default mode/version,
+      // before the query params were applied
+      this.refreshScheduleItemsEditable()
+    },
+
+    refreshScheduleItemsEditable() {
+      this.scheduleItems.forEach(item => {
+        const taskType = this.taskTypeMap.get(item.task_type_id)
+        item.editable = this.isInDepartment(taskType) && !this.isLockedSchedule
+      })
     },
 
     convertScheduleItems(taskTypeElement, scheduleItems) {
@@ -1354,10 +1370,6 @@ export default {
                 )
               }
               if (!endDate || endDate.isBefore(startDate)) {
-                const nbDays = startDate.isoWeekday() === 5 ? 3 : 1
-                endDate = startDate.clone().add(nbDays, 'days')
-              }
-              if (!endDate.isSameOrAfter(startDate)) {
                 const nbDays = startDate.isoWeekday() === 5 ? 3 : 1
                 endDate = startDate.clone().add(nbDays, 'days')
               }
@@ -1965,8 +1977,11 @@ export default {
       this.assignments.startDate = item.start_date || today
       this.assignments.endDate = item.end_date || today
 
-      item.children = this.filteredAssignments(item.children)
-      this.draggedEntities = [item]
+      // copy: filtering item.children in place permanently dropped the
+      // assigned entities from the side panel list
+      this.draggedEntities = [
+        { ...item, children: this.filteredAssignments(item.children) }
+      ]
     },
 
     onAssignmentItemDragStart(event, item, type) {
@@ -1977,8 +1992,9 @@ export default {
       event.dataTransfer.setData('taskTypeId', type.task_type_id)
       event.dataTransfer.setData('entityId', item.id)
 
-      item.children = this.filteredAssignments(item.children)
-      this.draggedEntities = [item]
+      this.draggedEntities = [
+        { ...item, children: this.filteredAssignments(item.children) }
+      ]
     },
 
     onScheduleItemDropped(event, item) {
@@ -2011,8 +2027,15 @@ export default {
         this.buildTaskFilters(this.selectedTaskType)
       )
 
+      // a zero or empty quota would make taskEstimation infinite and hang
+      // the distribution loop in addBusinessDays
       const dailyQuota =
-        this.assignments.forcedDailyQuota ?? this.estimatedDailyQuota
+        parseFloat(this.assignments.forcedDailyQuota) ||
+        this.estimatedDailyQuota
+      if (dailyQuota <= 0) {
+        this.assignments.saving = false
+        return
+      }
       const taskEstimation = 1 / dailyQuota
 
       // assign each selected entity to each selected assignee
@@ -2241,7 +2264,8 @@ export default {
           id: task.versionedTaskId,
           assignees: task.assignees
         })
-      } else {
+      } else if (personId !== 'unassigned') {
+        // 'unassigned' is a local placeholder, not a person known to the API
         await this.unassignPersonFromTask({
           person: { id: personId },
           task
@@ -2259,12 +2283,14 @@ export default {
 
     onModeChanged(mode) {
       this.updateRoute({ mode })
+      this.refreshScheduleItemsEditable()
       this.closeSidePanel()
       this.refreshSchedule()
     },
 
     onVersionChanged(version) {
       this.updateRoute({ version })
+      this.refreshScheduleItemsEditable()
       this.closeSidePanel()
       this.refreshSchedule()
     },
@@ -2303,28 +2329,46 @@ export default {
     },
 
     async editVersion(version) {
-      this.modals.editScheduleVersion = false
-      if (!version.id) {
-        const newVersion = await this.createScheduleVersion({
-          production: this.currentProduction,
-          version
-        })
-        this.version = newVersion.id
-        this.onVersionChanged(this.version)
-      } else {
-        await this.updateScheduleVersion(version)
+      this.loading.editScheduleVersion = true
+      this.errors.editScheduleVersion = false
+      try {
+        if (!version.id) {
+          const newVersion = await this.createScheduleVersion({
+            production: this.currentProduction,
+            version
+          })
+          this.version = newVersion.id
+          this.onVersionChanged(this.version)
+        } else {
+          await this.updateScheduleVersion(version)
+        }
+        this.modals.editScheduleVersion = false
+        this.scheduleVersionToEdit = {}
+      } catch (err) {
+        console.error(err)
+        this.errors.editScheduleVersion = true
+      } finally {
+        this.loading.editScheduleVersion = false
       }
-      this.scheduleVersionToEdit = {}
     },
 
     async deleteVersion(version) {
-      this.modals.deleteScheduleVersion = false
-      await this.deleteScheduleVersion(version)
-      if (this.version === version.id) {
-        this.version = DEFAULT_VERSION
-        this.onVersionChanged(this.version)
+      this.loading.delete = true
+      this.errors.deleteScheduleVersion = false
+      try {
+        await this.deleteScheduleVersion(version)
+        if (this.version === version.id) {
+          this.version = DEFAULT_VERSION
+          this.onVersionChanged(this.version)
+        }
+        this.modals.deleteScheduleVersion = false
+        this.scheduleVersionToEdit = {}
+      } catch (err) {
+        console.error(err)
+        this.errors.deleteScheduleVersion = true
+      } finally {
+        this.loading.delete = false
       }
-      this.scheduleVersionToEdit = {}
     },
 
     async applyToProduction() {
@@ -2406,11 +2450,17 @@ export default {
         data.hierarchy.forEach(item => {
           endRowLevel1 = startRowLevel1
 
+          // ExcelJS expects 8-digit ARGB values, 6-digit hex shifts the
+          // channels and renders wrong colors
+          const lightened = colors.lightenColor(item.color, 0.2).hex()
+          const color = `FF${item.color.slice(1)}`.toUpperCase()
+          const color2 = `FF${lightened.slice(1)}`.toUpperCase()
+
           const row = sheet.addRow([null, item.name])
           row.getCell(1).fill = {
             type: 'pattern',
             pattern: 'solid',
-            fgColor: { argb: item.color.slice(1) }
+            fgColor: { argb: color }
           }
           row.getCell(2).alignment = { vertical: 'top' }
           row.getCell(2).note =
@@ -2420,8 +2470,6 @@ export default {
           // fill timebar
           const start = dates.indexOf(item.start_date)
           const end = dates.indexOf(item.end_date)
-          const color = item.color.slice(1)
-          const color2 = colors.lightenColor(item.color, 0.2).hex().slice(1)
           for (let i = start; i > -1 && i <= end; i++) {
             const cell = row.getCell(5 + i)
             cell.fill = {

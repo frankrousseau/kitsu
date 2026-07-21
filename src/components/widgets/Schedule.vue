@@ -1086,6 +1086,9 @@ let initialClientX = null
 let initialClientY = null
 let lastStartDate = null
 let lastEndDate = null
+// person row the drag started on: a multi-assignee task renders one bar per
+// assignee, so assignees[0] is not necessarily the person being reassigned
+let dragSourcePersonId = null
 
 let domEvents = []
 
@@ -1153,25 +1156,12 @@ const weeksAvailable = computed(() => {
   if (daysAvailable.value.length < 1) return []
   const startDate = daysAvailable.value[0]
   const endDate = daysAvailable.value[daysAvailable.value.length - 1]
-  const day = startDate.clone().add(-1, 'days')
-  let dayDate = day.toDate()
+  let dayDate = startDate.clone().add(-1, 'days').toDate()
   const endDayDate = endDate.clone().add(7, 'days').toDate()
-  dayDate.weekday = day.isoWeekday()
-  dayDate.monthday = day.month()
-  dayDate.week = day.week()
 
   while (dayDate < endDayDate) {
     const nextDay = new Date(Number(dayDate))
     nextDay.setDate(dayDate.getDate() + 1) // Add 1 day
-    if (nextDay.isoweekday > 7) {
-      nextDay.isoweekday = 1
-      nextDay.newWeek = true
-    }
-    nextDay.monthday = dayDate.monthday + 1
-    if (nextDay.getMonth() !== dayDate.getMonth()) {
-      nextDay.newMonth = true
-      nextDay.monthday = 1
-    }
     const momentDay = parseDate(moment(nextDay).format('YYYY-MM-DD'))
     if (momentDay.isoWeekday() === 1) {
       momentDay.weekText = momentDay.format('YYYY-MM-DD')
@@ -1283,14 +1273,6 @@ const unitOfTime = computed(() => {
 })
 
 // Methods
-
-const getNbSubChildren = children => {
-  if (!children) return 0
-
-  return Object.values(children).reduce((acc, subChildren) => {
-    return acc + subChildren.length
-  }, 0)
-}
 
 const getNbLines = (items = []) => {
   const values = items.map(item => item.line || 0)
@@ -1420,14 +1402,28 @@ const isValidItemDates = (startDate, endDate) => {
   )
 }
 
+// dates outside the displayed range (e.g. a task due after the production
+// end) resolve to the nearest boundary instead of undefined, which made the
+// drag computations crash or silently no-op
 const getDisplayedDaysIndex = date => {
-  const dateString = date.format('YYYY-MM-DD')
-  return displayedDaysIndex.value[dateString]
+  const index = displayedDaysIndex.value[date.format('YYYY-MM-DD')]
+  if (index !== undefined) {
+    return index
+  }
+  return date.isBefore(props.startDate) ? 0 : displayedDays.value.length - 1
 }
 
 const getDisplayedWeeksIndex = date => {
-  const dateString = date.startOf('isoweek').format('YYYY-MM-DD')
-  return displayedWeeksIndex.value[dateString]
+  // clone before startOf: moment mutates in place and callers pass the
+  // items' own dates, which snapped them back to their week's Monday
+  const monday = date.clone().startOf('isoweek')
+  const index = displayedWeeksIndex.value[monday.format('YYYY-MM-DD')]
+  if (index !== undefined) {
+    return index
+  }
+  return monday.isBefore(weeksAvailable.value[0])
+    ? 0
+    : weeksAvailable.value.length - 1
 }
 
 const resetDroppableTargets = () => {
@@ -1472,13 +1468,13 @@ const changeDates = event => {
       target.classList.add('droppable')
 
       selection.value.forEach(item => {
-        // update item assignation in element hierarchy
-        const previousAssigneeId = item.assignees[0]
+        // the handlers own the assignees and person-line updates: mutating
+        // them here too duplicated the new assignee id
+        const previousAssigneeId =
+          dragSourcePersonId && item.assignees.includes(dragSourcePersonId)
+            ? dragSourcePersonId
+            : item.assignees[0]
         const newAssigneeId = target.dataset.personId
-        item.assignees = item.assignees.filter(
-          assigneeId => assigneeId !== previousAssigneeId
-        )
-        item.assignees.push(newAssigneeId)
 
         emit('item-unassign', item, previousAssigneeId)
         emit('item-assign', item, newAssigneeId)
@@ -1567,8 +1563,10 @@ const changeDates = event => {
     if (newStartDate) {
       const newEndDate = weeksAvailable.value[currentIndex + length]
       if (isValidItemDates(newStartDate, newEndDate)) {
-        currentElement.value.startDate = newStartDate
-        currentElement.value.endDate = newEndDate
+        // clone: assigning the weeksAvailable moments directly aliases the
+        // header entries with the item dates
+        currentElement.value.startDate = newStartDate.clone()
+        currentElement.value.endDate = newEndDate.clone()
       }
     }
   }
@@ -1597,6 +1595,7 @@ const changeStartDate = event => {
     : displayedDays.value[currentIndex]
 
   if (
+    newStartDate &&
     !newStartDate.isSame(currentElement.value.startDate) &&
     isValidItemDates(newStartDate, currentElement.value.endDate)
   ) {
@@ -1638,12 +1637,12 @@ const changeEndDate = event => {
   currentIndex += dayChange - 1
   if (currentIndex < startDateIndex) currentIndex = startDateIndex
   if (isWeekMode.value) {
-    if (currentIndex > displayedWeeksIndex.value.length) {
-      currentIndex = displayedWeeksIndex.value.length - 1
+    if (currentIndex > weeksAvailable.value.length - 1) {
+      currentIndex = weeksAvailable.value.length - 1
     }
   } else {
-    if (currentIndex > displayedDaysIndex.value.length) {
-      currentIndex = displayedDaysIndex.value.length - 1
+    if (currentIndex > displayedDays.value.length - 1) {
+      currentIndex = displayedDays.value.length - 1
     }
   }
 
@@ -1781,6 +1780,8 @@ const moveTimebar = (timeElement, event) => {
     lastStartDate = timeElement.startDate.clone()
     lastEndDate = timeElement.endDate.clone()
     initialClientX = getClientX(event)
+    dragSourcePersonId =
+      event.target.closest?.('[data-person-id]')?.dataset.personId ?? null
     document.body.style.cursor = props.reassignable ? 'all-scroll' : 'ew-resize'
 
     stampDragOrigin(timeElement)
@@ -1955,6 +1956,7 @@ const stopBrowsing = event => {
   isBrowsingY.value = false
   initialClientX = null
   initialClientY = null
+  dragSourcePersonId = null
   currentElement.value = null
 }
 
@@ -2396,7 +2398,13 @@ watch(
   () => {
     resetScheduleSize()
     refreshAllItemPositions()
-    onTimelineScroll(null, { scrollTop: 0, scrollLeft: 0 })
+    setScrollPosition(0)
+    if (timelineContentWrapperRef.value) {
+      timelineContentWrapperRef.value.scrollLeft = 0
+    }
+    if (timelineHeaderRef.value) {
+      timelineHeaderRef.value.scrollLeft = 0
+    }
   }
 )
 
@@ -2461,7 +2469,6 @@ onBeforeUnmount(() => {
 
 defineExpose({
   exportData,
-  getNbSubChildren,
   refreshAllItemPositions,
   refreshItemPositions,
   refreshManDays,
