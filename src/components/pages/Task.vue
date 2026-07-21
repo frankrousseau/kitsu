@@ -272,6 +272,24 @@
                       >
                         {{ task.data[descriptor.field_name] }}
                       </a>
+                      <span
+                        class="flexrow"
+                        v-else-if="
+                          descriptor.data_type === 'person' &&
+                          personForDescriptor(descriptor)
+                        "
+                      >
+                        <people-avatar
+                          class="flexrow-item"
+                          :person="personForDescriptor(descriptor)"
+                          :size="22"
+                          :font-size="11"
+                          :is-link="false"
+                        />
+                        <span class="flexrow-item">
+                          {{ personForDescriptor(descriptor).name }}
+                        </span>
+                      </span>
                       <template v-else>
                         {{ getTaskMetadataValue(descriptor) }}
                       </template>
@@ -1014,7 +1032,16 @@ export default {
       if (descriptor.data_type === 'boolean') {
         return value === 'true' ? this.$t('main.yes') : this.$t('main.no')
       }
+      if (descriptor.data_type === 'person') {
+        return this.personMap.get(value)?.name || ''
+      }
       return value
+    },
+
+    personForDescriptor(descriptor) {
+      return (
+        this.personMap.get(this.task?.data?.[descriptor.field_name]) || null
+      )
     },
 
     ...mapActions([

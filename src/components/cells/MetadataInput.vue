@@ -13,11 +13,20 @@
     >
       {{ displayValue }}
     </a>
+    <!-- person: avatar + name; click opens a teleported picker popup. -->
+    <metadata-person
+      :person="personValue"
+      :people="team"
+      :editable="isEditable"
+      @select="value => onMetadataFieldChanged(entity, descriptor, value)"
+      v-else-if="descriptor.data_type === 'person'"
+    />
     <!-- read-only value: editors only appear once the row is selected.
          Boolean keeps its checkbox (disabled below), so it is excluded here. -->
     <div
       class="metadata-readonly"
       :class="{ 'align-left': isTextType }"
+      :title="displayValue"
       v-else-if="selected === false && descriptor.data_type !== 'boolean'"
     >
       {{ displayValue }}
@@ -153,7 +162,9 @@ import {
   getMetadataFieldValue,
   isSupervisorInDepartments
 } from '@/lib/descriptors'
+import { sortPeople } from '@/lib/sorting'
 
+import MetadataPerson from '@/components/cells/MetadataPerson.vue'
 import ComboboxTag from '@/components/widgets/ComboboxTag.vue'
 import DateField from '@/components/widgets/DateField.vue'
 
@@ -178,11 +189,29 @@ const isCurrentUserManager = computed(() => store.getters.isCurrentUserManager)
 const isCurrentUserSupervisor = computed(
   () => store.getters.isCurrentUserSupervisor
 )
+const currentProduction = computed(() => store.getters.currentProduction)
+const personMap = computed(() => store.getters.personMap)
 const selectedAssets = computed(() => store.getters.selectedAssets)
 const selectedEdits = computed(() => store.getters.selectedEdits)
 const selectedShots = computed(() => store.getters.selectedShots)
 const selectedTasks = computed(() => store.getters.selectedTasks)
 const user = computed(() => store.getters.user)
+
+// Project team, for the "person" descriptor picker.
+const team = computed(() =>
+  sortPeople(
+    (currentProduction.value?.team || [])
+      .map(personId => personMap.value.get(personId))
+      .filter(Boolean)
+  )
+)
+
+const personValue = computed(
+  () =>
+    personMap.value.get(
+      getMetadataFieldValue(props.descriptor, props.entity)
+    ) || null
+)
 
 const isEditable = computed(
   () =>
@@ -337,6 +366,11 @@ const onNumberFieldKeyDown = event => {
 .metadata-link {
   color: inherit;
   text-decoration: underline;
+}
+
+/* Raise the cell so an open inline editor is not trapped behind neighbours. */
+.metadata-input:focus-within {
+  z-index: 40;
 }
 
 /* Let the datepicker flow like the schedule/task date cells instead of being

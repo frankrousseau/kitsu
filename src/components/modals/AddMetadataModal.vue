@@ -181,7 +181,7 @@ import DepartmentName from '@/components/widgets/DepartmentName.vue'
 import ModalFooter from '@/components/modals/ModalFooter.vue'
 import TextField from '@/components/widgets/TextField.vue'
 
-const SIMPLE_TYPES = ['string', 'number', 'boolean', 'date', 'url']
+const SIMPLE_TYPES = ['string', 'number', 'boolean', 'date', 'url', 'person']
 const VALUE_LIST_TYPES = ['list', 'taglist']
 
 const props = defineProps({
@@ -226,6 +226,7 @@ const typeOptions = computed(() => [
   { label: t('productions.metadata.boolean'), value: 'boolean' },
   { label: t('productions.metadata.date'), value: 'date' },
   { label: t('productions.metadata.url'), value: 'url' },
+  { label: t('productions.metadata.person'), value: 'person' },
   { label: t('productions.metadata.choices'), value: 'list' },
   { label: t('productions.metadata.tags'), value: 'taglist' },
   { label: t('productions.metadata.checklist'), value: 'checklist' }

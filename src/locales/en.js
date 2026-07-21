@@ -1483,6 +1483,7 @@ export default {
       edit_title: 'Edit metadata column',
       error: 'An error occurred while adding the metadata column. Make sure there is no column with a similar name and that all fields are filled. If the problem persists, please contact the support team.',
       number: 'Number',
+      person: 'Person',
       string: 'Text',
       tags: 'List of tags',
       url: 'Link',
