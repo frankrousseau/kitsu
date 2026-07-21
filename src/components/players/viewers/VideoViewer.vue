@@ -462,6 +462,14 @@ const play = () => {
   ) {
     setCurrentTime(0)
   }
+  // a replay seek is issued while the video is still paused, so
+  // setCurrentTimeRaw could not arm the seek guard: once playback starts,
+  // stale pre-seek frames still coming out of the decoder would emit
+  // end-range frame numbers and re-trigger the trim stop, parking the
+  // player a few frames in, paused
+  if (video.value.seeking) {
+    seekGuardTarget = video.value.currentTime
+  }
   video.value.play()?.catch(() => {})
 }
 
