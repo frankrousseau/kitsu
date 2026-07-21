@@ -201,6 +201,7 @@ const isCurrentUserSupervisor = computed(
 )
 const currentProduction = computed(() => store.getters.currentProduction)
 const personMap = computed(() => store.getters.personMap)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
 const selectedAssets = computed(() => store.getters.selectedAssets)
 const selectedEdits = computed(() => store.getters.selectedEdits)
 const selectedShots = computed(() => store.getters.selectedShots)
@@ -223,13 +224,21 @@ const personValue = computed(
     ) || null
 )
 
+// Task metadata editing is gated by the task type's department (matching the
+// zou permission), entity metadata by the descriptor's own departments.
+const editDepartments = computed(() =>
+  props.descriptor.entity_type === 'Task'
+    ? taskTypeMap.value.get(props.entity.task_type_id)?.department_id
+    : props.descriptor.departments
+)
+
 const isEditable = computed(
   () =>
     isCurrentUserManager.value ||
     isSupervisorInDepartments(
       user.value,
       isCurrentUserSupervisor.value,
-      props.descriptor.departments
+      editDepartments.value
     )
 )
 
