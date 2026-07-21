@@ -16,7 +16,7 @@
       @panzoom-changed="$event => $emit('panzoom-changed', $event)"
       @panzoom-ready="() => $emit('panzoom-ready')"
       @size-changed="() => $emit('size-changed')"
-      v-for="preview in validPreviews"
+      v-for="preview in mountedPreviews"
       v-show="
         preview.id === currentPreview.id &&
         preview.position === currentPreview.position
@@ -82,6 +82,21 @@ const pictureRefs = reactive({})
 // Computed
 
 const validPreviews = computed(() => props.previews.filter(p => p?.id))
+
+// Only mount the displayed picture and its immediate neighbours: the
+// strip used to mount (and download) every picture of the playlist up
+// front, saturating the network the moment a playlist opened. The +/-1
+// window keeps prev/next navigation and continuous playback preloaded.
+const mountedPreviews = computed(() => {
+  const list = validPreviews.value
+  const index = list.findIndex(
+    p =>
+      p.id === props.currentPreview?.id &&
+      p.position === props.currentPreview?.position
+  )
+  if (index === -1) return list.slice(0, 2)
+  return list.filter((p, i) => Math.abs(i - index) <= 1)
+})
 
 const setPictureRef = (preview, el) => {
   const key = `${preview.id}-${preview.position}`

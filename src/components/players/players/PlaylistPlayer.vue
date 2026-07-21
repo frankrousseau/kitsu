@@ -415,7 +415,7 @@
       <task-info
         ref="task-info"
         class="flexrow-item task-info-column"
-        :current-frame="parseInt(currentFrame) - 1"
+        :current-frame="taskInfoFrame"
         :current-parent-preview="currentPreview"
         :fps="fps"
         :extendable="false"
@@ -926,10 +926,12 @@ import {
   computed,
   defineAsyncComponent,
   getCurrentInstance,
+  markRaw,
   nextTick,
   onBeforeUnmount,
   onMounted,
   ref,
+  shallowRef,
   useTemplateRef,
   watch
 } from 'vue'
@@ -1104,6 +1106,10 @@ let lastResizeCall = 0
 let playingPictureTimeout = null
 let autoHideTimer = null
 let wavesurfer = null
+// Annotation painted by the show-annotations-while-playing path; reset
+// wherever the canvas is cleared outside that path.
+let lastShownWhilePlaying = null
+let lastWaveformSeek = 0
 
 // — Reactive
 const annotations = ref([])
@@ -1152,7 +1158,10 @@ const pictureDefaultHeight = ref(0)
 const playingEntityIndex = ref(0)
 const playlistDuration = ref(0)
 const playlistProgress = ref(0)
-const playlistShotPosition = ref({})
+// Frame -> entity lookup for the strip. Non-reactive on purpose: one
+// entry per frame of the whole playlist made Vue proxy tens of
+// thousands of objects; consumers re-render on the shallowRef swap.
+const playlistShotPosition = shallowRef({})
 const room = ref({
   people: [],
   newComer: true
@@ -1408,6 +1417,21 @@ const currentFrameMovieOrPicture = computed(() => {
   if (isCurrentPreviewPicture.value) return framesSeenOfPicture.value
   return 0
 })
+
+// TaskInfo renders the frame chip in its template: feeding it the live
+// frame re-rendered the whole comments panel dozens of times a second
+// during playback, even while hidden (v-show). Freeze the prop while
+// playing or hidden; it refreshes on pause and when the panel opens.
+const taskInfoFrame = ref(-1)
+watch(
+  [currentFrame, isPlaying, isCommentsHidden],
+  () => {
+    if (!isPlaying.value && !isCommentsHidden.value) {
+      taskInfoFrame.value = parseInt(currentFrame.value) - 1
+    }
+  },
+  { immediate: true }
+)
 
 // Computed — comparison
 
@@ -1984,7 +2008,13 @@ const scheduleRenderStep = step => {
 const startProgressiveRender = () => {
   cancelProgressiveRender()
   const total = entityList.value.length
-  renderedEntityCount.value = Math.min(RENDER_BATCH_SIZE, total)
+  // Keep whatever is already mounted: a same-content list replacement
+  // (reorder) must not unmount the strip beyond the first batch. Fresh
+  // playlists reset the count through resetPlaylist.
+  renderedEntityCount.value = Math.min(
+    Math.max(RENDER_BATCH_SIZE, renderedEntityCount.value),
+    total
+  )
   const step = () => {
     renderHandle = null
     const total = entityList.value.length
@@ -2095,6 +2125,7 @@ const play = () => {
     if (isComparing.value) rawPlayerComparison.value?.play()
     isPlaying.value = rawPlayer.value.isPlaying
   }
+  lastShownWhilePlaying = null
   clearCanvas()
 }
 
@@ -2166,6 +2197,7 @@ const playEntity = (entityIndex, updateFullPlaylist = true, frame = -1) => {
   ensureEntityRendered(entityIndex)
   const entity = entityList.value[entityIndex]
   const wasDrawing = isDrawing.value === true
+  lastShownWhilePlaying = null
   clearCanvas()
   framesSeenOfPicture.value = 1
   playingEntityIndex.value = entityIndex
@@ -2407,7 +2439,6 @@ const onScrubEnd = () => {
 
 const onProgressChanged = (frame, updatePlaylistProgress = true) => {
   clearCanvas()
-  reloadAnnotations(false)
   if (isCurrentPreviewPicture.value) {
     framesSeenOfPicture.value = frame + 1
   } else {
@@ -2655,10 +2686,16 @@ const onFrameUpdate = frame => {
   updateProgressBar()
   if (isShowAnnotationsWhilePlaying.value) {
     const ann = getAnnotation(currentTimeRaw.value)
-    clearCanvas()
-    if (ann) loadSingleAnnotation(ann)
-    if (isComparing.value && !isComparisonOverlay.value) {
-      loadComparisonAnnotation(currentTimeRaw.value)
+    // Repaint only when the displayed annotation changes: clearing and
+    // rebuilding fabric objects (async PSStroke deserialization) on
+    // EVERY frame tick churned constantly with the option enabled.
+    if (ann !== lastShownWhilePlaying) {
+      lastShownWhilePlaying = ann || null
+      clearCanvas()
+      if (ann) loadSingleAnnotation(ann)
+      if (isComparing.value && !isComparisonOverlay.value) {
+        loadComparisonAnnotation(currentTimeRaw.value)
+      }
     }
   }
   if (props.playlist && isPlaying.value) {
@@ -2694,7 +2731,13 @@ const onFrameUpdate = frame => {
     // Guard the divisor: while a playlist reset is in flight the next
     // media's duration isn't known yet (maxDurationRaw is 0), and seeking
     // to a non-finite position throws in WaveSurfer's currentTime setter.
-    wavesurfer.seekTo(currentTimeRaw.value / maxDurationRaw.value)
+    // Throttled: seekTo repaints wavesurfer internals, and a per-frame
+    // call is invisible on a 60px strip.
+    const now = performance.now()
+    if (now - lastWaveformSeek > 200) {
+      lastWaveformSeek = now
+      wavesurfer.seekTo(currentTimeRaw.value / maxDurationRaw.value)
+    }
   }
   nextTick(() => {
     const actions = onNextTimeUpdateActions.value
@@ -2847,6 +2890,7 @@ const onMainCanvasResized = () => {
   // objects that already have a fabric instance, so without this
   // the wrongly-scaled strokes drawn at mount-time (when the anchor
   // had no size yet) would stay on screen forever.
+  lastShownWhilePlaying = null
   clearCanvas()
   reloadAnnotations(false)
   const ann = getAnnotation(currentTimeRaw.value)
@@ -3649,16 +3693,16 @@ const moveSelectedEntity = (entityToMove, toMoveIndex, targetIndex) => {
   if (!currentEntity.value) return
   if (playingEntityIndex.value >= 0) {
     if (toMoveIndex >= 0 && targetIndex >= 0) {
+      // Single replacement: the transient empty list unmounted every
+      // PlaylistedEntity and remounted the whole strip on each reorder
+      // (the keyed v-for just moves nodes on a same-content swap).
       const tmp = [...entityList.value]
       tmp.splice(toMoveIndex, 1)
       tmp.splice(targetIndex, 0, entityToMove)
-      entityList.value = []
+      entityList.value = tmp
       nextTick(() => {
-        entityList.value = tmp
-        nextTick(() => {
-          playingEntityIndex.value = targetIndex
-          scrollToEntity(playingEntityIndex.value)
-        })
+        playingEntityIndex.value = targetIndex
+        scrollToEntity(playingEntityIndex.value)
       })
     }
   }
@@ -3979,6 +4023,7 @@ const resetHandles = entity => {
 const resetPlaylistFrameData = () => {
   let playlistDur = 0
   let curFrame = 0
+  const positions = {}
   entityList.value.forEach((entity, index) => {
     // An entity without preview still spans its edit length (like a slug
     // in a conform): playback holds the slot, the strip shows it in grey.
@@ -4000,16 +4045,21 @@ const resetPlaylistFrameData = () => {
     // the *current* entity's rate, durations refresh after this pass).
     entity.playlist_start_frame = curFrame
     entity.playlist_nb_frames = n
+    // One shared entry per entity (the fields are identical for all its
+    // frames), written into a fresh map: per-frame objects multiplied
+    // memory by the frame count, and stale frames from a longer previous
+    // playlist were never purged.
+    const entry = {
+      index,
+      name: entity.name,
+      extension: entity.preview_file_extension,
+      start: entity.start_duration,
+      width: entity.preview_file_width,
+      height: entity.preview_file_height,
+      id: entity.preview_file_id
+    }
     for (let i = 0; i < n; i++) {
-      playlistShotPosition.value[curFrame + i] = {
-        index,
-        name: entity.name,
-        extension: entity.preview_file_extension,
-        start: entity.start_duration,
-        width: entity.preview_file_width,
-        height: entity.preview_file_height,
-        id: entity.preview_file_id
-      }
+      positions[curFrame + i] = entry
     }
     curFrame += n
     playlistDur += n / fps.value
@@ -4021,6 +4071,7 @@ const resetPlaylistFrameData = () => {
       entity.task_status_color = taskStatus?.color
     }
   })
+  playlistShotPosition.value = markRaw(positions)
   playlistDuration.value = playlistDur
   return playlistDur
 }
@@ -4093,6 +4144,7 @@ const onComparisonPanZoomChanged = ({ x, y, scale }) => {
 const resetPlaylist = () => {
   currentPreviewIndex.value = 0
   currentComparisonPreviewIndex.value = 0
+  renderedEntityCount.value = 0
   entityList.value = props.entities
   resetPlaylistFrameData()
 
@@ -4371,6 +4423,10 @@ watch(
     }
   }
 )
+
+watch(isShowAnnotationsWhilePlaying, () => {
+  lastShownWhilePlaying = null
+})
 
 watch(framesSeenOfPicture, () => {
   if (isCurrentPreviewPicture.value) {

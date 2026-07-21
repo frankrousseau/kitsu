@@ -146,7 +146,7 @@
         <task-info
           ref="task-info-player"
           class="flexrow-item task-info-column"
-          :current-frame="currentFrame"
+          :current-frame="taskInfoFrame"
           :current-parent-preview="currentPreview"
           :entity-type="entityType"
           :extendable="false"
@@ -470,6 +470,7 @@ import { useComparison } from '@/composables/players/comparison'
 import { useOnionSkin } from '@/composables/players/onionSkin'
 import { usePreviewShortcuts } from '@/composables/players/previewShortcuts'
 import { usePlayerTransport } from '@/composables/players/transport'
+import func from '@/lib/func'
 import { getEntityPath } from '@/lib/path'
 import { mergeAnnotationsByFrame } from '@/lib/players/annotation'
 import localPreferences from '@/lib/preferences'
@@ -770,6 +771,21 @@ const currentFrameLabel = computed(() => {
   const frame = Math.min(nbFrames.value, currentFrame.value)
   return formatFrame(frame + 1)
 })
+
+// TaskInfo renders the frame chip in its template: feeding it the live
+// frame re-rendered the whole comments panel dozens of times a second
+// during playback, even while hidden (v-show). Freeze the prop while
+// playing or hidden; it refreshes on pause and when the panel opens.
+const taskInfoFrame = ref(0)
+watch(
+  [currentFrame, isPlaying, isCommentsHidden],
+  () => {
+    if (!isPlaying.value && !isCommentsHidden.value) {
+      taskInfoFrame.value = currentFrame.value
+    }
+  },
+  { immediate: true }
+)
 
 const currentPreview = computed(() => {
   if (
@@ -2448,10 +2464,14 @@ onMounted(() => {
   // viewer's transform through the panzoom-changed sync.
   previewViewer.value?.resumeZoom()
 
-  containerResizeObserver = new ResizeObserver(() => {
+  // Debounced: a live window resize (or the fullscreen transition) fires
+  // this continuously, and each tick cleared and rebuilt the annotation
+  // objects (async PSStroke deserialization).
+  const onContainerResized = func.debounce(() => {
     resetPlayerPositions()
     if (isPicture.value || isMovie.value) loadAnnotation()
-  })
+  }, 200)
+  containerResizeObserver = new ResizeObserver(onContainerResized)
   containerResizeObserver.observe(container.value)
 
   window.addEventListener('resize', onWindowResize)
