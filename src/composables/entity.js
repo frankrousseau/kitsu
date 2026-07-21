@@ -85,6 +85,7 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
   const currentSection = ref('infos')
   const zoomLevel = ref(1)
   const scheduleItems = ref([])
+  let scheduleItemsSignature = null
   const zoomOptions = [
     { label: '1', value: 1 },
     { label: '2', value: 2 },
@@ -239,6 +240,19 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
         }
       })
       .filter(c => c !== null)
+
+    // any task mutation in the store retriggers this build: skip the
+    // replacement (and the widget re-render) when nothing visible changed
+    const signature = children
+      .map(
+        child =>
+          `${child.id}:${child.startDate.valueOf()}:` +
+          `${child.endDate.valueOf()}:${child.man_days || 0}`
+      )
+      .join('|')
+    if (signature === scheduleItemsSignature) return
+    scheduleItemsSignature = signature
+
     let rootStartDate = moment()
     let rootEndDate = moment().add(1, 'days')
     if (children.length > 0) {

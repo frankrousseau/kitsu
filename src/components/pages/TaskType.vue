@@ -432,6 +432,7 @@ import { useStore } from 'vuex'
 import { getEntityMap } from '@/composables/entity'
 import csv from '@/lib/csv'
 import { isSupervisorInDepartments } from '@/lib/descriptors'
+import func from '@/lib/func'
 import {
   applyFilters,
   getDescFilters,
@@ -539,8 +540,10 @@ const activeTab = ref('tasks')
 const currentScheduleItem = ref(null)
 const currentSort = ref('entity_name')
 const daysOffByPerson = ref({})
-// not a ref: only read inside prepareScheduleData, never rendered
+// not refs: only read inside the schedule data loads, never rendered
 let daysOffRangeKey = null
+let timeSpentsRangeKey = null
+let timeSpentsCache = {}
 const timesheetByPerson = ref({})
 const displaySettings = ref({
   contactSheetMode: false,
@@ -1220,11 +1223,14 @@ const getTasks = entities => {
     entity.tasks.forEach(taskId => {
       const task = taskMap.value.get(taskId.id || taskId)
       if (task) {
-        // Hack to allow filtering on linked entity metadata.
-        store.commit('SET_TASK_EXTRA_DATA', {
-          task,
-          data: entity.data
-        })
+        // Hack to allow filtering on linked entity metadata. Guarded so
+        // the repeated resets do not commit the same reference again.
+        if (task.data !== entity.data) {
+          store.commit('SET_TASK_EXTRA_DATA', {
+            task,
+            data: entity.data
+          })
+        }
         if (task.task_type_id === currentTaskType.value.id) {
           result.push(task)
         }
@@ -1460,16 +1466,27 @@ const buildAssignationMap = () => {
   return taskAssignationMap
 }
 
+// same trade-off as the days off cache: one fetch per range, so the
+// debounced socket rebuilds stop refetching all time spents
+const loadTimeSpentsForRange = async (startDate, endDate) => {
+  const key = `${currentTaskType.value.id}_${startDate}_${endDate}`
+  if (key !== timeSpentsRangeKey) {
+    timeSpentsCache = await store
+      .dispatch('loadProductionTimeSpents', {
+        taskType: currentTaskType.value,
+        startDate,
+        endDate
+      })
+      .catch(
+        () => ({}) // fallback if not allowed to fetch timesheets
+      )
+    timeSpentsRangeKey = key
+  }
+  return timeSpentsCache
+}
+
 const loadTimesheets = async (personIds, startDate, endDate) => {
-  const timesheets = await store
-    .dispatch('loadProductionTimeSpents', {
-      taskType: currentTaskType.value,
-      startDate,
-      endDate
-    })
-    .catch(
-      () => ({}) // fallback if not allowed to fetch timesheets
-    )
+  const timesheets = await loadTimeSpentsForRange(startDate, endDate)
 
   const taskById = new Map(tasks.value.map(task => [task.id, task]))
   const timesheetByPersonResult = {}
@@ -1918,8 +1935,12 @@ const resetScheduleScroll = () => {
   }
 }
 
+// socket events arrive in bursts (imports, bulk assignments): rebuild the
+// schedule once per burst instead of once per event
+const resetScheduleItemsDebounced = func.debounce(resetScheduleItems, 400)
+
 const onRemoteTaskUpdate = eventData => {
-  resetScheduleItems()
+  resetScheduleItemsDebounced()
   if (
     !isActiveTab('schedule') &&
     taskMap.value.get(eventData.task_id) &&

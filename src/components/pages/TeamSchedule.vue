@@ -239,7 +239,13 @@ import { mapGetters, mapActions } from 'vuex'
 
 import colors from '@/lib/colors'
 import { getPersonPath } from '@/lib/path'
-import { addBusinessDays, minutesToDays, parseSimpleDate } from '@/lib/time'
+import {
+  addBusinessDays,
+  getFirstStartDate,
+  getLastEndDate,
+  minutesToDays,
+  parseSimpleDate
+} from '@/lib/time'
 
 import { formatListMixin } from '@/components/mixins/format'
 
@@ -326,6 +332,12 @@ export default {
         unassignedTasks: 1
       }
     }
+  },
+
+  created() {
+    // non-reactive: person id -> raw tasks, so re-expanding a row is instant.
+    // Entries are dropped whenever the row's assignments or dates change.
+    this.personTasksCache = new Map()
   },
 
   mounted() {
@@ -507,7 +519,7 @@ export default {
       this.loading.unassignedTasks = false
     },
 
-    async loadPersonDates(syncSchedule = false) {
+    async loadPersonDates() {
       const personDatesList = await this.getPersonsTasksDates()
       this.personDates = {}
       personDatesList.forEach(p => {
@@ -516,15 +528,17 @@ export default {
           startDate: parseSimpleDate(p.min_date)
         }
       })
+    },
 
-      if (syncSchedule) {
-        this.scheduleItems.forEach(scheduleItem => {
-          const personDates = this.personDates[scheduleItem.id]
-          if (personDates) {
-            scheduleItem.startDate = personDates.startDate
-            scheduleItem.endDate = personDates.endDate
-          }
-        })
+    // recompute the root bar locally after a drag: the person is expanded so
+    // its children are loaded, no need to refetch every person's dates
+    refreshPersonRootDates(person) {
+      if (!person?.children?.length) return
+      person.startDate = getFirstStartDate(person.children).clone()
+      person.endDate = getLastEndDate(person.children).clone()
+      this.personDates[person.id] = {
+        startDate: person.startDate.clone(),
+        endDate: person.endDate.clone()
       }
     },
 
@@ -641,6 +655,7 @@ export default {
         if (!task) {
           return
         }
+        this.personTasksCache.delete(person.id)
         person.children.push(task)
         person.children.sort(
           firstBy('startDate').thenBy('project_name').thenBy('name')
@@ -681,7 +696,8 @@ export default {
         }
         try {
           await this.saveTaskScheduleItem(item)
-          await this.loadPersonDates(true)
+          this.refreshPersonRootDates(item.parentElement)
+          this.personTasksCache.delete(item.parentElement.id)
         } catch (err) {
           console.error(err)
         }
@@ -690,6 +706,7 @@ export default {
 
     onScheduleItemAssigned(item, person) {
       if (item.type === 'Task') {
+        this.personTasksCache.delete(person.id)
         person.children.sort(
           firstBy('startDate').thenBy('project_name').thenBy('name')
         )
@@ -702,6 +719,7 @@ export default {
 
     onScheduleItemUnassigned(item, person) {
       if (item.type === 'Task') {
+        this.personTasksCache.delete(person.id)
         this.unassignPersonFromTask({
           person,
           task: item
@@ -719,7 +737,11 @@ export default {
       element.loading = true
       element.children = []
       try {
-        const tasks = await this.fetchPersonTasks(element.id)
+        let tasks = this.personTasksCache.get(element.id)
+        if (!tasks) {
+          tasks = await this.fetchPersonTasks(element.id)
+          this.personTasksCache.set(element.id, tasks)
+        }
         element.children = tasks
           .map(task => this.buildTaskScheduleItem(element, task))
           .filter(Boolean)
