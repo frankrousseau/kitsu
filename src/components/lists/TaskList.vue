@@ -76,6 +76,10 @@
             <metadata-header
               :key="descriptor.id"
               :descriptor="descriptor"
+              resizable
+              :width="metadataColumnWidths[descriptor.id]"
+              @resize="width => onMetadataColumnResize(descriptor.id, width)"
+              @resize-end="persistMetadataColumnWidths"
               @show-metadata-header-menu="
                 event => showMetadataHeaderMenu(descriptor.id, event)
               "
@@ -285,6 +289,14 @@
             <td
               class="metadata-descriptor"
               :key="`${task.id}-${descriptor.id}`"
+              :style="
+                metadataColumnWidths[descriptor.id]
+                  ? {
+                      width: `${metadataColumnWidths[descriptor.id]}px`,
+                      minWidth: `${metadataColumnWidths[descriptor.id]}px`
+                    }
+                  : undefined
+              "
               v-for="descriptor in visibleMetadataDescriptors"
             >
               <metadata-input
@@ -559,6 +571,31 @@ const isColumnVisible = name => metadataDisplayHeaders.value[name] !== false
 
 const toggleColumnSelector = () => {
   columnSelectorDisplayed.value = !columnSelectorDisplayed.value
+}
+
+// Metadata column widths (keyed by descriptor id), drag-resized and persisted.
+const METADATA_WIDTHS_KEY = 'metadataColumnWidths:task-type'
+const readMetadataColumnWidths = () => {
+  try {
+    return JSON.parse(localStorage.getItem(METADATA_WIDTHS_KEY)) || {}
+  } catch {
+    return {}
+  }
+}
+const metadataColumnWidths = ref(readMetadataColumnWidths())
+
+const onMetadataColumnResize = (descriptorId, width) => {
+  metadataColumnWidths.value = {
+    ...metadataColumnWidths.value,
+    [descriptorId]: width
+  }
+}
+
+const persistMetadataColumnWidths = () => {
+  localStorage.setItem(
+    METADATA_WIDTHS_KEY,
+    JSON.stringify(metadataColumnWidths.value)
+  )
 }
 
 const bodyRef = useTemplateRef('body')
