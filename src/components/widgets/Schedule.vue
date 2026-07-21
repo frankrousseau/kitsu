@@ -1546,6 +1546,20 @@ const changeDates = event => {
     }
   }
 
+  // a bar whose real dates lie outside the displayed range has no exact
+  // index: the boundary-resolved index math would compute the move against
+  // the window edge and teleport the bar there on the first tick, then the
+  // drop would persist the reset dates. Keep such bars unmovable (their
+  // dates must be fixed from the task panel first).
+  if (
+    !isValidItemDates(
+      currentElement.value.startDate,
+      currentElement.value.endDate
+    )
+  ) {
+    return
+  }
+
   if (lastStartDate.isBefore(props.startDate)) {
     lastStartDate = props.startDate.clone()
   }
