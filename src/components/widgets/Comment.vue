@@ -142,25 +142,25 @@
               <attachment-image
                 v-for="attachment in pictureAttachments"
                 :key="attachment.id"
-                :src="getDownloadAttachmentPath(attachment)"
+                :src="attachmentPath(attachment)"
                 :name="attachment.name"
               />
               <attachment-audio-player
                 v-for="attachment in audioAttachments"
                 :key="attachment.id"
-                :src="getDownloadAttachmentPath(attachment)"
+                :src="attachmentPath(attachment)"
                 :name="attachment.name"
-                :download-href="getDownloadAttachmentPath(attachment)"
+                :download-href="attachmentPath(attachment)"
               />
               <attachment-video-player
                 v-for="attachment in videoAttachments"
                 :key="attachment.id"
-                :src="getDownloadAttachmentPath(attachment)"
+                :src="attachmentPath(attachment)"
                 :name="attachment.name"
-                :download-href="getDownloadAttachmentPath(attachment)"
+                :download-href="attachmentPath(attachment)"
               />
               <a
-                :href="getDownloadAttachmentPath(attachment)"
+                :href="attachmentPath(attachment)"
                 :key="attachment.id"
                 :title="attachment.name"
                 class="attachment-file-link"
@@ -234,27 +234,27 @@
                     v-for="attachment in replyAttachmentMap.get(replyComment.id)
                       ?.pictures"
                     :key="attachment.id"
-                    :src="getDownloadAttachmentPath(attachment)"
+                    :src="attachmentPath(attachment)"
                     :name="attachment.name"
                   />
                   <attachment-audio-player
                     v-for="attachment in replyAttachmentMap.get(replyComment.id)
                       ?.audio"
                     :key="attachment.id"
-                    :src="getDownloadAttachmentPath(attachment)"
+                    :src="attachmentPath(attachment)"
                     :name="attachment.name"
-                    :download-href="getDownloadAttachmentPath(attachment)"
+                    :download-href="attachmentPath(attachment)"
                   />
                   <attachment-video-player
                     v-for="attachment in replyAttachmentMap.get(replyComment.id)
                       ?.video"
                     :key="attachment.id"
-                    :src="getDownloadAttachmentPath(attachment)"
+                    :src="attachmentPath(attachment)"
                     :name="attachment.name"
-                    :download-href="getDownloadAttachmentPath(attachment)"
+                    :download-href="attachmentPath(attachment)"
                   />
                   <a
-                    :href="getDownloadAttachmentPath(attachment)"
+                    :href="attachmentPath(attachment)"
                     :key="attachment.id"
                     :title="attachment.name"
                     class="attachment-file-link"
@@ -608,6 +608,10 @@ const props = defineProps({
     type: Object,
     default: () => {}
   },
+  urlPrefix: {
+    type: String,
+    default: ''
+  },
   frame: {
     type: Number,
     default: 0
@@ -766,6 +770,13 @@ const commentAttachments = computed(() => {
     attachment => !attachment.reply_id
   )
 })
+
+// Shared playlist guests have no JWT: the regular attachment route 401s
+// for them. When a urlPrefix is set, use its anonymous token route.
+const attachmentPath = attachment =>
+  props.urlPrefix
+    ? `${props.urlPrefix}/attachment-files/${attachment.id}/file/${attachment.name}`
+    : getDownloadAttachmentPath(attachment)
 
 const pictureAttachments = computed(() => {
   return commentAttachments.value

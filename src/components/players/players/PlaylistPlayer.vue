@@ -2243,7 +2243,7 @@ const syncComparisonPlayer = () => {
     isComparing.value &&
     rawPlayerComparison.value.currentPlayer
   ) {
-    const t = Number(rawPlayer.value.getCurrentTimeRaw().toPrecision(4))
+    const t = rawPlayer.value.getCurrentTimeRaw()
     rawPlayerComparison.value.setCurrentTimeRaw(t)
   }
 }
@@ -2559,8 +2559,9 @@ const getCurrentTime = () => {
   // scrub position leaks into the annotation key and strokes drawn
   // mid-shot disappear when the user comes back to the start.
   if (!isCurrentPreviewMovie.value) return 0
-  const time = roundToFrame(currentTimeRaw.value, fps.value) || 0
-  return Number(time.toPrecision(4))
+  // 4-decimal rounding only: toPrecision(4) keeps 4 significant digits and
+  // quantized times past 100s, landing annotations on neighbouring frames.
+  return roundToFrame(currentTimeRaw.value, fps.value) || 0
 }
 
 const getCurrentFrame = () => {
@@ -2580,7 +2581,7 @@ const setCurrentTimeRaw = time => {
     syncComparisonPlayer()
     const isChromium = !!window.chrome
     const change = isChromium ? 0.0001 : 0
-    currentTimeRaw.value = Number((roundedTime + change).toPrecision(4))
+    currentTimeRaw.value = roundedTime + change
     updateProgressBar()
   }
   return roundedTime
@@ -2649,9 +2650,7 @@ const setPlayerSpeed = rate => {
 const onFrameUpdate = frame => {
   const isChromium = !!window.chrome
   const change = isChromium ? 0.0001 : 0
-  currentTimeRaw.value = Number(
-    (frame * frameDuration.value + change).toPrecision(4)
-  )
+  currentTimeRaw.value = frame * frameDuration.value + change
   currentTime.value = formatTime(currentTimeRaw.value, fps.value)
   updateProgressBar()
   if (isShowAnnotationsWhilePlaying.value) {
@@ -2806,10 +2805,9 @@ const updateMainAnchor = () => {
           height: currentPreview.value.height
         }
       : picturePlayer.value?.getNaturalDimensions?.()
-    if (!naturalDimensions) return
+    if (!naturalDimensions?.width || !naturalDimensions?.height) return
     const naturalWidth = naturalDimensions.width
     const naturalHeight = naturalDimensions.height
-    const ratio = naturalWidth / naturalHeight
 
     let fullWidth = videoContainer.value.offsetWidth
     const fullHeight = videoContainer.value.offsetHeight
@@ -2817,33 +2815,21 @@ const updateMainAnchor = () => {
       fullWidth = Math.round(fullWidth / 2)
     }
 
-    let width = ratio ? fullHeight * ratio : fullWidth
-    let height = ratio ? Math.round(fullWidth / ratio) : fullHeight
-    let left = 0
-    let top = 0
+    // Contain fit, never upscaled: one uniform scale keeps the anchor at
+    // the image's aspect ratio in every container shape. The previous
+    // independent width/height clamps produced a wrong-aspect box when
+    // the container was narrower but taller than the image, misaligning
+    // the annotation canvas.
+    const scale = Math.min(
+      fullWidth / naturalWidth,
+      fullHeight / naturalHeight,
+      1
+    )
+    const width = Math.round(naturalWidth * scale)
+    const height = Math.round(naturalHeight * scale)
 
-    if (fullWidth > naturalWidth) {
-      left = Math.round((fullWidth - naturalWidth) / 2)
-      width = naturalWidth
-    } else if (fullWidth > width) {
-      left = Math.round((fullWidth - width) / 2)
-    } else {
-      width = fullWidth
-    }
-
-    if (fullHeight > naturalHeight) {
-      top = Math.round((fullHeight - naturalHeight) / 2)
-      height = naturalHeight
-    } else if (fullHeight > height) {
-      top = Math.round((fullHeight - height) / 2)
-    } else {
-      height = fullHeight
-      width = Math.round(height * ratio)
-      left = Math.round((fullWidth - width) / 2)
-    }
-
-    anchor.style.left = `${left}px`
-    anchor.style.top = `${top}px`
+    anchor.style.left = `${Math.round((fullWidth - width) / 2)}px`
+    anchor.style.top = `${Math.round((fullHeight - height) / 2)}px`
     anchor.style.width = `${width}px`
     anchor.style.height = `${height}px`
   }
@@ -2900,7 +2886,13 @@ const loadComparisonAnnotation = time => {
   if (!isMovieComparison.value) return
   const compared = currentRevisionToCompare.value
   const anns = compared?.annotations || []
-  const annotation = anns.find(a => a.time === time)
+  // Tolerant match like getAnnotation: `time` can be a raw rVFC media
+  // time while stored times are rounded (legacy ones not even that), so
+  // strict float equality mostly missed and the overlay stayed empty.
+  const target = roundToFrame(time, fps.value)
+  const annotation = anns.find(
+    a => Math.abs(roundToFrame(a.time, fps.value) - target) < 0.0001
+  )
   if (annotation) loadSingleAnnotationComparison(annotation)
 }
 
@@ -3216,7 +3208,8 @@ const onFocusToggle = event => {
 }
 
 const onTimeCodeClicked = ({ versionRevision, frame }) => {
-  const previews = currentEntity.value?.preview_files[task.value?.task_type_id]
+  const previews =
+    currentEntity.value?.preview_files?.[task.value?.task_type_id]
   if (!previews) return
   const previewFile = previews.find(
     p => p.revision === parseInt(versionRevision)
@@ -3611,11 +3604,14 @@ const onEntityDropped = info => {
   }
 }
 
+// Read the reorder payload BEFORE moving: moveSelectedEntity empties
+// entityList synchronously (restored on nextTick), so any index read
+// after the call lands on an empty array.
 const moveSelectedEntityToLeft = () => {
+  if (entityList.value.length < 2) return
   const toMoveIndex = playingEntityIndex.value
   const targetIndex = previousEntityIndex.value
   const entityToMove = currentEntity.value
-  moveSelectedEntity(entityToMove, toMoveIndex, targetIndex)
   const info = {
     before: {
       entity_id: entityList.value[targetIndex].id,
@@ -3626,14 +3622,15 @@ const moveSelectedEntityToLeft = () => {
       preview_file_id: entityList.value[toMoveIndex].preview_file_id
     }
   }
+  moveSelectedEntity(entityToMove, toMoveIndex, targetIndex)
   emit('order-change', info)
 }
 
 const moveSelectedEntityToRight = () => {
+  if (entityList.value.length < 2) return
   const toMoveIndex = playingEntityIndex.value
   const targetIndex = nextEntityIndex.value
   const entityToMove = currentEntity.value
-  moveSelectedEntity(entityToMove, toMoveIndex, targetIndex)
   const info = {
     before: {
       entity_id: entityList.value[toMoveIndex].id,
@@ -3644,6 +3641,7 @@ const moveSelectedEntityToRight = () => {
       preview_file_id: entityList.value[targetIndex].preview_file_id
     }
   }
+  moveSelectedEntity(entityToMove, toMoveIndex, targetIndex)
   emit('order-change', info)
 }
 
@@ -3817,7 +3815,7 @@ const setPlaylistProgress = time => {
   const pos = playlistShotPosition.value[frame]
   if (pos) {
     const entityIndex = pos.index
-    if (entityIndex !== playingEntityIndex.value && entityIndex) {
+    if (entityIndex !== playingEntityIndex.value) {
       playEntity(entityIndex)
     }
   }
@@ -3832,7 +3830,7 @@ const configureFullPlayer = () => {
   if (!fullPlaylistPlayer.value) return
   fullPlaylistPlayer.value.addEventListener('loadedmetadata', () => {
     playlistDuration.value = entityList.value.reduce(
-      (acc, e) => acc + e.preview_file_duration,
+      (acc, e) => acc + (e.preview_file_duration || 0),
       0
     )
   })
@@ -3985,7 +3983,7 @@ const resetPlaylistFrameData = () => {
     // An entity without preview still spans its edit length (like a slug
     // in a conform): playback holds the slot, the strip shows it in grey.
     const defaultNbFrames =
-      entity.preview_nb_frames || 2 * fps.value * frameDuration.value
+      entity.preview_nb_frames || Math.round(2 * fps.value)
     framesPerImage.value[index] = defaultNbFrames
     // Duration only counts for movie mains: a picture revision holding a
     // video sub-preview carries that video's duration, and using it here
@@ -4427,6 +4425,9 @@ watch(playingEntityIndex, () => {
     })
   } else if (wavesurfer && isWaveformDisplayed.value) {
     wavesurfer.destroy()
+    // Null it like loadWaveForm does, or the next load double-destroys
+    // the dead instance inside its try and skips rebuilding the waveform.
+    wavesurfer = null
   }
   if (currentEntity.value) {
     annotations.value = currentEntity.value.preview_file_annotations || []

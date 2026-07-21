@@ -1131,8 +1131,9 @@ const changeMaxDuration = duration => {
 
 const getCurrentTime = () => {
   if (!isMovie.value) return 0
-  const time = roundToFrame(currentTimeRaw.value, fps.value)
-  return Number(time.toPrecision(4))
+  // 4-decimal rounding only: toPrecision(4) keeps 4 significant digits and
+  // quantized times past 100s, landing annotations on neighbouring frames.
+  return roundToFrame(currentTimeRaw.value, fps.value)
 }
 
 const getCurrentFrame = () => {
@@ -1413,7 +1414,6 @@ const onRepeatClicked = () => {
 const onToggleSoundClicked = () => {
   clearFocus()
   isMuted.value = !isMuted.value
-  localPreferences.setPreference('player:muted', isMuted.value)
 }
 
 // Screen
@@ -1621,9 +1621,10 @@ const onAnnotationDisplayedClicked = () => {
 const saveAnnotations = () => {
   let currentTimeVal = 0
   if (isMovie.value) {
-    currentTimeVal = currentFrame.value * frameDuration.value
-    currentTimeVal = roundToFrame(currentTimeVal, fps.value)
-    currentTimeVal = Number(currentTimeVal.toPrecision(4))
+    currentTimeVal = roundToFrame(
+      currentFrame.value * frameDuration.value,
+      fps.value
+    )
   }
   const annotation = getAnnotation(currentTimeVal)
   const newAnnotations = getNewAnnotations(
@@ -1675,7 +1676,14 @@ const loadComparisonAnnotation = time => {
   }
   let annotation = null
   if (isMovie.value) {
-    annotation = anns.find(a => a.time === time)
+    // Tolerant match like getAnnotation: callers derive `time` from raw
+    // frame math while stored times are rounded (legacy ones not even
+    // that), so strict float equality mostly missed and the comparison
+    // overlay stayed empty.
+    const target = roundToFrame(time, fps.value)
+    annotation = anns.find(
+      a => Math.abs(roundToFrame(a.time, fps.value) - target) < 0.0001
+    )
   } else if (isPicture.value) {
     annotation = anns.find(a => a.time === 0)
   }
@@ -1770,7 +1778,9 @@ const extractVideoAnnotationSnapshots = async ({ withLabel = false } = {}) => {
       await getFileFromCanvas(canvas, snapshotFilename({ revision, frame }))
     )
   }
-  previewViewer.value.setCurrentFrame(currentFrame.value - 1)
+  // currentFrame is 0-based here (unlike PlaylistPlayer's 1-based label
+  // this restore was copied from): no -1, or the playhead steps back.
+  previewViewer.value.setCurrentFrame(currentFrame.value)
   nextTick(() => {
     clearCanvas()
   })
@@ -1844,20 +1854,24 @@ const getLinkedEntities = concept => {
 
 // Events
 
+// The playlist modal mounts a PlaylistPlayer above this (still mounted)
+// player: while it is open, its instance owns every shortcut.
+const isPlayerActive = () => {
+  const playlistModal = document.getElementById('temp-playlist-modal')
+  const styles = playlistModal && window.getComputedStyle(playlistModal)
+  return !styles || styles.display === 'none'
+}
+
 const { isAltHeld } = usePreviewShortcuts({
   // Escape is not wired — the browser exits fullscreen on it and the
   // useFullScreen listener picks up the resulting fullscreenchange.
+  isActive: isPlayerActive,
   onDelete: () => deleteSelection(),
   onPrevFrame: () => goPreviousFrame(),
   onNextFrame: () => goNextFrame(),
   onFirstFrame: () => goToFirstFrame(),
   onLastFrame: () => goToLastFrame(),
-  onPlayPause: () => {
-    // Don't toggle play/pause while a shared playlist modal is open.
-    const playlistModal = document.getElementById('temp-playlist-modal')
-    const styles = playlistModal && window.getComputedStyle(playlistModal)
-    if (!styles || styles.display === 'none') togglePlayPause()
-  },
+  onPlayPause: () => togglePlayPause(),
   onPrevAnnotation: () => goPreviousDrawing(),
   onNextAnnotation: () => goNextDrawing(),
   onAnnotate: () => {
@@ -2283,6 +2297,20 @@ watch(taskTypeId, () => {
   setDefaultComparisonPreview()
 })
 
+// The comparison lookup map is non-reactive and was only rebuilt on
+// task-type changes: switching tasks in TaskInfo (same task type id) or
+// receiving a new revision left it resolving stale preview files, which
+// blanked the comparison viewer. Rebuild it whenever the payload changes.
+watch(
+  () => props.entityPreviewFiles,
+  () => {
+    resetPreviewFileMap()
+    if (previewToCompareId.value) {
+      previewToCompare.value = resolvePreviewToCompare(previewToCompareId.value)
+    }
+  }
+)
+
 watch(isComparing, () => {
   endAnnotationSaving()
   if (!isComparing.value) {
@@ -2332,8 +2360,9 @@ watch(isTyping, () => {
     isAnnotationsDisplayed.value = true
   }
   const clickarea =
-    canvasWrapper.value.getElementsByClassName('upper-canvas')[0]
-  if (isTyping.value && clickarea) {
+    canvasWrapper.value?.getElementsByClassName('upper-canvas')[0]
+  if (!clickarea) return
+  if (isTyping.value) {
     clickarea.addEventListener('dblclick', addText)
   } else {
     clickarea.removeEventListener('dblclick', addText)
@@ -2376,6 +2405,13 @@ watch(speed, () => {
 watch(volume, () => {
   previewViewer.value.setVolume(volume.value)
   localPreferences.setPreference('player:volume', volume.value)
+})
+
+// Persist through a watcher: ButtonSound drives isMuted via v-model and
+// never emits change-sound, so a click handler on the toggle chain never
+// runs and the preference was never written.
+watch(isMuted, () => {
+  localPreferences.setPreference('player:muted', isMuted.value)
 })
 
 // Lifecycle

@@ -12,7 +12,7 @@
       :margin-bottom="marginBottom"
       :panzoom="panzoom"
       :preview="preview"
-      @loaded="() => $emit('loaded')"
+      @loaded="onViewerLoaded(preview)"
       @panzoom-changed="$event => $emit('panzoom-changed', $event)"
       @panzoom-ready="() => $emit('panzoom-ready')"
       @size-changed="() => $emit('size-changed')"
@@ -69,7 +69,12 @@ const props = defineProps({
   }
 })
 
-defineEmits(['loaded', 'panzoom-changed', 'panzoom-ready', 'size-changed'])
+const emit = defineEmits([
+  'loaded',
+  'panzoom-changed',
+  'panzoom-ready',
+  'size-changed'
+])
 
 const container = ref(null)
 const pictureRefs = reactive({})
@@ -84,6 +89,19 @@ const setPictureRef = (preview, el) => {
     pictureRefs[key] = el
   } else {
     delete pictureRefs[key]
+  }
+}
+
+// Every PictureViewer in the strip loads eagerly (v-show): only the
+// displayed one may notify the parent, or each background image finishing
+// its download resets the live annotation canvas (wiping in-progress
+// strokes) for seconds after opening a picture-heavy playlist.
+const onViewerLoaded = preview => {
+  if (
+    preview.id === props.currentPreview?.id &&
+    preview.position === props.currentPreview?.position
+  ) {
+    emit('loaded')
   }
 }
 
