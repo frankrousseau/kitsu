@@ -250,8 +250,8 @@ describe('Topbar.vue', () => {
   })
 
   describe('schedule episode selector', () => {
-    // The schedule is the only episodic section offering 'all': it swaps the
-    // per-episode planning for the production-wide one.
+    // The schedule offers 'all' (production-wide planning) and 'main' (main
+    // pack) on top of the real episodes, and coerces neither.
     const mountForSchedule = (episodeId, episodes = []) => {
       const production = { id: 'production-1', production_type: 'tvshow' }
       const { store: scheduleStore } = makeStore({
@@ -302,12 +302,18 @@ describe('Topbar.vue', () => {
       })
     }
 
-    it('offers an all option, and no main pack', async () => {
+    it('offers an all option and the main pack', async () => {
       const scheduleWrapper = mountForSchedule('all')
       scheduleWrapper.vm.currentProjectSection = 'schedule'
       await nextTick()
       expect(scheduleWrapper.vm.currentEpisodeOptionGroups).toEqual([
-        { name: '', episodeList: [{ label: 'episodes.all_episodes', value: 'all' }] }
+        {
+          name: '',
+          episodeList: [
+            { label: 'episodes.all_episodes', value: 'all' },
+            { label: 'main.main_pack', value: 'main' }
+          ]
+        }
       ])
       scheduleWrapper.unmount()
     })
@@ -319,10 +325,10 @@ describe('Topbar.vue', () => {
       scheduleWrapper.unmount()
     })
 
-    it('still coerces the main pack to the first episode', () => {
+    it('keeps the main pack instead of coercing it to the first one', () => {
       const scheduleWrapper = mountForSchedule('main', [{ id: 'episode-1' }])
       scheduleWrapper.vm.updateCombosFromRoute()
-      expect(scheduleWrapper.vm.currentEpisodeId).toBe('episode-1')
+      expect(scheduleWrapper.vm.currentEpisodeId).toBe('main')
       scheduleWrapper.unmount()
     })
   })

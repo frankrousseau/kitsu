@@ -472,16 +472,10 @@ export default {
         const episodeList = this.getBaseEpisodeOptionGroups('shots.episodes')
         return [{ name: '', episodeList }].concat(this.episodeOptionGroups)
       } else if (this.scheduleSections.includes(section)) {
-        // The schedule offers the production-wide planning through 'all', but
-        // has no main pack.
-        return [
-          {
-            name: '',
-            episodeList: [
-              { label: this.$t('episodes.all_episodes'), value: 'all' }
-            ]
-          }
-        ].concat(this.episodeOptionGroups)
+        const episodeList = this.getBaseEpisodeOptionGroups(
+          'episodes.all_episodes'
+        )
+        return [{ name: '', episodeList }].concat(this.episodeOptionGroups)
       } else {
         return this.episodeOptionGroups
       }
@@ -835,14 +829,9 @@ export default {
                   : 'all'
             } else if (
               ['playlists', 'schedule'].includes(this.currentProjectSection) &&
-              routeEpisodeId === 'all'
+              ['all', 'main'].includes(routeEpisodeId)
             ) {
-              this.currentEpisodeId = 'all'
-            } else if (
-              this.currentProjectSection === 'playlists' &&
-              routeEpisodeId === 'main'
-            ) {
-              this.currentEpisodeId = 'main'
+              this.currentEpisodeId = routeEpisodeId
             } else if (
               this.$route.params.plugin_id &&
               ['all', 'main'].includes(routeEpisodeId)
@@ -928,9 +917,9 @@ export default {
       const isAssetSection = this.assetSections.includes(section)
       const isEditSection = this.editSections.includes(section)
       const isBreakdownSection = this.breakdownSections.includes(section)
-      // The schedule keeps 'all' to display its production-wide planning.
-      const isScheduleAllEpisodes =
-        this.scheduleSections.includes(section) && episodeId === 'all'
+      // The schedule keeps both pseudo-episodes: 'all' displays its
+      // production-wide planning, 'main' scopes it to the main pack.
+      const isScheduleSection = this.scheduleSections.includes(section)
       // Plugin pages keep the all / main pseudo-episodes: coercing to the
       // first episode desyncs the combobox from the episode_id actually
       // forwarded to the plugin iframe.
@@ -939,7 +928,7 @@ export default {
         !isAssetSection &&
         !isEditSection &&
         !isBreakdownSection &&
-        !isScheduleAllEpisodes &&
+        !isScheduleSection &&
         ['all', 'main'].includes(episodeId) &&
         this.episodes.length > 0
       ) {
