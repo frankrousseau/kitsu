@@ -539,6 +539,8 @@ const activeTab = ref('tasks')
 const currentScheduleItem = ref(null)
 const currentSort = ref('entity_name')
 const daysOffByPerson = ref({})
+// not a ref: only read inside prepareScheduleData, never rendered
+let daysOffRangeKey = null
 const timesheetByPerson = ref({})
 const displaySettings = ref({
   contactSheetMode: false,
@@ -1350,11 +1352,15 @@ const prepareScheduleData = async () => {
   const startDate = currentScheduleItem.value.start_date
   const endDate = currentScheduleItem.value.end_date
 
-  const daysOffPromise = store
-    .dispatch('loadProductionDaysOff', { startDate, endDate })
-    .catch(
-      () => ({}) // fallback if not allowed to fetch days off
-    )
+  // every task:update socket event rebuilds the schedule, so the days off
+  // fetch is cached per range to avoid one HTTP call per event
+  const daysOffKey = `${currentProduction.value.id}_${startDate}_${endDate}`
+  const daysOffPromise =
+    daysOffKey === daysOffRangeKey
+      ? Promise.resolve(daysOffByPerson.value)
+      : store.dispatch('loadProductionDaysOff', { startDate, endDate }).catch(
+          () => ({}) // fallback if not allowed to fetch days off
+        )
 
   if (dataDisplay.value.timesheets) {
     const assignees = Object.keys(taskAssignationMap).filter(
@@ -1369,6 +1375,7 @@ const prepareScheduleData = async () => {
   } else {
     daysOffByPerson.value = await daysOffPromise
   }
+  daysOffRangeKey = daysOffKey
 
   return taskAssignationMap
 }
@@ -1596,9 +1603,22 @@ const buildPersonElement = (
       moment(schedule.taskTypeStartDate)
     )
 
+    if (startDate.isAfter(productionEndDate.value)) {
+      startDate = productionEndDate.value.clone().add(-1, 'days')
+    }
+    if (startDate.isBefore(productionStartDate.value)) {
+      startDate = productionStartDate.value.clone()
+    }
+
     if (!endDate || endDate.isBefore(startDate)) {
       const nbDays = startDate.isoWeekday() === 5 ? 3 : 1
       endDate = startDate.clone().add(nbDays, 'days')
+    }
+    if (endDate.isAfter(productionEndDate.value)) {
+      endDate = productionEndDate.value.clone().add(-1, 'days')
+      if (startDate.isAfter(endDate)) {
+        startDate = endDate.clone().add(-1, 'days')
+      }
     }
 
     if (estimation) manDays += estimation
@@ -1626,19 +1646,23 @@ const buildPersonElement = (
 
     if (withBeforeAfter) {
       const entity = entityMap.value.get(task.entity_id)
+      // copies: the ghost blocks below mutate name, dates and color,
+      // which must not leak into the taskMap objects
       const siblingElements = entity?.tasks
         .map(taskId => taskMap.value.get(taskId))
         .filter(Boolean)
 
       if (schedule.taskTypeBefore) {
-        data.previousElement = siblingElements.find(
+        const previousTask = siblingElements.find(
           item => item.task_type_id === schedule.taskTypeBefore
         )
+        data.previousElement = previousTask ? { ...previousTask } : null
       }
       if (schedule.taskTypeAfter) {
-        data.nextElement = siblingElements.find(
+        const nextTask = siblingElements.find(
           item => item.task_type_id === schedule.taskTypeAfter
         )
+        data.nextElement = nextTask ? { ...nextTask } : null
       }
     }
 
@@ -2030,6 +2054,7 @@ watch(currentScheduleItem, () => {
 watch(
   [() => schedule.taskTypeStartDate, () => schedule.taskTypeEndDate],
   () => {
+    if (!currentScheduleItem.value) return
     const startDate = moment(schedule.taskTypeStartDate).utc()
     const endDate = moment(schedule.taskTypeEndDate).utc()
     if (

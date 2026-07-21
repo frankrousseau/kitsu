@@ -5,8 +5,10 @@ import { useStore } from 'vuex'
 
 import { getEntityPath } from '@/lib/path'
 import {
+  addBusinessDays,
   getFirstStartDate,
   getLastEndDate,
+  minutesToDays,
   parseDate,
   parseSimpleDate
 } from '@/lib/time'
@@ -61,6 +63,23 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
   const getTaskTypePriority = computed(() => store.getters.getTaskTypePriority)
   const currentEpisode = computed(() => store.getters.currentEpisode)
   const currentProduction = computed(() => store.getters.currentProduction)
+  const organisation = computed(() => store.getters.organisation)
+  const isCurrentUserManager = computed(
+    () => store.getters.isCurrentUserManager
+  )
+  const isCurrentUserSupervisor = computed(
+    () => store.getters.isCurrentUserSupervisor
+  )
+  const user = computed(() => store.getters.user)
+
+  const canEditTaskDates = taskType => {
+    const departments = user.value.departments || []
+    return (
+      isCurrentUserManager.value ||
+      (isCurrentUserSupervisor.value &&
+        (!departments.length || departments.includes(taskType.department_id)))
+    )
+  }
 
   // Local state (mirrors the mixin's `data()` fields used by Edit.vue).
   const currentSection = ref('infos')
@@ -191,14 +210,18 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
         } else if (task.end_date) {
           endDate = parseSimpleDate(task.end_date)
         } else if (task.estimation) {
-          endDate = startDate.clone().add(estimation, 'days')
+          endDate = addBusinessDays(
+            startDate,
+            Math.ceil(minutesToDays(organisation.value, estimation)) - 1
+          )
         }
 
         if (!endDate || endDate.isBefore(startDate)) {
           endDate = startDate.clone().add(1, 'days')
         }
-        if (estimation) manDays += task.estimation
         const taskType = taskTypeMap.value.get(task.task_type_id)
+        if (!taskType) return null
+        if (estimation) manDays += task.estimation
 
         return {
           ...task,
@@ -208,7 +231,7 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
           expanded: false,
           loading: false,
           man_days: estimation,
-          editable: true,
+          editable: canEditTaskDates(taskType),
           unresizable: false,
           parentElement: rootElement,
           color: taskType.color,
@@ -229,6 +252,30 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
       man_days: manDays
     })
     scheduleItems.value = [rootElement]
+  }
+
+  const saveTaskScheduleItem = item => {
+    if (item.estimation) {
+      item.endDate = addBusinessDays(
+        item.startDate,
+        Math.ceil(minutesToDays(organisation.value, item.estimation)) - 1,
+        item.parentElement.daysOff
+      )
+    }
+    item.man_days = item.estimation || 0
+
+    if (item.startDate && item.endDate) {
+      store
+        .dispatch('updateTask', {
+          taskId: item.id,
+          data: {
+            estimation: item.estimation,
+            start_date: item.startDate.format('YYYY-MM-DD'),
+            due_date: item.endDate.format('YYYY-MM-DD')
+          }
+        })
+        .catch(console.error)
+    }
   }
 
   // Watch route params and re-init when the entity id in the URL changes.
@@ -257,6 +304,7 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
     nextEntityPath,
     currentTasks,
     tasksStartDate,
-    tasksEndDate
+    tasksEndDate,
+    saveTaskScheduleItem
   }
 }

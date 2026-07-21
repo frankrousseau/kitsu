@@ -44,7 +44,12 @@ export const entityMixin = {
   },
 
   computed: {
-    ...mapGetters(['organisation']),
+    ...mapGetters([
+      'isCurrentUserManager',
+      'isCurrentUserSupervisor',
+      'organisation',
+      'user'
+    ]),
 
     assetList() {
       return assetsStore.cache.assets
@@ -242,14 +247,18 @@ export const entityMixin = {
           } else if (task.end_date) {
             endDate = parseSimpleDate(task.end_date)
           } else if (task.estimation) {
-            endDate = startDate.clone().add(estimation, 'days')
+            endDate = addBusinessDays(
+              startDate,
+              Math.ceil(minutesToDays(this.organisation, estimation)) - 1
+            )
           }
 
           if (!endDate || endDate.isBefore(startDate)) {
             endDate = startDate.clone().add(1, 'days')
           }
-          if (estimation) manDays += task.estimation
           const taskType = this.taskTypeMap.get(task.task_type_id)
+          if (!taskType) return null
+          if (estimation) manDays += task.estimation
 
           return {
             ...task,
@@ -259,7 +268,7 @@ export const entityMixin = {
             expanded: false,
             loading: false,
             man_days: estimation,
-            editable: true,
+            editable: this.canEditTaskDates(taskType),
             unresizable: false,
             parentElement: rootElement,
             color: taskType.color,
@@ -282,6 +291,15 @@ export const entityMixin = {
       this.scheduleItems = [rootElement]
     },
 
+    canEditTaskDates(taskType) {
+      const departments = this.user.departments || []
+      return (
+        this.isCurrentUserManager ||
+        (this.isCurrentUserSupervisor &&
+          (!departments.length || departments.includes(taskType.department_id)))
+      )
+    },
+
     saveTaskScheduleItem(item) {
       if (item.estimation) {
         item.endDate = addBusinessDays(
@@ -300,7 +318,7 @@ export const entityMixin = {
             start_date: item.startDate.format('YYYY-MM-DD'),
             due_date: item.endDate.format('YYYY-MM-DD')
           }
-        })
+        }).catch(console.error)
       }
     }
   },
