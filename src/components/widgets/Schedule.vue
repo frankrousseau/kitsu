@@ -381,6 +381,7 @@
         <div
           ref="timelineContentWrapperRef"
           class="timeline-content-wrapper"
+          @mousemove.passive="onPositionBarMove"
           @scroll.passive="onTimelineScroll"
         >
           <div
@@ -439,7 +440,9 @@
                 :key="`dayoff-${dayOff.id}-${index}`"
                 :style="dayOffStyle(dayOff)"
                 :title="dayOff.description"
-                v-for="(dayOff, index) in getDayOffRange(rootElement.daysOff)"
+                v-for="(dayOff, index) in cachedDayOffRange(
+                  rootElement.daysOff
+                )"
               >
                 <briefcase-icon class="day-off-icon" :size="14" />
               </div>
@@ -582,8 +585,9 @@
                       "
                       :title="`${formatDuration(timesheet.duration)} ${isDurationInHours ? $t('main.hours_spent', formatDuration(timesheet.duration, false)) : $t('main.days_spent', formatDuration(timesheet.duration, false))}`"
                       :key="timesheet.id"
-                      v-for="timesheet in rootElement.timesheet.filter(
-                        ({ task_id }) => task_id === childElement.id
+                      v-for="timesheet in taskTimesheets(
+                        rootElement,
+                        childElement.id
                       )"
                     ></div>
                   </template>
@@ -712,7 +716,7 @@
                         :key="`dayoff-${dayOff.id}-${index}`"
                         :style="dayOffStyle(dayOff)"
                         :title="dayOff.description"
-                        v-for="(dayOff, index) in getDayOffRange(
+                        v-for="(dayOff, index) in cachedDayOffRange(
                           rootElement.people[personId].daysOff
                         )"
                       >
@@ -1090,7 +1094,15 @@ let lastEndDate = null
 // assignee, so assignees[0] is not necessarily the person being reassigned
 let dragSourcePersonId = null
 
+// cached wrapper rect: getBoundingClientRect on every mousemove forces a
+// layout; invalidated on resize and zoom via resetScheduleSize
+let wrapperRect = null
+let positionBarFrame = null
+let moveFrame = null
+let lastMoveEvent = null
+
 let domEvents = []
+let moveEvents = []
 
 // Computed
 
@@ -1121,10 +1133,12 @@ const daysAvailable = computed(() => {
   const days = []
   let day = props.startDate.clone().utc().startOf('day')
   const endDate = props.endDate.clone().utc().startOf('day')
-  const daysOff = getDayOffRange(props.daysOff).map(dayOff => dayOff.date)
+  const daysOff = new Set(
+    getDayOffRange(props.daysOff).map(dayOff => dayOff.date)
+  )
 
   while (day.isSameOrBefore(endDate)) {
-    day.off = daysOff.includes(day.toISOString().slice(0, 10))
+    day.off = daysOff.has(day.toISOString().slice(0, 10))
     day.newWeek = day.isoWeekday() === 1
     day.newMonth = day.date() === 1
     day.weekend = [6, 7].includes(day.isoWeekday())
@@ -1152,31 +1166,27 @@ const daysAvailable = computed(() => {
 })
 
 const weeksAvailable = computed(() => {
-  const weeks = []
   if (daysAvailable.value.length < 1) return []
   const startDate = daysAvailable.value[0]
   const endDate = daysAvailable.value[daysAvailable.value.length - 1]
-  let dayDate = startDate.clone().add(-1, 'days').toDate()
-  const endDayDate = endDate.clone().add(7, 'days').toDate()
+  const lastDay = endDate.clone().add(7, 'days')
 
-  while (dayDate < endDayDate) {
-    const nextDay = new Date(Number(dayDate))
-    nextDay.setDate(dayDate.getDate() + 1) // Add 1 day
-    const momentDay = parseDate(moment(nextDay).format('YYYY-MM-DD'))
-    if (momentDay.isoWeekday() === 1) {
-      momentDay.weekText = momentDay.format('YYYY-MM-DD')
-      momentDay.label = `${momentDay.weekText} to ${momentDay
-        .clone()
-        .add(6, 'days')
-        .format('YYYY-MM-DD')}`
-      momentDay.weekNumber = momentDay.week()
-      momentDay.newMonth =
-        weeks.length === 0 ||
-        momentDay.month() !== weeks[weeks.length - 1].month()
-      momentDay.monthText = momentDay.format('MMMM YY')
-      weeks.push(momentDay)
-    }
-    dayDate = nextDay
+  const weeks = []
+  // first Monday on or after the schedule start
+  const monday = startDate.clone().add((8 - startDate.isoWeekday()) % 7, 'days')
+  while (monday.isSameOrBefore(lastDay)) {
+    const week = monday.clone()
+    week.weekText = week.format('YYYY-MM-DD')
+    week.label = `${week.weekText} to ${week
+      .clone()
+      .add(6, 'days')
+      .format('YYYY-MM-DD')}`
+    week.weekNumber = week.week()
+    week.newMonth =
+      weeks.length === 0 || week.month() !== weeks[weeks.length - 1].month()
+    week.monthText = week.format('MMMM YY')
+    weeks.push(week)
+    monday.add(7, 'days')
   }
   return weeks
 })
@@ -1327,6 +1337,7 @@ const isVisible = timeElement => {
 }
 
 const resetScheduleSize = () => {
+  wrapperRect = null
   if (timelineContentRef.value) {
     if (props.zoomLevel > 0) {
       timelineContentRef.value.style.width = `${displayedDays.value.length * cellWidth.value}px`
@@ -1336,7 +1347,7 @@ const resetScheduleSize = () => {
   }
 }
 
-const onMouseMove = event => {
+const processMouseMove = event => {
   if (isChangeStartDate.value) {
     changeStartDate(event)
   } else if (isChangeEndDate.value) {
@@ -1347,8 +1358,23 @@ const onMouseMove = event => {
     if (isBrowsingX.value) scrollScheduleLeft(event)
     if (isBrowsingY.value) scrollScheduleTop(event)
   }
+}
 
-  updatePositionBarPosition(event)
+// high-frequency mice fire several mousemove events per frame: process only
+// the latest one per animation frame
+const onMouseMove = event => {
+  lastMoveEvent = event
+  if (moveFrame) return
+  moveFrame = requestAnimationFrame(() => {
+    moveFrame = null
+    processMouseMove(lastMoveEvent)
+  })
+}
+
+// document-level move listeners are attached only for the duration of a drag
+// or browse: a permanent listener ran on every mousemove of the whole page
+const startMoveTracking = () => {
+  addEvents(moveEvents)
 }
 
 const onChildEstimationChanged = (event, childElement, rootElement) => {
@@ -1377,18 +1403,26 @@ const onChildEstimationChanged = (event, childElement, rootElement) => {
 const updatePositionBarPosition = event => {
   if (!timelineContentWrapperRef.value || !timelinePositionRef.value) return
 
-  const cursorX =
-    getClientX(event) -
-    timelineContentWrapperRef.value.getBoundingClientRect().left
+  if (!wrapperRect) {
+    wrapperRect = timelineContentWrapperRef.value.getBoundingClientRect()
+  }
+  const cursorX = getClientX(event) - wrapperRect.left
 
-  if (cursorX <= 0 || cursorX >= timelineContentWrapperRef.value.offsetWidth)
-    return
+  if (cursorX <= 0 || cursorX >= wrapperRect.width) return
 
   const left =
     Math.floor(
       (timelineContentWrapperRef.value.scrollLeft + cursorX) / cellWidth.value
     ) * cellWidth.value
   timelinePositionRef.value.style.left = `${left}px`
+}
+
+const onPositionBarMove = event => {
+  if (positionBarFrame) return
+  positionBarFrame = requestAnimationFrame(() => {
+    positionBarFrame = null
+    updatePositionBarPosition(event)
+  })
 }
 
 const isValidItemDates = (startDate, endDate) => {
@@ -1750,9 +1784,10 @@ const isOverlapping = item => {
   )
 }
 
-const isSelected = item => {
-  return selection.value.some(({ id }) => id === item.id)
-}
+// isSelected runs for every bar on every render: keep it O(1)
+const selectedIds = computed(() => new Set(selection.value.map(({ id }) => id)))
+
+const isSelected = item => selectedIds.value.has(item.id)
 
 const addToSelection = itemToAdd => {
   selection.value.push(itemToAdd)
@@ -1784,6 +1819,7 @@ const moveTimebar = (timeElement, event) => {
       event.target.closest?.('[data-person-id]')?.dataset.personId ?? null
     document.body.style.cursor = props.reassignable ? 'all-scroll' : 'ew-resize'
 
+    startMoveTracking()
     stampDragOrigin(timeElement)
     updateSelection(timeElement, event)
   }
@@ -1804,6 +1840,7 @@ const moveTimebarLeftSide = (timeElement, event) => {
     initialClientX = getClientX(event)
     document.body.style.cursor = 'w-resize'
 
+    startMoveTracking()
     stampDragOrigin(timeElement)
     updateSelection(timeElement, event)
   }
@@ -1828,6 +1865,7 @@ const moveTimebarRightSide = (timeElement, event) => {
     initialClientX = getClientX(event)
     document.body.style.cursor = 'e-resize'
 
+    startMoveTracking()
     stampDragOrigin(timeElement)
     updateSelection(timeElement, event)
   }
@@ -1852,7 +1890,9 @@ const setScrollPosition = top => {
 const scrollScheduleLeft = event => {
   if (!timelineContentWrapperRef.value) return
   const previousLeft = timelineContentWrapperRef.value.scrollLeft
-  const movementX = event.movementX || getClientX(event) - initialClientX
+  // cumulative delta from the last processed event: movementX would lose the
+  // moves skipped by the frame throttle
+  const movementX = getClientX(event) - initialClientX
   const newLeft = previousLeft - movementX
   initialClientX = getClientX(event)
   timelineContentWrapperRef.value.scrollLeft = newLeft
@@ -1862,7 +1902,7 @@ const scrollScheduleLeft = event => {
 const scrollScheduleTop = event => {
   if (!timelineContentWrapperRef.value) return
   const previousTop = timelineContentWrapperRef.value.scrollTop
-  const movementY = event.movementY || getClientY(event) - initialClientY
+  const movementY = getClientY(event) - initialClientY
   const newTop = previousTop - movementY
   initialClientY = getClientY(event)
   setScrollPosition(newTop)
@@ -1901,6 +1941,7 @@ const startBrowsing = event => {
     isBrowsingY.value = true
     initialClientX = getClientX(event)
     initialClientY = getClientY(event)
+    startMoveTracking()
   }
 }
 
@@ -1908,16 +1949,24 @@ const startBrowsingX = event => {
   document.body.style.cursor = 'grabbing'
   isBrowsingX.value = true
   initialClientX = getClientX(event)
+  startMoveTracking()
 }
 
 const startBrowsingY = event => {
   document.body.style.cursor = 'grabbing'
   isBrowsingY.value = true
   initialClientY = getClientY(event)
+  startMoveTracking()
 }
 
 const stopBrowsing = event => {
   document.body.style.cursor = 'default'
+  removeEvents(moveEvents)
+  // a pending frame would move the item again after the drop is saved
+  if (moveFrame) {
+    cancelAnimationFrame(moveFrame)
+    moveFrame = null
+  }
   if (currentElement.value) {
     if (initialClientX !== getClientX(event)) {
       // on moving or resizing selected items
@@ -1961,6 +2010,37 @@ const stopBrowsing = event => {
 }
 
 // Helpers
+
+// the template iterates day-off ranges for each root and person row on every
+// render: expand each daysOff array once and reuse it
+const dayOffRangeCache = new WeakMap()
+const cachedDayOffRange = daysOff => {
+  if (!daysOff?.length) return []
+  let range = dayOffRangeCache.get(daysOff)
+  if (!range) {
+    range = getDayOffRange(daysOff)
+    dayOffRangeCache.set(daysOff, range)
+  }
+  return range
+}
+
+// same render-time concern for timesheets: group them by task once per array
+const timesheetsByTaskCache = new WeakMap()
+const taskTimesheets = (rootElement, taskId) => {
+  if (!rootElement.timesheet) return []
+  let byTask = timesheetsByTaskCache.get(rootElement.timesheet)
+  if (!byTask) {
+    byTask = new Map()
+    rootElement.timesheet.forEach(timesheet => {
+      if (!byTask.has(timesheet.task_id)) {
+        byTask.set(timesheet.task_id, [])
+      }
+      byTask.get(timesheet.task_id).push(timesheet)
+    })
+    timesheetsByTaskCache.set(rootElement.timesheet, byTask)
+  }
+  return byTask.get(taskId) ?? []
+}
 
 const dateDiff = (startDate, endDate, unit = 'days') => {
   if (startDate.isSame(endDate) || !startDate.isValid() || !endDate.isValid()) {
@@ -2447,9 +2527,11 @@ watch(
 // Lifecycle
 
 onMounted(() => {
-  domEvents = [
+  moveEvents = [
     ['mousemove', onMouseMove],
-    ['touchmove', onMouseMove],
+    ['touchmove', onMouseMove]
+  ]
+  domEvents = [
     ['mouseup', stopBrowsing],
     ['mouseleave', stopBrowsing],
     ['touchend', stopBrowsing],
@@ -2463,6 +2545,9 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   removeEvents(domEvents)
+  removeEvents(moveEvents)
+  if (positionBarFrame) cancelAnimationFrame(positionBarFrame)
+  if (moveFrame) cancelAnimationFrame(moveFrame)
   window.removeEventListener('resize', resetScheduleSize)
   document.body.style.cursor = 'default'
 })
@@ -2484,54 +2569,34 @@ defineExpose({
  *
  * @param {Array<Object>} items - The list of items to position.
  * @param {Moment.unitOfTime} unitOfTime - A unit of time (eg. 'days', 'weeks', 'months', ...).
- * @returns {Array<Object>} The list of items with updated positions.
  */
 const setItemPositions = (items, unitOfTime = 'days') => {
   if (!items?.length) {
     return
   }
-  const attributeName = 'line'
-  const matrix = []
   const minDate = moment
     .min(items.map(item => item.startDate))
     .clone()
     .startOf(unitOfTime)
-  const maxDate = moment
-    .max(items.map(item => item.endDate))
-    .clone()
-    .endOf(unitOfTime)
-  const nbColumns = maxDate.diff(minDate, unitOfTime) + 1
 
+  // one entry per line: the [start, end] ranges already placed on it
+  const lines = []
   items.forEach(item => {
     const start = item.startDate
       .clone()
       .startOf(unitOfTime)
       .diff(minDate, unitOfTime)
     const end = item.endDate.clone().endOf(unitOfTime).diff(minDate, unitOfTime)
-    const line = getFreeLinePosition(item.id, start, end, matrix)
-    item[attributeName] = line
-  })
-
-  function getFreeLinePosition(value, start, end, matrix, line = 0) {
-    for (let index = start; index <= end; index++) {
-      // if empty line
-      if (!matrix[line]) {
-        matrix.push(Array(nbColumns).fill(0))
-        index = end
-      }
-      // if collision on line
-      else if (matrix[line][index]) {
-        // go to next line
-        return getFreeLinePosition(value, start, end, matrix, line + 1)
-      }
-      // if no collision for the whole item
-      if (index === end) {
-        // save item in matrix
-        matrix[line].fill(value, start, end + 1)
-        return line
-      }
+    let line = 0
+    while (lines[line]?.some(([s, e]) => start <= e && end >= s)) {
+      line++
     }
-  }
+    if (!lines[line]) {
+      lines[line] = []
+    }
+    lines[line].push([start, end])
+    item.line = line
+  })
 }
 </script>
 

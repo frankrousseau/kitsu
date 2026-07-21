@@ -635,6 +635,7 @@ export default {
       },
       availableTaskTypes: [],
       daysOffByPerson: {},
+      daysOffRangeKey: null,
       draggedEntities: [],
       endDate: moment().add(6, 'months').endOf('day'),
       entityType: null,
@@ -1177,6 +1178,8 @@ export default {
       taskTypeElement.expanded = expanded || !taskTypeElement.expanded
 
       if (taskTypeElement.expanded) {
+        // unversioned task list shared with the side panel to avoid a reload
+        let rawTasks = null
         try {
           taskTypeElement.loading = true
 
@@ -1231,6 +1234,7 @@ export default {
           let tasks = await this.loadTasks(
             this.buildTaskFilters(taskTypeElement)
           )
+          rawTasks = tasks
 
           // Update tasks for versioned schedules
           if (this.isVersioned) {
@@ -1263,12 +1267,18 @@ export default {
               .filter(Boolean)
           }
 
-          this.daysOffByPerson = await this.loadProductionDaysOff({
-            startDate: this.startDate.format('YYYY-MM-DD'),
-            endDate: this.endDate.format('YYYY-MM-DD')
-          }).catch(
-            () => ({}) // fallback if not allowed to fetch days off
-          )
+          // days off only depend on the production and the date range:
+          // reuse them across expands
+          const daysOffKey = `${this.currentProduction.id}_${this.startDate.format('YYYY-MM-DD')}_${this.endDate.format('YYYY-MM-DD')}`
+          if (this.daysOffRangeKey !== daysOffKey) {
+            this.daysOffByPerson = await this.loadProductionDaysOff({
+              startDate: this.startDate.format('YYYY-MM-DD'),
+              endDate: this.endDate.format('YYYY-MM-DD')
+            }).catch(
+              () => ({}) // fallback if not allowed to fetch days off
+            )
+            this.daysOffRangeKey = daysOffKey
+          }
 
           // Read the entity maps fresh from the store cache. They are plain,
           // non-reactive Maps replaced on each episode-scoped load, so a cached
@@ -1496,7 +1506,12 @@ export default {
           refreshScheduleCallBack(taskTypeElement)
         }
 
-        this.selectTaskTypeElement(taskTypeElement, null, resetAssignments)
+        this.selectTaskTypeElement(
+          taskTypeElement,
+          null,
+          resetAssignments,
+          rawTasks
+        )
       }
     },
 
@@ -1745,7 +1760,8 @@ export default {
     async selectTaskTypeElement(
       taskType,
       selectedEntityType = undefined,
-      resetAssignments = true
+      resetAssignments = true,
+      preloadedTasks = null
     ) {
       // No assignment panel on the production-wide planning.
       if (this.isAllEpisodes) {
@@ -1760,14 +1776,18 @@ export default {
 
       this.assignments.loading = true
 
-      // load tasks
-      const tasks = await this.loadTasks(
-        this.buildTaskFilters(this.selectedTaskType)
-      )
+      // when called from expandTaskTypeElement, the tasks and entities were
+      // just loaded: reuse them instead of refetching everything
+      const tasks =
+        preloadedTasks ??
+        (await this.loadTasks(this.buildTaskFilters(this.selectedTaskType)))
+      const taskEntityIds = new Set(tasks.map(task => task.entity_id))
 
       // load entity types
       if (taskType.for_entity === 'Asset') {
-        await this.loadScopedAssets()
+        if (!preloadedTasks) {
+          await this.loadScopedAssets()
+        }
 
         this.assignments.entityTypes = this.productionAssetTypes
           .filter(assetType => {
@@ -1791,7 +1811,7 @@ export default {
                     !asset.canceled &&
                     !asset.shared &&
                     this.assetInScope(asset) &&
-                    tasks.some(task => task.entity_id === asset.id)
+                    taskEntityIds.has(asset.id)
                 )
                 .map(asset => ({
                   ...asset,
@@ -1802,10 +1822,12 @@ export default {
             }
           })
       } else if (taskType.for_entity === 'Shot') {
-        await this.loadShots()
+        if (!preloadedTasks) {
+          await this.loadShots()
+        }
 
         const shotsBySequence = shotStore.cache.shots
-          .filter(shot => tasks.some(task => task.entity_id === shot.id))
+          .filter(shot => taskEntityIds.has(shot.id))
           .reduce((acc, shot) => {
             if (!acc[shot.parent_id]) {
               acc[shot.parent_id] = []
@@ -1830,7 +1852,9 @@ export default {
           }
         )
       } else if (taskType.for_entity === 'Sequence') {
-        await this.loadSequences()
+        if (!preloadedTasks) {
+          await this.loadSequences()
+        }
 
         // sequences are the assignable entities, grouped by episode
         const sequencesByEpisode = [...sequenceStore.cache.sequenceMap.values()]
@@ -1839,7 +1863,7 @@ export default {
               !sequence.canceled &&
               (!this.currentEpisodeId ||
                 sequence.episode_id === this.currentEpisodeId) &&
-              tasks.some(task => task.entity_id === sequence.id)
+              taskEntityIds.has(sequence.id)
           )
           .reduce((acc, sequence) => {
             const groupId = sequence.episode_id || taskType.for_entity
@@ -1866,7 +1890,9 @@ export default {
           }
         )
       } else if (taskType.for_entity === 'Episode') {
-        await this.loadEpisodes()
+        if (!preloadedTasks) {
+          await this.loadEpisodes()
+        }
 
         // episodes are the assignable entities, under a single production group
         const episodes = [...episodeStore.cache.episodeMap.values()]
@@ -1876,7 +1902,7 @@ export default {
               !['all', 'main'].includes(episode.id) &&
               (!this.currentEpisodeId ||
                 episode.id === this.currentEpisodeId) &&
-              tasks.some(task => task.entity_id === episode.id)
+              taskEntityIds.has(episode.id)
           )
           .map(episode => ({
             ...episode,
@@ -1895,7 +1921,9 @@ export default {
           }
         ]
       } else if (taskType.for_entity === 'Edit') {
-        await this.loadEdits()
+        if (!preloadedTasks) {
+          await this.loadEdits()
+        }
 
         // edits are the assignable entities, grouped by episode
         const editsByEpisode = [...editStore.cache.editMap.values()]
@@ -1904,7 +1932,7 @@ export default {
               !edit.canceled &&
               (!this.currentEpisodeId ||
                 edit.episode_id === this.currentEpisodeId) &&
-              tasks.some(task => task.entity_id === edit.id)
+              taskEntityIds.has(edit.id)
           )
           .reduce((acc, edit) => {
             const groupId = edit.episode_id || taskType.for_entity
@@ -2026,6 +2054,13 @@ export default {
       const tasks = await this.loadTasks(
         this.buildTaskFilters(this.selectedTaskType)
       )
+      // first task per entity, preserving the find() first-match behavior
+      const taskByEntityId = new Map()
+      tasks.forEach(task => {
+        if (!taskByEntityId.has(task.entity_id)) {
+          taskByEntityId.set(task.entity_id, task)
+        }
+      })
 
       // a zero or empty quota would make taskEstimation infinite and hang
       // the distribution loop in addBusinessDays
@@ -2038,6 +2073,22 @@ export default {
       }
       const taskEstimation = 1 / dailyQuota
 
+      // versioned tasks all belong to the selected task type: load them once
+      // instead of once per entity
+      let versionedTaskByTaskId = null
+      if (this.isVersioned) {
+        const versionedTasks = await this.loadTasksFromScheduleVersion({
+          version: { id: this.version },
+          taskType: { id: this.selectedTaskType.task_type_id }
+        })
+        versionedTaskByTaskId = new Map(
+          versionedTasks.map(versionedTask => [
+            versionedTask.task_id,
+            versionedTask
+          ])
+        )
+      }
+
       // assign each selected entity to each selected assignee
       for (const taskType of this.draggedEntities) {
         const startDate = parseDate(this.assignments.startDate)
@@ -2047,6 +2098,7 @@ export default {
         // clear-assignation request plus one assign request per assignee
         const taskIdsToUnassign = []
         const taskIdsByAssignee = new Map()
+        const taskUpdates = []
 
         let cumulatedTasks = 0
         let nextAssigneeIndex = 0
@@ -2054,18 +2106,14 @@ export default {
 
         // distribute the task assignments according to the daily quotas, the task type duration and people's availability.
         for (const entity of taskType.children) {
-          const task = tasks.find(task => task.entity_id === entity.id)
+          const task = taskByEntityId.get(entity.id)
           if (!task) {
             continue // no task found for this entity
           }
 
           let versionedTask
           if (this.isVersioned) {
-            const versionedTasks = await this.loadTasksFromScheduleVersion({
-              version: { id: this.version },
-              taskType: { id: task.task_type_id }
-            })
-            versionedTask = versionedTasks.find(t => t.task_id === task.id) ?? {
+            versionedTask = versionedTaskByTaskId.get(task.id) ?? {
               taskId: task.id,
               version: this.version,
               assignees: []
@@ -2131,8 +2179,8 @@ export default {
                   taskIdsByAssignee.set(taskAssignee.id, [])
                 }
                 taskIdsByAssignee.get(taskAssignee.id).push(task.id)
-                // save task dates & estimation
-                await this.updateTask({
+                // task dates & estimation are flushed in batches after the loop
+                taskUpdates.push({
                   taskId: task.id,
                   data: {
                     estimation: daysToMinutes(
@@ -2153,6 +2201,14 @@ export default {
               break // jump to next task
             }
           }
+        }
+
+        // ponytail: chunks of 5 keep the server load reasonable, a bulk
+        // endpoint in zou would replace this
+        for (let i = 0; i < taskUpdates.length; i += 5) {
+          await Promise.all(
+            taskUpdates.slice(i, i + 5).map(update => this.updateTask(update))
+          )
         }
 
         // unassign first so batched assignations are not cleared right after
