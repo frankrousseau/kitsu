@@ -60,6 +60,13 @@
     @update:model-value="updateValue"
     v-else-if="descriptor.data_type === 'taglist'"
   />
+  <!-- textarea field -->
+  <textarea-field
+    :label="label ?? descriptor.name"
+    :model-value="modelValue"
+    @update:model-value="updateValue"
+    v-else-if="descriptor.data_type === 'textarea'"
+  />
   <!-- person field -->
   <people-field
     :label="label ?? descriptor.name"
@@ -93,6 +100,7 @@ import ComboboxBoolean from '@/components/widgets/ComboboxBoolean.vue'
 import ComboboxTag from '@/components/widgets/ComboboxTag.vue'
 import PeopleField from '@/components/widgets/PeopleField.vue'
 import TextField from '@/components/widgets/TextField.vue'
+import TextareaField from '@/components/widgets/TextareaField.vue'
 
 const store = useStore()
 const isCurrentUserManager = computed(() => store.getters.isCurrentUserManager)

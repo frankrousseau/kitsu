@@ -259,7 +259,11 @@
                     v-for="descriptor in taskMetadata"
                   >
                     <td class="field-label">{{ descriptor.name }}</td>
-                    <td>
+                    <td
+                      :class="{
+                        'pre-wrap': descriptor.data_type === 'textarea'
+                      }"
+                    >
                       <a
                         :href="task.data[descriptor.field_name]"
                         target="_blank"
@@ -2012,6 +2016,10 @@ video {
 .field-label {
   width: 130px;
   max-width: 130px;
+}
+
+.pre-wrap {
+  white-space: pre-wrap;
 }
 
 .title {

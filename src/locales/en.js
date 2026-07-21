@@ -1485,6 +1485,7 @@ export default {
       number: 'Number',
       person: 'Person',
       string: 'Text',
+      textarea: 'Long text',
       tags: 'List of tags',
       url: 'Link',
       target_project: 'Project',

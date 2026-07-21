@@ -1,5 +1,14 @@
 <template>
   <div class="metadata-input" :class="metadataInputClass">
+    <!-- long text: preview + popup editor (teleported, escapes the table). -->
+    <metadata-textarea
+      :model-value="getMetadataFieldValue(descriptor, entity)"
+      :editable="isEditable"
+      @update:model-value="
+        value => onMetadataFieldChanged(entity, descriptor, value)
+      "
+      v-if="descriptor.data_type === 'textarea'"
+    />
     <!-- read-only URL: clickable link until the row is selected -->
     <a
       class="metadata-readonly align-left metadata-link"
@@ -7,7 +16,7 @@
       target="_blank"
       rel="noopener noreferrer"
       @click.stop
-      v-if="
+      v-else-if="
         selected === false && descriptor.data_type === 'url' && displayValue
       "
     >
@@ -165,6 +174,7 @@ import {
 import { sortPeople } from '@/lib/sorting'
 
 import MetadataPerson from '@/components/cells/MetadataPerson.vue'
+import MetadataTextarea from '@/components/cells/MetadataTextarea.vue'
 import ComboboxTag from '@/components/widgets/ComboboxTag.vue'
 import DateField from '@/components/widgets/DateField.vue'
 
@@ -228,7 +238,7 @@ const isReadonly = computed(() => props.selected === false)
 const isTextType = computed(
   () =>
     !props.descriptor.data_type ||
-    ['string', 'url'].includes(props.descriptor.data_type)
+    ['string', 'url', 'textarea'].includes(props.descriptor.data_type)
 )
 
 // The read-only value uses a plain display, so the editor-specific layout

@@ -181,7 +181,15 @@ import DepartmentName from '@/components/widgets/DepartmentName.vue'
 import ModalFooter from '@/components/modals/ModalFooter.vue'
 import TextField from '@/components/widgets/TextField.vue'
 
-const SIMPLE_TYPES = ['string', 'number', 'boolean', 'date', 'url', 'person']
+const SIMPLE_TYPES = [
+  'string',
+  'textarea',
+  'number',
+  'boolean',
+  'date',
+  'url',
+  'person'
+]
 const VALUE_LIST_TYPES = ['list', 'taglist']
 
 const props = defineProps({
@@ -222,6 +230,7 @@ const selectedDepartment = ref(null)
 
 const typeOptions = computed(() => [
   { label: t('productions.metadata.string'), value: 'string' },
+  { label: t('productions.metadata.textarea'), value: 'textarea' },
   { label: t('productions.metadata.number'), value: 'number' },
   { label: t('productions.metadata.boolean'), value: 'boolean' },
   { label: t('productions.metadata.date'), value: 'date' },

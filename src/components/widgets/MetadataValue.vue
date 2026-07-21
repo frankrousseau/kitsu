@@ -14,6 +14,10 @@
       </label>
     </div>
   </div>
+  <!-- long text: keep line breaks -->
+  <span class="pre-wrap" v-else-if="descriptor.data_type === 'textarea'">
+    {{ rawValue }}
+  </span>
   <!-- url: clickable link -->
   <a
     :href="rawValue"
@@ -107,6 +111,10 @@ const person = computed(
   padding-right: 0.5rem;
   position: relative;
   white-space: normal;
+}
+
+.pre-wrap {
+  white-space: pre-wrap;
 }
 
 .person {
