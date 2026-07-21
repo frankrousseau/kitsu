@@ -1037,14 +1037,7 @@ const setVideoFrameContext = frame => {
     if (!isPlaying.value) loadAnnotation()
     if (isPlaying.value && hasTrimEnd.value && frame >= handleOut.value) {
       if (isRepeating.value) {
-        // Loop from the frame START (see the play() jump) and repaint the
-        // bar at the loop target right away: on this tick the playing
-        // channel has already filled past the handle-out marker.
-        const startTime = trimStartFrame.value * frameDuration.value
-        pendingTrimSeek = true
-        previewViewer.value.setCurrentTimeRaw(startTime)
-        comparisonViewer.value?.setCurrentTimeRaw(startTime)
-        progress.value?.updateProgressBar(trimStartFrame.value - 1)
+        seekTrimStart()
       } else {
         pause()
         setCurrentFrame(handleOut.value)
@@ -1160,6 +1153,26 @@ const getCurrentFrame = () => {
   return Math.round(time / frameDuration.value) + 1
 }
 
+// Restart seek shared by the manual replay and the repeat loop. Seeks the
+// START of the trim frame, not the usual mid-frame (setCurrentFrame):
+// starting mid-frame only shows half of the handle-in frame, which reads
+// as playing one frame late. Also wraps the displayed frame right away:
+// the first playback emission after the seek lands is ceil+1-based
+// (~start + 2), so the counter would visibly restart a few frames in.
+const seekTrimStart = () => {
+  const startTime = trimStartFrame.value * frameDuration.value
+  pendingTrimSeek = true
+  previewViewer.value.setCurrentTimeRaw(startTime)
+  comparisonViewer.value?.setCurrentTimeRaw(startTime)
+  currentFrame.value = trimStartFrame.value
+  currentTimeRaw.value = startTime
+  currentTime.value = formatTime(startTime, fps.value)
+  emit('frame-updated', trimStartFrame.value)
+  // park the fill ON the start frame (paused convention), so the playback
+  // repaints that resume at ~start + 2 read as a continuous 1, 2, 3…
+  progress.value?.updateProgressBar(trimStartFrame.value)
+}
+
 const play = () => {
   isPlaying.value = true
   isDrawing.value = false
@@ -1173,13 +1186,7 @@ const play = () => {
         currentFrame.value >= endFrame ||
         currentFrame.value < trimStartFrame.value
       ) {
-        // Seek the START of the trim frame, not the usual mid-frame
-        // (setCurrentFrame): starting mid-frame only shows half of the
-        // handle-in frame, which reads as playing one frame late.
-        const startTime = trimStartFrame.value * frameDuration.value
-        pendingTrimSeek = true
-        previewViewer.value.setCurrentTimeRaw(startTime)
-        comparisonViewer.value?.setCurrentTimeRaw(startTime)
+        seekTrimStart()
       }
       previewViewer.value.play()
       if (comparisonViewer.value && isComparing.value) {
