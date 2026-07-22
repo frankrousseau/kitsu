@@ -1297,6 +1297,19 @@ const refreshAllItemPositions = () => {
   })
 }
 
+// Drag-time variant: the collision relayout walks every child of the
+// section (moment clones + line scan) and re-renders the moved bars, which
+// stalls fast drags on large sections. During a drag a ~100ms cadence is
+// enough for live feedback; the drop (stopBrowsing) still runs the exact
+// relayout on every moved item.
+let lastDragRelayoutAt = 0
+const refreshItemPositionsDuringDrag = rootElements => {
+  const now = performance.now()
+  if (now - lastDragRelayoutAt < 100) return
+  lastDragRelayoutAt = now
+  rootElements.forEach(refreshItemPositions)
+}
+
 const refreshItemPositions = rootElement => {
   if (!rootElement?.children) {
     return
@@ -1546,6 +1559,20 @@ const changeDates = event => {
     }
   }
 
+  // a bar whose real dates lie outside the displayed range has no exact
+  // index: the boundary-resolved index math would compute the move against
+  // the window edge and teleport the bar there on the first tick, then the
+  // drop would persist the reset dates. Keep such bars unmovable (their
+  // dates must be fixed from the task panel first).
+  if (
+    !isValidItemDates(
+      currentElement.value.startDate,
+      currentElement.value.endDate
+    )
+  ) {
+    return
+  }
+
   if (lastStartDate.isBefore(props.startDate)) {
     lastStartDate = props.startDate.clone()
   }
@@ -1582,7 +1609,7 @@ const changeDates = event => {
           const parentElements = [
             ...new Set(selection.value.map(item => item.parentElement))
           ]
-          parentElements.forEach(refreshItemPositions)
+          refreshItemPositionsDuringDrag(parentElements)
         }
       }
     }
@@ -1636,7 +1663,7 @@ const changeStartDate = event => {
     currentElement.value.startDate = newStartDate.clone()
     updateItemEstimation(currentElement.value)
     propagateClipToChildren(currentElement.value)
-    refreshItemPositions(currentElement.value.parentElement)
+    refreshItemPositionsDuringDrag([currentElement.value.parentElement])
     resetSelection([currentElement.value])
   }
 }
@@ -1691,7 +1718,7 @@ const changeEndDate = event => {
     currentElement.value.endDate = newEndDate.clone()
     updateItemEstimation(currentElement.value)
     propagateClipToChildren(currentElement.value)
-    refreshItemPositions(currentElement.value.parentElement)
+    refreshItemPositionsDuringDrag([currentElement.value.parentElement])
     resetSelection([currentElement.value])
   }
 }
