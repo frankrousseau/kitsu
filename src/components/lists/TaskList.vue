@@ -394,6 +394,7 @@
             <entity-preview
               class="flexrow-item"
               :entity="getEntity(task.entity.id)"
+              :preview-file-id="task.last_preview_file_id"
               :height="133"
               :width="200"
               :empty-width="200"
