@@ -1785,6 +1785,9 @@ const snapshotTitle = identity =>
 // annotation's frame with its drawing composited on top.
 const extractVideoAnnotationSnapshots = async ({ withLabel = false } = {}) => {
   const files = []
+  // The loop below seeks the player around (extractVideoFrame goes through
+  // setCurrentFrame), so save the user's frame now to restore it at the end.
+  const cur = currentFrame.value
   const sortedAnnotations = annotations.value.sort((a, b) => {
     return parseInt(b.frame) < parseInt(a.frame) ? 1 : -1
   })
@@ -1803,9 +1806,13 @@ const extractVideoAnnotationSnapshots = async ({ withLabel = false } = {}) => {
   }
   // currentFrame is 0-based here (unlike PlaylistPlayer's 1-based label
   // this restore was copied from): no -1, or the playhead steps back.
-  previewViewer.value.setCurrentFrame(currentFrame.value)
+  previewViewer.value.setCurrentFrame(cur)
   nextTick(() => {
+    // Repaint the annotation of the restored frame: the loop used the live
+    // canvas as scratch space, and clearing without reloading left the
+    // user's drawing gone until the next frame change.
     clearCanvas()
+    loadAnnotation()
   })
   return files
 }
@@ -1853,7 +1860,13 @@ const extractPicturePreviewSnapshots = async ({ withLabel = false } = {}) => {
     currentIndex.value = savedIndex
     await new Promise(resolve => setTimeout(resolve, 500))
   }
-  nextTick(() => clearCanvas())
+  // Repaint the current preview's annotation rather than leaving the
+  // live canvas cleared (the drawing otherwise vanishes until the next
+  // preview change).
+  nextTick(() => {
+    clearCanvas()
+    loadAnnotation()
+  })
   return files
 }
 
