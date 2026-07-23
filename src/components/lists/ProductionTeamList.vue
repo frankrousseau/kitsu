@@ -47,16 +47,23 @@
               <combobox
                 v-if="isCurrentUserProductionManager && person.role !== 'admin'"
                 thin
+                class="role-select"
+                :class="{ overridden: isOverridden(person) }"
                 :options="roleOptions"
                 :with-margin="false"
                 :model-value="projectRoles[person.id] || person.role"
+                :title="overriddenTitle(person)"
                 @update:model-value="value => onRoleChange(person, value)"
               />
-              <template v-else>
+              <span
+                v-else
+                :class="{ overridden: isOverridden(person) }"
+                :title="overriddenTitle(person)"
+              >
                 {{
                   $t(`people.role.${projectRoles[person.id] || person.role}`)
                 }}
-              </template>
+              </span>
             </td>
             <department-names-cell :departments="person.departments" />
             <td
@@ -121,6 +128,13 @@ const roleOptions = computed(() =>
 )
 
 // Functions
+const isOverridden = person => Boolean(props.projectRoles[person.id])
+
+const overriddenTitle = person =>
+  isOverridden(person)
+    ? t('people.global_role', { role: t(`people.role.${person.role}`) })
+    : undefined
+
 const onRoleChange = (person, value) => {
   // Picking the person's global role back means inheriting it again.
   emit('update-role', {
@@ -171,6 +185,15 @@ const removePerson = person => {
 
 .data-list {
   margin-top: 2em;
+}
+
+// Blue accent when the project role overrides the person's global role.
+.role-select.overridden :deep(select) {
+  border-color: $blue;
+}
+
+span.overridden {
+  color: $blue;
 }
 
 .footer-info {

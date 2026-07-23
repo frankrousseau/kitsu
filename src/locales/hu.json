@@ -721,6 +721,7 @@
       "delete_text": "Biztos vagy benne hogy törlöd {personName} felhasználót az adatbázisból? Minden hozzá tartozó megjegyzés és előnézet törlésre kerül. Kérlek erősítsd meg a teljes felhasználónév begépelésével.",
       "edit_title": "Felhasználó szerkesztése",
       "empty_team": "Nincs senki a projekt stábjában.",
+      "global_role": "Globális szerep: {role}",
       "invite": "Meghívó küldése",
       "invite_error": "Hiba történt a meghívó küldésekor",
       "invite_success": "Meghívó sikeresen elküldve",
