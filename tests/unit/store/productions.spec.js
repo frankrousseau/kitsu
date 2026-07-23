@@ -99,6 +99,31 @@ describe('Productions store', () => {
       taskTypeStore.cache.taskTypeMap = rootState.taskTypes.taskTypeMap
     })
 
+    test('isCurrentUserProductionManager', () => {
+      const getter = store.getters.isCurrentUserProductionManager
+      const stateFor = roles => ({ currentTeamRoles: roles })
+      const rootStateFor = role => ({ user: { user: { id: 123, role } } })
+
+      // Global admin always, whatever the project slot says.
+      expect(getter(stateFor({ 123: 'user' }), {}, rootStateFor('admin'))).toBe(
+        true
+      )
+      // Global manager, no explicit project role: inherits manager.
+      expect(getter(stateFor({}), {}, rootStateFor('manager'))).toBe(true)
+      // Global manager demoted on this production.
+      expect(
+        getter(stateFor({ 123: 'user' }), {}, rootStateFor('manager'))
+      ).toBe(false)
+      // Global artist promoted manager on this production.
+      expect(
+        getter(stateFor({ 123: 'manager' }), {}, rootStateFor('user'))
+      ).toBe(true)
+      // Global artist, nothing set.
+      expect(getter(stateFor({}), {}, rootStateFor('user'))).toBe(false)
+      // Not authenticated.
+      expect(getter(stateFor({}), {}, { user: { user: null } })).toBe(false)
+    })
+
     test('isTVShow', () => {
       let state = {
         currentProduction: {
@@ -1040,8 +1065,32 @@ describe('Productions store', () => {
       state.currentProduction = {
         team: [123]
       }
+      state.currentTeamRoles = { 123: 'manager' }
       store.mutations.TEAM_REMOVE_PERSON(state, 123)
       expect(state.currentProduction.team).toHaveLength(0)
+      expect(state.currentTeamRoles[123]).toBeUndefined()
+    })
+
+    test('TEAM_ROLES_LOADED', () => {
+      store.mutations.TEAM_ROLES_LOADED(state, [
+        { id: 123, project_role: 'supervisor' },
+        { id: 456, project_role: null }
+      ])
+      expect(state.currentTeamRoles).toEqual({ 123: 'supervisor', 456: null })
+    })
+
+    test('TEAM_MEMBER_ROLE_UPDATED', () => {
+      state.currentTeamRoles = { 123: 'supervisor' }
+      store.mutations.TEAM_MEMBER_ROLE_UPDATED(state, {
+        person_id: 123,
+        role: 'manager'
+      })
+      expect(state.currentTeamRoles[123]).toEqual('manager')
+      store.mutations.TEAM_MEMBER_ROLE_UPDATED(state, {
+        person_id: 123,
+        role: null
+      })
+      expect(state.currentTeamRoles[123]).toBeNull()
     })
 
     test('PRODUCTION_ADD_ASSET_TYPE', () => {

@@ -7,10 +7,14 @@
             <th scope="col" class="name datatable-row-header">
               {{ $t('people.list.name') }}
             </th>
-            <th scope="col" class="email" v-if="isCurrentUserManager">
+            <th scope="col" class="email" v-if="isCurrentUserProductionManager">
               {{ $t('people.list.email') }}
             </th>
-            <th scope="col" class="contract" v-if="isCurrentUserManager">
+            <th
+              scope="col"
+              class="contract"
+              v-if="isCurrentUserProductionManager"
+            >
               {{ $t('people.list.contract') }}
             </th>
             <th scope="col" class="role">
@@ -19,7 +23,11 @@
             <th scope="col">
               {{ $t('people.list.departments') }}
             </th>
-            <th scope="col" class="actions" v-if="isCurrentUserManager"></th>
+            <th
+              scope="col"
+              class="actions"
+              v-if="isCurrentUserProductionManager"
+            ></th>
           </tr>
         </thead>
         <tbody class="datatable-body" v-if="!isEmpty">
@@ -28,17 +36,33 @@
               class="name datatable-row-header"
               :person="person"
             />
-            <td class="email" v-if="isCurrentUserManager">
+            <td class="email" v-if="isCurrentUserProductionManager">
               {{ person.email }}
             </td>
-            <td class="contract" v-if="isCurrentUserManager">
+            <td class="contract" v-if="isCurrentUserProductionManager">
               {{ $t(`people.contract.${person.contract_type}`) }}
             </td>
             <td class="role">
-              {{ $t(`people.role.${person.role}`) }}
+              <!-- Admin is a global-only role: no project role select. -->
+              <combobox
+                v-if="isCurrentUserProductionManager && person.role !== 'admin'"
+                thin
+                :options="roleOptions"
+                :with-margin="false"
+                :model-value="projectRoles[person.id] || person.role"
+                @update:model-value="value => onRoleChange(person, value)"
+              />
+              <template v-else>
+                {{
+                  $t(`people.role.${projectRoles[person.id] || person.role}`)
+                }}
+              </template>
             </td>
             <department-names-cell :departments="person.departments" />
-            <td class="actions has-text-right" v-if="isCurrentUserManager">
+            <td
+              class="actions has-text-right"
+              v-if="isCurrentUserProductionManager"
+            >
               <button class="button" @click="removePerson(person)">
                 {{ $t('main.remove') }}
               </button>
@@ -58,42 +82,55 @@
   </div>
 </template>
 
-<script>
-import { mapGetters, mapActions } from 'vuex'
+<script setup>
+// Imports
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useStore } from 'vuex'
 
+/* eslint-disable no-unused-vars */
 import DepartmentNamesCell from '@/components/cells/DepartmentNamesCell.vue'
 import PeopleNameCell from '@/components/cells/PeopleNameCell.vue'
+import Combobox from '@/components/widgets/Combobox.vue'
+/* eslint-enable no-unused-vars */
 
-export default {
-  name: 'production-team-list',
+// Composables
+const { t } = useI18n()
+const store = useStore()
 
-  components: {
-    DepartmentNamesCell,
-    PeopleNameCell
-  },
+// Props / Emits
+const props = defineProps({
+  entries: { type: Array, default: () => [] },
+  projectRoles: { type: Object, default: () => ({}) }
+})
+const emit = defineEmits(['update-role'])
 
-  props: {
-    entries: {
-      type: Array,
-      default: () => []
-    }
-  },
+// Computed
+const isCurrentUserProductionManager = computed(
+  () => store.getters.isCurrentUserProductionManager
+)
+const isEmpty = computed(() => !props.entries?.length)
 
-  computed: {
-    ...mapGetters(['isCurrentUserManager']),
+const PROJECT_ROLES = ['user', 'supervisor', 'manager', 'client', 'vendor']
 
-    isEmpty() {
-      return !this.entries?.length
-    }
-  },
+const roleOptions = computed(() =>
+  PROJECT_ROLES.map(role => ({
+    label: t(`people.role.${role}`),
+    value: role
+  }))
+)
 
-  methods: {
-    ...mapActions(['removePersonFromTeam']),
+// Functions
+const onRoleChange = (person, value) => {
+  // Picking the person's global role back means inheriting it again.
+  emit('update-role', {
+    person,
+    role: value === person.role ? null : value
+  })
+}
 
-    removePerson(person) {
-      this.removePersonFromTeam(person)
-    }
-  }
+const removePerson = person => {
+  store.dispatch('removePersonFromTeam', person)
 }
 </script>
 
@@ -119,8 +156,8 @@ export default {
 }
 
 .role {
-  width: 160px;
-  min-width: 160px;
+  width: 200px;
+  min-width: 200px;
 }
 
 .contract {
