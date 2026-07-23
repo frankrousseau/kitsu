@@ -99,31 +99,6 @@ describe('Productions store', () => {
       taskTypeStore.cache.taskTypeMap = rootState.taskTypes.taskTypeMap
     })
 
-    test('isCurrentUserProductionManager', () => {
-      const getter = store.getters.isCurrentUserProductionManager
-      const stateFor = roles => ({ currentTeamRoles: roles })
-      const rootStateFor = role => ({ user: { user: { id: 123, role } } })
-
-      // Global admin always, whatever the project slot says.
-      expect(getter(stateFor({ 123: 'user' }), {}, rootStateFor('admin'))).toBe(
-        true
-      )
-      // Global manager, no explicit project role: inherits manager.
-      expect(getter(stateFor({}), {}, rootStateFor('manager'))).toBe(true)
-      // Global manager demoted on this production.
-      expect(
-        getter(stateFor({ 123: 'user' }), {}, rootStateFor('manager'))
-      ).toBe(false)
-      // Global artist promoted manager on this production.
-      expect(
-        getter(stateFor({ 123: 'manager' }), {}, rootStateFor('user'))
-      ).toBe(true)
-      // Global artist, nothing set.
-      expect(getter(stateFor({}), {}, rootStateFor('user'))).toBe(false)
-      // Not authenticated.
-      expect(getter(stateFor({}), {}, { user: { user: null } })).toBe(false)
-    })
-
     test('isTVShow', () => {
       let state = {
         currentProduction: {

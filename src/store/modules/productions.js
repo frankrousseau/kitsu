@@ -33,6 +33,7 @@ import {
   TEAM_REMOVE_PERSON,
   TEAM_ROLES_LOADED,
   TEAM_MEMBER_ROLE_UPDATED,
+  SET_USER_PROJECT_ROLE,
   PRODUCTION_ADD_ASSET_TYPE,
   PRODUCTION_REMOVE_ASSET_TYPE,
   PRODUCTION_ADD_BACKGROUND,
@@ -223,16 +224,6 @@ const getters = {
   productionStatus: state => state.productionStatus,
 
   productionTeamRoles: state => state.currentTeamRoles,
-
-  // Effective manager on the current production: global admins always,
-  // otherwise the project role when set, the global role when not.
-  isCurrentUserProductionManager: (state, getters, rootState) => {
-    const user = rootState.user.user
-    if (!user) return false
-    if (user.role === 'admin') return true
-    const effectiveRole = state.currentTeamRoles[user.id] || user.role
-    return effectiveRole === 'manager'
-  },
 
   productionAvatarFormData: state => state.productionAvatarFormData,
 
@@ -558,13 +549,20 @@ const actions = {
     return team
   },
 
-  async setTeamMemberRole({ commit, state }, { personId, role }) {
+  async setTeamMemberRole({ commit, state, rootState }, { personId, role }) {
     const link = await productionsApi.updateTeamMemberRole(
       state.currentProduction.id,
       personId,
       role
     )
     commit(TEAM_MEMBER_ROLE_UPDATED, link)
+    // Managers changing their own role must see their gating follow.
+    if (personId === rootState.user.user?.id) {
+      commit(SET_USER_PROJECT_ROLE, {
+        projectId: state.currentProduction.id,
+        role: link.role
+      })
+    }
     return link
   },
 
