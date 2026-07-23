@@ -28,9 +28,18 @@
           :options="zoomOptions"
           v-model="zoomLevel"
         />
+
+        <div class="filler"></div>
+        <button-simple
+          class="flexrow-item"
+          icon="clock"
+          :text="$t('schedule.today')"
+          @click="scrollScheduleToToday"
+        />
       </div>
 
       <schedule
+        ref="schedule"
         :end-date="endDate"
         :hierarchy="scheduleItems"
         :is-loading="loading.schedule"
@@ -64,6 +73,7 @@ import {
 } from '@/lib/time'
 import colors from '@/lib/colors'
 
+import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
 import ComboboxNumber from '@/components/widgets/ComboboxNumber.vue'
 import DateField from '@/components/widgets/DateField.vue'
 import Schedule from '@/components/widgets/Schedule.vue'
@@ -72,6 +82,7 @@ export default {
   name: 'main-schedule',
 
   components: {
+    ButtonSimple,
     ComboboxNumber,
     DateField,
     Schedule
@@ -106,6 +117,7 @@ export default {
     this.zoomLevel = Math.min(Math.max(zoom, 0), 3)
 
     this.init()
+    this.scrollScheduleToToday()
   },
 
   computed: {
@@ -194,6 +206,10 @@ export default {
 
     onUpdateSelectedEndDate(date) {
       this.endDate = parseSimpleDate(date)
+    },
+
+    scrollScheduleToToday() {
+      this.$refs.schedule?.scrollToToday()
     },
 
     onScheduleItemChanged(item) {
