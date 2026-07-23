@@ -1092,6 +1092,7 @@ export default {
     edit_title: 'Edit user',
     empty_team: 'There is no one listed in the production team.',
     global_role: 'Global role: {role}',
+    project_role: 'Project role',
     import_from_production: 'Import a team from another production',
     import_from_department: 'Import an entire department',
     import_from_unlisted: 'Add from unlisted people',

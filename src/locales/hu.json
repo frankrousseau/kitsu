@@ -722,6 +722,7 @@
       "edit_title": "Felhasználó szerkesztése",
       "empty_team": "Nincs senki a projekt stábjában.",
       "global_role": "Globális szerep: {role}",
+      "project_role": "Projektszerep",
       "invite": "Meghívó küldése",
       "invite_error": "Hiba történt a meghívó küldésekor",
       "invite_success": "Meghívó sikeresen elküldve",

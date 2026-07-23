@@ -722,6 +722,7 @@
       "edit_title": "Modifica utente",
       "empty_team": "Non c'è nessuno nel team di produzione.",
       "global_role": "Ruolo globale: {role}",
+      "project_role": "Ruolo di progetto",
       "invite": "Invia un invito",
       "invite_error": "Si è verificato un errore durante l'invio dell'invito",
       "invite_success": "Invito inviato con successo",

@@ -43,27 +43,32 @@
               {{ $t(`people.contract.${person.contract_type}`) }}
             </td>
             <td class="role">
-              <!-- Admin is a global-only role: no project role select. -->
-              <combobox
-                v-if="isCurrentUserProductionManager && person.role !== 'admin'"
-                thin
-                class="role-select"
-                :class="{ overridden: isOverridden(person) }"
-                :options="roleOptions"
-                :with-margin="false"
-                :model-value="projectRoles[person.id] || person.role"
-                :title="overriddenTitle(person)"
-                @update:model-value="value => onRoleChange(person, value)"
-              />
-              <span
-                v-else
-                :class="{ overridden: isOverridden(person) }"
-                :title="overriddenTitle(person)"
-              >
-                {{
-                  $t(`people.role.${projectRoles[person.id] || person.role}`)
-                }}
-              </span>
+              <div class="flexrow">
+                <!-- Admin is a global-only role: no project role select. -->
+                <combobox
+                  v-if="
+                    isCurrentUserProductionManager && person.role !== 'admin'
+                  "
+                  thin
+                  class="flexrow-item"
+                  :options="roleOptions"
+                  :with-margin="false"
+                  :model-value="projectRoles[person.id] || person.role"
+                  @update:model-value="value => onRoleChange(person, value)"
+                />
+                <span v-else class="flexrow-item">
+                  {{
+                    $t(`people.role.${projectRoles[person.id] || person.role}`)
+                  }}
+                </span>
+                <span
+                  v-if="isOverridden(person)"
+                  class="tag project-role-tag flexrow-item"
+                  :title="overriddenTitle(person)"
+                >
+                  {{ $t('people.project_role') }}
+                </span>
+              </div>
             </td>
             <department-names-cell :departments="person.departments" />
             <td
@@ -187,13 +192,12 @@ const removePerson = person => {
   margin-top: 2em;
 }
 
-// Blue accent when the project role overrides the person's global role.
-.role-select.overridden :deep(select) {
-  border-color: $blue;
-}
-
-span.overridden {
-  color: $blue;
+.project-role-tag {
+  background: $blue;
+  color: white;
+  font-size: 0.7em;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .footer-info {
