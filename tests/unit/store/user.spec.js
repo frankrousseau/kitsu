@@ -18,13 +18,20 @@ describe('User store', () => {
     })
 
     describe('currentUserEffectiveRole', () => {
-      const getter = store.getters.currentUserEffectiveRole
+      const call = (state, rootState) =>
+        store.getters.currentUserEffectiveRole(
+          state,
+          {
+            currentUserRoleForProduction:
+              store.getters.currentUserRoleForProduction(state)
+          },
+          rootState
+        )
 
       test('project role wins on the current production', () => {
         expect(
-          getter(
+          call(
             stateFor('user', { 'production-1': 'supervisor' }),
-            {},
             rootStateFor('production-1')
           )
         ).toEqual('supervisor')
@@ -32,12 +39,11 @@ describe('User store', () => {
 
       test('falls back to the global role', () => {
         expect(
-          getter(stateFor('supervisor'), {}, rootStateFor('production-1'))
+          call(stateFor('supervisor'), rootStateFor('production-1'))
         ).toEqual('supervisor')
         expect(
-          getter(
+          call(
             stateFor('supervisor', { 'production-2': 'user' }),
-            {},
             rootStateFor('production-1')
           )
         ).toEqual('supervisor')
@@ -45,16 +51,25 @@ describe('User store', () => {
 
       test('global role outside any production', () => {
         expect(
-          getter(
-            stateFor('manager', { 'production-1': 'user' }),
-            {},
-            rootStateFor(null)
-          )
+          call(stateFor('manager', { 'production-1': 'user' }), rootStateFor(null))
         ).toEqual('manager')
       })
 
       test('null when not authenticated', () => {
-        expect(getter(stateFor(null), {}, rootStateFor(null))).toBeNull()
+        expect(call(stateFor(null), rootStateFor(null))).toBeNull()
+      })
+    })
+
+    describe('currentUserRoleForProduction', () => {
+      const getter = store.getters.currentUserRoleForProduction
+
+      test('resolves per production id', () => {
+        const roleFor = getter(
+          stateFor('user', { 'production-1': 'manager' })
+        )
+        expect(roleFor('production-1')).toEqual('manager')
+        expect(roleFor('production-2')).toEqual('user')
+        expect(roleFor(null)).toEqual('user')
       })
     })
 

@@ -149,13 +149,16 @@ const getters = {
   isCurrentUserClient: state => state.user && state.user.role === 'client',
   isCurrentUserVendor: state => state.user && state.user.role === 'vendor',
 
-  // Role the user effectively holds on the current production: the
-  // per-project role when one is set, the global role otherwise.
-  currentUserEffectiveRole: (state, getters, rootState) => {
+  // Role the user effectively holds on given production: the per-project
+  // role when one is set, the global role otherwise.
+  currentUserRoleForProduction: state => productionId => {
     if (!state.user) return null
-    const production = rootState.productions.currentProduction
-    return (production && state.projectRoles[production.id]) || state.user.role
+    return (productionId && state.projectRoles[productionId]) || state.user.role
   },
+  currentUserEffectiveRole: (state, getters, rootState) =>
+    getters.currentUserRoleForProduction(
+      rootState.productions.currentProduction?.id
+    ),
   isCurrentUserProductionManager: (state, getters) =>
     state.user?.role === 'admin' ||
     getters.currentUserEffectiveRole === 'manager',

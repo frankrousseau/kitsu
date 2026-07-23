@@ -1053,8 +1053,6 @@ export default {
       'getCustomActionsByType',
       'isCurrentUserArtist',
       'isCurrentUserClient',
-      'isCurrentUserManager',
-      'isCurrentUserSupervisor',
       'isShowAssignations',
       'nbSelectedTasks',
       'nbSelectedValidations',
@@ -1069,6 +1067,24 @@ export default {
       'taskTypeMap',
       'user'
     ]),
+
+    // Role gating follows the production of the displayed tasks, not the
+    // globally selected one: this panel also serves cross-production views
+    // (Todos, All Tasks, checks, notifications).
+    currentUserProductionRole() {
+      return this.$store.getters.currentUserRoleForProduction(this.productionId)
+    },
+
+    isCurrentUserManager() {
+      return (
+        this.$store.getters.isCurrentUserAdmin ||
+        this.currentUserProductionRole === 'manager'
+      )
+    },
+
+    isCurrentUserSupervisor() {
+      return this.currentUserProductionRole === 'supervisor'
+    },
 
     assetMap() {
       return assetsStore.cache.assetMap

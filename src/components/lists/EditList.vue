@@ -631,8 +631,6 @@ export default {
       'displayedEditsLength',
       'displayedEditsTimeSpent',
       'isCurrentUserAdmin',
-      'isCurrentUserManager',
-      'isCurrentUserSupervisor',
       'isCurrentUserClient',
       'isSingleEpisode',
       'isEditDescription',
@@ -652,6 +650,13 @@ export default {
       'taskTypeMap',
       'user'
     ]),
+
+    // Production-scoped: effective role on the current production (global
+    // admins/managers still pass, but a per-project override wins).
+    ...mapGetters({
+      isCurrentUserManager: 'isCurrentUserProductionManager',
+      isCurrentUserSupervisor: 'isCurrentUserProductionSupervisor'
+    }),
 
     isEmptyList() {
       return (

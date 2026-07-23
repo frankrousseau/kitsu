@@ -608,9 +608,11 @@ const taskRows = new Map()
 const { startBrowsing } = useGrabList(bodyRef)
 
 // Computed
-const isCurrentUserManager = computed(() => store.getters.isCurrentUserManager)
-const isCurrentUserSupervisor = computed(
-  () => store.getters.isCurrentUserSupervisor
+const isCurrentUserProductionManager = computed(
+  () => store.getters.isCurrentUserProductionManager
+)
+const isCurrentUserProductionSupervisor = computed(
+  () => store.getters.isCurrentUserProductionSupervisor
 )
 const isPaperProduction = computed(() => store.getters.isPaperProduction)
 const nbSelectedTasks = computed(() => store.getters.nbSelectedTasks)
@@ -931,10 +933,10 @@ const scrollToLine = taskId => {
 }
 
 const isInDepartment = task =>
-  isCurrentUserManager.value ||
+  isCurrentUserProductionManager.value ||
   isSupervisorInDepartments(
     user.value,
-    isCurrentUserSupervisor.value,
+    isCurrentUserProductionSupervisor.value,
     taskTypeMap.value.get(task.task_type_id)?.department_id
   )
 
@@ -943,10 +945,10 @@ const isMetadataMenuEditAllowed = computed(() => {
     d => d.id === lastMetadataHeaderMenuDisplayed.value
   )
   return (
-    isCurrentUserManager.value ||
+    isCurrentUserProductionManager.value ||
     isSupervisorInDepartments(
       user.value,
-      isCurrentUserSupervisor.value,
+      isCurrentUserProductionSupervisor.value,
       descriptor?.departments
     )
   )

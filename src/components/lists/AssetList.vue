@@ -786,8 +786,6 @@ export default {
       'isAssetDescription',
       'isAssetResolution',
       'isCurrentUserClient',
-      'isCurrentUserManager',
-      'isCurrentUserSupervisor',
       'isShowAssignations',
       'isAssetEstimation',
       'isAssetTime',
@@ -799,6 +797,13 @@ export default {
       'taskMap',
       'user'
     ]),
+
+    // Production-scoped: effective role on the current production (global
+    // admins/managers still pass, but a per-project override wins).
+    ...mapGetters({
+      isCurrentUserManager: 'isCurrentUserProductionManager',
+      isCurrentUserSupervisor: 'isCurrentUserProductionSupervisor'
+    }),
 
     assetCache() {
       return assetStore.cache
