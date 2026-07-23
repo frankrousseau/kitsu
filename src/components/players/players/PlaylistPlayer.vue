@@ -3331,6 +3331,10 @@ const snapshotTitle = identity =>
 // annotation's frame with its drawing composited on top.
 const extractVideoAnnotationSnapshots = async ({ withLabel = false } = {}) => {
   const cur = currentFrame.value
+  // The loop below repaints the live canvas annotation by annotation, so
+  // grab the one being displayed now: currentTimeRaw has drifted by the
+  // time the loop ends and cannot be used to resolve it afterwards.
+  const displayedAnnotation = getAnnotation(currentTimeRaw.value)
   const sorted = annotations.value.sort((a, b) => a.time - b.time)
   const files = []
   const revision = currentPreview.value?.revision
@@ -3347,7 +3351,10 @@ const extractVideoAnnotationSnapshots = async ({ withLabel = false } = {}) => {
     )
   }
   rawPlayer.value.setCurrentFrame(cur - 1)
-  nextTick(() => clearCanvas())
+  nextTick(() => {
+    clearCanvas()
+    if (displayedAnnotation) loadSingleAnnotation(displayedAnnotation)
+  })
   return files
 }
 
@@ -3406,7 +3413,7 @@ const extractPicturePreviewSnapshots = async ({ withLabel = false } = {}) => {
     currentPreviewIndex.value = savedIndex
     await new Promise(resolve => setTimeout(resolve, 500))
   }
-  nextTick(() => clearCanvas())
+  nextTick(() => reloadCurrentAnnotation())
   return files
 }
 
