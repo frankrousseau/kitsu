@@ -1948,15 +1948,10 @@
       "drop_new_concepts": "Drop hier nieuwe conceptbestanden"
     },
     "intro": {
+      "join_discord": "Word lid van de community-Discord",
+      "join_partner": "Doe mee aan ons partnerprogramma",
       "main": "Om ons project te laten slagen, hebben we jouw steun nodig. Hier zijn enkele eenvoudige manieren waarop je kunt helpen:",
-      "first": "Star onze repository op ",
-      "second": "Volg ons op ",
-      "third": "Word lid van onze",
-      "four": "Nieuwe functies voorstellen op ",
-      "five": "Doneer aan onze ",
-      "six": "Bekijk onze oplossingen in de cloud en op locatie ",
-      "seven": "Deel Kitsu met je vrienden en collega's",
-      "eight": "Bedankt voor je hulp!",
+      "star_github": "Geef onze GitHub-repository een ster",
       "title": "Hoe Kitsu ondersteunen"
     },
     "my_checks": {

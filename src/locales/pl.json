@@ -618,15 +618,10 @@
       "last_frame": "Przejdź do ostatniej klatki"
     },
     "intro": {
+      "join_discord": "Dołącz do społeczności na Discordzie",
+      "join_partner": "Dołącz do naszego programu partnerskiego",
       "main": "Aby nasz projekt mógł się rozwijać, potrzebujemy Twojego wsparcia. Oto kilka prostych sposobów, w jakie możesz pomóc:",
-      "first": "Oznacz gwiazdką nasze repozytorium w serwisie ",
-      "second": "Obserwuj nas na ",
-      "third": "Dołącz do naszego serwera",
-      "four": "Proponuj nowe funkcje w serwisie ",
-      "five": "Wesprzyj nas na ",
-      "six": "Zapoznaj się z naszymi rozwiązaniami chmurowymi i on-premise ",
-      "seven": "Poleć Kitsu znajomym i współpracownikom",
-      "eight": "Dziękujemy za pomoc!",
+      "star_github": "Dodaj gwiazdkę naszemu repozytorium na GitHubie",
       "title": "Jak wesprzeć Kitsu"
     },
     "login": {

@@ -1948,15 +1948,10 @@
       "drop_new_concepts": "Læg nye konceptfiler her"
     },
     "intro": {
+      "join_discord": "Deltag i fællesskabets Discord",
+      "join_partner": "Bliv en del af vores partnerprogram",
       "main": "For at vores projekt kan trives, har vi brug for din støtte. Her er nogle enkle måder, du kan hjælpe på:",
-      "first": "Stjernemærk vores repository på ",
-      "second": "Følg os på ",
-      "third": "Deltag i vores",
-      "four": "Foreslå ny feature på ",
-      "five": "Doner til vores ",
-      "six": "Tag et kig på vores cloud- og on-premise-løsninger ",
-      "seven": "Del Kitsu med dine venner og kolleger",
-      "eight": "Tak for din hjælp!",
+      "star_github": "Giv vores GitHub-repository en stjerne",
       "title": "Sådan kan du støtte Kitsu"
     },
     "my_checks": {
