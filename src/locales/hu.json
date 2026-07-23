@@ -1868,15 +1868,10 @@
       "title": "Hardvereszközök"
     },
     "intro": {
-      "eight": "Köszönjük a segítségedet!",
-      "first": "Csillagozd a repository-nkat itt: ",
-      "five": "Adományozz a ",
-      "four": "Javasolj új funkciókat itt: ",
+      "join_discord": "Csatlakozz a közösségi Discordhoz",
+      "join_partner": "Csatlakozz partnerprogramunkhoz",
       "main": "Hogy a projektünk virágozzon, szükségünk van a támogatásodra. Íme néhány egyszerű módja, ahogy segíthetsz:",
-      "second": "Kövess minket itt: ",
-      "seven": "Oszd meg a Kitsu-t a barátaiddal és kollégáiddal",
-      "six": "Vesd egy pillantást a felhő- és helyben tárolt megoldásainkra ",
-      "third": "Csatlakozz a ",
+      "star_github": "Adj csillagot a GitHub-tárolónknak",
       "title": "Hogyan támogasd a Kitsu-t"
     },
     "my_checks": {

@@ -1948,15 +1948,10 @@
       "drop_new_concepts": "在此丟入新的概念檔案"
     },
     "intro": {
+      "join_discord": "加入社群 Discord",
+      "join_partner": "加入我們的合作夥伴計畫",
       "main": "為了讓我們的專案茁壯成長，我們需要您的支持。以下是您可以幫忙的一些簡單方法：",
-      "first": "為我們的儲存庫加註星號於 ",
-      "second": "關注我們 ",
-      "third": "加入我們",
-      "four": "建議新功能 ",
-      "five": "捐助我們 ",
-      "six": "看看我們的雲端和內部部署解決方案 ",
-      "seven": "與您的朋友和同事分享 Kitsu",
-      "eight": "感謝您的協助！",
+      "star_github": "為我們的 GitHub 儲存庫加星號",
       "title": "如何支援 Kitsu"
     },
     "my_checks": {

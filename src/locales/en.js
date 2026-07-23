@@ -650,15 +650,10 @@ export default {
   },
 
   intro: {
+    join_discord: 'Join the community Discord',
+    join_partner: 'Join our Partner Program',
     main: 'To make our project thrive, we need your support. Here are some simple ways you can help:',
-    first: 'Star our repository on ',
-    second: 'Follow us on ',
-    third: 'Join our',
-    four: 'Suggest new features on ',
-    five: 'Donate to our ',
-    six: 'Have a look at our cloud and on-premise solutions ',
-    seven: 'Share Kitsu with your friends and colleagues',
-    eight: 'Thank you for your help!',
+    star_github: 'Star our repository on GitHub',
     title: 'How to support Kitsu'
   },
 

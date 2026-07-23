@@ -1948,15 +1948,10 @@
       "drop_new_concepts": "Envie novos arquivos de conceito aqui"
     },
     "intro": {
+      "join_discord": "Junte-se ao Discord da comunidade",
+      "join_partner": "Junte-se ao nosso programa de parceiros",
       "main": "Para que nosso projeto seja bem-sucedido, precisamos de seu apoio. Aqui estão algumas maneiras simples de ajudar:",
-      "first": "Marque nosso repositório com uma estrela em ",
-      "second": "Siga-nos em ",
-      "third": "Participe de nossa",
-      "four": "Sugerir novos recursos em ",
-      "five": "Faça uma doação para nossa ",
-      "six": "Dê uma olhada em nossas soluções na nuvem e no local ",
-      "seven": "Compartilhe o Kitsu com seus amigos e colegas",
-      "eight": "Obrigado por sua ajuda!",
+      "star_github": "Dê uma estrela ao nosso repositório no GitHub",
       "title": "Como apoiar a Kitsu"
     },
     "my_checks": {
