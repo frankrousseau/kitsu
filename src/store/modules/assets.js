@@ -188,7 +188,6 @@ const helpers = {
         task = taskMap.get(task)
       }
       if (!task) return
-      task.data = asset.data || {}
       asset.full_name = `${asset.asset_type_name} / ${asset.name}`
       helpers.populateTask(task, asset)
 
