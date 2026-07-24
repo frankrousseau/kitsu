@@ -372,7 +372,6 @@ export default {
       'sequences',
       'sequenceSearchQueries',
       'isCurrentUserClient',
-      'isCurrentUserManager',
       'isSequenceDescription',
       'isSequenceEstimation',
       'isSequenceTime',
@@ -391,6 +390,9 @@ export default {
       'taskTypeMap',
       'user'
     ]),
+    ...mapGetters({
+      isCurrentUserManager: 'isCurrentUserProductionManager'
+    }),
 
     renderColumns() {
       const collection = [...this.dataMatchers, ...this.optionalColumns]

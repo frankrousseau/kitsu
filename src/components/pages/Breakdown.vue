@@ -575,7 +575,6 @@ export default {
       'episodeMap',
       'episodes',
       'isAssetsLoading',
-      'isCurrentUserManager',
       'isFrameIn',
       'isFrameOut',
       'isFrames',
@@ -586,6 +585,9 @@ export default {
       'shotMap',
       'shotMetadataDescriptors'
     ]),
+    ...mapGetters({
+      isCurrentUserManager: 'isCurrentUserProductionManager'
+    }),
 
     searchField() {
       return this.$refs['search-field']

@@ -430,7 +430,6 @@ export default {
       'episodes',
       'openProductions',
       'isCurrentUserClient',
-      'isCurrentUserManager',
       'isEditDescription',
       'isEditEstimation',
       'isEditTime',
@@ -444,6 +443,9 @@ export default {
       'taskTypeMap',
       'user'
     ]),
+    ...mapGetters({
+      isCurrentUserManager: 'isCurrentUserProductionManager'
+    }),
 
     renderColumns() {
       const collection = [...this.dataMatchers, ...this.optionalColumns]

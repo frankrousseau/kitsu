@@ -506,7 +506,6 @@ export default {
       'episodes',
       'departments',
       'isCurrentUserClient',
-      'isCurrentUserManager',
       'isFrames',
       'isFrameIn',
       'isFrameOut',
@@ -538,6 +537,9 @@ export default {
       'taskTypeMap',
       'user'
     ]),
+    ...mapGetters({
+      isCurrentUserManager: 'isCurrentUserProductionManager'
+    }),
 
     shotMap() {
       return shotStore.cache.shotMap

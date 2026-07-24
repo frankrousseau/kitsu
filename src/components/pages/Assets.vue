@@ -461,7 +461,6 @@ export default {
       'isAssetsLoading',
       'isAssetsLoadingError',
       'isCurrentUserClient',
-      'isCurrentUserManager',
       'isTVShow',
       'isAssetResolution',
       'openProductions',
@@ -472,6 +471,9 @@ export default {
       'userFilters',
       'userFilterGroups'
     ]),
+    ...mapGetters({
+      isCurrentUserManager: 'isCurrentUserProductionManager'
+    }),
 
     productionAssetSearchQueries() {
       const productionId = this.currentProduction?.id

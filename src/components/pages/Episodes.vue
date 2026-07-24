@@ -374,7 +374,6 @@ export default {
       'episodeSorting',
       'episodeSearchQueries',
       'isCurrentUserClient',
-      'isCurrentUserManager',
       'isEpisodeDescription',
       'isEpisodeEstimation',
       'isEpisodeTime',
@@ -388,6 +387,9 @@ export default {
       'taskTypeMap',
       'user'
     ]),
+    ...mapGetters({
+      isCurrentUserManager: 'isCurrentUserProductionManager'
+    }),
 
     renderColumns() {
       const collection = [...this.dataMatchers, ...this.optionalColumns]

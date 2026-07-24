@@ -697,8 +697,6 @@ export default {
     ...mapGetters([
       'currentEpisode',
       'currentProduction',
-      'isCurrentUserManager',
-      'isCurrentUserSupervisor',
       'isTVShow',
       'organisation',
       'personMap',
@@ -706,6 +704,10 @@ export default {
       'scheduleVersions',
       'user'
     ]),
+    ...mapGetters({
+      isCurrentUserManager: 'isCurrentUserProductionManager',
+      isCurrentUserSupervisor: 'isCurrentUserProductionSupervisor'
+    }),
 
     estimatedDailyQuota() {
       const startDate = parseSimpleDate(this.assignments.startDate)
