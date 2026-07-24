@@ -263,6 +263,7 @@
           <search-query-list
             :queries="searchQueries"
             type="taskType"
+            :production-id="currentProduction?.id"
             @remove-search="removeSearchQuery"
           />
         </div>

@@ -69,6 +69,7 @@
               :is-group-enabled="true"
               :queries="productionAssetSearchQueries"
               type="asset"
+              :production-id="currentProduction?.id"
               @remove-search="removeSearchQuery"
             />
           </div>

@@ -131,6 +131,7 @@
                 :descriptors="metadataDescriptors"
                 :exclude="{ frames: !isShots }"
                 namespace="task-type"
+                :production-id="currentProduction?.id"
                 v-model="metadataDisplayHeaders"
                 v-model:is-open="columnSelectorDisplayed"
               />
@@ -608,6 +609,7 @@ const taskRows = new Map()
 const { startBrowsing } = useGrabList(bodyRef)
 
 // Computed
+const currentProduction = computed(() => store.getters.currentProduction)
 const isCurrentUserProductionManager = computed(
   () => store.getters.isCurrentUserProductionManager
 )

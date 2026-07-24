@@ -67,6 +67,7 @@
             <search-query-list
               :queries="editSearchQueries"
               type="edit"
+              :production-id="currentProduction?.id"
               @remove-search="removeSearchQuery"
               v-if="!isEditsLoading && !initialLoading"
             />

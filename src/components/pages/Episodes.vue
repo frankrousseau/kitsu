@@ -47,6 +47,7 @@
             <search-query-list
               :queries="episodeSearchQueries"
               type="episode"
+              :production-id="currentProduction?.id"
               @remove-search="removeSearchQuery"
               v-if="!isEpisodesLoading && !initialLoading"
             />

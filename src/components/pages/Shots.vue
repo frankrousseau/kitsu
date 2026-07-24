@@ -86,6 +86,7 @@
               :is-group-enabled="true"
               :queries="shotSearchQueries"
               type="shot"
+              :production-id="currentProduction?.id"
               @remove-search="removeSearchQuery"
               v-if="!isShotsLoading && !initialLoading"
             />

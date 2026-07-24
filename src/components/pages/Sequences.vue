@@ -47,6 +47,7 @@
             <search-query-list
               :queries="sequenceSearchQueries"
               type="sequence"
+              :production-id="currentProduction?.id"
               @remove-search="removeSearchQuery"
               v-if="!isSequencesLoading && !initialLoading"
             />

@@ -202,6 +202,7 @@
                   estimation: !isSequenceEstimation
                 }"
                 namespace="sequences"
+                :production-id="currentProduction?.id"
                 v-model="metadataDisplayHeaders"
                 v-model:is-open="columnSelectorDisplayed"
                 v-if="displaySettings.showInfos"
