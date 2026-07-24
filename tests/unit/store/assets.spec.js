@@ -164,6 +164,46 @@ describe('Assets store', () => {
     })
   })
 
+  describe('getAssetsCsvLines', () => {
+    test('exports the full name for person descriptors, not the id', () => {
+      const asset = {
+        id: 'a1',
+        name: 'A1',
+        asset_type_name: 'Char',
+        description: '',
+        ready_for: 'None',
+        data: { reviewer: 'person-1' },
+        validations: new Map()
+      }
+      assetsStore.cache.assets = [asset]
+      assetsStore.cache.result = []
+      const rootGetters = baseRootGetters()
+      rootGetters.currentProduction = {
+        id: 'p1',
+        descriptors: [
+          {
+            name: 'Reviewer',
+            field_name: 'reviewer',
+            data_type: 'person',
+            entity_type: 'Asset'
+          }
+        ]
+      }
+      rootGetters.personMap = new Map([
+        ['person-1', { id: 'person-1', full_name: 'John Doe' }]
+      ])
+      const state = { assetValidationColumns: [] }
+
+      const lines = assetsStore.actions.getAssetsCsvLines({
+        state,
+        rootGetters
+      })
+
+      expect(lines[0]).toContain('John Doe')
+      expect(lines[0]).not.toContain('person-1')
+    })
+  })
+
   describe('cache.result maintenance', () => {
     test('REMOVE_ASSET drops the asset from cache.result so it cannot reappear on "show more" (BUG-10)', () => {
       const asset = { id: 'a1', name: 'A1', asset_type_name: 'Char', tasks: [] }

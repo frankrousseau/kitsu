@@ -761,6 +761,9 @@ const actions = {
             assetLine.push(
               asset.data[descriptor.field_name]?.toLowerCase() === 'true'
             )
+          } else if (descriptor.data_type === 'person') {
+            const person = personMap.get(asset.data[descriptor.field_name])
+            assetLine.push(person ? person.full_name : '')
           } else {
             assetLine.push(asset.data[descriptor.field_name])
           }
