@@ -2252,20 +2252,53 @@ td.fps {
   margin: auto;
 }
 
-.tabs li a {
-  color: var(--text);
+// segmented-control look shared by every tab bar (RouteTabs,
+// RouteSectionTabs and the raw Bulma markup pages)
+.tabs {
+  ul {
+    align-items: center;
+    background: var(--background-alt);
+    border: 0;
+    border-radius: 8px;
+    display: inline-flex;
+    flex: none;
+    gap: 2px;
+    padding: 3px;
+  }
 
-  &:hover {
-    color: var(--text-selectable);
-    border-color: var(--text-selectable);
+  li a {
+    border: 0;
+    border-radius: 6px;
+    color: var(--text);
+    padding: 0.35em 1em;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease;
+
+    &:hover {
+      background: var(--background-hover);
+      color: var(--text);
+    }
+  }
+
+  li.is-active a {
+    background: var(--background);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    color: var(--text);
+    font-weight: 600;
+
+    &:hover {
+      background: var(--background);
+    }
   }
 }
 
-.tabs li.is-active a {
-  font-weight: bold;
-
-  color: var(--text-selected);
-  border-color: var(--text-selected);
+// in dark the background token is darker than the rail, which would read
+// as a pressed slot: give the active pill its own lighter fill
+.dark .tabs li.is-active a,
+.dark .tabs li.is-active a:hover {
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .page .columns:last-child {
