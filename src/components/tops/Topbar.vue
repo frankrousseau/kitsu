@@ -84,6 +84,9 @@
             </span>
           </router-link>
         </div>
+        <div class="nav-item page-title" v-if="pageTitle">
+          {{ pageTitle }}
+        </div>
       </div>
 
       <div class="nav-right">
@@ -498,6 +501,12 @@ export default {
         this.$route.params.production_id !== undefined ||
         this.$route.path.indexOf('my-tasks') === 0
       )
+    },
+
+    pageTitle() {
+      if (this.isProductionContext) return ''
+      const titleKey = this.$route.meta.title
+      return titleKey ? this.$t(titleKey) : ''
     },
 
     isEpisodeContext() {
@@ -1233,6 +1242,14 @@ export default {
   width: 100%;
   height: 100%;
   overflow: hidden;
+}
+
+.page-title {
+  color: var(--text);
+  font-size: 1.4em;
+  font-weight: 800;
+  margin-top: -2px;
+  padding-left: 1em;
 }
 
 .version {

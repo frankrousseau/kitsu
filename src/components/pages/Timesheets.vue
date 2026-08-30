@@ -3,10 +3,6 @@
     <div class="column main-column">
       <div class="timesheets page">
         <div class="page-header flexrow">
-          <page-title
-            class="flexrow-item title"
-            :text="$t('timesheets.title')"
-          />
           <combobox-production
             class="flexrow-item"
             :label="$t('main.production')"
@@ -113,7 +109,6 @@ import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
 import Combobox from '@/components/widgets/Combobox.vue'
 import ComboboxProduction from '@/components/widgets/ComboboxProduction.vue'
 import ComboboxStudio from '@/components/widgets/ComboboxStudio.vue'
-import PageTitle from '@/components/widgets/PageTitle.vue'
 
 // Composables
 const { t } = useI18n()

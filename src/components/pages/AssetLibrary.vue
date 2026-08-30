@@ -2,10 +2,6 @@
   <page-layout :side="showSidePanel">
     <template #main>
       <div class="asset-library">
-        <header class="flexrow">
-          <page-title class="mt1 filler" :text="$t('library.asset_library')" />
-        </header>
-
         <div class="filters flexrow">
           <search-field
             ref="searchFieldRef"
@@ -122,7 +118,6 @@ import ManageLibrary from '@/components/sides/ManageLibrary.vue'
 import Combobox from '@/components/widgets/Combobox.vue'
 import ComboboxProduction from '@/components/widgets/ComboboxProduction.vue'
 import EntityPreview from '@/components/widgets/EntityPreview.vue'
-import PageTitle from '@/components/widgets/PageTitle.vue'
 import ProductionName from '@/components/widgets/ProductionName.vue'
 import SearchField from '@/components/widgets/SearchField.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
@@ -287,7 +282,7 @@ useHead({
   margin-left: auto;
   margin-right: auto;
   max-height: 100%;
-  padding: 4em 2em 1em 2em;
+  padding: 6em 2em 1em 2em;
 }
 
 .filters {

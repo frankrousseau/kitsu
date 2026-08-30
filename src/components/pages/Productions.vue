@@ -1,7 +1,6 @@
 <template>
   <div class="productions page fixed-page">
     <div class="flexrow page-header">
-      <page-title class="filler" :text="$t('productions.title')" />
       <button-simple
         class="flexrow-item"
         :text="$t('productions.load_stats')"
@@ -87,7 +86,6 @@ import EditProductionModal from '@/components/modals/EditProductionModal.vue'
 import HardDeleteModal from '@/components/modals/HardDeleteModal.vue'
 import ButtonLink from '@/components/widgets/ButtonLink.vue'
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
-import PageTitle from '@/components/widgets/PageTitle.vue'
 
 const { t } = useI18n()
 const store = useStore()
