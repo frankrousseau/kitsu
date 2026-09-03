@@ -11,24 +11,18 @@
       <page-title class="flexrow-item" :text="person.full_name" />
     </div>
 
-    <div class="info-date" v-if="isYearInfo">
-      {{ year }}
+    <div class="info-date" v-if="level === 'year'">{{ year }}</div>
+    <div class="info-date" v-else-if="level === 'month'">
+      {{ monthString }} {{ year }}
     </div>
-
-    <div class="info-date" v-if="isMonthInfo">{{ monthString }} {{ year }}</div>
-
-    <div class="info-date" v-else-if="isWeekInfo">
-      {{ $t('main.week') }}
-      {{ week }}, {{ startDay }} - {{ endDay }} {{ weekMonth }} {{ year }}
+    <div class="info-date" v-else-if="level === 'week'">
+      {{ $t('main.week') }} {{ week }}, {{ weekDays }} {{ year }}
     </div>
+    <div class="info-date" v-else>{{ day }} {{ monthString }} {{ year }}</div>
 
-    <div class="info-day-off" v-if="!isDayInfo">
+    <div class="info-day-off" v-if="level !== 'day'">
       {{ dayOffCount }}
       {{ $t('days_off.nb_days_off', { count: dayOffCount }) }}
-    </div>
-
-    <div class="info-date" v-else-if="isDayInfo">
-      {{ day }} {{ monthString }} {{ year }}
     </div>
 
     <time-spent-task-list
@@ -41,171 +35,83 @@
   </div>
 </template>
 
-<script>
+<script setup>
+// Imports
 import { XIcon } from 'lucide-vue-next'
 import moment from 'moment-timezone'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import { monthToString } from '@/lib/time'
 
+import TimeSpentTaskList from '@/components/lists/TimeSpentTaskList.vue'
 import PageTitle from '@/components/widgets/PageTitle.vue'
 import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
-import TimeSpentTaskList from '@/components/lists/TimeSpentTaskList.vue'
 
-export default {
-  name: 'people-timesheet-info',
+// Composables
+const route = useRoute()
+const router = useRouter()
 
-  components: {
-    PageTitle,
-    PeopleAvatar,
-    TimeSpentTaskList,
-    XIcon
-  },
+// Props
+const props = defineProps({
+  person: { type: Object, default: () => ({}) },
+  year: { type: Number, default: 0 },
+  month: { type: Number, default: 0 },
+  week: { type: Number, default: 0 },
+  day: { type: Number, default: 0 },
+  isLoading: { type: Boolean, default: false },
+  isLoadingError: { type: Boolean, default: false },
+  tasks: { type: Array, default: () => [] },
+  dayOffCount: { type: Number, default: 0 },
+  unit: { type: String, default: 'hour' }
+})
 
-  props: {
-    person: {
-      type: Object,
-      default: () => {}
-    },
-    year: {
-      type: Number,
-      default: 0
-    },
-    month: {
-      type: Number,
-      default: 0
-    },
-    week: {
-      type: Number,
-      default: 0
-    },
-    day: {
-      type: Number,
-      default: 0
-    },
-    isLoading: {
-      type: Boolean,
-      default: false
-    },
-    isLoadingError: {
-      type: Boolean,
-      default: false
-    },
-    tasks: {
-      type: Array,
-      default: () => []
-    },
-    dayOffCount: {
-      type: Number,
-      default: 0
-    },
-    unit: {
-      type: String,
-      default: 'hour'
-    }
-  },
+// Computed
+// --------------------------------------------------------------------------
+// the panel only shows on the `timesheets-<level>-person` routes
+const level = computed(() => route.name.split('-')[1])
+const monthString = computed(() => monthToString(props.month))
 
-  mounted() {
-    window.addEventListener('keydown', this.onKeyDown)
-  },
+// Monday of the displayed ISO week, as aggregated by the backend
+const weekDays = computed(() => {
+  const start = moment(`${props.year}-${props.week}`, 'YYYY-W')
+  const end = start.clone().add(6, 'days')
+  return `${start.date()} - ${end.date()} ${start.format('MMM')}`
+})
 
-  beforeUnmount() {
-    window.removeEventListener('keydown', this.onKeyDown)
-  },
-
-  computed: {
-    // Monday of the displayed ISO week, as aggregated by the backend.
-    weekStartDate() {
-      return moment(this.year + '-' + this.week, 'YYYY-W')
-    },
-
-    startDay() {
-      return this.weekStartDate.date()
-    },
-
-    endDay() {
-      return this.weekStartDate.clone().add(6, 'days').date()
-    },
-
-    weekMonth() {
-      return this.weekStartDate.format('MMM')
-    },
-
-    monthString() {
-      return monthToString(this.month)
-    },
-
-    isYearInfo() {
-      return !this.isMonthInfo && !this.isWeekInfo && !this.isDayInfo
-    },
-
-    isMonthInfo() {
-      return this.$route.path.indexOf('month') > 0
-    },
-
-    isWeekInfo() {
-      return this.$route.path.indexOf('week') > 0
-    },
-
-    isDayInfo() {
-      return this.$route.path.indexOf('day') > 0
-    },
-
-    closeRoute() {
-      const query = {
-        productionId: this.$route.query.productionId,
-        studioId: this.$route.query.studioId
-      }
-      if (this.isYearInfo) {
-        return {
-          name: 'timesheets-year',
-          params: {
-            year: this.year
-          },
-          query
-        }
-      } else if (this.isMonthInfo) {
-        return {
-          name: 'timesheets-month',
-          params: {
-            year: this.year,
-            month: this.month
-          },
-          query
-        }
-      } else if (this.isWeekInfo) {
-        return {
-          name: 'timesheets-week',
-          params: {
-            year: this.year,
-            week: this.week
-          },
-          query
-        }
-      } else if (this.isDayInfo) {
-        return {
-          name: 'timesheets-day',
-          params: {
-            year: this.year,
-            month: this.month,
-            day: this.day
-          },
-          query
-        }
-      } else {
-        return {
-          name: 'timesheets',
-          query
-        }
-      }
-    }
-  },
-
-  methods: {
-    onKeyDown(event) {
-      if (event.key === 'Escape') this.$router.push(this.closeRoute)
+const closeRoute = computed(() => {
+  const { year, month, week, day } = props
+  const params = {
+    year: { year },
+    month: { year, month },
+    week: { year, week },
+    day: { year, month, day }
+  }[level.value]
+  return {
+    name: `timesheets-${level.value}`,
+    params,
+    query: {
+      productionId: route.query.productionId,
+      studioId: route.query.studioId
     }
   }
+})
+
+// Functions
+// --------------------------------------------------------------------------
+const onKeyDown = event => {
+  if (event.key === 'Escape') router.push(closeRoute.value)
 }
+
+// Lifecycle
+// --------------------------------------------------------------------------
+onMounted(() => {
+  window.addEventListener('keydown', onKeyDown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeyDown)
+})
 </script>
 
 <style lang="scss" scoped>

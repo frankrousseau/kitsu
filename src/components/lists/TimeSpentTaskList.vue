@@ -9,40 +9,30 @@
     />
 
     <div class="aggregated-time-spents">
-      <div
-        :key="projectId"
-        class="by-project"
-        v-for="projectId in Object.keys(projects)"
-      >
-        <production-name
-          :production="{
-            id: projectId,
-            name: projectNames[projectId]
-          }"
-          v-if="projectNames[projectId]"
-        />
+      <div class="by-project" :key="project.id" v-for="project in projects">
+        <production-name :production="project" />
 
         <div
-          :key="taskTypeId"
           class="by-task-type-id"
-          v-for="taskTypeId in Object.keys(projects[projectId])"
+          :key="taskType.id"
+          v-for="taskType in project.taskTypes"
         >
-          <task-type-name :task-type="taskTypeMap.get(taskTypeId)" />
+          <task-type-name :task-type="taskTypeMap.get(taskType.id)" />
 
           <div class="table-body">
             <table class="datatable">
               <tbody class="datatable-body">
                 <tr
+                  class="datatable-row"
                   :key="task.id"
-                  class="by-task-type-id datatable-row"
-                  v-for="task in projects[projectId][taskTypeId]"
+                  v-for="task in taskType.tasks"
                 >
                   <router-link :to="getTaskPath(task)">
                     <td class="name">
                       {{ task.name }}
                     </td>
                     <td class="duration">
-                      {{ getDuration(task) }}
+                      {{ duration(task) }}
                     </td>
                   </router-link>
                 </tr>
@@ -55,11 +45,13 @@
   </div>
 </template>
 
-<script>
-import { mapGetters } from 'vuex'
+<script setup>
+// Imports
 import { firstBy } from 'thenby'
+import { computed } from 'vue'
+import { useStore } from 'vuex'
 
-import { getTaskPath } from '@/lib/path'
+import { getTaskPath as buildTaskPath } from '@/lib/path'
 import { sortByName } from '@/lib/sorting'
 import { hoursToDays } from '@/lib/time'
 
@@ -67,126 +59,92 @@ import ProductionName from '@/components/widgets/ProductionName.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
 import TaskTypeName from '@/components/widgets/TaskTypeName.vue'
 
-export default {
-  name: 'time-spent-task-list',
+// Composables
+const store = useStore()
 
-  components: {
-    TableInfo,
-    ProductionName,
-    TaskTypeName
-  },
+// Props
+const props = defineProps({
+  tasks: { type: Array, default: () => [] },
+  isLoading: { type: Boolean, default: false },
+  isError: { type: Boolean, default: false },
+  unit: { type: String, default: 'hour' }
+})
 
-  data() {
-    return {
-      projectNames: {}
-    }
-  },
+// Computed
+// --------------------------------------------------------------------------
+const organisation = computed(() => store.getters.organisation)
+const productionMap = computed(() => store.getters.productionMap)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
 
-  props: {
-    tasks: {
-      type: Array,
-      default: () => []
-    },
-    isLoading: {
-      type: Boolean,
-      default: false
-    },
-    isError: {
-      type: Boolean,
-      default: false
-    },
-    unit: {
-      type: String,
-      default: 'hour'
-    }
-  },
-
-  computed: {
-    ...mapGetters(['organisation', 'productionMap', 'taskTypeMap']),
-
-    isHours() {
-      return this.unit === 'hour'
-    },
-
-    projects() {
-      const projects = {}
-      const tasks = [...this.tasks].sort(firstBy('project_name'))
-
-      tasks.forEach(task => {
-        if (!projects[task.project_id]) projects[task.project_id] = {}
-        if (!projects[task.project_id][task.task_type_id]) {
-          projects[task.project_id][task.task_type_id] = []
-        }
-
-        let name = task.entity_name
-        if (['Shot', 'Sequence'].includes(task.entity_type_name)) {
-          name = `${task.sequence_name} / ${name}`
-          if (task.episode_name) name = `${task.episode_name} / ${name}`
-        } else {
-          name = `${task.entity_type_name} / ${name}`
-        }
-
-        projects[task.project_id][task.task_type_id].push({
-          id: task.task_id,
-          project_id: task.project_id,
-          task_type_id: task.task_type_id,
-          name: name,
-          duration: task.duration
-        })
-      })
-
-      Object.keys(projects).forEach(projectId => {
-        Object.keys(projects[projectId]).forEach(taskTypeId => {
-          projects[projectId][taskTypeId] = sortByName(
-            projects[projectId][taskTypeId]
-          )
-        })
-      })
-
-      return projects
-    }
-  },
-
-  methods: {
-    getDuration(task) {
-      const duration = task.duration / 60
-      const value = this.isHours
-        ? duration
-        : hoursToDays(this.organisation, duration)
-      // one decimal max, no padding
-      return Math.round(value * 10) / 10
-    },
-
-    getTaskPath(task) {
-      const project = this.productionMap.get(task.project_id)
-      if (!project || project.project_status_name === 'Closed') {
-        return ''
+// tasks grouped by production then task type, productions and tasks
+// sorted by name
+const projects = computed(() => {
+  const groups = {}
+  props.tasks.forEach(task => {
+    if (!groups[task.project_id]) {
+      groups[task.project_id] = {
+        id: task.project_id,
+        name: productionLabel(task),
+        taskTypes: {}
       }
-      const isTVShow = project.production_type === 'tvshow'
-      const episode = { id: project.first_episode_id }
-      return getTaskPath(task, null, isTVShow, episode, this.taskTypeMap)
     }
-  },
+    const taskTypes = groups[task.project_id].taskTypes
+    if (!taskTypes[task.task_type_id]) taskTypes[task.task_type_id] = []
+    taskTypes[task.task_type_id].push({
+      id: task.task_id,
+      project_id: task.project_id,
+      task_type_id: task.task_type_id,
+      name: entityName(task),
+      duration: task.duration
+    })
+  })
+  return Object.values(groups)
+    .sort(firstBy('name'))
+    .map(project => ({
+      ...project,
+      taskTypes: Object.entries(project.taskTypes).map(([id, tasks]) => ({
+        id,
+        tasks: sortByName(tasks)
+      }))
+    }))
+})
 
-  watch: {
-    tasks() {
-      this.projectNames = this.tasks.reduce((projectNames, task) => {
-        const production = this.productionMap.get(task.project_id)
-        const suffix =
-          production?.project_status_name === 'Closed' ? ' (closed)' : ''
-        projectNames[task.project_id] = task.project_name + suffix
-        return projectNames
-      }, {})
-    }
+// Functions
+// --------------------------------------------------------------------------
+const productionLabel = task => {
+  const production = productionMap.value.get(task.project_id)
+  const suffix = production?.project_status_name === 'Closed' ? ' (closed)' : ''
+  return task.project_name + suffix
+}
+
+const entityName = task => {
+  if (!['Shot', 'Sequence'].includes(task.entity_type_name)) {
+    return `${task.entity_type_name} / ${task.entity_name}`
   }
+  const name = `${task.sequence_name} / ${task.entity_name}`
+  return task.episode_name ? `${task.episode_name} / ${name}` : name
+}
+
+// selected unit, one decimal max without padding
+const duration = task => {
+  const hours = task.duration / 60
+  const value =
+    props.unit === 'hour' ? hours : hoursToDays(organisation.value, hours)
+  return Math.round(value * 10) / 10
+}
+
+// closed productions have no task page: the empty target resolves to the
+// current route, so the row stays put
+const getTaskPath = task => {
+  const production = productionMap.value.get(task.project_id)
+  if (!production || production.project_status_name === 'Closed') return ''
+  const isTVShow = production.production_type === 'tvshow'
+  const episode = { id: production.first_episode_id }
+  return buildTaskPath(task, null, isTVShow, episode, taskTypeMap.value)
 }
 </script>
 
 <style lang="scss" scoped>
-.dark .table {
-  border-color: $dark-grey;
-}
-
 // the side panel is narrow: let the name column flex and keep a real
 // column for the numbers instead of a fixed 300px name squeezing them
 .name {
@@ -197,13 +155,6 @@ export default {
   min-width: 70px;
   text-align: right;
   white-space: nowrap;
-}
-
-.table {
-  border-top: 1px solid $light-grey;
-  border-bottom: 1px solid $light-grey;
-  margin-bottom: 1em;
-  margin-top: 0.5em;
 }
 
 .by-task-type-id {
