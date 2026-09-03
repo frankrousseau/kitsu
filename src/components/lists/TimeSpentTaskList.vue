@@ -145,14 +145,6 @@ const getTaskPath = task => {
 </script>
 
 <style lang="scss" scoped>
-// flat rows on the panel: the global datatable paints its stripes and
-// borders from these tokens
-.data-list {
-  --background: var(--background-panel);
-  --background-alt: var(--background-panel);
-  --border: rgba(var(--skeleton-rgb), 0.25);
-}
-
 // the side panel is narrow: let the name column flex and keep a real
 // column for the numbers instead of a fixed 300px name squeezing them
 .name {
