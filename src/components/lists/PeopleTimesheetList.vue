@@ -535,7 +535,7 @@ th.today {
 
 .duration {
   border-radius: 0.3em;
-  color: var(--text-strong);
+  color: var(--text);
   font-weight: 600;
   outline: none;
   padding: 0.5em;

@@ -145,6 +145,7 @@ onBeforeUnmount(() => {
 .people-timesheet-info {
   background: var(--background-panel);
   border-radius: 12px;
+  color: var(--text);
   min-height: 100%;
   padding: 1.5em 1.5em 1em;
   position: relative;

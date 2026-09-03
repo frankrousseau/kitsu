@@ -168,4 +168,9 @@ const getTaskPath = task => {
 a {
   color: var(--text);
 }
+
+// the production name widget paints itself black in light theme
+:deep(.avatar-name) {
+  color: var(--text);
+}
 </style>
