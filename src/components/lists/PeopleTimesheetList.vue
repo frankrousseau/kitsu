@@ -78,17 +78,15 @@
               <td
                 :key="`year-${year}-${person.id}`"
                 class="time year"
-                :class="{
-                  selected: isYearSelected(person.id, year)
-                }"
+                :class="{ selected: isSelected(person.id, { year }) }"
                 v-for="year in yearRange"
               >
                 <router-link
-                  v-if="yearDuration(year, person.id) > 0"
+                  v-if="duration(year, person.id) > 0"
                   class="duration"
-                  :to="getYearDetailRoute(person, year)"
+                  :to="getDetailRoute(person, { year })"
                 >
-                  {{ yearDuration(year, person.id) }}
+                  {{ duration(year, person.id) }}
                 </router-link>
                 <template v-else> - </template>
               </td>
@@ -99,17 +97,15 @@
               <td
                 :key="`month-${month}-${person.id}`"
                 class="time month"
-                :class="{
-                  selected: isMonthSelected(person.id, year, month)
-                }"
+                :class="{ selected: isSelected(person.id, { year, month }) }"
                 v-for="month in monthRange"
               >
                 <router-link
-                  v-if="monthDuration(month, person.id) > 0"
+                  v-if="duration(month, person.id) > 0"
                   class="duration"
-                  :to="getMonthDetailRoute(person, year, month)"
+                  :to="getDetailRoute(person, { year, month })"
                 >
-                  {{ monthDuration(month, person.id) }}
+                  {{ duration(month, person.id) }}
                 </router-link>
                 <template v-else> - </template>
               </td>
@@ -120,22 +116,16 @@
               <td
                 :key="`week-${week}-${person.id}`"
                 class="daytime"
-                :class="{
-                  selected: isWeekSelected(person.id, year, week)
-                }"
+                :class="{ selected: isSelected(person.id, { year, week }) }"
                 v-for="week in weekRange"
               >
                 <router-link
-                  v-if="weekDuration(week, person.id) > 0"
+                  v-if="duration(week, person.id) > 0"
                   class="duration"
-                  :class="{
-                    warning:
-                      weekDuration(week, person.id) >
-                      5 * organisation.hours_by_day
-                  }"
-                  :to="getWeekDetailRoute(person, year, week)"
+                  :class="{ warning: isOvertime(week, person.id) }"
+                  :to="getDetailRoute(person, { year, week })"
                 >
-                  {{ weekDuration(week, person.id) }}
+                  {{ duration(week, person.id) }}
                 </router-link>
                 <template v-else> - </template>
               </td>
@@ -148,20 +138,20 @@
                 class="daytime"
                 :class="{
                   weekend: isWeekend(year, month, day),
-                  selected: isDaySelected(person.id, year, month, day)
+                  selected: isSelected(person.id, { year, month, day })
                 }"
                 v-for="day in dayRange"
               >
-                <router-link
-                  v-if="dayDuration(day, person.id) > 0"
-                  class="duration"
-                  :to="getDayDetailRoute(person, year, month, day)"
-                >
-                  {{ dayDuration(day, person.id) }}
-                </router-link>
-                <template v-else-if="isDayOff(person.id, day)">
+                <template v-if="isDayOff(person.id, day)">
                   {{ $t('timesheets.off').toUpperCase() }}
                 </template>
+                <router-link
+                  v-else-if="duration(day, person.id) > 0"
+                  class="duration"
+                  :to="getDetailRoute(person, { year, month, day })"
+                >
+                  {{ duration(day, person.id) }}
+                </router-link>
                 <template v-else> - </template>
               </td>
             </template>
@@ -179,17 +169,19 @@
   </div>
 </template>
 
-<script>
+<script setup>
+// Imports
 import moment from 'moment-timezone'
-import { mapGetters } from 'vuex'
+import { computed, nextTick, useTemplateRef, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { useStore } from 'vuex'
 
-import { domMixin } from '@/components/mixins/dom'
-import { grabListMixin } from '@/components/mixins/grablist'
+import { useGrabList } from '@/composables/grabList'
 import {
   formatDisplayDate,
+  getDayRange,
   getMonthRange,
   getWeekRange,
-  getDayRange,
   hoursToDays,
   monthToString,
   range
@@ -199,286 +191,102 @@ import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
 import PeopleName from '@/components/widgets/PeopleName.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
 
-export default {
-  name: 'people-timesheet-list',
+// Composables
+const route = useRoute()
+const store = useStore()
+const bodyRef = useTemplateRef('body')
+const { startBrowsing } = useGrabList(bodyRef)
 
-  mixins: [domMixin, grabListMixin],
+// Props
+const props = defineProps({
+  timesheet: { type: Object, default: () => ({}) },
+  people: { type: Array, default: () => [] },
+  detailLevel: { type: String, default: 'day' },
+  year: { type: Number, default: 0 },
+  month: { type: Number, default: 0 },
+  unit: { type: String, default: 'hour' },
+  isLoading: { type: Boolean, default: false },
+  isError: { type: Boolean, default: false }
+})
 
-  components: {
-    PeopleAvatar,
-    PeopleName,
-    TableInfo
-  },
+// State
+// --------------------------------------------------------------------------
+const currentMonth = moment().month() + 1
+const currentYear = moment().year()
 
-  data() {
-    return {
-      currentMonth: moment().month() + 1,
-      currentYear: moment().year(),
-      domEvents: [
-        ['mousemove', this.onMouseMove],
-        ['touchmove', this.onMouseMove],
-        ['mouseup', this.stopBrowsing],
-        ['mouseleave', this.stopBrowsing],
-        ['touchend', this.stopBrowsing],
-        ['touchcancel', this.stopBrowsing],
-        ['keyup', this.stopBrowsing]
-      ]
-    }
-  },
+// Computed
+// --------------------------------------------------------------------------
+const dateFormat = computed(() => store.getters.dateFormat)
+const dayOffMap = computed(() => store.getters.dayOffMap)
+const organisation = computed(() => store.getters.organisation)
 
-  mounted() {
-    this.addEvents(this.domEvents)
-  },
+const yearRange = computed(() => range(2018, currentYear))
+const monthRange = computed(() =>
+  getMonthRange(props.year, currentYear, currentMonth)
+)
+const weekRange = computed(() => getWeekRange(props.year, currentYear))
+const dayRange = computed(() =>
+  getDayRange(props.year, props.month, currentYear, currentMonth)
+)
 
-  beforeUnmount() {
-    this.removeEvents(this.domEvents)
-    document.body.style.cursor = 'default'
-  },
+// Functions
+// --------------------------------------------------------------------------
+const hours = (index, personId) =>
+  (props.timesheet?.[index]?.[personId] || 0) / 60
 
-  props: {
-    timesheet: {
-      type: Object,
-      default: () => {}
-    },
-
-    people: {
-      type: Array,
-      default: () => []
-    },
-
-    detailLevel: {
-      type: String,
-      default: 'day'
-    },
-
-    year: {
-      type: Number,
-      default: 0
-    },
-
-    month: {
-      type: Number,
-      default: 0
-    },
-
-    unit: {
-      type: String,
-      default: 'hour'
-    },
-
-    isLoading: {
-      type: Boolean,
-      default: false
-    },
-
-    isError: {
-      type: Boolean,
-      default: false
-    }
-  },
-
-  computed: {
-    ...mapGetters(['dateFormat', 'dayOffMap', 'organisation', 'route']),
-
-    yearRange() {
-      return range(2018, moment().year())
-    },
-
-    monthRange() {
-      return getMonthRange(this.year, this.currentYear, this.currentMonth)
-    },
-
-    dayRange() {
-      return getDayRange(
-        this.year,
-        this.month,
-        this.currentYear,
-        this.currentMonth
-      )
-    },
-
-    weekRange() {
-      return getWeekRange(this.year, this.currentYear)
-    },
-
-    isHours() {
-      return this.unit === 'hour'
-    }
-  },
-
-  methods: {
-    monthToString,
-
-    // convert to the selected unit and cap at one decimal, without
-    // padding; empty cells ('-') pass through untouched
-    cellDuration(duration) {
-      if (typeof duration !== 'number') return duration
-      const value = this.isHours
-        ? duration
-        : hoursToDays(this.organisation, duration)
-      return Math.round(value * 10) / 10
-    },
-
-    yearDuration(year, personId) {
-      return this.cellDuration(this.getDuration(`${year}`, personId))
-    },
-
-    monthDuration(month, personId) {
-      return this.cellDuration(this.getDuration(`${month}`, personId))
-    },
-
-    weekDuration(week, personId) {
-      return this.cellDuration(this.getDuration(week, personId))
-    },
-
-    dayDuration(day, personId) {
-      if (this.dayOffMap[personId]?.[`${day}`] === true) {
-        return this.$t('timesheets.off').toUpperCase()
-      }
-      return this.cellDuration(this.getDuration(day, personId))
-    },
-
-    getDuration(index, personId) {
-      if (
-        this.timesheet &&
-        this.timesheet[index] &&
-        this.timesheet[index][personId]
-      ) {
-        return this.timesheet[index][personId] / 60
-      } else {
-        return '-'
-      }
-    },
-
-    isWeekend(year, month, day) {
-      const date = moment(`${year}-${month}-${day}`, 'YYYY-M-D')
-      return [0, 6].includes(date.day())
-    },
-
-    isDaySelected(personId, year, month, day) {
-      return (
-        this.$route.params.person_id &&
-        this.$route.params.person_id === personId &&
-        parseInt(this.$route.params.year) === year &&
-        parseInt(this.$route.params.month) === month &&
-        parseInt(this.$route.params.day) === day
-      )
-    },
-
-    isWeekSelected(personId, year, week) {
-      return (
-        this.$route.params.person_id &&
-        this.$route.params.person_id === personId &&
-        parseInt(this.$route.params.year) === year &&
-        parseInt(this.$route.params.week) === week
-      )
-    },
-
-    isMonthSelected(personId, year, month) {
-      return (
-        this.$route.params.person_id &&
-        this.$route.params.person_id === personId &&
-        parseInt(this.$route.params.year) === year &&
-        parseInt(this.$route.params.month) === month
-      )
-    },
-
-    isYearSelected(personId, year) {
-      return (
-        this.$route.params.person_id &&
-        this.$route.params.person_id === personId &&
-        parseInt(this.$route.params.year) === year
-      )
-    },
-
-    getWeekTitle(week) {
-      const beginning = moment(this.year + '-' + week, 'YYYY-W')
-      const end = beginning.clone().add(6, 'days')
-      return (
-        formatDisplayDate(beginning, this.dateFormat) +
-        ' - ' +
-        formatDisplayDate(end, this.dateFormat)
-      )
-    },
-
-    getYearDetailRoute(person, year) {
-      return {
-        name: 'timesheets-year-person',
-        params: {
-          person_id: person.id,
-          year: year
-        },
-        query: {
-          productionId: this.$route.query.productionId,
-          studioId: this.$route.query.studioId
-        }
-      }
-    },
-
-    getMonthDetailRoute(person, year, month) {
-      return {
-        name: 'timesheets-month-person',
-        params: {
-          person_id: person.id,
-          year: year,
-          month: month
-        },
-        query: {
-          productionId: this.$route.query.productionId,
-          studioId: this.$route.query.studioId
-        }
-      }
-    },
-
-    getWeekDetailRoute(person, year, week) {
-      return {
-        name: 'timesheets-week-person',
-        params: {
-          person_id: person.id,
-          year: year,
-          week: week
-        },
-        query: {
-          productionId: this.$route.query.productionId,
-          studioId: this.$route.query.studioId
-        }
-      }
-    },
-
-    getDayDetailRoute(person, year, month, day) {
-      return {
-        name: 'timesheets-day-person',
-        params: {
-          person_id: person.id,
-          year: year,
-          month: month,
-          day: day
-        },
-        query: {
-          productionId: this.$route.query.productionId,
-          studioId: this.$route.query.studioId
-        }
-      }
-    },
-
-    isDayOff(personId, day) {
-      const dayString = `${day}`.padStart(2, '0')
-      return this.dayOffMap[personId] && this.dayOffMap[personId][dayString]
-    }
-  },
-
-  watch: {
-    route() {
-      if (
-        !document.getElementsByClassName('selected').length &&
-        this.$refs.body
-      ) {
-        // selected element is not visible
-        this.$refs.body.scrollLeft += 350
-      }
-    }
-  }
+// selected unit, one decimal max without padding; empty cells show '-'
+const duration = (index, personId) => {
+  const logged = hours(index, personId)
+  if (!logged) return '-'
+  const value =
+    props.unit === 'hour' ? logged : hoursToDays(organisation.value, logged)
+  return Math.round(value * 10) / 10
 }
+
+const isOvertime = (week, personId) =>
+  hours(week, personId) > 5 * organisation.value.hours_by_day
+
+const isDayOff = (personId, day) =>
+  dayOffMap.value[personId]?.[`${day}`.padStart(2, '0')] === true
+
+const isWeekend = (year, month, day) =>
+  [0, 6].includes(moment(`${year}-${month}-${day}`, 'YYYY-M-D').day())
+
+const isSelected = (personId, params) =>
+  route.params.person_id === personId &&
+  Object.entries(params).every(
+    ([key, value]) => parseInt(route.params[key]) === value
+  )
+
+const getDetailRoute = (person, params) => ({
+  name: `timesheets-${props.detailLevel}-person`,
+  params: { person_id: person.id, ...params },
+  query: {
+    productionId: route.query.productionId,
+    studioId: route.query.studioId
+  }
+})
+
+const getWeekTitle = week => {
+  const beginning = moment(`${props.year}-${week}`, 'YYYY-W')
+  const end = beginning.clone().add(6, 'days')
+  const format = date => formatDisplayDate(date, dateFormat.value)
+  return `${format(beginning)} - ${format(end)}`
+}
+
+// Watchers
+// --------------------------------------------------------------------------
+// opening the side column takes 400px from the wrapper, which can push the
+// clicked cell out of view: wait for the resize, then scroll it back
+watch(
+  () => route.fullPath,
+  async () => {
+    await nextTick()
+    bodyRef.value
+      ?.querySelector('.selected')
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }
+)
 </script>
 
 <style lang="scss" scoped>
@@ -490,16 +298,9 @@ export default {
   width: 100%;
 }
 
-.name {
-  overflow: hidden;
-}
-
 .datatable-body tr:first-child th,
 .datatable-body tr:first-child td {
   border-top: 0;
-}
-.dark .weekend {
-  background-color: $dark-grey;
 }
 
 .dark .duration:hover {
@@ -507,6 +308,7 @@ export default {
 }
 
 .name {
+  overflow: hidden;
   width: 230px;
   min-width: 230px;
 }
@@ -556,8 +358,14 @@ a:hover {
   }
 }
 
+// translucent so the cell keeps the row striping and the hover colour
+// underneath, in both themes
 .weekend {
-  background-color: $white-grey;
+  background-color: rgba(0, 0, 0, 0.045);
+}
+
+.dark .weekend {
+  background-color: rgba(0, 0, 0, 0.16);
 }
 
 .duration:hover {
