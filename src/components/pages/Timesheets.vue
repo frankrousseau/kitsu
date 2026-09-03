@@ -136,6 +136,7 @@ const people = computed(() => store.getters.people)
 const personMap = computed(() => store.getters.personMap)
 const productions = computed(() => store.getters.productions)
 const timesheet = computed(() => store.getters.timesheet)
+const firstYear = computed(() => store.getters.firstTimesheetYear)
 
 // The route holds the whole selection: every filter reads it back and writes
 // to it, so there is no local copy to keep in sync.
@@ -221,7 +222,7 @@ const filteredPeople = computed(() =>
 )
 
 const yearOptions = computed(() =>
-  range(2018, moment().year()).map(year => ({
+  range(firstYear.value, moment().year()).map(year => ({
     label: `${year}`,
     value: year
   }))

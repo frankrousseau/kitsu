@@ -219,8 +219,9 @@ const currentYear = moment().year()
 const dateFormat = computed(() => store.getters.dateFormat)
 const dayOffMap = computed(() => store.getters.dayOffMap)
 const organisation = computed(() => store.getters.organisation)
+const firstYear = computed(() => store.getters.firstTimesheetYear)
 
-const yearRange = computed(() => range(2018, currentYear))
+const yearRange = computed(() => range(firstYear.value, currentYear))
 const monthRange = computed(() =>
   getMonthRange(props.year, currentYear, currentMonth)
 )
