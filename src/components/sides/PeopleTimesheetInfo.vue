@@ -20,6 +20,10 @@
     </div>
     <div class="info-date" v-else>{{ day }} {{ monthString }} {{ year }}</div>
 
+    <div class="info-total" v-if="!isLoading && !isLoadingError">
+      {{ total }} {{ $t(totalKey, { count: total }) }}
+    </div>
+
     <div class="info-day-off" v-if="level !== 'day'">
       {{ dayOffCount }}
       {{ $t('days_off.nb_days_off', { count: dayOffCount }) }}
@@ -41,8 +45,9 @@ import { XIcon } from 'lucide-vue-next'
 import moment from 'moment-timezone'
 import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useStore } from 'vuex'
 
-import { monthToString } from '@/lib/time'
+import { minutesToDays, monthToString } from '@/lib/time'
 
 import TimeSpentTaskList from '@/components/lists/TimeSpentTaskList.vue'
 import PageTitle from '@/components/widgets/PageTitle.vue'
@@ -51,6 +56,7 @@ import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
 // Composables
 const route = useRoute()
 const router = useRouter()
+const store = useStore()
 
 // Props
 const props = defineProps({
@@ -68,8 +74,25 @@ const props = defineProps({
 
 // Computed
 // --------------------------------------------------------------------------
+const organisation = computed(() => store.getters.organisation)
+
 // the panel only shows on the `timesheets-<level>-person` routes
 const level = computed(() => route.name.split('-')[1])
+
+// selected unit, one decimal max without padding
+const total = computed(() => {
+  const minutes = props.tasks.reduce((sum, task) => sum + task.duration, 0)
+  const value =
+    props.unit === 'hour'
+      ? minutes / 60
+      : minutesToDays(organisation.value, minutes)
+  return Math.round(value * 10) / 10
+})
+
+const totalKey = computed(() =>
+  props.unit === 'hour' ? 'main.hours_spent' : 'main.days_spent'
+)
+
 const monthString = computed(() => monthToString(props.month))
 
 // Monday of the displayed ISO week, as aggregated by the backend
@@ -127,6 +150,11 @@ onBeforeUnmount(() => {
   font-size: 1.5em;
   margin-top: 1em;
   text-transform: capitalize;
+}
+
+.info-total {
+  font-weight: bold;
+  margin-top: 0.5em;
 }
 
 .close {
