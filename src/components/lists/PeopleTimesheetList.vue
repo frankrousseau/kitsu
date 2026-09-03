@@ -84,6 +84,7 @@
                 <router-link
                   v-if="duration(year, person.id) > 0"
                   class="duration"
+                  :class="{ warning: isOvertime(year, person.id) }"
                   :to="getDetailRoute(person, { year })"
                 >
                   {{ duration(year, person.id) }}
@@ -103,6 +104,7 @@
                 <router-link
                   v-if="duration(month, person.id) > 0"
                   class="duration"
+                  :class="{ warning: isOvertime(month, person.id) }"
                   :to="getDetailRoute(person, { year, month })"
                 >
                   {{ duration(month, person.id) }}
@@ -148,6 +150,7 @@
                 <router-link
                   v-else-if="duration(day, person.id) > 0"
                   class="duration"
+                  :class="{ warning: isOvertime(day, person.id) }"
                   :to="getDetailRoute(person, { year, month, day })"
                 >
                   {{ duration(day, person.id) }}
@@ -183,6 +186,7 @@ import { useStore } from 'vuex'
 import { useGrabList } from '@/composables/grabList'
 import {
   formatDisplayDate,
+  getBusinessDays,
   getDayRange,
   getMonthRange,
   getWeekRange,
@@ -234,6 +238,32 @@ const dayRange = computed(() =>
   getDayRange(props.year, props.month, currentYear, currentMonth)
 )
 
+// hours a full-time person is expected to log per column: the day rate
+// over the working days the column spans (Monday to Friday, days off
+// ignored, which only makes the threshold more lenient)
+const expectedHours = computed(() => {
+  const hpd = organisation.value.hours_by_day
+  const ranges = {
+    year: yearRange,
+    month: monthRange,
+    week: weekRange,
+    day: dayRange
+  }
+  const expected = index => {
+    if (props.detailLevel === 'day') return hpd
+    if (props.detailLevel === 'week') return 5 * hpd
+    const start =
+      props.detailLevel === 'year'
+        ? moment({ year: index })
+        : moment({ year: props.year, month: index - 1 })
+    const end = start.clone().endOf(props.detailLevel)
+    return getBusinessDays(start, end) * hpd
+  }
+  return Object.fromEntries(
+    ranges[props.detailLevel].value.map(index => [index, expected(index)])
+  )
+})
+
 // Functions
 // --------------------------------------------------------------------------
 const hours = (index, personId) =>
@@ -248,8 +278,8 @@ const duration = (index, personId) => {
   return Math.round(value * 10) / 10
 }
 
-const isOvertime = (week, personId) =>
-  hours(week, personId) > 5 * organisation.value.hours_by_day
+const isOvertime = (index, personId) =>
+  hours(index, personId) > expectedHours.value[index]
 
 const isDayOff = (personId, day) =>
   dayOffMap.value[personId]?.[`${day}`.padStart(2, '0')] === true
@@ -361,11 +391,13 @@ a:hover {
   color: inherit;
 }
 
-.warning {
+// logged hours above the expected ones for the column
+.duration.warning {
+  background: rgba($red, 0.15);
   color: $red;
 
   &:hover {
-    color: red;
+    background: rgba($red, 0.25);
   }
 }
 
