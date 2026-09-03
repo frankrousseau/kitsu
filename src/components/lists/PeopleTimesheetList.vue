@@ -163,7 +163,11 @@
 
     <table-info :is-loading="isLoading" :is-error="isError" variant="grid" />
 
-    <p class="has-text-centered footer-info" v-if="!isLoading">
+    <p class="empty" v-if="!isLoading && !isError && !people.length">
+      {{ $t('timesheets.empty') }}
+    </p>
+
+    <p class="has-text-centered footer-info" v-if="!isLoading && people.length">
       {{ people.length }} {{ $t('people.persons', { count: people.length }) }}
     </p>
   </div>
@@ -304,10 +308,6 @@ watch(
   border-top: 0;
 }
 
-.dark .duration:hover {
-  color: $white;
-}
-
 .name {
   overflow: hidden;
   width: 230px;
@@ -346,6 +346,16 @@ th.actions {
   min-width: auto;
 }
 
+// the admin lists' empty row, kept out of the table so the text stays
+// centered in the viewport when the grid is wider than it
+.empty {
+  color: var(--text);
+  font-size: 1.2rem;
+  font-style: italic;
+  padding-top: 30px;
+  text-align: center;
+}
+
 a,
 a:hover {
   color: inherit;
@@ -360,12 +370,13 @@ a:hover {
 }
 
 // translucent so the cell keeps the row striping and the hover colour
-// underneath, in both themes
-.weekend {
+// underneath, in both themes. The global last-row rule paints cell
+// backgrounds, so the row must be in the selector to win there too
+.datatable-row td.weekend {
   background-color: rgba(0, 0, 0, 0.045);
 }
 
-.dark .weekend {
+.dark .datatable-row td.weekend {
   background-color: rgba(0, 0, 0, 0.16);
 }
 
@@ -375,18 +386,23 @@ a:hover {
 
 .selected .duration {
   background: var(--background-selected);
-  color: var(--text);
 
   &:hover {
     background: var(--background-selected);
-    color: var(--text);
     cursor: default;
   }
 }
 
 .duration {
   border-radius: 0.3em;
+  color: var(--text-strong);
+  font-weight: 600;
+  outline: none;
   padding: 0.5em;
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--background-selectable);
+  }
 }
 
 .selected .duration.warning {

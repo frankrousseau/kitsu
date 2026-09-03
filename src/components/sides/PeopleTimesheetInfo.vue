@@ -2,7 +2,7 @@
   <div class="people-timesheet-info">
     <div class="close">
       <router-link class="close-button" :to="closeRoute">
-        <x-icon />
+        <x-icon :size="16" />
       </router-link>
     </div>
 
@@ -143,7 +143,16 @@ onBeforeUnmount(() => {
 }
 
 .people-timesheet-info {
+  background: var(--background-panel);
+  border-radius: 12px;
+  min-height: 100%;
   padding: 1.5em 1.5em 1em;
+  position: relative;
+
+  // keep the name clear of the floating close button
+  > .flexrow {
+    margin-right: 2em;
+  }
 }
 
 .info-date {
@@ -157,7 +166,20 @@ onBeforeUnmount(() => {
   margin-top: 0.5em;
 }
 
+// out of the flow: a full line for one icon was too much
 .close {
-  text-align: right;
+  position: absolute;
+  right: 0.75em;
+  top: 0.75em;
+}
+
+.close-button {
+  height: 26px;
+  padding-top: 5px;
+  width: 26px;
+
+  &:hover {
+    background: rgba(var(--skeleton-rgb), 0.25);
+  }
 }
 </style>

@@ -2266,6 +2266,7 @@ export default {
     day_off_no_logging: 'No time logging on a day off',
     detail_level: 'Detail level',
     done_tasks: 'Done tasks',
+    empty: 'No time logged for this period with the current filters.',
     export_timesheet: 'Export Timesheet',
     export_timespents: 'Export time spent entries for open productions as a list',
     hours: 'hours',

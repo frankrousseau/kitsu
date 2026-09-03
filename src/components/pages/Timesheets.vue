@@ -350,10 +350,6 @@ useHead({ title: computed(() => `${t('timesheets.title')} - Kitsu`) })
 </script>
 
 <style lang="scss" scoped>
-.dark .side-column {
-  border-color: $dark-grey-lightest;
-}
-
 .data-list {
   margin-top: 0;
 }
@@ -365,13 +361,10 @@ useHead({ title: computed(() => `${t('timesheets.title')} - Kitsu`) })
   padding-bottom: 1em;
 }
 
-.side-column {
-  border-left: 3px solid $light-grey;
-}
-
-.title {
-  margin-right: 1em;
-  white-space: nowrap;
+// the person panel is its own surface: the column only frames it
+.column.side-column {
+  background: transparent;
+  padding: 1em 1em 1em 0;
 }
 
 // measured on the live row: ComboboxStudio deviates on BOTH metrics of
