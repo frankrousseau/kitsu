@@ -19,6 +19,7 @@
                 :key="`year-${year}`"
                 scope="col"
                 class="time year"
+                :class="{ today: isCurrentColumn(year) }"
                 v-for="year in yearRange"
               >
                 {{ year }}
@@ -31,6 +32,7 @@
                 :key="`month-${month}`"
                 scope="col"
                 class="time month"
+                :class="{ today: isCurrentColumn(month) }"
                 v-for="month in monthRange"
               >
                 {{ monthToString(month) }}
@@ -43,6 +45,7 @@
                 :key="`week-${week}`"
                 scope="col"
                 class="daytime"
+                :class="{ today: isCurrentColumn(week) }"
                 :title="getWeekTitle(week)"
                 v-for="week in weekRange"
               >
@@ -56,11 +59,13 @@
                 :key="`day-${day}`"
                 scope="col"
                 class="daytime"
+                :class="{ today: isCurrentColumn(day) }"
                 v-for="day in dayRange"
               >
                 {{ day }}
               </th>
             </template>
+            <th scope="col" class="total">{{ $t('main.total') }}</th>
             <th scope="col" class="actions"></th>
           </tr>
         </thead>
@@ -78,7 +83,10 @@
               <td
                 :key="`year-${year}-${person.id}`"
                 class="time year"
-                :class="{ selected: isSelected(person.id, { year }) }"
+                :class="{
+                  today: isCurrentColumn(year),
+                  selected: isSelected(person.id, { year })
+                }"
                 v-for="year in yearRange"
               >
                 <router-link
@@ -98,7 +106,10 @@
               <td
                 :key="`month-${month}-${person.id}`"
                 class="time month"
-                :class="{ selected: isSelected(person.id, { year, month }) }"
+                :class="{
+                  today: isCurrentColumn(month),
+                  selected: isSelected(person.id, { year, month })
+                }"
                 v-for="month in monthRange"
               >
                 <router-link
@@ -118,7 +129,10 @@
               <td
                 :key="`week-${week}-${person.id}`"
                 class="daytime"
-                :class="{ selected: isSelected(person.id, { year, week }) }"
+                :class="{
+                  today: isCurrentColumn(week),
+                  selected: isSelected(person.id, { year, week })
+                }"
                 v-for="week in weekRange"
               >
                 <router-link
@@ -140,6 +154,7 @@
                 class="daytime"
                 :class="{
                   weekend: isWeekend(year, month, day),
+                  today: isCurrentColumn(day),
                   selected: isSelected(person.id, { year, month, day })
                 }"
                 v-for="day in dayRange"
@@ -158,9 +173,24 @@
                 <template v-else> - </template>
               </td>
             </template>
+            <td class="total">{{ format(personTotals[person.id]) }}</td>
             <td class="actions"></td>
           </tr>
         </tbody>
+        <tfoot class="datatable-foot" v-if="!isLoading && people.length">
+          <tr>
+            <th class="datatable-row-header name">{{ $t('main.total') }}</th>
+            <td
+              :key="`total-${index}`"
+              class="column-total"
+              v-for="index in columnRange"
+            >
+              {{ format(columnTotals[index]) }}
+            </td>
+            <td class="total">{{ format(grandTotal) }}</td>
+            <td class="actions"></td>
+          </tr>
+        </tfoot>
       </table>
     </div>
 
@@ -219,7 +249,9 @@ const props = defineProps({
 
 // State
 // --------------------------------------------------------------------------
+const currentDay = moment().date()
 const currentMonth = moment().month() + 1
+const currentWeek = moment().isoWeek()
 const currentYear = moment().year()
 
 // Computed
@@ -238,17 +270,21 @@ const dayRange = computed(() =>
   getDayRange(props.year, props.month, currentYear, currentMonth)
 )
 
+const columnRange = computed(
+  () =>
+    ({
+      year: yearRange.value,
+      month: monthRange.value,
+      week: weekRange.value,
+      day: dayRange.value
+    })[props.detailLevel]
+)
+
 // hours a full-time person is expected to log per column: the day rate
 // over the working days the column spans (Monday to Friday, days off
 // ignored, which only makes the threshold more lenient)
 const expectedHours = computed(() => {
   const hpd = organisation.value.hours_by_day
-  const ranges = {
-    year: yearRange,
-    month: monthRange,
-    week: weekRange,
-    day: dayRange
-  }
   const expected = index => {
     if (props.detailLevel === 'day') return hpd
     if (props.detailLevel === 'week') return 5 * hpd
@@ -260,7 +296,7 @@ const expectedHours = computed(() => {
     return getBusinessDays(start, end) * hpd
   }
   return Object.fromEntries(
-    ranges[props.detailLevel].value.map(index => [index, expected(index)])
+    columnRange.value.map(index => [index, expected(index)])
   )
 })
 
@@ -270,13 +306,52 @@ const hours = (index, personId) =>
   (props.timesheet?.[index]?.[personId] || 0) / 60
 
 // selected unit, one decimal max without padding; empty cells show '-'
-const duration = (index, personId) => {
-  const logged = hours(index, personId)
-  if (!logged) return '-'
+const format = loggedHours => {
+  if (!loggedHours) return '-'
   const value =
-    props.unit === 'hour' ? logged : hoursToDays(organisation.value, logged)
+    props.unit === 'hour'
+      ? loggedHours
+      : hoursToDays(organisation.value, loggedHours)
   return Math.round(value * 10) / 10
 }
+
+const duration = (index, personId) => format(hours(index, personId))
+
+const personTotals = computed(() =>
+  Object.fromEntries(
+    props.people.map(person => [
+      person.id,
+      columnRange.value.reduce(
+        (total, index) => total + hours(index, person.id),
+        0
+      )
+    ])
+  )
+)
+
+const columnTotals = computed(() =>
+  Object.fromEntries(
+    columnRange.value.map(index => [
+      index,
+      props.people.reduce((total, person) => total + hours(index, person.id), 0)
+    ])
+  )
+)
+
+const grandTotal = computed(() =>
+  Object.values(columnTotals.value).reduce((sum, total) => sum + total, 0)
+)
+
+const isCurrentColumn = index =>
+  ({
+    year: index === currentYear,
+    month: props.year === currentYear && index === currentMonth,
+    week: props.year === currentYear && index === currentWeek,
+    day:
+      props.year === currentYear &&
+      props.month === currentMonth &&
+      index === currentDay
+  })[props.detailLevel]
 
 const isOvertime = (index, personId) =>
   hours(index, personId) > expectedHours.value[index]
@@ -376,6 +451,29 @@ th.actions {
   min-width: auto;
 }
 
+.total,
+.column-total {
+  font-weight: 600;
+  text-align: center;
+  vertical-align: middle;
+}
+
+// the total column closes the grid, the daily columns keep scrolling
+.total {
+  border-left: 1px solid var(--border);
+  width: 80px;
+  min-width: 80px;
+}
+
+.datatable-foot {
+  th,
+  td {
+    background-color: var(--background-alt);
+    border-top: 1px solid var(--border);
+    font-weight: 600;
+  }
+}
+
 // the admin lists' empty row, kept out of the table so the text stays
 // centered in the viewport when the grid is wider than it
 .empty {
@@ -410,6 +508,16 @@ a:hover {
 
 .dark .datatable-row td.weekend {
   background-color: rgba(0, 0, 0, 0.16);
+}
+
+// after the weekend rule so that a weekend day still reads as today
+.datatable-row td.today,
+th.today {
+  background-color: rgba($green, 0.08);
+}
+
+th.today {
+  color: $green;
 }
 
 .duration:hover {
