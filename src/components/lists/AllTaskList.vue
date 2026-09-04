@@ -46,12 +46,12 @@
           <tr
             :key="task.id"
             class="task-line datatable-row"
-            :class="{ selected: selectionGrid[task.id] }"
+            :class="{ selected: selectedTaskId === task.id }"
             role="button"
             tabindex="0"
-            @click="selectTask(index, task)"
-            @keydown.enter.prevent="selectTask(index, task)"
-            v-for="(task, index) in tasks"
+            @click="selectTask(task)"
+            @keydown.enter.prevent="selectTask(task)"
+            v-for="task in tasks"
           >
             <td class="project">
               <production-name-cell
@@ -196,8 +196,7 @@ const emit = defineEmits(['more-clicked', 'task-selected'])
 
 // State
 // --------------------------------------------------------------------------
-const lastSelection = ref(null)
-const selectionGrid = ref({})
+const selectedTaskId = ref(null)
 
 // Computed
 // --------------------------------------------------------------------------
@@ -239,28 +238,26 @@ const onKeyDown = event => {
       : 0
   if (delta === 0) return
   const { length } = props.tasks
-  const index = ((lastSelection.value || 0) + delta + length) % length
-  selectTask(index, props.tasks[index])
+  const current = props.tasks.findIndex(({ id }) => id === selectedTaskId.value)
+  const index = (Math.max(current, 0) + delta + length) % length
+  selectTask(props.tasks[index])
   pauseEvent(event)
 }
 
-const selectTask = (index, task) => {
-  const isSelected = selectionGrid.value[task.id]
-  const isManySelection = Object.keys(selectionGrid.value).length > 1
+const selectTask = task => {
+  const wasSelected = selectedTaskId.value === task.id
   store.dispatch('clearSelectedTasks', { task })
   resetSelection()
 
-  if (!isSelected || isManySelection) {
+  if (!wasSelected) {
     store.dispatch('addSelectedTask', { task })
     emit('task-selected', task)
-    selectionGrid.value[task.id] = true
-    lastSelection.value = index
+    selectedTaskId.value = task.id
   }
 }
 
 const resetSelection = () => {
-  selectionGrid.value = {}
-  lastSelection.value = null
+  selectedTaskId.value = null
 }
 
 // Watchers
