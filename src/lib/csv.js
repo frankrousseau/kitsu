@@ -17,6 +17,7 @@ const csv = {
     timesheet,
     people,
     unit,
+    dailyRates = {},
     organisation,
     detailLevel,
     todayYear,
@@ -40,7 +41,8 @@ const csv = {
       detailLevel,
       headers,
       people,
-      timesheet
+      timesheet,
+      dailyRates
     )
     csv.buildCsvFile(name, entries)
   },
@@ -83,18 +85,26 @@ const csv = {
     detailLevel,
     headers,
     people,
-    timesheet
+    timesheet,
+    dailyRates = {}
   ) {
     const entries = [headers]
+    // hours, days, or the salary they represent at the person's daily rate
+    const convert = (person, minutes) => {
+      const hours = minutes / 60
+      if (unit === 'hour') return hours
+      const days = hoursToDays(organisation, hours)
+      return unit === 'salary'
+        ? Math.round(days * (dailyRates[person.id] || 0))
+        : days
+    }
     people.forEach(person => {
       const line = [person.full_name]
       if (detailLevel === 'year') {
         headers.forEach((h, index) => {
           if (index > 0) {
             if (timesheet[h] && timesheet[h][person.id]) {
-              let value = timesheet[h][person.id] / 60
-              if (unit !== 'hour') value = hoursToDays(organisation, value)
-              line.push(value)
+              line.push(convert(person, timesheet[h][person.id]))
             } else {
               line.push('-')
             }
@@ -104,9 +114,7 @@ const csv = {
         headers.forEach((h, index) => {
           if (index > 0) {
             if (timesheet && timesheet[index] && timesheet[index][person.id]) {
-              let value = timesheet[index][person.id] / 60
-              if (unit !== 'hour') value = hoursToDays(organisation, value)
-              line.push(value)
+              line.push(convert(person, timesheet[index][person.id]))
             } else {
               line.push('-')
             }

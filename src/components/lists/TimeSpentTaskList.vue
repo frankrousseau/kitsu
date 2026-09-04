@@ -51,6 +51,7 @@ import { firstBy } from 'thenby'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 
+import { formatAmount } from '@/lib/number'
 import { getTaskPath as buildTaskPath } from '@/lib/path'
 import { sortByName } from '@/lib/sorting'
 import { hoursToDays } from '@/lib/time'
@@ -67,12 +68,14 @@ const props = defineProps({
   tasks: { type: Array, default: () => [] },
   isLoading: { type: Boolean, default: false },
   isError: { type: Boolean, default: false },
-  unit: { type: String, default: 'hour' }
+  unit: { type: String, default: 'hour' },
+  dailyRate: { type: Number, default: 0 }
 })
 
 // Computed
 // --------------------------------------------------------------------------
 const organisation = computed(() => store.getters.organisation)
+const use12HourClock = computed(() => store.getters.use12HourClock)
 const productionMap = computed(() => store.getters.productionMap)
 const taskTypeMap = computed(() => store.getters.taskTypeMap)
 
@@ -125,12 +128,15 @@ const entityName = task => {
   return task.episode_name ? `${task.episode_name} / ${name}` : name
 }
 
-// selected unit, one decimal max without padding
+// selected unit, one decimal max without padding; salaries in whole units
 const duration = task => {
   const hours = task.duration / 60
-  const value =
-    props.unit === 'hour' ? hours : hoursToDays(organisation.value, hours)
-  return Math.round(value * 10) / 10
+  if (props.unit === 'hour') return Math.round(hours * 10) / 10
+  const days = hoursToDays(organisation.value, hours)
+  if (props.unit === 'salary') {
+    return formatAmount(days * props.dailyRate, use12HourClock.value)
+  }
+  return Math.round(days * 10) / 10
 }
 
 // closed productions have no task page: the empty target resolves to the

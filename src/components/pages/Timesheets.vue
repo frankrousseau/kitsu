@@ -97,6 +97,7 @@
           :month="currentMonth"
           :year="currentYear"
           :unit="unit"
+          :daily-rates="dailyRates"
           :is-loading="isLoading"
           :is-error="isLoadingError"
         />
@@ -111,6 +112,7 @@
         :week="currentWeek"
         :day="currentDay"
         :unit="unit"
+        :daily-rate="dailyRates[currentPerson.id] || 0"
         :is-loading="isInfoLoading"
         :is-loading-error="isInfoLoadingError"
         :tasks="tasks"
@@ -155,6 +157,7 @@ const store = useStore()
 // State
 // --------------------------------------------------------------------------
 const dayOffs = ref([])
+const salaryScale = ref(null)
 const showFilters = ref(false)
 const isInfoLoading = ref(false)
 const isInfoLoadingError = ref(false)
@@ -221,7 +224,10 @@ const studioId = computed({
 // the remaining filters live in the query too, so a reload or a shared
 // link keeps them; defaults are left out of the URL
 const unit = computed({
-  get: () => route.query.unit ?? 'hour',
+  get: () => {
+    const known = unitOptions.value.map(option => option.value)
+    return known.includes(route.query.unit) ? route.query.unit : 'hour'
+  },
   set: value => pushQuery('unit', value === 'hour' ? '' : value)
 })
 
@@ -258,10 +264,33 @@ const peopleOptions = computed(() => [
   { label: t('main.all'), value: 'all' }
 ])
 
+// the salary unit reads the salary data, which only admins may
 const unitOptions = computed(() => [
   { label: t('main.hour'), value: 'hour' },
-  { label: t('main.day'), value: 'day' }
+  { label: t('main.day'), value: 'day' },
+  ...(isCurrentUserAdmin.value
+    ? [{ label: t('timesheets.salary'), value: 'salary' }]
+    : [])
 ])
+
+// the rate set on the person, else the salary scale entry of the first of
+// their departments that has one for their position and seniority
+const dailyRates = computed(() =>
+  Object.fromEntries(
+    people.value.map(person => [
+      person.id,
+      person.daily_salary ||
+        (person.departments ?? [])
+          .map(
+            id =>
+              salaryScale.value?.[id]?.[person.position]?.[person.seniority]
+                ?.salary
+          )
+          .find(Boolean) ||
+        0
+    ])
+  )
+)
 
 const productionList = computed(() => {
   const productionOptions = sortByName([...productions.value]).map(
@@ -380,6 +409,7 @@ const exportTimesheet = () => {
     timesheet: timesheet.value,
     people: filteredPeople.value,
     unit: unit.value,
+    dailyRates: dailyRates.value,
     organisation: organisation.value,
     detailLevel: detailLevel.value,
     todayYear: currentYear.value,
@@ -417,6 +447,17 @@ watch(
 
 // Lifecycle
 // --------------------------------------------------------------------------
+// the salary scale is only needed, and only readable, for the salary unit
+watch(
+  unit,
+  async value => {
+    if (value === 'salary' && !salaryScale.value) {
+      salaryScale.value = await store.dispatch('loadSalaryScale')
+    }
+  },
+  { immediate: true }
+)
+
 onMounted(async () => {
   isLoading.value = true
   store.dispatch('loadProductions')

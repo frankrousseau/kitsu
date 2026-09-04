@@ -29,8 +29,10 @@
       <div class="info-stat" :title="expectedTitle" v-if="!isLoadingError">
         <span class="info-stat-value" :class="{ skeleton: isLoading }">
           <template v-if="!isLoading">
-            <span :class="{ warning: total > expected }">{{ total }}</span>
-            <span class="info-stat-expected">/ {{ expected }}</span>
+            <span :class="{ warning: total > expected }">{{
+              format(total)
+            }}</span>
+            <span class="info-stat-expected">/ {{ format(expected) }}</span>
           </template>
         </span>
         <span class="info-stat-label">{{
@@ -51,6 +53,7 @@
       :is-loading="isLoading"
       :is-error="isLoadingError"
       :unit="unit"
+      :daily-rate="dailyRate"
     />
   </div>
 </template>
@@ -64,12 +67,8 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
-import {
-  getBusinessDays,
-  hoursToDays,
-  minutesToDays,
-  monthToString
-} from '@/lib/time'
+import { formatAmount } from '@/lib/number'
+import { getBusinessDays, hoursToDays, monthToString } from '@/lib/time'
 
 import TimeSpentTaskList from '@/components/lists/TimeSpentTaskList.vue'
 import PageTitle from '@/components/widgets/PageTitle.vue'
@@ -92,28 +91,42 @@ const props = defineProps({
   isLoadingError: { type: Boolean, default: false },
   tasks: { type: Array, default: () => [] },
   dayOffs: { type: Array, default: () => [] },
-  unit: { type: String, default: 'hour' }
+  unit: { type: String, default: 'hour' },
+  dailyRate: { type: Number, default: 0 }
 })
 
 // Computed
 // --------------------------------------------------------------------------
 const organisation = computed(() => store.getters.organisation)
+const use12HourClock = computed(() => store.getters.use12HourClock)
 
 // the panel only shows on the `timesheets-<level>-person` routes
 const level = computed(() => route.name.split('-')[1])
 
-// selected unit, one decimal max without padding
-const total = computed(() => {
-  const minutes = props.tasks.reduce((sum, task) => sum + task.duration, 0)
-  const value =
-    props.unit === 'hour'
-      ? minutes / 60
-      : minutesToDays(organisation.value, minutes)
-  return Math.round(value * 10) / 10
-})
+// hours into the selected unit: days, or their salary at the daily rate
+const convert = hours => {
+  if (props.unit === 'hour') return hours
+  const days = hoursToDays(organisation.value, hours)
+  return props.unit === 'salary' ? days * props.dailyRate : days
+}
 
-const totalKey = computed(() =>
-  props.unit === 'hour' ? 'main.hours_spent' : 'main.days_spent'
+// one decimal max without padding, whole units of currency
+const format = value =>
+  props.unit === 'salary'
+    ? formatAmount(value, use12HourClock.value)
+    : Math.round(value * 10) / 10
+
+const total = computed(() =>
+  convert(props.tasks.reduce((sum, task) => sum + task.duration, 0) / 60)
+)
+
+const totalKey = computed(
+  () =>
+    ({
+      hour: 'main.hours_spent',
+      day: 'main.days_spent',
+      salary: 'timesheets.in_salary'
+    })[props.unit]
 )
 
 const monthString = computed(() => monthToString(props.month))
@@ -152,17 +165,17 @@ const dayOffCount = computed(() => businessDays.value - workingDays.value)
 
 // what a full-time person logs over the working days of the period, in
 // the selected unit
-const expected = computed(() => {
-  const hours = workingDays.value * organisation.value.hours_by_day
-  const value =
-    props.unit === 'hour' ? hours : hoursToDays(organisation.value, hours)
-  return Math.round(value * 10) / 10
-})
+const expected = computed(() =>
+  convert(workingDays.value * organisation.value.hours_by_day)
+)
 
 const expectedTitle = computed(() => {
-  const key =
-    props.unit === 'hour' ? 'main.hours_expected' : 'main.days_expected'
-  return `${expected.value} ${t(key, { count: expected.value })}`
+  const key = {
+    hour: 'main.hours_expected',
+    day: 'main.days_expected',
+    salary: 'timesheets.expected'
+  }[props.unit]
+  return `${format(expected.value)} ${t(key, { count: expected.value })}`
 })
 
 const closeRoute = computed(() => {

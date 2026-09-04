@@ -92,7 +92,7 @@
                 v-for="year in yearRange"
               >
                 <router-link
-                  v-if="duration(year, person.id) > 0"
+                  v-if="hours(year, person.id) > 0"
                   class="duration"
                   :class="{ warning: isOvertime(year, person.id) }"
                   :title="getCellTitle(year, person.id)"
@@ -117,7 +117,7 @@
                 v-for="month in monthRange"
               >
                 <router-link
-                  v-if="duration(month, person.id) > 0"
+                  v-if="hours(month, person.id) > 0"
                   class="duration"
                   :class="{ warning: isOvertime(month, person.id) }"
                   :title="getCellTitle(month, person.id)"
@@ -142,7 +142,7 @@
                 v-for="week in weekRange"
               >
                 <router-link
-                  v-if="duration(week, person.id) > 0"
+                  v-if="hours(week, person.id) > 0"
                   class="duration"
                   :class="{ warning: isOvertime(week, person.id) }"
                   :title="getCellTitle(week, person.id)"
@@ -171,7 +171,7 @@
                   {{ $t('timesheets.off').toUpperCase() }}
                 </span>
                 <router-link
-                  v-else-if="duration(day, person.id) > 0"
+                  v-else-if="hours(day, person.id) > 0"
                   class="duration"
                   :class="{ warning: isOvertime(day, person.id) }"
                   :title="getCellTitle(day, person.id)"
@@ -183,7 +183,7 @@
               </td>
             </template>
             <td class="total" :data-label="$t('main.total')">
-              {{ format(personTotals[person.id]) }}
+              {{ personTotals[person.id] }}
             </td>
             <td class="actions"></td>
           </tr>
@@ -195,7 +195,7 @@
               :data-label="columnLabel(index)"
               v-for="index in columnRange"
             >
-              {{ format(columnTotals[index]) }}
+              {{ columnTotals[index] }}
             </td>
             <td class="total"></td>
             <td class="actions"></td>
@@ -226,6 +226,7 @@ import { useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 
 import { useGrabList } from '@/composables/grabList'
+import { formatAmount } from '@/lib/number'
 import {
   formatDisplayDate,
   getBusinessDays,
@@ -256,6 +257,7 @@ const props = defineProps({
   year: { type: Number, default: 0 },
   month: { type: Number, default: 0 },
   unit: { type: String, default: 'hour' },
+  dailyRates: { type: Object, default: () => ({}) },
   isLoading: { type: Boolean, default: false },
   isError: { type: Boolean, default: false }
 })
@@ -272,6 +274,7 @@ const currentYear = moment().year()
 const dateFormat = computed(() => store.getters.dateFormat)
 const dayOffMap = computed(() => store.getters.dayOffMap)
 const organisation = computed(() => store.getters.organisation)
+const use12HourClock = computed(() => store.getters.use12HourClock)
 const firstYear = computed(() => store.getters.firstTimesheetYear)
 
 const yearRange = computed(() => range(firstYear.value, currentYear))
@@ -318,13 +321,24 @@ const expectedHours = computed(() => {
 const hours = (index, personId) =>
   (props.timesheet?.[index]?.[personId] || 0) / 60
 
-// selected unit, one decimal max without padding; empty cells show '-'
-const format = loggedHours => {
-  if (!loggedHours) return '-'
-  const value =
-    props.unit === 'hour'
-      ? loggedHours
-      : hoursToDays(organisation.value, loggedHours)
+// the cell figure in the selected unit: hours, days, or the salary they
+// represent at the person's daily rate
+const amount = (index, personId) => {
+  const logged = hours(index, personId)
+  if (props.unit === 'hour') return logged
+  const days = hoursToDays(organisation.value, logged)
+  return props.unit === 'salary'
+    ? days * (props.dailyRates[personId] || 0)
+    : days
+}
+
+// one decimal max without padding, whole units of currency. Cells with no
+// time show '-': logged time at no rate reads as a 0 salary
+const format = (value, logged = value) => {
+  if (!logged) return '-'
+  if (props.unit === 'salary') {
+    return formatAmount(value, use12HourClock.value)
+  }
   return Math.round(value * 10) / 10
 }
 
@@ -332,16 +346,20 @@ const format = loggedHours => {
 const columnLabel = index =>
   props.detailLevel === 'month' ? monthToString(index) : index
 
-const duration = (index, personId) => format(hours(index, personId))
+const duration = (index, personId) =>
+  format(amount(index, personId), hours(index, personId))
+
+const sumRow = (personId, cell) =>
+  columnRange.value.reduce((total, index) => total + cell(index, personId), 0)
+
+const sumColumn = (index, cell) =>
+  props.people.reduce((total, person) => total + cell(index, person.id), 0)
 
 const personTotals = computed(() =>
   Object.fromEntries(
-    props.people.map(person => [
-      person.id,
-      columnRange.value.reduce(
-        (total, index) => total + hours(index, person.id),
-        0
-      )
+    props.people.map(({ id }) => [
+      id,
+      format(sumRow(id, amount), sumRow(id, hours))
     ])
   )
 )
@@ -350,13 +368,13 @@ const columnTotals = computed(() =>
   Object.fromEntries(
     columnRange.value.map(index => [
       index,
-      props.people.reduce((total, person) => total + hours(index, person.id), 0)
+      format(sumColumn(index, amount), sumColumn(index, hours))
     ])
   )
 )
 
 const grandTotal = computed(() =>
-  Object.values(columnTotals.value).reduce((sum, total) => sum + total, 0)
+  columnRange.value.reduce((sum, index) => sum + sumColumn(index, amount), 0)
 )
 
 // the cell formatter shows '-' for zero, the footer wants a number
@@ -364,20 +382,33 @@ const grandTotalLabel = computed(() =>
   grandTotal.value ? format(grandTotal.value) : 0
 )
 
-const totalKey = computed(() =>
-  props.unit === 'hour' ? 'main.hours_spent' : 'main.days_spent'
+// the titles keep talking time when the cells show salaries
+const titleUnit = computed(() => (props.unit === 'day' ? 'day' : 'hour'))
+
+const spentKey = computed(() =>
+  titleUnit.value === 'hour' ? 'main.hours_spent' : 'main.days_spent'
 )
 
 const expectedKey = computed(() =>
-  props.unit === 'hour' ? 'main.hours_expected' : 'main.days_expected'
+  titleUnit.value === 'hour' ? 'main.hours_expected' : 'main.days_expected'
+)
+
+const totalKey = computed(() =>
+  props.unit === 'salary' ? 'timesheets.in_salary' : spentKey.value
 )
 
 // says why a cell is red, and how far the others are from it
 const getCellTitle = (index, personId) => {
-  const logged = format(hours(index, personId))
-  const expected = format(expectedHours.value[index])
+  const inTitleUnit = value =>
+    Math.round(
+      (titleUnit.value === 'day'
+        ? hoursToDays(organisation.value, value)
+        : value) * 10
+    ) / 10
+  const logged = inTitleUnit(hours(index, personId))
+  const expected = inTitleUnit(expectedHours.value[index])
   return [
-    `${logged} ${t(totalKey.value, { count: logged })}`,
+    `${logged} ${t(spentKey.value, { count: logged })}`,
     `${expected} ${t(expectedKey.value, { count: expected })}`
   ].join(', ')
 }
