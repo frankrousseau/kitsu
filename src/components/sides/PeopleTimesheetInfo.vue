@@ -68,7 +68,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
 import { formatAmount } from '@/lib/number'
-import { getBusinessDays, hoursToDays, monthToString } from '@/lib/time'
+import { getBusinessDays, monthToString } from '@/lib/time'
+import { convertHours } from '@/lib/timesheet'
 
 import TimeSpentTaskList from '@/components/lists/TimeSpentTaskList.vue'
 import PageTitle from '@/components/widgets/PageTitle.vue'
@@ -103,12 +104,8 @@ const use12HourClock = computed(() => store.getters.use12HourClock)
 // the panel only shows on the `timesheets-<level>-person` routes
 const level = computed(() => route.name.split('-')[1])
 
-// hours into the selected unit: days, or their salary at the daily rate
-const convert = hours => {
-  if (props.unit === 'hour') return hours
-  const days = hoursToDays(organisation.value, hours)
-  return props.unit === 'salary' ? days * props.dailyRate : days
-}
+const convert = hours =>
+  convertHours(hours, props.unit, organisation.value, props.dailyRate)
 
 // one decimal max without padding, whole units of currency
 const format = value =>

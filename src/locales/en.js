@@ -2261,6 +2261,7 @@ export default {
   },
 
   timesheets: {
+    chart: 'Time chart',
     confirm_day_off: 'Setting this day as a day off will erase all time logged for the current day. Are you sure you want to continue?',
     confirm_day_offs: 'Setting these days as days off will erase all time logged for the affected days. Are you sure you want to continue?',
     confirm_unset_day_offs: 'Days off are currently applied from {start} to {end}. Are you sure you want to remove this period?',

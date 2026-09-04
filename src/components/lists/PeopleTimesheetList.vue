@@ -237,6 +237,7 @@ import {
   monthToString,
   range
 } from '@/lib/time'
+import { convertHours } from '@/lib/timesheet'
 
 import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
 import PeopleName from '@/components/widgets/PeopleName.vue'
@@ -323,14 +324,13 @@ const hours = (index, personId) =>
 
 // the cell figure in the selected unit: hours, days, or the salary they
 // represent at the person's daily rate
-const amount = (index, personId) => {
-  const logged = hours(index, personId)
-  if (props.unit === 'hour') return logged
-  const days = hoursToDays(organisation.value, logged)
-  return props.unit === 'salary'
-    ? days * (props.dailyRates[personId] || 0)
-    : days
-}
+const amount = (index, personId) =>
+  convertHours(
+    hours(index, personId),
+    props.unit,
+    organisation.value,
+    props.dailyRates[personId]
+  )
 
 // one decimal max without padding, whole units of currency. Cells with no
 // time show '-': logged time at no rate reads as a 0 salary

@@ -54,7 +54,7 @@ import { useStore } from 'vuex'
 import { formatAmount } from '@/lib/number'
 import { getTaskPath as buildTaskPath } from '@/lib/path'
 import { sortByName } from '@/lib/sorting'
-import { hoursToDays } from '@/lib/time'
+import { convertHours } from '@/lib/timesheet'
 
 import ProductionName from '@/components/widgets/ProductionName.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
@@ -130,13 +130,15 @@ const entityName = task => {
 
 // selected unit, one decimal max without padding; salaries in whole units
 const duration = task => {
-  const hours = task.duration / 60
-  if (props.unit === 'hour') return Math.round(hours * 10) / 10
-  const days = hoursToDays(organisation.value, hours)
-  if (props.unit === 'salary') {
-    return formatAmount(days * props.dailyRate, use12HourClock.value)
-  }
-  return Math.round(days * 10) / 10
+  const value = convertHours(
+    task.duration / 60,
+    props.unit,
+    organisation.value,
+    props.dailyRate
+  )
+  return props.unit === 'salary'
+    ? formatAmount(value, use12HourClock.value)
+    : Math.round(value * 10) / 10
 }
 
 // closed productions have no task page: the empty target resolves to the

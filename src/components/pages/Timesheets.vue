@@ -38,6 +38,13 @@
             />
             <div class="filler"></div>
             <button-simple
+              class="flexrow-item chart-button"
+              icon="chart-column"
+              :active="showChart"
+              :title="$t('timesheets.chart')"
+              @click="showChart = !showChart"
+            />
+            <button-simple
               class="flexrow-item"
               :title="$t('timesheets.export_timesheet')"
               icon="export"
@@ -89,6 +96,19 @@
           </div>
         </div>
 
+        <timesheet-chart
+          class="data-list"
+          :people="filteredPeople"
+          :timesheet="timesheet"
+          :detail-level="detailLevel"
+          :month="currentMonth"
+          :year="currentYear"
+          :unit="unit"
+          :daily-rates="dailyRates"
+          :is-loading="isLoading"
+          :is-error="isLoadingError"
+          v-if="showChart"
+        />
         <people-timesheet-list
           class="data-list"
           :people="filteredPeople"
@@ -100,6 +120,7 @@
           :daily-rates="dailyRates"
           :is-loading="isLoading"
           :is-error="isLoadingError"
+          v-else
         />
       </div>
     </div>
@@ -146,6 +167,7 @@ import ComboboxDepartment from '@/components/widgets/ComboboxDepartment.vue'
 import ComboboxProduction from '@/components/widgets/ComboboxProduction.vue'
 import ComboboxStudio from '@/components/widgets/ComboboxStudio.vue'
 import PeopleField from '@/components/widgets/PeopleField.vue'
+import TimesheetChart from '@/components/widgets/TimesheetChart.vue'
 
 // Composables
 // --------------------------------------------------------------------------
@@ -244,6 +266,11 @@ const peopleFilter = computed({
 const selectedPerson = computed({
   get: () => personMap.value.get(route.query.personId) ?? null,
   set: person => pushQuery('personId', person?.id ?? '')
+})
+
+const showChart = computed({
+  get: () => route.query.view === 'chart',
+  set: value => pushQuery('view', value ? 'chart' : '')
 })
 
 const showInfo = computed(() => Boolean(route.params.person_id))

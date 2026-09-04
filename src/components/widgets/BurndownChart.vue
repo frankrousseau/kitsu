@@ -52,8 +52,8 @@ import { Chart } from 'chart.js'
 import moment from 'moment-timezone'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useStore } from 'vuex'
 
+import { useChartTheme } from '@/composables/chartTheme'
 import { useFormat } from '@/composables/format'
 import { hoursToDays } from '@/lib/time'
 
@@ -112,7 +112,7 @@ Chart.register({
 
 // Composables
 const { t } = useI18n()
-const store = useStore()
+const { font, theme } = useChartTheme()
 const { organisation } = useFormat()
 
 // Props
@@ -130,27 +130,6 @@ const today = moment().format('YYYY-MM-DD')
 
 // Computed
 // --------------------------------------------------------------------------
-const isDarkTheme = computed(() => store.getters.isDarkTheme)
-
-// the canvas cannot resolve var(--*) tokens, so the theme values are pinned
-const theme = computed(() =>
-  isDarkTheme.value
-    ? {
-        fillTop: 'rgba(0, 178, 66, 0.28)',
-        fillBottom: 'rgba(0, 178, 66, 0.03)',
-        futureFill: 'rgba(255, 255, 255, 0.04)',
-        grid: 'rgba(255, 255, 255, 0.08)',
-        muted: '#9a9da8'
-      }
-    : {
-        fillTop: 'rgba(0, 178, 66, 0.22)',
-        fillBottom: 'rgba(0, 178, 66, 0.02)',
-        futureFill: 'rgba(0, 0, 0, 0.03)',
-        grid: 'rgba(0, 0, 0, 0.06)',
-        muted: '#7b7e87'
-      }
-)
-
 // the browser locale, not the UI locale: formatDuration and every number
 // in the app already format this way. [1] is the grouping char in every
 // locale that groups; guard the ones that do not, where it is a digit
@@ -319,7 +298,6 @@ const chartData = computed(() => {
 })
 
 const chartLibrary = computed(() => {
-  const font = { family: 'Lato, sans-serif' }
   return {
     maintainAspectRatio: false,
     interaction: { intersect: false, mode: 'index' },

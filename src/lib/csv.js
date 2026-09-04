@@ -4,12 +4,8 @@ import { downloadBlob } from '@/lib/download'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import { getPercentage } from '@/lib/stats'
 import stringHelpers from '@/lib/string'
-import {
-  getDayRange,
-  getMonthRange,
-  getWeekRange,
-  hoursToDays
-} from '@/lib/time'
+import { getDayRange, getMonthRange, getWeekRange } from '@/lib/time'
+import { convertHours } from '@/lib/timesheet'
 
 const csv = {
   generateTimesheet({
@@ -89,14 +85,14 @@ const csv = {
     dailyRates = {}
   ) {
     const entries = [headers]
-    // hours, days, or the salary they represent at the person's daily rate
     const convert = (person, minutes) => {
-      const hours = minutes / 60
-      if (unit === 'hour') return hours
-      const days = hoursToDays(organisation, hours)
-      return unit === 'salary'
-        ? Math.round(days * (dailyRates[person.id] || 0))
-        : days
+      const value = convertHours(
+        minutes / 60,
+        unit,
+        organisation,
+        dailyRates[person.id]
+      )
+      return unit === 'salary' ? Math.round(value) : value
     }
     people.forEach(person => {
       const line = [person.full_name]
