@@ -2276,6 +2276,7 @@ export default {
     timelog_title: 'Timelog',
     title: 'Timesheets',
     unit: 'Unit',
+    with_time_logged: 'With time logged',
     year: 'Year'
   },
 

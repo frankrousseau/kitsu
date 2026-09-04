@@ -2,59 +2,81 @@
   <div class="columns fixed-page">
     <div class="column main-column">
       <div class="timesheets page">
-        <div class="page-header flexrow">
-          <combobox-production
-            class="flexrow-item"
-            :label="$t('main.production')"
-            :production-list="productionList"
-            v-model="productionId"
-          />
-          <combobox-studio
-            class="flexrow-item field"
-            all-studios-label
-            :label="$t('main.studio')"
-            v-model="studioId"
-          />
-          <combobox
-            class="flexrow-item nowrap"
-            :label="$t('timesheets.detail_level')"
-            :options="detailOptions"
-            v-model="detailLevel"
-          />
-          <combobox
-            class="flexrow-item"
-            :label="$t('timesheets.year')"
-            :options="yearOptions"
-            v-model="currentYear"
-            v-if="detailLevel !== 'year'"
-          />
-          <combobox
-            class="flexrow-item"
-            :label="$t('timesheets.month')"
-            :options="monthOptions"
-            v-model="currentMonth"
-            v-if="detailLevel === 'day'"
-          />
-          <combobox
-            class="flexrow-item"
-            :label="$t('timesheets.unit')"
-            :options="unitOptions"
-            v-model="unit"
-          />
-          <div class="filler"></div>
-          <button-simple
-            class="flexrow-item"
-            :title="$t('timesheets.export_timesheet')"
-            icon="export"
-            @click="exportTimesheet"
-          />
-          <button-href-link
-            class="flexrow-item"
-            :title="$t('timesheets.export_timespents')"
-            path="/api/export/csv/time-spents.csv"
-            icon="export-lines"
-            v-if="isCurrentUserAdmin"
-          />
+        <div class="page-header">
+          <div class="filters flexrow">
+            <combobox
+              class="flexrow-item nowrap"
+              :label="$t('timesheets.detail_level')"
+              :options="detailOptions"
+              v-model="detailLevel"
+            />
+            <combobox
+              class="flexrow-item"
+              :label="$t('timesheets.year')"
+              :options="yearOptions"
+              v-model="currentYear"
+              v-if="detailLevel !== 'year'"
+            />
+            <combobox
+              class="flexrow-item"
+              :label="$t('timesheets.month')"
+              :options="monthOptions"
+              v-model="currentMonth"
+              v-if="detailLevel === 'day'"
+            />
+            <combobox
+              class="flexrow-item"
+              :label="$t('timesheets.unit')"
+              :options="unitOptions"
+              v-model="unit"
+            />
+            <combobox
+              class="flexrow-item"
+              :label="$t('main.people')"
+              :options="peopleOptions"
+              v-model="peopleFilter"
+            />
+            <div class="filler"></div>
+            <button-simple
+              class="flexrow-item"
+              :title="$t('timesheets.export_timesheet')"
+              icon="export"
+              @click="exportTimesheet"
+            />
+            <button-href-link
+              class="flexrow-item"
+              :title="$t('timesheets.export_timespents')"
+              path="/api/export/csv/time-spents.csv"
+              icon="export-lines"
+              v-if="isCurrentUserAdmin"
+            />
+          </div>
+          <div class="filters flexrow">
+            <combobox-production
+              class="flexrow-item"
+              :label="$t('main.production')"
+              :production-list="productionList"
+              v-model="productionId"
+            />
+            <combobox-studio
+              class="flexrow-item field"
+              all-studios-label
+              :label="$t('main.studio')"
+              v-model="studioId"
+            />
+            <combobox-department
+              class="flexrow-item field"
+              all-departments-label
+              :label="$t('main.department')"
+              v-model="departmentId"
+            />
+            <people-field
+              class="flexrow-item"
+              :label="$t('main.person')"
+              :people="selectablePeople"
+              v-model="selectedPerson"
+            />
+          </div>
         </div>
 
         <people-timesheet-list
@@ -108,8 +130,10 @@ import PeopleTimesheetInfo from '@/components/sides/PeopleTimesheetInfo.vue'
 import ButtonHrefLink from '@/components/widgets/ButtonHrefLink.vue'
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
 import Combobox from '@/components/widgets/Combobox.vue'
+import ComboboxDepartment from '@/components/widgets/ComboboxDepartment.vue'
 import ComboboxProduction from '@/components/widgets/ComboboxProduction.vue'
 import ComboboxStudio from '@/components/widgets/ComboboxStudio.vue'
+import PeopleField from '@/components/widgets/PeopleField.vue'
 
 // Composables
 // --------------------------------------------------------------------------
@@ -121,6 +145,9 @@ const store = useStore()
 // State
 // --------------------------------------------------------------------------
 const dayOffCount = ref(0)
+const departmentId = ref('')
+const peopleFilter = ref('logged')
+const selectedPerson = ref(null)
 const isInfoLoading = ref(false)
 const isInfoLoadingError = ref(false)
 const isLoading = ref(false)
@@ -197,6 +224,11 @@ const detailOptions = computed(() => [
   { label: t('main.year'), value: 'year' }
 ])
 
+const peopleOptions = computed(() => [
+  { label: t('timesheets.with_time_logged'), value: 'logged' },
+  { label: t('main.all'), value: 'all' }
+])
+
 const unitOptions = computed(() => [
   { label: t('main.hour'), value: 'hour' },
   { label: t('main.day'), value: 'day' }
@@ -213,12 +245,24 @@ const productionList = computed(() => {
   return [{ id: '', name: t('main.all') }, ...productionOptions]
 })
 
-const filteredPeople = computed(() =>
-  people.value.filter(person =>
+// everyone the grid could show, and what the person field offers
+const selectablePeople = computed(() => {
+  const hasLoggedTime = person =>
     Object.values(timesheet.value).some(
       entry => entry?.[person.id] !== undefined
     )
+  return people.value.filter(
+    person =>
+      (hasLoggedTime(person) ||
+        (peopleFilter.value === 'all' && person.active && !person.is_bot)) &&
+      (!departmentId.value || person.departments?.includes(departmentId.value))
   )
+})
+
+const filteredPeople = computed(() =>
+  selectedPerson.value
+    ? selectablePeople.value.filter(({ id }) => id === selectedPerson.value.id)
+    : selectablePeople.value
 )
 
 const yearOptions = computed(() =>
@@ -325,6 +369,15 @@ watch(
   reloadTimesheet
 )
 
+// the person field silently drops a selection that leaves its option list,
+// which would otherwise leave the grid filtered on nobody
+watch(selectablePeople, list => {
+  const { id } = selectedPerson.value ?? {}
+  if (id && !list.some(person => person.id === id)) {
+    selectedPerson.value = null
+  }
+})
+
 watch(
   () => route.fullPath,
   () => {
@@ -351,7 +404,7 @@ useHead({ title: computed(() => `${t('timesheets.title')} - Kitsu`) })
 
 <style lang="scss" scoped>
 .data-list {
-  margin-top: 0;
+  margin-top: 2em;
 }
 
 .timesheets {
@@ -367,16 +420,43 @@ useHead({ title: computed(() => `${t('timesheets.title')} - Kitsu`) })
   padding: 1em 1em 1em 0;
 }
 
-// measured on the live row: ComboboxStudio deviates on BOTH metrics of
-// the centered header row, so both need pinning. Its label takes a 5px
-// padding-top under the field class, and its control renders 38px tall
-// against 42px for the production combo and the Bulma selects.
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5em;
+}
+
+.filters {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  row-gap: 1.5em;
+
+  // the comboboxes carry the Bulma field margin the person field and the
+  // buttons lack, which pushed those 14px down in the centered rows
+  > .flexrow-item {
+    margin-bottom: 0;
+  }
+
+  // the icon buttons render 32px tall: stretch them to the controls and
+  // sit them on the row's bottom edge, under the labels
+  > .button {
+    align-self: flex-end;
+    height: 42px;
+  }
+}
+
+// measured on the live row: ComboboxStudio and ComboboxDepartment deviate
+// on BOTH metrics of the centered header rows, so both need pinning. Their
+// label takes a 5px padding-top under the field class, and their control
+// renders 38px tall against 42px for the production combo and the Bulma
+// selects.
 .page-header :deep(.label) {
   margin-bottom: 5px;
   padding-top: 0;
 }
 
-.page-header :deep(.studio-combo) {
+.page-header :deep(.studio-combo),
+.page-header :deep(.department-combo) {
   display: flex;
   flex-direction: column;
   height: 42px;
