@@ -74,11 +74,11 @@
             <td class="asset-type">
               {{ getParentName(task) }}
             </td>
-            <td class="name">
+            <td class="entity name">
               {{ task.entity_name }}
             </td>
             <task-type-cell
-              class="name"
+              class="task-type name"
               :task-type="taskTypeMap.get(task.task_type_id)"
             />
             <validation-cell
@@ -114,7 +114,11 @@
             <td class="start-date">
               {{ formatDisplayDate(task.start_date) }}
             </td>
-            <td class="due-date" :class="{ error: isLate(task) }">
+            <td
+              class="due-date"
+              :class="{ error: isLate(task) }"
+              :data-label="$t('tasks.fields.due_date')"
+            >
               {{ formatDisplayDate(task.due_date) }}
             </td>
             <td class="done-date">
@@ -385,5 +389,120 @@ td.due-date {
 
 .datatable-row:hover {
   background: var(--background-selectable);
+}
+
+// read-only cards below the tablet breakpoint, like the admin lists
+@media screen and (max-width: 768px) {
+  .datatable-wrapper {
+    background: transparent;
+    border: 0;
+    min-height: 0;
+    overflow-x: visible;
+  }
+
+  .datatable,
+  .datatable-body {
+    background: transparent;
+    display: block;
+    min-height: 0;
+    overflow: visible;
+    white-space: normal;
+    width: 100%;
+  }
+
+  .datatable-head {
+    display: none;
+  }
+
+  // App.vue paints the last row transparent with !important, hence the
+  // pseudo-class variants
+  .datatable-row,
+  .datatable-row:last-child,
+  .datatable-row:hover {
+    align-items: center;
+    background: var(--background) !important;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    column-gap: 0.75em;
+    display: grid;
+    grid-template-areas:
+      'thumbnail entity status'
+      'thumbnail parent status'
+      'type type due'
+      'project assignees assignees';
+    grid-template-columns: auto 1fr auto;
+    margin-bottom: 0.5em;
+    padding: 0.75em;
+    row-gap: 0.25em;
+  }
+
+  .dark .datatable-row,
+  .dark .datatable-row:last-child {
+    background: var(--background-alt) !important;
+  }
+
+  // three classes deep to beat App.vue's `.datatable-row:last-child td`
+  .datatable .datatable-body td,
+  .datatable .datatable-body td.name,
+  .datatable .datatable-body td.status {
+    background: transparent !important;
+    border: 0;
+    display: block;
+    height: auto;
+    max-width: none;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+    width: auto;
+  }
+
+  td.project {
+    grid-area: project;
+  }
+
+  td.thumbnail {
+    grid-area: thumbnail;
+  }
+
+  td.entity {
+    grid-area: entity;
+    font-size: 1.05em;
+  }
+
+  td.asset-type {
+    grid-area: parent;
+    color: var(--text-alt);
+    font-size: 0.9em;
+  }
+
+  td.task-type {
+    grid-area: type;
+  }
+
+  td.status {
+    grid-area: status;
+  }
+
+  td.assignees {
+    grid-area: assignees;
+  }
+
+  td.due-date {
+    grid-area: due;
+    font-size: 0.9em;
+
+    &::before {
+      color: var(--text-alt);
+      content: attr(data-label) ': ';
+    }
+  }
+
+  td.estimation,
+  td.duration,
+  td.start-date,
+  td.done-date,
+  td.empty {
+    display: none;
+  }
 }
 </style>
