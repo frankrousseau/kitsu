@@ -50,6 +50,20 @@
             :people="personList"
             v-model="filters.person"
           />
+          <date-field
+            class="flexrow-item"
+            :label="$t('tasks.fields.start_date')"
+            model-type="yyyy-MM-dd"
+            :with-margin="false"
+            v-model="filters.startDate"
+          />
+          <date-field
+            class="flexrow-item"
+            :label="$t('tasks.fields.due_date')"
+            model-type="yyyy-MM-dd"
+            :with-margin="false"
+            v-model="filters.dueDate"
+          />
         </div>
         <template v-if="showBurndown">
           <burndown-chart
@@ -107,6 +121,7 @@ import ComboboxProduction from '@/components/widgets/ComboboxProduction.vue'
 import ComboboxStatus from '@/components/widgets/ComboboxStatus.vue'
 import ComboboxStudio from '@/components/widgets/ComboboxStudio.vue'
 import ComboboxTaskType from '@/components/widgets/ComboboxTaskType.vue'
+import DateField from '@/components/widgets/DateField.vue'
 import PeopleField from '@/components/widgets/PeopleField.vue'
 import StatusStats from '@/components/widgets/StatusStats.vue'
 import TasksStatsLine from '@/components/widgets/TasksStatsLine.vue'
@@ -135,12 +150,14 @@ const tasks = ref([])
 // the deep filters watcher used to trigger on pages opened with filters
 const filters = reactive({
   departmentId: route.query.department_id || null,
+  dueDate: route.query.due_date || null,
   person: route.query.person_id
     ? store.getters.activePeopleWithoutBot.filter(person =>
         route.query.person_id.split(',').includes(person.id)
       )
     : null,
   productionId: route.query.project_id || null,
+  startDate: route.query.start_date || null,
   studioId: route.query.studio_id || null,
   taskStatusId: route.query.task_status_id || null,
   taskTypeId: route.query.task_type_id || null
@@ -204,7 +221,9 @@ const params = computed(() => ({
   task_type_id: filters.taskTypeId,
   person_id: filters.person?.map(person => person.id).join(',') || null,
   department_id: filters.departmentId,
-  studio_id: filters.studioId
+  studio_id: filters.studioId,
+  start_date: filters.startDate,
+  due_date: filters.dueDate
 }))
 
 // statusStats would shadow the StatusStats component tag in the template
@@ -357,5 +376,10 @@ useHead({ title: computed(() => `${t('tasks.all_tasks')} - Kitsu`) })
   flex-direction: column;
   height: 42px;
   justify-content: center;
+}
+
+// the date picker input ships its own 38px height, same story
+.filters :deep(.dp__input) {
+  height: 42px;
 }
 </style>
