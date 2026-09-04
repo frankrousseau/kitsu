@@ -272,6 +272,8 @@ onBeforeUnmount(() => {
   color: var(--text-alt);
   font-size: 0.7em;
   font-weight: 400;
+  // the template whitespace between the two spans is condensed away
+  margin-left: 0.3em;
 }
 
 .info-stat-label {
