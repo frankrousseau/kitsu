@@ -176,9 +176,7 @@
             <td class="total">{{ format(personTotals[person.id]) }}</td>
             <td class="actions"></td>
           </tr>
-        </tbody>
-        <tfoot class="datatable-foot" v-if="!isLoading && people.length">
-          <tr>
+          <tr class="datatable-row total-row" v-if="people.length">
             <th class="datatable-row-header name">{{ $t('main.total') }}</th>
             <td
               :key="`total-${index}`"
@@ -187,10 +185,10 @@
             >
               {{ format(columnTotals[index]) }}
             </td>
-            <td class="total">{{ format(grandTotal) }}</td>
+            <td class="total"></td>
             <td class="actions"></td>
           </tr>
-        </tfoot>
+        </tbody>
       </table>
     </div>
 
@@ -201,7 +199,8 @@
     </p>
 
     <p class="has-text-centered footer-info" v-if="!isLoading && people.length">
-      {{ people.length }} {{ $t('people.persons', { count: people.length }) }}
+      {{ people.length }} {{ $t('people.persons', { count: people.length }) }},
+      {{ grandTotalLabel }} {{ $t(totalKey, { count: grandTotalLabel }) }}
     </p>
   </div>
 </template>
@@ -342,6 +341,15 @@ const grandTotal = computed(() =>
   Object.values(columnTotals.value).reduce((sum, total) => sum + total, 0)
 )
 
+// the cell formatter shows '-' for zero, the footer wants a number
+const grandTotalLabel = computed(() =>
+  grandTotal.value ? format(grandTotal.value) : 0
+)
+
+const totalKey = computed(() =>
+  props.unit === 'hour' ? 'main.hours_spent' : 'main.days_spent'
+)
+
 const isCurrentColumn = index =>
   ({
     year: index === currentYear,
@@ -400,6 +408,10 @@ watch(
 </script>
 
 <style lang="scss" scoped>
+.datatable-wrapper {
+  margin-bottom: 2em;
+}
+
 .datatable {
   // auto layout recomputes column widths from the cell contents at every
   // reload (the tbody unmounts while loading), which makes the columns
@@ -465,13 +477,13 @@ th.actions {
   min-width: 80px;
 }
 
-.datatable-foot {
-  th,
-  td {
-    background-color: var(--background-alt);
-    border-top: 1px solid var(--border);
-    font-weight: 600;
-  }
+// the other rows get their height from the avatar: pad the plain text
+// cells so the total row does not look squeezed under them
+.total-row th,
+.total-row td {
+  font-weight: 600;
+  padding-bottom: 1em;
+  padding-top: 1em;
 }
 
 // the admin lists' empty row, kept out of the table so the text stays
