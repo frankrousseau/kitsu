@@ -56,6 +56,7 @@
                 $t(showFilters ? 'main.less_filters' : 'main.more_filters')
               "
               icon="filter"
+              :aria-expanded="`${showFilters}`"
               :is-on="showFilters"
               @click="showFilters = !showFilters"
             />
@@ -113,7 +114,7 @@
         :is-loading="isInfoLoading"
         :is-loading-error="isInfoLoadingError"
         :tasks="tasks"
-        :day-off-count="dayOffCount"
+        :day-offs="dayOffs"
       />
     </div>
   </div>
@@ -153,17 +154,13 @@ const store = useStore()
 
 // State
 // --------------------------------------------------------------------------
-const dayOffCount = ref(0)
-const departmentId = ref('')
-const peopleFilter = ref('logged')
-const selectedPerson = ref(null)
+const dayOffs = ref([])
 const showFilters = ref(false)
 const isInfoLoading = ref(false)
 const isInfoLoadingError = ref(false)
 const isLoading = ref(false)
 const isLoadingError = ref(false)
 const tasks = ref([])
-const unit = ref('hour')
 
 // Computed
 // --------------------------------------------------------------------------
@@ -219,6 +216,28 @@ const productionId = computed({
 const studioId = computed({
   get: () => route.query.studioId ?? '',
   set: value => pushQuery('studioId', value)
+})
+
+// the remaining filters live in the query too, so a reload or a shared
+// link keeps them; defaults are left out of the URL
+const unit = computed({
+  get: () => route.query.unit ?? 'hour',
+  set: value => pushQuery('unit', value === 'hour' ? '' : value)
+})
+
+const departmentId = computed({
+  get: () => route.query.departmentId ?? '',
+  set: value => pushQuery('departmentId', value)
+})
+
+const peopleFilter = computed({
+  get: () => route.query.people ?? 'logged',
+  set: value => pushQuery('people', value === 'logged' ? '' : value)
+})
+
+const selectedPerson = computed({
+  get: () => personMap.value.get(route.query.personId) ?? null,
+  set: person => pushQuery('personId', person?.id ?? '')
 })
 
 const showInfo = computed(() => Boolean(route.params.person_id))
@@ -338,14 +357,13 @@ const loadAggregate = async () => {
       }
     )
     tasks.value = aggregatedTasks.filter(task => task.duration > 0)
-    const dayOffs = await store.dispatch('loadAggregatedPersonDaysOff', {
+    dayOffs.value = await store.dispatch('loadAggregatedPersonDaysOff', {
       personId: route.params.person_id,
       detailLevel: detailLevel.value,
       year: route.params.year,
       month: route.params.month,
       week: route.params.week
     })
-    dayOffCount.value = dayOffs.length
   } catch (error) {
     console.error(error)
     isInfoLoadingError.value = true
@@ -388,8 +406,10 @@ watch(selectablePeople, list => {
   }
 })
 
+// the query also carries the display filters, which the aggregate does
+// not depend on
 watch(
-  () => route.fullPath,
+  () => [route.path, productionId.value, studioId.value],
   () => {
     if (showInfo.value) loadAggregate()
   }

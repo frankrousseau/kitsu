@@ -26,8 +26,13 @@
     </div>
 
     <div class="info-stats">
-      <div class="info-stat" v-if="!isLoading && !isLoadingError">
-        <span class="info-stat-value">{{ total }}</span>
+      <div class="info-stat" :title="expectedTitle" v-if="!isLoadingError">
+        <span class="info-stat-value" :class="{ skeleton: isLoading }">
+          <template v-if="!isLoading">
+            <span :class="{ warning: total > expected }">{{ total }}</span>
+            <span class="info-stat-expected">/ {{ expected }}</span>
+          </template>
+        </span>
         <span class="info-stat-label">{{
           $t(totalKey, { count: total })
         }}</span>
@@ -55,16 +60,23 @@
 import { XIcon } from 'lucide-vue-next'
 import moment from 'moment-timezone'
 import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
-import { minutesToDays, monthToString } from '@/lib/time'
+import {
+  getBusinessDays,
+  hoursToDays,
+  minutesToDays,
+  monthToString
+} from '@/lib/time'
 
 import TimeSpentTaskList from '@/components/lists/TimeSpentTaskList.vue'
 import PageTitle from '@/components/widgets/PageTitle.vue'
 import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
 
 // Composables
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const store = useStore()
@@ -79,7 +91,7 @@ const props = defineProps({
   isLoading: { type: Boolean, default: false },
   isLoadingError: { type: Boolean, default: false },
   tasks: { type: Array, default: () => [] },
-  dayOffCount: { type: Number, default: 0 },
+  dayOffs: { type: Array, default: () => [] },
   unit: { type: String, default: 'hour' }
 })
 
@@ -106,11 +118,51 @@ const totalKey = computed(() =>
 
 const monthString = computed(() => monthToString(props.month))
 
-// Monday of the displayed ISO week, as aggregated by the backend
+// the displayed period; weeks start on the Monday of the ISO week, as
+// aggregated by the backend
+const period = computed(() => {
+  const { year, month, week, day } = props
+  const start = {
+    year: moment({ year }),
+    month: moment({ year, month: month - 1 }),
+    week: moment(`${year}-${week}`, 'YYYY-W'),
+    day: moment({ year, month: month - 1, day })
+  }[level.value]
+  const end =
+    level.value === 'week'
+      ? start.clone().add(6, 'days')
+      : start.clone().endOf(level.value)
+  return { start, end }
+})
+
 const weekDays = computed(() => {
-  const start = moment(`${props.year}-${props.week}`, 'YYYY-W')
-  const end = start.clone().add(6, 'days')
+  const { start, end } = period.value
   return `${start.date()} - ${end.date()} ${start.format('MMM')}`
+})
+
+const businessDays = computed(() =>
+  getBusinessDays(period.value.start, period.value.end)
+)
+
+const workingDays = computed(() =>
+  getBusinessDays(period.value.start, period.value.end, props.dayOffs)
+)
+
+const dayOffCount = computed(() => businessDays.value - workingDays.value)
+
+// what a full-time person logs over the working days of the period, in
+// the selected unit
+const expected = computed(() => {
+  const hours = workingDays.value * organisation.value.hours_by_day
+  const value =
+    props.unit === 'hour' ? hours : hoursToDays(organisation.value, hours)
+  return Math.round(value * 10) / 10
+})
+
+const expectedTitle = computed(() => {
+  const key =
+    props.unit === 'hour' ? 'main.hours_expected' : 'main.days_expected'
+  return `${expected.value} ${t(key, { count: expected.value })}`
 })
 
 const closeRoute = computed(() => {
@@ -124,10 +176,7 @@ const closeRoute = computed(() => {
   return {
     name: `timesheets-${level.value}`,
     params,
-    query: {
-      productionId: route.query.productionId,
-      studioId: route.query.studioId
-    }
+    query: route.query
   }
 })
 
@@ -205,6 +254,24 @@ onBeforeUnmount(() => {
   font-size: 1.5em;
   font-weight: 600;
   line-height: 1.2;
+
+  // holds the line while the figures load, so the tile does not jump
+  &.skeleton {
+    background: rgba(var(--skeleton-rgb), 0.3);
+    border-radius: 4px;
+    height: 1.2em;
+    width: 3em;
+  }
+
+  .warning {
+    color: $red;
+  }
+}
+
+.info-stat-expected {
+  color: var(--text-alt);
+  font-size: 0.7em;
+  font-weight: 400;
 }
 
 .info-stat-label {

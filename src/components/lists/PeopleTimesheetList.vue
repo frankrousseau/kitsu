@@ -50,6 +50,7 @@
                 v-for="week in weekRange"
               >
                 {{ week }}
+                <span class="week-start">{{ getWeekStart(week) }}</span>
               </th>
             </template>
 
@@ -94,6 +95,7 @@
                   v-if="duration(year, person.id) > 0"
                   class="duration"
                   :class="{ warning: isOvertime(year, person.id) }"
+                  :title="getCellTitle(year, person.id)"
                   :to="getDetailRoute(person, { year })"
                 >
                   {{ duration(year, person.id) }}
@@ -118,6 +120,7 @@
                   v-if="duration(month, person.id) > 0"
                   class="duration"
                   :class="{ warning: isOvertime(month, person.id) }"
+                  :title="getCellTitle(month, person.id)"
                   :to="getDetailRoute(person, { year, month })"
                 >
                   {{ duration(month, person.id) }}
@@ -142,6 +145,7 @@
                   v-if="duration(week, person.id) > 0"
                   class="duration"
                   :class="{ warning: isOvertime(week, person.id) }"
+                  :title="getCellTitle(week, person.id)"
                   :to="getDetailRoute(person, { year, week })"
                 >
                   {{ duration(week, person.id) }}
@@ -170,6 +174,7 @@
                   v-else-if="duration(day, person.id) > 0"
                   class="duration"
                   :class="{ warning: isOvertime(day, person.id) }"
+                  :title="getCellTitle(day, person.id)"
                   :to="getDetailRoute(person, { year, month, day })"
                 >
                   {{ duration(day, person.id) }}
@@ -216,6 +221,7 @@
 // Imports
 import moment from 'moment-timezone'
 import { computed, nextTick, useTemplateRef, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 
@@ -236,6 +242,7 @@ import PeopleName from '@/components/widgets/PeopleName.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
 
 // Composables
+const { t } = useI18n()
 const route = useRoute()
 const store = useStore()
 const bodyRef = useTemplateRef('body')
@@ -361,6 +368,20 @@ const totalKey = computed(() =>
   props.unit === 'hour' ? 'main.hours_spent' : 'main.days_spent'
 )
 
+const expectedKey = computed(() =>
+  props.unit === 'hour' ? 'main.hours_expected' : 'main.days_expected'
+)
+
+// says why a cell is red, and how far the others are from it
+const getCellTitle = (index, personId) => {
+  const logged = format(hours(index, personId))
+  const expected = format(expectedHours.value[index])
+  return [
+    `${logged} ${t(totalKey.value, { count: logged })}`,
+    `${expected} ${t(expectedKey.value, { count: expected })}`
+  ].join(', ')
+}
+
 const isCurrentColumn = index =>
   ({
     year: index === currentYear,
@@ -390,11 +411,11 @@ const isSelected = (personId, params) =>
 const getDetailRoute = (person, params) => ({
   name: `timesheets-${props.detailLevel}-person`,
   params: { person_id: person.id, ...params },
-  query: {
-    productionId: route.query.productionId,
-    studioId: route.query.studioId
-  }
+  query: route.query
 })
+
+const getWeekStart = week =>
+  moment(`${props.year}-${week}`, 'YYYY-W').format('D MMM')
 
 const getWeekTitle = week => {
   const beginning = moment(`${props.year}-${week}`, 'YYYY-W')
@@ -466,6 +487,13 @@ watch(
 .daytime {
   text-align: center;
   vertical-align: middle;
+}
+
+.week-start {
+  color: var(--text-alt);
+  display: block;
+  font-weight: 400;
+  white-space: nowrap;
 }
 
 th.actions {
