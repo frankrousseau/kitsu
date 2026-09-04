@@ -62,7 +62,7 @@
               :title="
                 $t(showFilters ? 'main.less_filters' : 'main.more_filters')
               "
-              icon="filter"
+              icon="funnel"
               :aria-expanded="`${showFilters}`"
               :is-on="showFilters"
               @click="showFilters = !showFilters"

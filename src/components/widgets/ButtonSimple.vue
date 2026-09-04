@@ -53,7 +53,6 @@
     <link-icon class="icon" v-else-if="icon === 'link'" />
     <clock-icon class="icon" v-else-if="icon === 'clock'" />
     <rotate-ccw-icon class="icon" v-else-if="icon === 'refresh'" />
-    <sliders-horizontal-icon class="icon" v-else-if="icon === 'filter'" />
     <funnel-icon
       class="icon"
       :stroke-width="1.5"
@@ -139,7 +138,6 @@ import {
   SendIcon,
   ShapesIcon,
   SkipBackIcon,
-  SlidersHorizontalIcon,
   SkipForwardIcon,
   SmileIcon,
   TriangleIcon,
