@@ -447,6 +447,8 @@
       "remove": "移除",
       "save": "儲存",
       "sort_by": "排序方式",
+      "grouped_by": "分組方式",
+      "none": "無",
       "sorted_by": "排序",
       "start_date": "開始日期",
       "studio": "工作室",
@@ -1166,7 +1168,8 @@
         "shots": "鏡頭",
         "sequences": "序列"
       },
-      "load_stats": "載入統計"
+      "hide_stats": "隱藏統計",
+      "show_stats": "顯示統計資料"
     },
     "profile": {
       "change_avatar": "更換頭像",

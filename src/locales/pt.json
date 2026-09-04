@@ -447,6 +447,8 @@
       "remove": "Remover",
       "save": "Salvar",
       "sort_by": "Ordenar por",
+      "grouped_by": "Agrupado por",
+      "none": "Nenhum",
       "sorted_by": "Ordenado por",
       "start_date": "Data de início",
       "studio": "Estúdio",
@@ -1166,7 +1168,8 @@
         "shots": "Shots",
         "sequences": "Sequências"
       },
-      "load_stats": "Carregar estatísticas"
+      "hide_stats": "Esconder estatísticas",
+      "show_stats": "Mostrar estatísticas"
     },
     "profile": {
       "change_avatar": "Alterar avatar",

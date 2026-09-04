@@ -447,6 +447,8 @@
       "remove": "Fjern",
       "save": "Gem",
       "sort_by": "Sorter efter",
+      "grouped_by": "Grupperet efter",
+      "none": "Ingen",
       "sorted_by": "Sorteret efter",
       "start_date": "Startdato",
       "studio": "Studio",
@@ -1166,7 +1168,8 @@
         "shots": "Shots",
         "sequences": "Sequences"
       },
-      "load_stats": "Indlæs statistikker"
+      "hide_stats": "Skjul statistikker",
+      "show_stats": "Vis statistikker"
     },
     "profile": {
       "change_avatar": "Skift avatar",

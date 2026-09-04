@@ -447,6 +447,8 @@
       "remove": "削除",
       "save": "保存",
       "sort_by": "並び順",
+      "grouped_by": "グループ化",
+      "none": "なし",
       "sorted_by": "並び順",
       "start_date": "開始日",
       "studio": "スタジオ",
@@ -1166,7 +1168,8 @@
         "shots": "ショット",
         "sequences": "シーケンス"
       },
-      "load_stats": "統計を読み込み"
+      "hide_stats": "統計を隠す",
+      "show_stats": "統計を表示"
     },
     "profile": {
       "change_avatar": "アバターを変更",

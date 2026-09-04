@@ -447,6 +447,8 @@
       "remove": "Eltávolítás",
       "save": "Mentés",
       "sort_by": "Rendezés",
+      "grouped_by": "Csoportosítás",
+      "none": "Nincs",
       "sorted_by": "Rendezve",
       "start_date": "Kezdő dátum",
       "studio": "Stúdió",
@@ -1149,7 +1151,8 @@
         "sequences": "Szekvenciák",
         "shots": "Shot-ok"
       },
-      "load_stats": "Statisztikák betöltése",
+      "hide_stats": "Statisztika elrejtése",
+      "show_stats": "Statisztika mutatása",
       "style": {
         "2d": "2D animáció",
         "2d3d": "2D/3D animáció",

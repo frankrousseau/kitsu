@@ -447,6 +447,8 @@
       "remove": "Verwijderen",
       "save": "Opslaan",
       "sort_by": "Sorteren op",
+      "grouped_by": "Gegroepeerd op",
+      "none": "Geen",
       "sorted_by": "Gesorteerd op",
       "start_date": "Startdatum",
       "studio": "Studio",
@@ -1166,7 +1168,8 @@
         "shots": "Opnamen",
         "sequences": "Sequenties"
       },
-      "load_stats": "Statistieken laden"
+      "hide_stats": "Verberg statistieken",
+      "show_stats": "Toon statistieken"
     },
     "profile": {
       "change_avatar": "Avatar wijzigen",

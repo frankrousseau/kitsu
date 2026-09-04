@@ -447,6 +447,8 @@
       "remove": "삭제",
       "save": "저장",
       "sort_by": "정렬 기준:",
+      "grouped_by": "그룹화 기준",
+      "none": "없음",
       "sorted_by": "정렬된 기준:",
       "start_date": "시작일",
       "studio": "스튜디오",
@@ -1166,7 +1168,8 @@
         "shots": "샷",
         "sequences": "시퀀스"
       },
-      "load_stats": "로드 통계"
+      "hide_stats": "통계 숨기기",
+      "show_stats": "통계 표시"
     },
     "profile": {
       "change_avatar": "아바타 변경",
