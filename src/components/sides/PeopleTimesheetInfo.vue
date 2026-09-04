@@ -150,9 +150,16 @@ onBeforeUnmount(() => {
   padding: 1.5em 1.5em 1em;
   position: relative;
 
-  // keep the name clear of the floating close button
+  // keep the name clear of the floating close button: it overhangs the
+  // padding by about 1em
   > .flexrow {
-    margin-right: 2em;
+    margin-right: 1em;
+  }
+
+  // the page title is sized for a full-width header: at 2rem uppercase
+  // a two-word name already wraps in the 400px column
+  :deep(.title) {
+    font-size: 1.5rem;
   }
 }
 
