@@ -117,7 +117,7 @@
             <td
               class="due-date"
               :class="{ error: isLate(task) }"
-              :data-label="$t('tasks.fields.due_date')"
+              :data-label="task.due_date ? $t('tasks.fields.due_date') : null"
             >
               {{ formatDisplayDate(task.due_date) }}
             </td>
@@ -426,13 +426,13 @@ td.due-date {
     column-gap: 0.75em;
     display: grid;
     grid-template-areas:
-      'thumbnail entity status'
-      'thumbnail parent status'
-      'type type due'
-      'project assignees assignees';
+      'project type status'
+      'thumbnail parent assignees'
+      'thumbnail entity assignees'
+      'due due due';
     grid-template-columns: auto 1fr auto;
     margin-bottom: 0.5em;
-    padding: 0.75em;
+    padding: 0.75em 0.5em 0.75em 0.75em;
     row-gap: 0.25em;
   }
 
@@ -473,10 +473,18 @@ td.due-date {
     grid-area: parent;
     color: var(--text-alt);
     font-size: 0.9em;
+    // cancels the row gap: the parent sits right on top of the name
+    margin-bottom: -0.25em;
   }
 
   td.task-type {
     grid-area: type;
+
+    // the tag carries a left margin meant for the table cell, which pushed
+    // it 10px right of the parent and entity lines below
+    :deep(.tag) {
+      margin-left: 0;
+    }
   }
 
   td.status {
@@ -485,23 +493,36 @@ td.due-date {
 
   td.assignees {
     grid-area: assignees;
+    justify-self: end;
+
+    .flexrow {
+      justify-content: flex-end;
+    }
+
+    // size and font come inline from the avatar props, tuned for the rows
+    :deep(.avatar) {
+      font-size: 12px !important;
+      height: 24px !important;
+      width: 24px !important;
+    }
   }
 
   td.due-date {
     grid-area: due;
     font-size: 0.9em;
 
-    &::before {
+    &[data-label]::before {
       color: var(--text-alt);
       content: attr(data-label) ': ';
     }
   }
 
-  td.estimation,
-  td.duration,
-  td.start-date,
-  td.done-date,
-  td.empty {
+  .datatable .datatable-body td.estimation,
+  .datatable .datatable-body td.duration,
+  .datatable .datatable-body td.start-date,
+  .datatable .datatable-body td.done-date,
+  .datatable .datatable-body td.empty,
+  .datatable .datatable-body td.due-date:not([data-label]) {
     display: none;
   }
 }

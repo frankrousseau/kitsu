@@ -440,6 +440,14 @@ useHead({ title: computed(() => `${t('tasks.all_tasks')} - Kitsu`) })
     display: none;
   }
 
+  // unfolded, the status and type combos take a line each under the
+  // production one instead of squeezing it next to the toggle
+  .filters > .collapsible {
+    flex: 0 0 100%;
+    margin-right: 0;
+    order: 1;
+  }
+
   .burndown-button,
   .burndown-chart,
   .burndown-stats {
