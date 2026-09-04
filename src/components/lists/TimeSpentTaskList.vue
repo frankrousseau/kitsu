@@ -161,6 +161,12 @@ const getTaskPath = task => {
   margin-top: 1em;
 }
 
+// the global 10px radius, minus the corner under the task type tag so
+// the tag reads as a tab on the list
+.table-body {
+  border-top-left-radius: 0;
+}
+
 .by-project {
   margin-bottom: 2em;
 }

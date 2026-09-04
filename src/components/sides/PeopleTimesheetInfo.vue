@@ -11,22 +11,33 @@
       <page-title class="flexrow-item" :text="person.full_name" />
     </div>
 
-    <div class="info-date" v-if="level === 'year'">{{ year }}</div>
-    <div class="info-date" v-else-if="level === 'month'">
-      {{ monthString }} {{ year }}
+    <div class="info-date">
+      <template v-if="level === 'year'">{{ year }}</template>
+      <template v-else-if="level === 'month'">
+        {{ monthString }} {{ year }}
+      </template>
+      <template v-else-if="level === 'week'">
+        {{ $t('main.week') }} {{ week }}
+      </template>
+      <template v-else>{{ day }} {{ monthString }} {{ year }}</template>
     </div>
-    <div class="info-date" v-else-if="level === 'week'">
-      {{ $t('main.week') }} {{ week }}, {{ weekDays }} {{ year }}
+    <div class="info-range" v-if="level === 'week'">
+      {{ weekDays }} {{ year }}
     </div>
-    <div class="info-date" v-else>{{ day }} {{ monthString }} {{ year }}</div>
 
-    <div class="info-total" v-if="!isLoading && !isLoadingError">
-      {{ total }} {{ $t(totalKey, { count: total }) }}
-    </div>
-
-    <div class="info-day-off" v-if="level !== 'day'">
-      {{ dayOffCount }}
-      {{ $t('days_off.nb_days_off', { count: dayOffCount }) }}
+    <div class="info-stats">
+      <div class="info-stat" v-if="!isLoading && !isLoadingError">
+        <span class="info-stat-value">{{ total }}</span>
+        <span class="info-stat-label">{{
+          $t(totalKey, { count: total })
+        }}</span>
+      </div>
+      <div class="info-stat" v-if="level !== 'day'">
+        <span class="info-stat-value">{{ dayOffCount }}</span>
+        <span class="info-stat-label">
+          {{ $t('days_off.nb_days_off', { count: dayOffCount }) }}
+        </span>
+      </div>
     </div>
 
     <time-spent-task-list
@@ -169,9 +180,39 @@ onBeforeUnmount(() => {
   text-transform: capitalize;
 }
 
-.info-total {
-  font-weight: bold;
-  margin-top: 0.5em;
+.info-range {
+  color: var(--text-alt);
+  margin-top: 0.25em;
+}
+
+.info-stats {
+  display: flex;
+  gap: 0.75em;
+  margin: 1em 0 2.5em;
+}
+
+// figure above its label, on the page surface so the tiles stand out
+// of the panel in both themes
+.info-stat {
+  background: var(--background);
+  border-radius: 8px;
+  flex: 1;
+  padding: 0.75em 1em;
+}
+
+.info-stat-value {
+  display: block;
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.info-stat-label {
+  display: block;
+  font-size: 0.8em;
+  letter-spacing: 0.5px;
+  margin-top: 0.25em;
+  text-transform: uppercase;
 }
 
 // out of the flow: a full line for one icon was too much
