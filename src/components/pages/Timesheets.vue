@@ -1,8 +1,8 @@
 <template>
-  <div class="columns fixed-page">
+  <div class="columns fixed-page" :class="{ 'with-info': showInfo }">
     <div class="column main-column">
       <div class="timesheets page">
-        <div class="page-header">
+        <div class="page-header" :class="{ collapsed: !showFilters }">
           <div class="filters flexrow">
             <combobox
               class="flexrow-item nowrap"
@@ -18,7 +18,7 @@
               v-if="detailLevel !== 'year'"
             />
             <combobox
-              class="flexrow-item"
+              class="flexrow-item collapsible"
               :label="$t('timesheets.month')"
               :options="monthOptions"
               v-model="currentMonth"
@@ -31,7 +31,7 @@
               v-model="unit"
             />
             <combobox
-              class="flexrow-item"
+              class="flexrow-item collapsible people-filter"
               :label="$t('main.people')"
               :options="peopleOptions"
               v-model="peopleFilter"
@@ -50,8 +50,17 @@
               icon="export-lines"
               v-if="isCurrentUserAdmin"
             />
+            <button-simple
+              class="flexrow-item filters-toggle"
+              :title="
+                $t(showFilters ? 'main.less_filters' : 'main.more_filters')
+              "
+              icon="filter"
+              :is-on="showFilters"
+              @click="showFilters = !showFilters"
+            />
           </div>
-          <div class="filters flexrow">
+          <div class="filters flexrow collapsible">
             <combobox-production
               class="flexrow-item"
               :label="$t('main.production')"
@@ -148,6 +157,7 @@ const dayOffCount = ref(0)
 const departmentId = ref('')
 const peopleFilter = ref('logged')
 const selectedPerson = ref(null)
+const showFilters = ref(false)
 const isInfoLoading = ref(false)
 const isInfoLoadingError = ref(false)
 const isLoading = ref(false)
@@ -450,6 +460,11 @@ useHead({ title: computed(() => `${t('timesheets.title')} - Kitsu`) })
 // label takes a 5px padding-top under the field class, and their control
 // renders 38px tall against 42px for the production combo and the Bulma
 // selects.
+// small screens only: the filters fold behind it
+.filters-toggle {
+  display: none;
+}
+
 .page-header :deep(.label) {
   margin-bottom: 5px;
   padding-top: 0;
@@ -461,5 +476,50 @@ useHead({ title: computed(() => `${t('timesheets.title')} - Kitsu`) })
   flex-direction: column;
   height: 42px;
   justify-content: center;
+}
+
+@media screen and (max-width: 768px) {
+  .data-list {
+    margin-top: 1em;
+  }
+
+  .page-header {
+    gap: 1em;
+  }
+
+  .filters {
+    row-gap: 1em;
+
+    // read-only below the tablet breakpoint, like the admin lists
+    > .button {
+      display: none;
+    }
+
+    > .filters-toggle {
+      display: flex;
+    }
+  }
+
+  .collapsed .collapsible {
+    display: none;
+  }
+
+  // on its own line under the toggle, once unfolded
+  .people-filter {
+    flex: 0 0 calc(100% - 1rem);
+    order: 1;
+  }
+
+  // the panel takes the whole width in place of the grid: its close
+  // button (or Escape) brings the grid back
+  .with-info .main-column {
+    display: none;
+  }
+
+  .column.side-column {
+    max-width: none;
+    padding: 0.5em;
+    width: 100%;
+  }
 }
 </style>

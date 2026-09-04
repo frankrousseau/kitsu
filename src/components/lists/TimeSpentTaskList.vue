@@ -173,4 +173,12 @@ a {
 :deep(.avatar-name) {
   color: var(--text);
 }
+
+// the widget hides its label on small screens for the top bar's sake:
+// the panel has the room and nothing else names the production
+@media screen and (max-width: 768px) {
+  .by-project :deep(.avatar-name) {
+    display: inline;
+  }
+}
 </style>

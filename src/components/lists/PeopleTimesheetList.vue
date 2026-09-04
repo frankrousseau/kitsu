@@ -83,6 +83,7 @@
               <td
                 :key="`year-${year}-${person.id}`"
                 class="time year"
+                :data-label="year"
                 :class="{
                   today: isCurrentColumn(year),
                   selected: isSelected(person.id, { year })
@@ -97,7 +98,7 @@
                 >
                   {{ duration(year, person.id) }}
                 </router-link>
-                <template v-else> - </template>
+                <span class="blank" v-else>-</span>
               </td>
             </template>
 
@@ -106,6 +107,7 @@
               <td
                 :key="`month-${month}-${person.id}`"
                 class="time month"
+                :data-label="monthToString(month)"
                 :class="{
                   today: isCurrentColumn(month),
                   selected: isSelected(person.id, { year, month })
@@ -120,7 +122,7 @@
                 >
                   {{ duration(month, person.id) }}
                 </router-link>
-                <template v-else> - </template>
+                <span class="blank" v-else>-</span>
               </td>
             </template>
 
@@ -129,6 +131,7 @@
               <td
                 :key="`week-${week}-${person.id}`"
                 class="daytime"
+                :data-label="week"
                 :class="{
                   today: isCurrentColumn(week),
                   selected: isSelected(person.id, { year, week })
@@ -143,7 +146,7 @@
                 >
                   {{ duration(week, person.id) }}
                 </router-link>
-                <template v-else> - </template>
+                <span class="blank" v-else>-</span>
               </td>
             </template>
 
@@ -152,6 +155,7 @@
               <td
                 :key="`day-${day}-${person.id}`"
                 class="daytime"
+                :data-label="day"
                 :class="{
                   weekend: isWeekend(year, month, day),
                   today: isCurrentColumn(day),
@@ -159,9 +163,9 @@
                 }"
                 v-for="day in dayRange"
               >
-                <template v-if="isDayOff(person.id, day)">
+                <span class="blank" v-if="isDayOff(person.id, day)">
                   {{ $t('timesheets.off').toUpperCase() }}
-                </template>
+                </span>
                 <router-link
                   v-else-if="duration(day, person.id) > 0"
                   class="duration"
@@ -170,10 +174,12 @@
                 >
                   {{ duration(day, person.id) }}
                 </router-link>
-                <template v-else> - </template>
+                <span class="blank" v-else>-</span>
               </td>
             </template>
-            <td class="total">{{ format(personTotals[person.id]) }}</td>
+            <td class="total" :data-label="$t('main.total')">
+              {{ format(personTotals[person.id]) }}
+            </td>
             <td class="actions"></td>
           </tr>
           <tr class="datatable-row total-row" v-if="people.length">
@@ -181,6 +187,7 @@
             <td
               :key="`total-${index}`"
               class="column-total"
+              :data-label="columnLabel(index)"
               v-for="index in columnRange"
             >
               {{ format(columnTotals[index]) }}
@@ -313,6 +320,10 @@ const format = loggedHours => {
       : hoursToDays(organisation.value, loggedHours)
   return Math.round(value * 10) / 10
 }
+
+// chip labels of the mobile cards, where the header row is hidden
+const columnLabel = index =>
+  props.detailLevel === 'month' ? monthToString(index) : index
 
 const duration = (index, personId) => format(hours(index, personId))
 
@@ -560,5 +571,116 @@ th.today {
 .selected .duration.warning {
   background: $red;
   color: $black;
+}
+
+// one card per person with a chip per column, seven chips a line,
+// following the admin lists' mobile layout (TaskTypeList)
+@media screen and (max-width: 768px) {
+  .datatable-wrapper {
+    background: transparent;
+    border: 0;
+    overflow: visible;
+  }
+
+  .datatable,
+  .datatable-body {
+    display: block;
+    overflow: visible;
+    width: 100%;
+  }
+
+  .datatable-head {
+    display: none;
+  }
+
+  // the global last-row rule paints the cells instead of the row
+  .datatable-row,
+  .datatable-row:last-child {
+    background: var(--background) !important;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25em;
+    margin-bottom: 0.75em;
+    padding: 0.75em;
+  }
+
+  .dark .datatable-row,
+  .dark .datatable-row:last-child {
+    background: var(--background-alt) !important;
+  }
+
+  .datatable-row th.name {
+    background: transparent !important;
+    border: 0;
+    min-width: 0;
+    padding: 0 0 0.5em;
+    position: static;
+    width: 100%;
+
+    // the sticky column shadow would stick out of the card
+    &::after {
+      display: none;
+    }
+  }
+
+  .datatable-row td {
+    align-items: center;
+    background-color: transparent !important;
+    border: 0;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 0.4em 0;
+    width: calc((100% - 6 * 0.25em) / 7);
+  }
+
+  // same box as the duration link so every chip line has one height
+  .blank {
+    padding: 0.5em;
+  }
+
+  .datatable-row td[data-label]::before {
+    color: var(--text-alt);
+    content: attr(data-label);
+    font-size: 0.7em;
+    line-height: 1;
+    margin-bottom: 0.2em;
+  }
+
+  // the tints, restated over the transparent cells above
+  .datatable-row td.weekend {
+    background-color: rgba(0, 0, 0, 0.045) !important;
+  }
+
+  .dark .datatable-row td.weekend {
+    background-color: rgba(0, 0, 0, 0.16) !important;
+  }
+
+  .datatable-row td.today {
+    background-color: rgba($green, 0.08) !important;
+  }
+
+  // the person total closes the card as a full line
+  .datatable-row td.total {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-top: 0.5em;
+    padding: 0.75em 0.25em 0.25em;
+    width: 100%;
+
+    &::before {
+      font-size: 0.8em;
+      margin-bottom: 0;
+      text-transform: uppercase;
+    }
+  }
+
+  .datatable-row td.actions,
+  .total-row td.total {
+    display: none;
+  }
 }
 </style>
