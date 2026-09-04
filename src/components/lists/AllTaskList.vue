@@ -114,7 +114,7 @@
             <td class="start-date">
               {{ formatDisplayDate(task.start_date) }}
             </td>
-            <td class="due-date">
+            <td class="due-date" :class="{ error: isLate(task) }">
               {{ formatDisplayDate(task.due_date) }}
             </td>
             <td class="done-date">
@@ -143,6 +143,7 @@
 
 <script setup>
 // Imports
+import moment from 'moment'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useStore } from 'vuex'
 
@@ -217,6 +218,11 @@ const getParentName = task => {
 
 const isEstimationBurned = task =>
   task.estimation > 0 && task.duration > task.estimation
+
+const isLate = task =>
+  task.due_date &&
+  !task.done_date &&
+  moment(task.due_date).isBefore(moment(), 'day')
 
 const onUnassign = (task, person) =>
   store
