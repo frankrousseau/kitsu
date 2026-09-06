@@ -1,16 +1,21 @@
 <template>
   <div class="task-types page fixed-page">
     <list-page-header
-      :title="$t('task_types.library_title')"
+      class="mt2"
+      :active-tab="activeTab"
+      :tabs="tabs"
       :new-entry-label="$t('task_types.new_task_type')"
       :is-exportable="isActiveTab"
       @export-clicked="onExportClicked"
       @new-clicked="onNewClicked"
     />
 
-    <route-tabs class="mt2" :active-tab="activeTab" :tabs="tabs" />
-
-    <route-tabs :active-tab="entityTab" :tabs="entityTabs" route-key="entity" />
+    <route-tabs
+      class="mt1"
+      :active-tab="entityTab"
+      :tabs="entityTabs"
+      route-key="entity"
+    />
 
     <task-type-list
       :entries="listTaskTypes"

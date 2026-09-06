@@ -1,14 +1,14 @@
 <template>
   <div class="studios page fixed-page">
     <list-page-header
-      :title="$t('studios.title')"
+      class="mt2 mb1"
+      :active-tab="activeTab"
+      :tabs="tabs"
       :new-entry-label="$t('studios.new_studios')"
       :is-exportable="isActiveTab"
       @export-clicked="onExportClicked"
       @new-clicked="onNewClicked"
     />
-
-    <route-tabs class="mt2" :active-tab="activeTab" :tabs="tabs" />
 
     <studio-list
       class="studio-list"
@@ -54,7 +54,6 @@ import StudioList from '@/components/lists/StudioList.vue'
 import DeleteModal from '@/components/modals/DeleteModal.vue'
 import EditStudiosModal from '@/components/modals/EditStudiosModal.vue'
 import ListPageHeader from '@/components/widgets/ListPageHeader.vue'
-import RouteTabs from '@/components/widgets/RouteTabs.vue'
 
 const { t } = useI18n()
 const route = useRoute()
