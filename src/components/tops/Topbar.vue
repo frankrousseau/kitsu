@@ -123,8 +123,7 @@
           {{ $t('timesheets.timelog_title') }}
         </router-link>
         <global-search-field
-          class="flexrow-item mr0"
-          :class="{ 'hide-in-production': isProductionContext }"
+          class="flexrow-item mr0 global-search"
           v-if="mainConfig.indexer_configured && !isCurrentUserClient"
         />
         <div class="nav-item">
@@ -1292,7 +1291,7 @@ export default {
     padding-left: 0;
   }
 
-  .hide-in-production {
+  .global-search {
     display: none;
   }
 
