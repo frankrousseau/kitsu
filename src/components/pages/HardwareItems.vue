@@ -1,14 +1,14 @@
 <template>
   <div class="hardware-items page fixed-page">
     <list-page-header
-      :title="$t('hardware_items.title')"
+      class="mt2 mb1"
+      :active-tab="activeTab"
+      :tabs="tabs"
       :new-entry-label="$t('hardware_items.new_hardware_item')"
       :is-exportable="isActiveTab"
       @export-clicked="onExportClicked"
       @new-clicked="onNewClicked"
     />
-
-    <route-tabs class="mt2" :active-tab="activeTab" :tabs="tabs" />
 
     <hardware-item-list
       class="hardware-item-list"
@@ -56,7 +56,6 @@ import HardwareItemList from '@/components/lists/HardwareItemList.vue'
 import DeleteModal from '@/components/modals/DeleteModal.vue'
 import EditHardwareItemModal from '@/components/modals/EditHardwareItemModal.vue'
 import ListPageHeader from '@/components/widgets/ListPageHeader.vue'
-import RouteTabs from '@/components/widgets/RouteTabs.vue'
 
 const { t } = useI18n()
 const route = useRoute()

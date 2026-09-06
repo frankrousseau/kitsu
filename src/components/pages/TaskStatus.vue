@@ -1,14 +1,14 @@
 <template>
   <div class="task-status page fixed-page">
     <list-page-header
-      :title="$t('task_status.library_title')"
+      class="mt2 mb1"
+      :active-tab="activeTab"
+      :tabs="tabs"
       :new-entry-label="$t('task_status.new_task_status')"
       :is-exportable="isActiveTab"
       @export-clicked="onExportClicked"
       @new-clicked="onNewClicked"
     />
-
-    <route-tabs class="mt2" :active-tab="activeTab" :tabs="tabs" />
 
     <route-tabs :active-tab="entityTab" :tabs="entityTabs" route-key="entity" />
 

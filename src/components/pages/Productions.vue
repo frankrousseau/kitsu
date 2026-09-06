@@ -6,6 +6,14 @@
         placeholder="ex: Big Buck Bunny"
         @change="searchQuery = $event"
       />
+      <combobox
+        class="flexrow-item group-by"
+        :label="$t('main.grouped_by')"
+        :options="groupByOptions"
+        :with-margin="false"
+        v-model="groupBy"
+      />
+      <div class="filler"></div>
       <button-simple
         class="flexrow-item"
         :text="
@@ -16,13 +24,6 @@
         :is-loading="loading.stats"
         @click="toggleStats"
       />
-      <combobox
-        class="flexrow-item group-by"
-        :label="$t('main.grouped_by')"
-        :options="groupByOptions"
-        v-model="groupBy"
-      />
-      <div class="filler"></div>
       <button-link
         class="flexrow-item"
         :text="$t('productions.new_production')"
@@ -370,6 +371,20 @@ useHead({ title: computed(() => `${t('productions.title')} - Kitsu`) })
 </script>
 
 <style lang="scss" scoped>
+// Controls of unequal height (pill input, select under its label, buttons)
+// only line up on their bottom edge, as in the People search row.
+.page-header {
+  align-items: flex-end;
+
+  // One height for the whole row: buttons, select and the search pill are all
+  // sized differently by default.
+  :deep(.button),
+  :deep(.select select),
+  :deep(.search-field-wrapper) {
+    height: 2.5em;
+  }
+}
+
 @media screen and (max-width: 768px) {
   .page-header .flexrow-item:not(.search) {
     display: none;

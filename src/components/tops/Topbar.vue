@@ -77,14 +77,15 @@
           class="nav-item"
           v-else-if="lastProduction && $route.path !== '/open-productions'"
         >
-          <router-link :to="lastProductionRoute" class="flexrow">
+          <router-link
+            :to="lastProductionRoute"
+            :title="$t('main.go_productions')"
+            class="flexrow mr0"
+          >
             <chevron-left-icon />
-            <span class="go-productions-label">
-              {{ $t('main.go_productions') }}
-            </span>
           </router-link>
         </div>
-        <div class="nav-item page-title" v-if="pageTitle">
+        <div class="nav-item page-title pl0 ml0" v-if="pageTitle">
           {{ pageTitle }}
         </div>
       </div>
@@ -1249,7 +1250,6 @@ export default {
   font-size: 1.4em;
   font-weight: 800;
   margin-top: -2px;
-  padding-left: 1em;
 }
 
 .version {

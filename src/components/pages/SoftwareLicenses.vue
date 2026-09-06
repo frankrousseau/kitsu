@@ -1,14 +1,14 @@
 <template>
   <div class="software-licenses page fixed-page">
     <list-page-header
-      :title="$t('software_licenses.title')"
+      class="mt2 mb1"
+      :active-tab="activeTab"
+      :tabs="tabs"
       :new-entry-label="$t('software_licenses.new_software_license')"
       :is-exportable="isActiveTab"
       @export-clicked="onExportClicked"
       @new-clicked="onNewClicked"
     />
-
-    <route-tabs class="mt2" :active-tab="activeTab" :tabs="tabs" />
 
     <software-license-list
       class="software-license-list"
@@ -56,7 +56,6 @@ import SoftwareLicenseList from '@/components/lists/SoftwareLicenseList.vue'
 import DeleteModal from '@/components/modals/DeleteModal.vue'
 import EditSoftwareLicenseModal from '@/components/modals/EditSoftwareLicenseModal.vue'
 import ListPageHeader from '@/components/widgets/ListPageHeader.vue'
-import RouteTabs from '@/components/widgets/RouteTabs.vue'
 
 const { t } = useI18n()
 const route = useRoute()
