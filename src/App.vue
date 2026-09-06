@@ -2252,53 +2252,37 @@ td.fps {
   margin: auto;
 }
 
-// segmented-control look shared by every tab bar (RouteTabs,
-// RouteSectionTabs and the raw Bulma markup pages)
+// underline look shared by every tab bar (RouteTabs, RouteSectionTabs and
+// the raw Bulma markup pages): plain labels sitting on a hairline, the
+// active one marked by a 2px rule, so the bar reads as text anchored to its
+// content rather than as a row of buttons
 .tabs {
   ul {
-    align-items: center;
-    background: var(--background-alt);
-    border: 0;
-    border-radius: 8px;
-    display: inline-flex;
-    flex: none;
-    gap: 2px;
-    padding: 3px;
+    border-bottom: 1px solid var(--border-alt);
   }
 
   li a {
-    border: 0;
-    border-radius: 6px;
+    border-bottom: 2px solid transparent;
     color: var(--text);
-    padding: 0.35em 1em;
-    transition:
-      background 0.15s ease,
-      color 0.15s ease;
+    margin-bottom: -1px;
+    padding: 0.5em 0.9em;
+    transition: color 0.15s ease;
 
     &:hover {
-      background: var(--background-hover);
-      color: var(--text);
+      border-bottom-color: transparent;
+      color: var(--text-strong);
     }
   }
 
   li.is-active a {
-    background: var(--background);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-    color: var(--text);
+    border-bottom-color: var(--text-selected);
+    color: var(--text-strong);
     font-weight: 600;
 
     &:hover {
-      background: var(--background);
+      border-bottom-color: var(--text-selected);
     }
   }
-}
-
-// in dark the background token is darker than the rail, which would read
-// as a pressed slot: give the active pill its own lighter fill
-.dark .tabs li.is-active a,
-.dark .tabs li.is-active a:hover {
-  background: rgba(255, 255, 255, 0.09);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .page .columns:last-child {
