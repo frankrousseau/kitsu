@@ -83,7 +83,7 @@
     >
       <div class="flexrow search-area" v-if="openProductions.length > 6">
         <search-field
-          ref="search-field"
+          ref="searchField"
           class="search-field ml1"
           @change="onSearchChange"
           v-focus
@@ -155,165 +155,154 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { useHead } from '@unhead/vue'
 import {
   HandshakeIcon,
   MessageCircleIcon,
   StarIcon,
   XIcon
 } from 'lucide-vue-next'
-import { mapGetters } from 'vuex'
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
+import { useStore } from 'vuex'
 
-import { buildNameIndex } from '@/lib/indexing'
 import colors from '@/lib/colors'
+import { buildNameIndex } from '@/lib/indexing'
 import preferences from '@/lib/preferences'
 
 import SearchField from '@/components/widgets/SearchField.vue'
 import Spinner from '@/components/widgets/Spinner.vue'
 
-export default {
-  name: 'open-productions',
+// Composables
+// --------------------------------------------------------------------------
 
-  components: {
-    HandshakeIcon,
-    MessageCircleIcon,
-    SearchField,
-    Spinner,
-    StarIcon,
-    XIcon
-  },
+const { t } = useI18n()
+const router = useRouter()
+const store = useStore()
 
-  data() {
-    return {
-      isContributions: false,
-      filteredProductions: []
-    }
-  },
+// State
+// --------------------------------------------------------------------------
 
-  mounted() {
-    this.filteredProductions = this.openProductions
-    this.productionIndex = buildNameIndex(this.openProductions)
-    this.isContributions =
-      this.mainConfig.is_self_hosted &&
-      preferences.getPreference('open-productions:contributions') !== 'false'
-  },
+const searchFieldRef = useTemplateRef('searchField')
 
-  computed: {
-    ...mapGetters([
-      'isCurrentUserAdmin',
-      'isCurrentUserManager',
-      'isCurrentUserClient',
-      'isOpenProductionsLoading',
-      'lastProductionScreen',
-      'mainConfig',
-      'openProductions'
-    ])
-  },
+const filteredProductions = ref([])
+const isContributions = ref(false)
 
-  methods: {
-    generateAvatar(production) {
-      const firstLetter = production.name?.[0] || 'P'
-      return firstLetter.toUpperCase()
-    },
+// The index is only read on search, it does not need to be reactive.
+let productionIndex = {}
 
-    getAvatarColor(production) {
-      return colors.fromString(production.name)
-    },
+// Computed
+// --------------------------------------------------------------------------
 
-    getPath(production) {
-      return this.sectionPath(production, this.lastProductionScreen)
-    },
+const isCurrentUserAdmin = computed(() => store.getters.isCurrentUserAdmin)
+const isCurrentUserClient = computed(() => store.getters.isCurrentUserClient)
+const isCurrentUserManager = computed(() => store.getters.isCurrentUserManager)
+const isOpenProductionsLoading = computed(
+  () => store.getters.isOpenProductionsLoading
+)
+const lastProductionScreen = computed(() => store.getters.lastProductionScreen)
+const mainConfig = computed(() => store.getters.mainConfig)
+const openProductions = computed(() => store.getters.openProductions)
 
-    sectionPath(production, section) {
-      const routeName = this.isCurrentUserClient
-        ? 'playlists'
-        : production.homepage || section
-      const route = {
-        name: routeName,
-        params: {
-          production_id: production.id
-        },
-        query: {}
-      }
-      if (production.production_type === 'tvshow') {
-        if (routeName !== 'episodes') {
-          route.name = `episode-${routeName}`
-        }
-        if (
-          !['edits', 'episodes'].includes(routeName) &&
-          production.first_episode_id
-        ) {
-          route.params.episode_id = production.first_episode_id
-        } else {
-          route.params.episode_id = 'all'
-        }
-      } else if (
-        production.production_type === 'shots' &&
-        routeName === 'assets'
-      ) {
-        route.name = 'shots'
-      } else if (
-        production.production_type === 'assets' &&
-        ['shots', 'sequences'].includes(routeName)
-      ) {
-        route.name = 'assets'
-      }
-      const isEntityPage = [
-        'assets',
-        'shots',
-        'edits',
-        'sequences',
-        'episodes'
-      ].includes(routeName)
-      if (isEntityPage) {
-        route.query.search = ''
-      }
-      return route
-    },
+// Functions
+// --------------------------------------------------------------------------
 
-    getThumbnailPath(production) {
-      const lastUpdate = production.updated_at || production.created_at
-      const timestamp = Date.parse(lastUpdate)
-      return `/api/pictures/thumbnails/projects/${production.id}.png?t=${timestamp}`
-    },
+const generateAvatar = production => (production.name?.[0] || 'P').toUpperCase()
 
-    newProductionPage() {
-      this.$router.push({
-        name: 'new-production'
-      })
-    },
+const getAvatarColor = production => colors.fromString(production.name)
 
-    onSearchChange(search) {
-      if (search === '') {
-        this.filteredProductions = this.openProductions
-      } else {
-        this.filteredProductions = this.productionIndex[search]
-      }
-    },
-
-    hideContributions() {
-      this.isContributions = false
-      preferences.setPreference('open-productions:contributions', false)
-    }
-  },
-
-  watch: {
-    openProductions() {
-      if (this.openProductions.length > 6) {
-        const searchQuery = this.$refs['search-field']?.getValue() || ''
-        this.onSearchChange(searchQuery)
-      } else {
-        this.filteredProductions = this.openProductions
-      }
-    }
-  },
-
-  head() {
-    return {
-      title: `${this.$t('productions.home.title')} - Kitsu`
-    }
-  }
+const getThumbnailPath = production => {
+  const lastUpdate = production.updated_at || production.created_at
+  const timestamp = Date.parse(lastUpdate)
+  return `/api/pictures/thumbnails/projects/${production.id}.png?t=${timestamp}`
 }
+
+const getPath = production => {
+  const routeName = isCurrentUserClient.value
+    ? 'playlists'
+    : production.homepage || lastProductionScreen.value
+  const route = {
+    name: routeName,
+    params: {
+      production_id: production.id
+    },
+    query: {}
+  }
+  if (production.production_type === 'tvshow') {
+    if (routeName !== 'episodes') {
+      route.name = `episode-${routeName}`
+    }
+    if (
+      !['edits', 'episodes'].includes(routeName) &&
+      production.first_episode_id
+    ) {
+      route.params.episode_id = production.first_episode_id
+    } else {
+      route.params.episode_id = 'all'
+    }
+  } else if (production.production_type === 'shots' && routeName === 'assets') {
+    route.name = 'shots'
+  } else if (
+    production.production_type === 'assets' &&
+    ['shots', 'sequences'].includes(routeName)
+  ) {
+    route.name = 'assets'
+  }
+  const isEntityPage = [
+    'assets',
+    'shots',
+    'edits',
+    'sequences',
+    'episodes'
+  ].includes(routeName)
+  if (isEntityPage) {
+    route.query.search = ''
+  }
+  return route
+}
+
+const newProductionPage = () => {
+  router.push({ name: 'new-production' })
+}
+
+const onSearchChange = search => {
+  filteredProductions.value = search
+    ? productionIndex[search]
+    : openProductions.value
+}
+
+const hideContributions = () => {
+  isContributions.value = false
+  preferences.setPreference('open-productions:contributions', false)
+}
+
+// Watchers
+// --------------------------------------------------------------------------
+
+watch(
+  openProductions,
+  () => {
+    productionIndex = buildNameIndex(openProductions.value)
+    onSearchChange(searchFieldRef.value?.getValue() || '')
+  },
+  { immediate: true }
+)
+
+// Lifecycle
+// --------------------------------------------------------------------------
+
+onMounted(() => {
+  isContributions.value =
+    mainConfig.value.is_self_hosted &&
+    preferences.getPreference('open-productions:contributions') !== 'false'
+})
+
+// Head
+// --------------------------------------------------------------------------
+
+useHead({ title: computed(() => `${t('productions.home.title')} - Kitsu`) })
 </script>
 
 <style lang="scss" scoped>
