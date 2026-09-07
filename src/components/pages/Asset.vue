@@ -623,16 +623,12 @@ useHead({ title: computed(() => `${title.value} - Kitsu`) })
 
 <style lang="scss" scoped>
 .dark {
-  .page {
-    padding-bottom: 1em;
-  }
-
   .table-body {
-    border: 1px solid $dark-grey;
+    border: 1px solid var(--border);
   }
 
   .wrapper {
-    background: $dark-grey-2;
+    background: var(--background);
   }
 }
 
@@ -656,6 +652,7 @@ h2.subtitle {
 }
 
 .page-header {
+  align-items: center;
   margin-top: calc(50px + 2em);
   margin-bottom: 0.8em;
   margin-left: 1em;
@@ -728,10 +725,6 @@ h2.subtitle {
 .field-label {
   font-weight: bold;
   width: 120px;
-}
-
-.page-header {
-  align-items: center;
 }
 
 .back-link {

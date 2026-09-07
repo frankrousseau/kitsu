@@ -67,7 +67,7 @@
               <td class="end-cell"></td>
             </tr>
             <tr class="datatable-row" v-if="outputFile.path">
-              <td colspan="10">
+              <td colspan="9">
                 {{ outputFile.path }}
               </td>
             </tr>
@@ -187,11 +187,6 @@ td.type {
 
 .output-files {
   overflow-y: auto;
-}
-
-.output-thumbnail {
-  cursor: pointer;
-  border-radius: 4px;
 }
 
 .datatable-row-header::after {

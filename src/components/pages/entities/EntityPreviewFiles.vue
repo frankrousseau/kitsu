@@ -12,7 +12,7 @@
     <div class="has-text-centered" v-if="isLoading">
       <spinner />
     </div>
-    <div v-else-if="previewFiles.length > 0 && !isLoading">
+    <div v-else-if="previewFiles.length > 0">
       <div class="contact-sheet flexcolumn" v-if="contactSheetMode">
         <div
           :key="`task-type-group-${index}`"
@@ -292,8 +292,11 @@ td.type {
 }
 
 .preview-files {
+  flex: 1;
+  margin-top: 0;
   overflow-y: auto;
 }
+
 .dark .preview-files.wrapper {
   background: transparent;
 }
@@ -305,11 +308,6 @@ td.type {
 
 .datatable-row-header::after {
   display: none;
-}
-
-.preview-files {
-  margin-top: 0;
-  flex: 1;
 }
 
 .contact-sheet {

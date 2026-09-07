@@ -46,12 +46,9 @@
       <table class="datatable">
         <tbody class="datatable-body">
           <tr
+            class="datatable-row datatable-row--selectable"
             :key="task.id"
-            :class="{
-              selected: currentTask && currentTask.id === task.id,
-              'datatable-row': true,
-              'datatable-row--selectable': true
-            }"
+            :class="{ selected: currentTask?.id === task.id }"
             role="button"
             tabindex="0"
             @click="selectTask(task)"
