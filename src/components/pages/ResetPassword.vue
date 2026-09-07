@@ -58,61 +58,61 @@
   </div>
 </template>
 
-<script>
-import { mapActions } from 'vuex'
-
+<script setup>
+import { useHead } from '@unhead/vue'
 import { MailIcon } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useStore } from 'vuex'
 
-export default {
-  name: 'reset-password',
+// Composables
+// --------------------------------------------------------------------------
 
-  components: {
-    MailIcon
-  },
+const { t } = useI18n()
+const store = useStore()
 
-  data() {
-    return {
-      email: '',
-      isLoading: false,
-      isInactive: false,
-      isError: false,
-      isSuccess: false
+// State
+// --------------------------------------------------------------------------
+
+const email = ref('')
+const isError = ref(false)
+const isInactive = ref(false)
+const isLoading = ref(false)
+const isSuccess = ref(false)
+
+// Functions
+// --------------------------------------------------------------------------
+
+const confirmResetPassword = async () => {
+  isLoading.value = true
+  isInactive.value = false
+  isError.value = false
+  isSuccess.value = false
+  try {
+    await store.dispatch('resetPassword', email.value)
+    isSuccess.value = true
+  } catch (error) {
+    if (error.body?.message?.includes('inactive')) {
+      isInactive.value = true
+    } else {
+      isError.value = true
     }
-  },
-
-  mounted() {
-    this.email = this.$store.state.login.email
-  },
-
-  methods: {
-    ...mapActions(['resetPassword']),
-
-    async confirmResetPassword() {
-      this.isLoading = true
-      this.isInactive = false
-      this.isError = false
-      this.isSuccess = false
-      try {
-        await this.resetPassword(this.email)
-        this.isSuccess = true
-      } catch (error) {
-        if (error.body?.message?.includes('inactive')) {
-          this.isInactive = true
-        } else {
-          this.isError = true
-        }
-      } finally {
-        this.isLoading = false
-      }
-    }
-  },
-
-  head() {
-    return {
-      title: this.$t('login.reset_password_title')
-    }
+  } finally {
+    isLoading.value = false
   }
 }
+
+// Lifecycle
+// --------------------------------------------------------------------------
+
+onMounted(() => {
+  email.value = store.state.login.email
+})
+
+// Head
+// --------------------------------------------------------------------------
+
+useHead({ title: computed(() => t('login.reset_password_title')) })
 </script>
 
 <style lang="scss" scoped>
