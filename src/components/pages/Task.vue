@@ -717,14 +717,17 @@ const previewOptions = computed(() =>
     }))
 )
 
+// selectedPreviewId and route.params.preview_id are kept in sync both ways,
+// so read the selection from one source only. An id that survives in the url
+// after its preview is gone would otherwise blank the player out.
 const currentPreview = computed(() => {
   if (!isPreviews.value) return null
-  let preview = taskPreviews.value[0]
-  const previewId = route.params.preview_id
-  if (selectedPreviewId.value) {
-    preview = taskPreviews.value.find(item => item.id === previewId)
-  }
-  return preview
+  const previewId = selectedPreviewId.value
+  if (!previewId) return taskPreviews.value[0]
+  return (
+    taskPreviews.value.find(item => item.id === previewId) ??
+    taskPreviews.value[0]
+  )
 })
 
 const currentPreviewId = computed(() =>

@@ -3,6 +3,9 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { createStore } from 'vuex'
 import { describe, expect, it, vi } from 'vitest'
 
+// jsdom has no layout engine, and the page scrolls its column on mount.
+window.scrollTo = vi.fn()
+
 vi.mock('@unhead/vue', () => ({ useHead: vi.fn() }))
 vi.mock('vue-i18n', async importOriginal => ({
   ...(await importOriginal()),
@@ -14,6 +17,8 @@ import '@/lib/auth'
 
 import Task from '@/components/pages/Task.vue'
 import AddComment from '@/components/widgets/AddComment.vue'
+import PreviewPlayer from '@/components/players/players/PreviewPlayer.vue'
+import { DEFAULT_FPS } from '@/lib/video'
 
 // The ten events the page used to declare through the `socket` component
 // option, which `<script setup>` cannot express.
@@ -54,7 +59,8 @@ const buildTask = (overrides = {}) => ({
 const mountPage = async ({
   task = buildTask(),
   getterOverrides = {},
-  comments = []
+  comments = [],
+  previews = []
 } = {}) => {
   const dispatched = []
   const socket = { on: vi.fn(), off: vi.fn() }
@@ -63,7 +69,12 @@ const mountPage = async ({
     history: createMemoryHistory(),
     routes: [
       { path: '/', name: 'open-productions', component: { template: '<div />' } },
-      { path: '/task/:task_id', name: 'task', component: { template: '<div />' } }
+      { path: '/task/:task_id', name: 'task', component: { template: '<div />' } },
+      {
+        path: '/task/:task_id/preview/:preview_id',
+        name: 'task-preview',
+        component: { template: '<div />' }
+      }
     ]
   })
   await router.push({ name: 'task', params: { task_id: TASK_ID } })
@@ -84,7 +95,7 @@ const mountPage = async ({
       episodeMap: () => new Map(),
       getTaskComment: () => () => null,
       getTaskComments: () => () => comments,
-      getTaskPreviews: () => () => [],
+      getTaskPreviews: () => () => previews,
       isCurrentUserArtist: () => false,
       isCurrentUserClient: () => false,
       isCurrentUserProductionManager: () => false,
@@ -92,7 +103,7 @@ const mountPage = async ({
       isTVShow: () => false,
       organisation: () => ({ format_duration_in_hours: false }),
       personMap: () => new Map(),
-      productionMap: () => new Map([['production-1', { fps: 25 }]]),
+      productionMap: () => new Map([['production-1', { fps: 30 }]]),
       sequenceMap: () => new Map(),
       shotMap: () => new Map(),
       taskEntityPreviews: () => [],
@@ -119,8 +130,11 @@ const mountPage = async ({
         // method and the resulting throw would cut the reset short.
         AddPreviewModal: { template: '<div />', methods: { reset: () => {} } },
         // The default stub swallows its slot, which holds the page title.
-        RouterLink: { template: '<a><slot /></a>' }
+        RouterLink: { props: ['to'], template: '<a><slot /></a>' },
+        // Provided by the animxyz plugin, which the specs do not install.
+        XyzTransitionGroup: { template: '<div><slot /></div>' }
       },
+      directives: { xyz: {} },
       plugins: [
         router,
         store,
@@ -133,7 +147,7 @@ const mountPage = async ({
     }
   })
   await flushPromises()
-  return { wrapper, socket, dispatched, store }
+  return { wrapper, socket, dispatched, store, router }
 }
 
 describe('Task.vue', () => {
@@ -281,5 +295,164 @@ describe('Task.vue', () => {
       })
       expect(wrapper.text()).not.toContain('Difficulty')
     })
+  })
+})
+
+describe('Task.vue preview selection', () => {
+  // Distinct nested previews make the selected revision observable through
+  // the player props.
+  const previews = [
+    { id: 'preview-3', revision: 3, extension: 'mp4', previews: ['from-3'] },
+    { id: 'preview-2', revision: 2, extension: 'mp4', previews: ['from-2'] }
+  ]
+
+  const playerPreviews = wrapper =>
+    wrapper.findComponent(PreviewPlayer).props('previews')
+
+  const selectPreview = async (router, previewId) => {
+    await router.push({
+      name: 'task-preview',
+      params: { task_id: TASK_ID, preview_id: previewId }
+    })
+    await flushPromises()
+  }
+
+  it('shows the latest preview when none is selected', async () => {
+    const { wrapper } = await mountPage({ previews })
+    expect(playerPreviews(wrapper)).toEqual(['from-3'])
+  })
+
+  it('shows the preview named by the route', async () => {
+    const { wrapper, router } = await mountPage({ previews })
+    await selectPreview(router, 'preview-2')
+    expect(playerPreviews(wrapper)).toEqual(['from-2'])
+  })
+
+  it('falls back to the latest preview when the selected id is unknown', async () => {
+    const { wrapper, router } = await mountPage({ previews })
+    await selectPreview(router, 'preview-gone')
+    // A stale id in the url must not blank the player out.
+    expect(wrapper.findComponent(PreviewPlayer).exists()).toBe(true)
+    expect(playerPreviews(wrapper)).toEqual(['from-3'])
+  })
+})
+
+describe('Task.vue fps', () => {
+  const previews = [{ id: 'preview-1', revision: 1, extension: 'mp4' }]
+
+  const playerFps = wrapper => wrapper.findComponent(PreviewPlayer).props('fps')
+
+  it('uses the production fps by default', async () => {
+    const { wrapper } = await mountPage({ previews })
+    expect(playerFps(wrapper)).toBe(30)
+  })
+
+  it('lets the entity override the production fps', async () => {
+    // The video was rendered at the entity rate; using the production one
+    // would duplicate or drop frames in the player.
+    const { wrapper } = await mountPage({
+      previews,
+      getterOverrides: {
+        shotMap: () => new Map([['entity-1', { id: 'entity-1', data: { fps: '48' } }]])
+      }
+    })
+    expect(playerFps(wrapper)).toBe(48)
+  })
+
+  it('falls back to the default fps when the production declares none', async () => {
+    const { wrapper } = await mountPage({
+      previews,
+      getterOverrides: { productionMap: () => new Map([['production-1', {}]]) }
+    })
+    expect(playerFps(wrapper)).toBe(DEFAULT_FPS)
+  })
+})
+
+describe('Task.vue preview player permissions', () => {
+  const previews = [{ id: 'preview-1', revision: 1, extension: 'mp4' }]
+
+  const isReadOnly = wrapper =>
+    wrapper.findComponent(PreviewPlayer).props('readOnly')
+
+  it('is read only for a plain artist', async () => {
+    const { wrapper } = await mountPage({ previews })
+    expect(isReadOnly(wrapper)).toBe(true)
+  })
+
+  it('is writable for a production manager', async () => {
+    const { wrapper } = await mountPage({
+      previews,
+      getterOverrides: { isCurrentUserProductionManager: () => true }
+    })
+    expect(isReadOnly(wrapper)).toBe(false)
+  })
+
+  it('is writable for a supervisor without any department', async () => {
+    const { wrapper } = await mountPage({
+      previews,
+      getterOverrides: {
+        isCurrentUserProductionSupervisor: () => true,
+        user: () => ({ id: 'user-1', departments: [] })
+      }
+    })
+    expect(isReadOnly(wrapper)).toBe(false)
+  })
+
+  it('is read only for a supervisor of another department', async () => {
+    const { wrapper } = await mountPage({
+      previews,
+      getterOverrides: {
+        isCurrentUserProductionSupervisor: () => true,
+        user: () => ({ id: 'user-1', departments: ['department-2'] }),
+        taskTypeMap: () =>
+          new Map([[taskType.id, { ...taskType, department_id: 'department-1' }]])
+      }
+    })
+    expect(isReadOnly(wrapper)).toBe(true)
+  })
+})
+
+describe('Task.vue metadata values', () => {
+  const descriptorOf = (data_type, extra = {}) => ({
+    id: 'descriptor-1',
+    name: 'Field',
+    field_name: 'field',
+    data_type,
+    task_type_id: taskType.id,
+    ...extra
+  })
+
+  const renderWith = (data_type, value, getterOverrides = {}) =>
+    mountPage({
+      task: buildTask({ data: { field: value } }),
+      getterOverrides: {
+        taskMetadataDescriptors: () => [descriptorOf(data_type)],
+        ...getterOverrides
+      }
+    })
+
+  it('renders a person descriptor as the person name', async () => {
+    const { wrapper } = await renderWith('person', 'person-1', {
+      personMap: () => new Map([['person-1', { id: 'person-1', name: 'Ada' }]])
+    })
+    expect(wrapper.text()).toContain('Ada')
+  })
+
+  it('renders an unknown person as an empty value', async () => {
+    const { wrapper } = await renderWith('person', 'person-missing')
+    expect(wrapper.text()).not.toContain('person-missing')
+  })
+
+  it('renders a plain string descriptor as is', async () => {
+    const { wrapper } = await renderWith('string', 'hello')
+    expect(wrapper.text()).toContain('hello')
+  })
+
+  it('renders an empty value as an empty string', async () => {
+    const { wrapper } = await renderWith('string', '')
+    const row = wrapper
+      .findAll('tr.datatable-row')
+      .find(candidate => candidate.find('.field-label').text() === 'Field')
+    expect(row.findAll('td')[1].text()).toEqual('')
   })
 })
