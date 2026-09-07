@@ -125,175 +125,135 @@
   </div>
 </template>
 
-<script>
-import { mapGetters } from 'vuex'
+<script setup>
+import { computed, ref } from 'vue'
+import { useStore } from 'vuex'
 
-import { formatListMixin } from '@/components/mixins/format'
+import { useFormat } from '@/composables/format'
 
+/* eslint-disable no-unused-vars */
+import TaskTypeCell from '@/components/cells/TaskTypeCell.vue'
 import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
-import TaskTypeCell from '@/components/cells/TaskTypeCell.vue'
 import ValidationTag from '@/components/widgets/ValidationTag.vue'
+/* eslint-enable no-unused-vars */
 
-export default {
-  name: 'entity-task-list',
+const store = useStore()
+const { formatDuration } = useFormat()
 
-  mixins: [formatListMixin],
+// Props / Emits
+// --------------------------------------------------------------------------
+const props = defineProps({
+  entries: { type: Array, default: () => [] },
+  isLoading: { type: Boolean, default: false },
+  isError: { type: Boolean, default: false }
+})
+const emit = defineEmits(['task-selected'])
 
-  components: {
-    PeopleAvatar,
-    TableInfo,
-    TaskTypeCell,
-    ValidationTag
-  },
+// State
+// --------------------------------------------------------------------------
+const currentTask = ref(null)
+const headerWrapper = ref(null)
 
-  props: {
-    entries: {
-      type: Array,
-      default: () => []
-    },
-    isLoading: {
-      type: Boolean,
-      default: false
-    },
-    isError: {
-      type: Boolean,
-      default: false
+// Computed
+// --------------------------------------------------------------------------
+const currentProduction = computed(() => store.getters.currentProduction)
+const getTaskTypePriority = computed(() => store.getters.getTaskTypePriority)
+const isCurrentUserClient = computed(() => store.getters.isCurrentUserClient)
+const isCurrentUserVendor = computed(() => store.getters.isCurrentUserVendor)
+const personMap = computed(() => store.getters.personMap)
+const taskMap = computed(() => store.getters.taskMap)
+const taskStatusMap = computed(() => store.getters.taskStatusMap)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
+
+const sortedEntries = computed(() =>
+  [...props.entries].sort((taskA, taskB) => {
+    if (!taskA) return false
+    const taskTypeA = taskTypeMap.value.get(taskA.task_type_id)
+    const taskTypeB = taskTypeMap.value.get(taskB.task_type_id)
+    const priorityA = getTaskTypePriority.value(taskA.task_type_id)
+    const priorityB = getTaskTypePriority.value(taskB.task_type_id)
+    if (priorityA === priorityB) {
+      return (taskTypeA?.name || '').localeCompare(
+        taskTypeB?.name || '',
+        undefined,
+        { numeric: true }
+      )
     }
-  },
+    return priorityA - priorityB
+  })
+)
 
-  emits: ['task-selected'],
+const entityProgress = computed(() => {
+  const doneTasks = props.entries.filter(task => {
+    const fullTask = getTask(task.id)
+    const taskStatus = taskStatusMap.value.get(fullTask?.task_status_id)
+    return taskStatus?.is_done
+  })
+  return `${doneTasks.length} / ${props.entries.length}`
+})
 
-  data() {
-    return {
-      currentTask: null
-    }
-  },
+const entityEstimation = computed(() =>
+  props.entries.reduce((acc, task) => acc + task.estimation, 0)
+)
 
-  computed: {
-    ...mapGetters([
-      'currentProduction',
-      'getTaskTypePriority',
-      'isCurrentUserClient',
-      'isCurrentUserVendor',
-      'personMap',
-      'taskMap',
-      'taskStatusMap',
-      'taskTypeMap'
-    ]),
+const entityDuration = computed(() =>
+  props.entries.reduce((acc, task) => acc + task.duration, 0)
+)
 
-    sortedEntries() {
-      return [...this.entries].sort((taskA, taskB) => {
-        if (!taskA) return false
-        const taskTypeA = this.taskTypeMap.get(taskA.task_type_id)
-        const taskTypeB = this.taskTypeMap.get(taskB.task_type_id)
-        const taskTypeAPriority = this.getTaskTypePriority(taskA.task_type_id)
-        const taskTypeBPriority = this.getTaskTypePriority(taskB.task_type_id)
-        if (taskTypeAPriority === taskTypeBPriority) {
-          return (taskTypeA?.name || '').localeCompare(
-            taskTypeB?.name || '',
-            undefined,
-            { numeric: true }
-          )
-        } else {
-          return taskTypeAPriority - taskTypeBPriority
-        }
-      })
-    },
+const entityStartDate = computed(() => {
+  if (props.entries.length === 0) return ''
+  const startDate = props.entries.reduce(
+    (min, task) => (task.start_date < min ? task.start_date : min),
+    props.entries[0].start_date
+  )
+  return startDate ? startDate.substring(0, 10) : ''
+})
 
-    entityProgress() {
-      const doneTasks = this.entries.filter(task => {
-        const fullTask = this.getTask(task.id)
-        const taskStatus = this.taskStatusMap.get(fullTask?.task_status_id)
-        return taskStatus?.is_done
-      })
-      return `${doneTasks.length} / ${this.entries.length}`
-    },
+const entityDueDate = computed(() => {
+  if (props.entries.length === 0) return ''
+  const dueDate = props.entries.reduce(
+    (max, task) => (task.due_date > max ? task.due_date : max),
+    props.entries[0].due_date
+  )
+  return dueDate ? dueDate.substring(0, 10) : ''
+})
 
-    entityEstimation() {
-      return this.entries.reduce((acc, task) => acc + task.estimation, 0)
-    },
+const entityAssignees = computed(() => [
+  ...new Set(props.entries.flatMap(task => task.assignees))
+])
 
-    entityDuration() {
-      return this.entries.reduce((acc, task) => acc + task.duration, 0)
-    },
+// Functions
+// --------------------------------------------------------------------------
+const onBodyScroll = event => {
+  headerWrapper.value.style.left = `-${event.target.scrollLeft}px`
+}
 
-    entityStartDate() {
-      if (this.entries.length === 0) return ''
-      let startDate = this.entries[0].start_date
-      this.entries.forEach(task => {
-        if (task.start_date < startDate) {
-          startDate = task.start_date
-        }
-      })
-      return startDate ? startDate.substring(0, 10) : ''
-    },
+const getTask = task =>
+  typeof task === 'string' ? taskMap.value.get(task) : task
 
-    entityDueDate() {
-      if (this.entries.length === 0) return ''
-      let dueDate = this.entries[0].due_date
-      this.entries.forEach(task => {
-        if (task.due_date > dueDate) {
-          dueDate = task.due_date
-        }
-      })
-      return dueDate ? dueDate.substring(0, 10) : ''
-    },
+const getTaskStartDate = task =>
+  task?.start_date ? task.start_date.substring(0, 10) : ''
 
-    entityAssignees() {
-      return [...new Set(this.entries.flatMap(task => task.assignees))]
-    }
-  },
+const getTaskDueDate = task =>
+  task?.due_date ? task.due_date.substring(0, 10) : ''
 
-  methods: {
-    onBodyScroll(event) {
-      const position = event.target
-      this.$refs.headerWrapper.style.left = `-${position.scrollLeft}px`
-    },
+const getTaskEstimation = task =>
+  task?.estimation ? formatDuration(task.estimation) : ''
 
-    getTask(task) {
-      if (typeof task === 'string') {
-        return this.taskMap.get(task)
-      } else {
-        return task
-      }
-    },
+const getTaskDuration = task =>
+  task?.duration ? formatDuration(task.duration) : ''
 
-    getTaskStartDate(task) {
-      return task && task.start_date ? task.start_date.substring(0, 10) : ''
-    },
+const getTaskType = entry => {
+  const task = getTask(entry)
+  return task ? taskTypeMap.value.get(task.task_type_id) : null
+}
 
-    getTaskDueDate(task) {
-      return task && task.due_date ? task.due_date.substring(0, 10) : ''
-    },
+const getAssignees = entry => getTask(entry)?.assignees || []
 
-    getTaskEstimation(task) {
-      return task && task.estimation ? this.formatDuration(task.estimation) : ''
-    },
-
-    getTaskDuration(task) {
-      return task && task.duration ? this.formatDuration(task.duration) : ''
-    },
-
-    getTaskType(entry) {
-      const task = this.getTask(entry)
-      return task ? this.taskTypeMap.get(task.task_type_id) : null
-    },
-
-    getAssignees(entry) {
-      const task = this.getTask(entry)
-      return task ? task.assignees : []
-    },
-
-    selectTask(task) {
-      if (task.id === this.currentTask?.id) {
-        this.currentTask = null
-      } else {
-        this.currentTask = task
-      }
-      this.$emit('task-selected', task)
-    }
-  }
+const selectTask = task => {
+  currentTask.value = task.id === currentTask.value?.id ? null : task
+  emit('task-selected', task)
 }
 </script>
 

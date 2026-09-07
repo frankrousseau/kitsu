@@ -52,78 +52,71 @@
   </div>
 </template>
 
-<script>
-import { mapGetters, mapActions } from 'vuex'
+<script setup>
+import { computed, onMounted, ref, watch } from 'vue'
+import { useStore } from 'vuex'
 
-import { formatListMixin } from '@/components/mixins/format'
+import { useFormat } from '@/composables/format'
 
+/* eslint-disable no-unused-vars */
 import PeopleNameCell from '@/components/cells/PeopleNameCell.vue'
-import Spinner from '@/components/widgets/Spinner.vue'
 import TaskTypeCell from '@/components/cells/TaskTypeCell.vue'
+import Spinner from '@/components/widgets/Spinner.vue'
+/* eslint-enable no-unused-vars */
 
-export default {
-  name: 'entity-time-logs',
+const store = useStore()
+const { formatDisplayDate, formatDuration } = useFormat()
 
-  mixins: [formatListMixin],
+// Props
+// --------------------------------------------------------------------------
+const props = defineProps({
+  entity: { type: Object, default: null }
+})
 
-  components: {
-    PeopleNameCell,
-    Spinner,
-    TaskTypeCell
-  },
+// State
+// --------------------------------------------------------------------------
+const isLoading = ref(false)
+const logs = ref([])
 
-  props: {
-    entity: {
-      type: Object,
-      default: () => {}
-    }
-  },
+// Computed
+// --------------------------------------------------------------------------
+const currentProduction = computed(() => store.getters.currentProduction)
+const personMap = computed(() => store.getters.personMap)
+const taskMap = computed(() => store.getters.taskMap)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
 
-  data() {
-    return {
-      logs: [],
-      isLoading: false
-    }
-  },
-
-  mounted() {
-    if (!this.entity) return
-    this.reset()
-  },
-
-  computed: {
-    ...mapGetters(['currentProduction', 'personMap', 'taskMap', 'taskTypeMap'])
-  },
-
-  methods: {
-    ...mapActions(['getEntityTimeLogs']),
-
-    getTaskType(log) {
-      const task = this.taskMap.get(log.task_id)
-      return task && this.taskTypeMap.get(task.task_type_id)
-    },
-
-    reset() {
-      this.isLoading = true
-      this.getEntityTimeLogs(this.entity.id)
-        .then(logs => {
-          this.logs = logs
-          this.isLoading = false
-        })
-        .catch(err => {
-          console.error(err)
-          this.logs = []
-          this.isLoading = false
-        })
-    }
-  },
-
-  watch: {
-    entity() {
-      if (this.entity) this.reset()
-    }
-  }
+// Functions
+// --------------------------------------------------------------------------
+const getTaskType = log => {
+  const task = taskMap.value.get(log.task_id)
+  return task && taskTypeMap.value.get(task.task_type_id)
 }
+
+const reset = async () => {
+  isLoading.value = true
+  try {
+    logs.value = await store.dispatch('getEntityTimeLogs', props.entity.id)
+  } catch (err) {
+    console.error(err)
+    logs.value = []
+  }
+  isLoading.value = false
+}
+
+// Watchers
+// --------------------------------------------------------------------------
+watch(
+  () => props.entity,
+  () => {
+    if (props.entity) reset()
+  }
+)
+
+// Lifecycle
+// --------------------------------------------------------------------------
+onMounted(() => {
+  if (props.entity) reset()
+})
 </script>
 
 <style lang="scss" scoped>

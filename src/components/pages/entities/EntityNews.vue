@@ -54,116 +54,98 @@
   </div>
 </template>
 
-<script>
-import { mapGetters, mapActions } from 'vuex'
+<script setup>
+import {
+  computed,
+  getCurrentInstance,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch
+} from 'vue'
+import { useStore } from 'vuex'
 
-import { formatListMixin } from '@/components/mixins/format'
+import { useFormat } from '@/composables/format'
 
-import Spinner from '@/components/widgets/Spinner.vue'
+/* eslint-disable no-unused-vars */
 import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
+import Spinner from '@/components/widgets/Spinner.vue'
 import TaskTypeName from '@/components/widgets/TaskTypeName.vue'
 import ValidationTag from '@/components/widgets/ValidationTag.vue'
+/* eslint-enable no-unused-vars */
 
-export default {
-  name: 'entity-news',
+const store = useStore()
+const { formatDisplayDate } = useFormat()
+const socket = getCurrentInstance().appContext.config.globalProperties.$socket
 
-  mixins: [formatListMixin],
+// Props
+// --------------------------------------------------------------------------
+const props = defineProps({
+  entity: { type: Object, default: null }
+})
 
-  components: {
-    PeopleAvatar,
-    Spinner,
-    TaskTypeName,
-    ValidationTag
-  },
+// State
+// --------------------------------------------------------------------------
+const isLoading = ref(false)
+const newsList = ref([])
 
-  data() {
-    return {
-      isLoading: false,
-      newsList: []
-    }
-  },
+// Computed
+// --------------------------------------------------------------------------
+const currentProduction = computed(() => store.getters.currentProduction)
+const taskStatusMap = computed(() => store.getters.taskStatusMap)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
 
-  props: {
-    entity: {
-      type: Object,
-      default: () => {}
-    }
-  },
+// Functions
+// --------------------------------------------------------------------------
+const buildTaskFromNews = news => ({ task_status_id: news.task_status_id })
 
-  mounted() {
-    this.reset()
-  },
+const buildTaskTypeFromNews = news => ({
+  ...taskTypeMap.value.get(news.task_type_id),
+  episode_id: news.episode_id
+})
 
-  computed: {
-    ...mapGetters(['currentProduction', 'taskTypeMap', 'taskStatusMap'])
-  },
-
-  methods: {
-    ...mapActions(['getEntityNews']),
-
-    buildTaskFromNews(news) {
-      return {
-        task_status_id: news.task_status_id
-      }
-    },
-
-    buildTaskTypeFromNews(news) {
-      return {
-        ...this.taskTypeMap.get(news.task_type_id),
-        episode_id: news.episode_id
-      }
-    },
-
-    hasRetakeValue(news) {
-      const taskStatus = this.taskStatusMap.get(news.task_status_id)
-      return taskStatus ? news.change && taskStatus.is_retake : false
-    },
-
-    hasDoneValue(news) {
-      const taskStatus = this.taskStatusMap.get(news.task_status_id)
-      return taskStatus ? news.change && taskStatus.is_done : false
-    },
-
-    reset() {
-      if (!this.entity) {
-        return
-      }
-      this.isLoading = true
-      this.getEntityNews(this.entity.id)
-        .then(data => {
-          // The author is already resolved and enriched by the store action.
-          this.newsList = data.data
-        })
-        .catch(err => {
-          console.error(err)
-          this.newsList = []
-        })
-        .finally(() => {
-          this.isLoading = false
-        })
-    }
-  },
-
-  watch: {
-    entity() {
-      this.reset()
-    }
-  },
-
-  socket: {
-    events: {
-      'news:new'(eventData) {
-        if (
-          eventData.project_id === this.currentProduction.id &&
-          (!this.taskTypeId || this.taskTypeId === eventData.task_type_id) &&
-          (!this.taskStatusId || this.taskStatusId === eventData.task_status_id)
-        ) {
-          this.reset()
-        }
-      }
-    }
-  }
+const hasRetakeValue = news => {
+  const taskStatus = taskStatusMap.value.get(news.task_status_id)
+  return taskStatus ? news.change && taskStatus.is_retake : false
 }
+
+const hasDoneValue = news => {
+  const taskStatus = taskStatusMap.value.get(news.task_status_id)
+  return taskStatus ? news.change && taskStatus.is_done : false
+}
+
+const reset = async () => {
+  if (!props.entity) return
+  isLoading.value = true
+  try {
+    // The author is already resolved and enriched by the store action.
+    const data = await store.dispatch('getEntityNews', props.entity.id)
+    newsList.value = data.data
+  } catch (err) {
+    console.error(err)
+    newsList.value = []
+  }
+  isLoading.value = false
+}
+
+const onNewsNew = eventData => {
+  if (eventData.project_id === currentProduction.value.id) reset()
+}
+
+// Watchers
+// --------------------------------------------------------------------------
+watch(() => props.entity, reset)
+
+// Lifecycle
+// --------------------------------------------------------------------------
+onMounted(() => {
+  socket.on('news:new', onNewsNew)
+  reset()
+})
+
+onBeforeUnmount(() => {
+  socket.off('news:new', onNewsNew)
+})
 </script>
 
 <style lang="scss" scoped>

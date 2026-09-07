@@ -127,154 +127,120 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { DownloadIcon } from 'lucide-vue-next'
-import { mapGetters, mapActions } from 'vuex'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useStore } from 'vuex'
 
-import { renderFileSize } from '@/lib/render'
-import { formatDate as formatDateBase } from '@/lib/time'
+import { useFormat } from '@/composables/format'
 import preferences from '@/lib/preferences'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
+import { renderFileSize } from '@/lib/render'
 
+/* eslint-disable no-unused-vars */
+import PeopleNameCell from '@/components/cells/PeopleNameCell.vue'
+import TaskTypeCell from '@/components/cells/TaskTypeCell.vue'
+import EntityPreviewFileCard from '@/components/pages/entities/EntityPreviewFileCard.vue'
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
 import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
-import EntityPreviewFileCard from '@/components/pages/entities/EntityPreviewFileCard.vue'
-import PeopleNameCell from '@/components/cells/PeopleNameCell.vue'
 import Spinner from '@/components/widgets/Spinner.vue'
 import TaskTypeName from '@/components/widgets/TaskTypeName.vue'
-import TaskTypeCell from '@/components/cells/TaskTypeCell.vue'
+/* eslint-enable no-unused-vars */
 
-export default {
-  name: 'entity-preview-files',
+const store = useStore()
+const { formatDate } = useFormat()
 
-  components: {
-    ButtonSimple,
-    DownloadIcon,
-    EntityPreviewFileCard,
-    EntityThumbnail,
-    PeopleNameCell,
-    Spinner,
-    TaskTypeCell,
-    TaskTypeName
-  },
+// Props
+// --------------------------------------------------------------------------
+const props = defineProps({
+  entity: { type: Object, default: null }
+})
 
-  data() {
-    return {
-      contactSheetMode: false,
-      isLoading: false,
-      previewFiles: []
+// State
+// --------------------------------------------------------------------------
+const contactSheetMode = ref(false)
+const isLoading = ref(false)
+const previewFiles = ref([])
+
+// Computed
+// --------------------------------------------------------------------------
+const currentProduction = computed(() => store.getters.currentProduction)
+const isCurrentUserArtist = computed(() => store.getters.isCurrentUserArtist)
+const personMap = computed(() => store.getters.personMap)
+const taskMap = computed(() => store.getters.taskMap)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
+
+const taskTypePreviewFileGroups = computed(() => {
+  const groups = previewFiles.value.reduce((acc, previewFile) => {
+    const taskType = getTaskType(previewFile)
+    if (taskType) {
+      acc.set(taskType.id, [...(acc.get(taskType.id) || []), previewFile])
     }
-  },
-
-  props: {
-    entity: {
-      type: Object,
-      default: () => {}
-    }
-  },
-
-  mounted() {
-    if (!this.entity) return
-    this.reset()
-    this.contactSheetMode = preferences.getBoolPreference(
-      'entity:preview-files-contact-sheet'
+    return acc
+  }, new Map())
+  const priorityOf = taskTypeId =>
+    getTaskTypePriorityOfProd(
+      taskTypeMap.value.get(taskTypeId),
+      currentProduction.value
     )
-  },
+  return Array.from(groups.keys())
+    .sort((a, b) => priorityOf(b) - priorityOf(a))
+    .map(taskTypeId => groups.get(taskTypeId))
+})
 
-  computed: {
-    ...mapGetters([
-      'currentProduction',
-      'dateFormat',
-      'isCurrentUserArtist',
-      'personMap',
-      'taskMap',
-      'taskTypeMap',
-      'use12HourClock'
-    ]),
-
-    taskTypePreviewFileGroups() {
-      const taskTypePreviewFiles = new Map()
-      this.previewFiles.forEach(previewFile => {
-        const taskType = this.getTaskType(previewFile)
-        if (taskType) {
-          if (!taskTypePreviewFiles.has(taskType.id)) {
-            taskTypePreviewFiles.set(taskType.id, [])
-          }
-          taskTypePreviewFiles.get(taskType.id).push(previewFile)
-        }
-      })
-      return Array.from(taskTypePreviewFiles.keys())
-        .sort((a, b) => {
-          const taskTypeA = this.taskTypeMap.get(a)
-          const taskTypeB = this.taskTypeMap.get(b)
-          const priorityA = getTaskTypePriorityOfProd(
-            taskTypeA,
-            this.currentProduction
-          )
-          const priorityB = getTaskTypePriorityOfProd(
-            taskTypeB,
-            this.currentProduction
-          )
-          return priorityB - priorityA
-        })
-        .map(taskTypeId => {
-          return taskTypePreviewFiles.get(taskTypeId)
-        })
-    }
-  },
-
-  methods: {
-    ...mapActions(['getEntityPreviewFiles']),
-
-    getTaskType(previewFile) {
-      const task = this.taskMap.get(previewFile.task_id)
-      return task && this.taskTypeMap.get(task.task_type_id)
-    },
-
-    getDownloadPath(previewFileId) {
-      const previewFile = this.previewFiles.find(
-        file => file.id === previewFileId
-      )
-      if (!previewFile) return ''
-
-      const type = previewFile.extension === 'mp4' ? 'movies' : 'pictures'
-      return `/api/${type}/originals/preview-files/${previewFileId}/download`
-    },
-
-    renderFileSize,
-
-    formatDate(date) {
-      return formatDateBase(date, this.dateFormat, this.use12HourClock)
-    },
-
-    reset() {
-      this.isLoading = true
-      this.getEntityPreviewFiles(this.entity.id)
-        .then(previewFiles => {
-          this.previewFiles = previewFiles
-          this.isLoading = false
-        })
-        .catch(err => {
-          console.error(err)
-          this.previewFiles = []
-          this.isLoading = false
-        })
-    }
-  },
-
-  watch: {
-    entity() {
-      if (this.entity) this.reset()
-    },
-
-    contactSheetMode() {
-      preferences.setPreference(
-        'entity:preview-files-contact-sheet',
-        this.contactSheetMode
-      )
-    }
-  }
+// Functions
+// --------------------------------------------------------------------------
+const getTaskType = previewFile => {
+  const task = taskMap.value.get(previewFile.task_id)
+  return task && taskTypeMap.value.get(task.task_type_id)
 }
+
+const getDownloadPath = previewFileId => {
+  const previewFile = previewFiles.value.find(file => file.id === previewFileId)
+  if (!previewFile) return ''
+  const type = previewFile.extension === 'mp4' ? 'movies' : 'pictures'
+  return `/api/${type}/originals/preview-files/${previewFileId}/download`
+}
+
+const reset = async () => {
+  isLoading.value = true
+  try {
+    previewFiles.value = await store.dispatch(
+      'getEntityPreviewFiles',
+      props.entity.id
+    )
+  } catch (err) {
+    console.error(err)
+    previewFiles.value = []
+  }
+  isLoading.value = false
+}
+
+// Watchers
+// --------------------------------------------------------------------------
+watch(
+  () => props.entity,
+  () => {
+    if (props.entity) reset()
+  }
+)
+
+watch(contactSheetMode, () => {
+  preferences.setPreference(
+    'entity:preview-files-contact-sheet',
+    contactSheetMode.value
+  )
+})
+
+// Lifecycle
+// --------------------------------------------------------------------------
+onMounted(() => {
+  if (!props.entity) return
+  reset()
+  contactSheetMode.value = preferences.getBoolPreference(
+    'entity:preview-files-contact-sheet'
+  )
+})
 </script>
 
 <style lang="scss" scoped>

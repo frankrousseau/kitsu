@@ -81,90 +81,78 @@
   </div>
 </template>
 
-<script>
-import { mapGetters, mapActions } from 'vuex'
+<script setup>
+import { computed, onMounted, ref, watch } from 'vue'
+import { useStore } from 'vuex'
+
 import { renderFileSize } from '@/lib/render'
 
+/* eslint-disable no-unused-vars */
 import PeopleNameCell from '@/components/cells/PeopleNameCell.vue'
-import Spinner from '@/components/widgets/Spinner.vue'
 import TaskTypeCell from '@/components/cells/TaskTypeCell.vue'
+import Spinner from '@/components/widgets/Spinner.vue'
+/* eslint-enable no-unused-vars */
 
-export default {
-  name: 'entity-output-files',
+const store = useStore()
 
-  components: {
-    PeopleNameCell,
-    Spinner,
-    TaskTypeCell
-  },
+// Props
+// --------------------------------------------------------------------------
+const props = defineProps({
+  entity: { type: Object, default: null }
+})
 
-  data() {
-    return {
-      isLoading: false,
-      outputFiles: []
-    }
-  },
+// State
+// --------------------------------------------------------------------------
+const isLoading = ref(false)
+const outputFiles = ref([])
 
-  props: {
-    entity: {
-      type: Object,
-      default: () => {}
-    }
-  },
+// Computed
+// --------------------------------------------------------------------------
+const currentProduction = computed(() => store.getters.currentProduction)
+const fileStatusMap = computed(() => store.getters.fileStatusMap)
+const outputFileTypeMap = computed(() => store.getters.outputFileTypeMap)
+const personMap = computed(() => store.getters.personMap)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
 
-  mounted() {
-    if (!this.entity) return
-    this.reset()
-  },
+// Functions
+// --------------------------------------------------------------------------
+const getTaskType = outputFile => taskTypeMap.value.get(outputFile.task_type_id)
 
-  computed: {
-    ...mapGetters([
-      'currentProduction',
-      'isCurrentUserArtist',
-      'personMap',
-      'fileStatusMap',
-      'outputFileTypeMap',
-      'taskMap',
-      'taskTypeMap'
-    ])
-  },
+const getFileStatus = outputFile =>
+  fileStatusMap.value.get(outputFile.file_status_id)
 
-  methods: {
-    ...mapActions([
-      'loadEntityOutputFiles',
-      'loadFileStatuses',
-      'loadOutputTypes'
-    ]),
+const getOutputType = outputFile =>
+  outputFileTypeMap.value.get(outputFile.output_type_id)
 
-    getTaskType(outputFile) {
-      return this.taskTypeMap.get(outputFile.task_type_id)
-    },
-
-    getFileStatus(outputFile) {
-      return this.fileStatusMap.get(outputFile.file_status_id)
-    },
-
-    getOutputType(outputFile) {
-      return this.outputFileTypeMap.get(outputFile.output_type_id)
-    },
-
-    renderFileSize,
-
-    async reset() {
-      this.isLoading = true
-      if (this.fileStatusMap.size === 0) await this.loadFileStatuses()
-      if (this.outputFileTypeMap.size === 0) await this.loadOutputTypes()
-      this.outputFiles = await this.loadEntityOutputFiles(this.entity.id)
-      this.isLoading = false
-    }
-  },
-
-  watch: {
-    entity() {
-      if (this.entity) this.reset()
-    }
+const reset = async () => {
+  isLoading.value = true
+  if (fileStatusMap.value.size === 0) {
+    await store.dispatch('loadFileStatuses')
   }
+  if (outputFileTypeMap.value.size === 0) {
+    await store.dispatch('loadOutputTypes')
+  }
+  outputFiles.value = await store.dispatch(
+    'loadEntityOutputFiles',
+    props.entity.id
+  )
+  isLoading.value = false
 }
+
+// Watchers
+// --------------------------------------------------------------------------
+watch(
+  () => props.entity,
+  () => {
+    if (props.entity) reset()
+  }
+)
+
+// Lifecycle
+// --------------------------------------------------------------------------
+onMounted(() => {
+  if (props.entity) reset()
+})
 </script>
 
 <style lang="scss" scoped>
