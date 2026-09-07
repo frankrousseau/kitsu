@@ -295,7 +295,7 @@
         >
           <div class="wrapper">
             <schedule
-              ref="schedule-widget"
+              ref="scheduleWidget"
               :start-date="tasksStartDate"
               :end-date="tasksEndDate"
               :hierarchy="scheduleItems"
@@ -338,7 +338,6 @@
     </div>
 
     <edit-asset-modal
-      ref="edit-asset-modal"
       :active="modals.edit"
       :is-loading="loading.edit"
       :is-error="errors.edit"
@@ -349,32 +348,36 @@
   </div>
 </template>
 
-<script>
-import { mapGetters, mapActions } from 'vuex'
+<script setup>
+import { useHead } from '@unhead/vue'
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CornerLeftUpIcon
 } from 'lucide-vue-next'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
+import { useStore } from 'vuex'
 
+import { useEntity } from '@/composables/entity'
+import { sortByName } from '@/lib/sorting'
 import assetStore from '@/store/modules/assets'
 
-import { sortByName } from '@/lib/sorting'
-import { entityMixin } from '@/components/mixins/entity'
-import { formatListMixin } from '@/components/mixins/format'
-
-import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
-import ConceptCard from '@/components/widgets/ConceptCard.vue'
-import ComboboxNumber from '@/components/widgets/ComboboxNumber.vue'
-import ComboboxStatus from '@/components/widgets/ComboboxStatus.vue'
+/* eslint-disable no-unused-vars */
 import DescriptionCell from '@/components/cells/DescriptionCell.vue'
+import EntityTaskList from '@/components/lists/EntityTaskList.vue'
 import EditAssetModal from '@/components/modals/EditAssetModal.vue'
 import EntityChat from '@/components/pages/entities/EntityChat.vue'
 import EntityNews from '@/components/pages/entities/EntityNews.vue'
 import EntityOutputFiles from '@/components/pages/entities/EntityOutputFiles.vue'
 import EntityPreviewFiles from '@/components/pages/entities/EntityPreviewFiles.vue'
 import EntityTimeLogs from '@/components/pages/entities/EntityTimeLogs.vue'
-import EntityTaskList from '@/components/lists/EntityTaskList.vue'
+import TaskInfo from '@/components/sides/TaskInfo.vue'
+import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
+import ComboboxNumber from '@/components/widgets/ComboboxNumber.vue'
+import ComboboxStatus from '@/components/widgets/ComboboxStatus.vue'
+import ConceptCard from '@/components/widgets/ConceptCard.vue'
 import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import MetadataValue from '@/components/widgets/MetadataValue.vue'
 import PageSubtitle from '@/components/widgets/PageSubtitle.vue'
@@ -382,364 +385,240 @@ import RouteSectionTabs from '@/components/widgets/RouteSectionTabs.vue'
 import Schedule from '@/components/widgets/Schedule.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
 import TaskTypeName from '@/components/widgets/TaskTypeName.vue'
-import TaskInfo from '@/components/sides/TaskInfo.vue'
+/* eslint-enable no-unused-vars */
 
-export default {
-  name: 'asset',
+defineOptions({ name: 'asset' })
 
-  mixins: [entityMixin, formatListMixin],
+const { t } = useI18n()
+const route = useRoute()
+const store = useStore()
 
-  components: {
-    ButtonSimple,
-    ChevronLeftIcon,
-    ChevronRightIcon,
-    ConceptCard,
-    ComboboxNumber,
-    ComboboxStatus,
-    CornerLeftUpIcon,
-    DescriptionCell,
-    EditAssetModal,
-    EntityChat,
-    EntityNews,
-    EntityOutputFiles,
-    EntityPreviewFiles,
-    EntityThumbnail,
-    EntityTaskList,
-    EntityTimeLogs,
-    MetadataValue,
-    PageSubtitle,
-    RouteSectionTabs,
-    Schedule,
-    TableInfo,
-    TaskInfo,
-    TaskTypeName
-  },
+// State
+// --------------------------------------------------------------------------
+const currentAsset = ref(null)
+const currentConcept = ref(null)
+const currentConceptStatus = ref(null)
+const currentConceptTask = ref(null)
+const localTasks = ref([])
+const scheduleWidget = ref(null)
+const castIn = reactive({ isLoading: false, isError: false })
+const errors = reactive({ edit: false })
+const loading = reactive({ edit: false })
+const modals = reactive({ edit: false })
 
-  data() {
-    return {
-      type: 'asset',
-      currentAsset: null,
-      currentConcept: null,
-      currentTask: null,
-      currentConceptStatus: null,
-      currentConceptTask: null,
-      localTasks: [],
-      castIn: {
-        isLoading: false,
-        isError: false
-      },
-      errors: {
-        edit: false
-      },
-      loading: {
-        edit: false
-      },
-      modals: {
-        edit: false
-      }
-    }
-  },
+// Computed
+// --------------------------------------------------------------------------
+const assetMetadataDescriptors = computed(
+  () => store.getters.assetMetadataDescriptors
+)
+const assetSearchText = computed(() => store.getters.assetSearchText)
+const currentEpisode = computed(() => store.getters.currentEpisode)
+const currentProduction = computed(() => store.getters.currentProduction)
+const isCurrentUserManager = computed(
+  () => store.getters.isCurrentUserProductionManager
+)
+const linkedConcepts = computed(() => store.getters.linkedConcepts)
+const taskMap = computed(() => store.getters.taskMap)
+const taskStatusMap = computed(() => store.getters.taskStatusMap)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
 
-  mounted() {
-    this.clearSelectedTasks()
-    this.init()
-  },
+const entityList = computed(() => assetStore.cache.assets)
 
-  computed: {
-    ...mapGetters([
-      'assetMap',
-      'assetSearchText',
-      'assetMetadataDescriptors',
-      'conceptMap',
-      'currentEpisode',
-      'currentProduction',
-      'getTaskTypePriority',
-      'isTVShow',
-      'linkedConcepts',
-      'route',
-      'taskMap',
-      'taskStatusMap',
-      'taskTypeMap',
-      'shotId'
-    ]),
-    ...mapGetters({
-      isCurrentUserManager: 'isCurrentUserProductionManager'
-    }),
+const title = computed(() =>
+  currentAsset.value
+    ? `${currentAsset.value.asset_type_name} / ${currentAsset.value.name}`
+    : t('main.loading')
+)
 
-    title() {
-      if (this.currentAsset) {
-        return (
-          `${this.currentAsset.asset_type_name} / ` +
-          `${this.currentAsset.name}`
-        )
-      } else {
-        return this.$t('main.loading')
-      }
-    },
+const nbShotsCastedIn = computed(() =>
+  (currentAsset.value?.castInShotsBySequence || []).reduce(
+    (acc, shots) => acc + shots.length,
+    0
+  )
+)
 
-    assetThumbnailPath() {
-      const previewId = this.currentAsset.preview_file_id
-      return `/api/pictures/originals/preview-files/${previewId}.png`
-    },
+const assetsPath = computed(() => {
+  const path = {
+    name: 'assets',
+    params: { production_id: currentProduction.value.id },
+    query: { search: assetSearchText.value || '' }
+  }
+  if (currentEpisode.value) {
+    path.name = 'episode-assets'
+    path.params.episode_id = currentEpisode.value.id
+  }
+  return path
+})
 
-    isPreview() {
-      return (
-        this.currentAsset &&
-        this.currentAsset.preview_file_id &&
-        this.currentAsset.preview_file_id.length > 0
+const assetTabs = computed(() => [
+  { label: t('main.label.info'), name: 'infos' },
+  { label: t('main.label.chat'), name: 'chat' },
+  { label: t('main.label.concepts'), name: 'concepts' },
+  { label: t('main.label.casting'), name: 'casting' },
+  { label: t('main.label.schedule'), name: 'schedule' },
+  { label: t('main.label.preview_files'), name: 'preview-files' },
+  { label: t('main.label.timelog'), name: 'time-logs' },
+  { label: t('main.label.output_files'), name: 'output-files' }
+])
+
+const taskStatusList = computed(() => {
+  const allStatusItem = {
+    id: null,
+    color: '#999',
+    name: t('main.all'),
+    short_name: t('main.all')
+  }
+  const conceptTaskStatusList = sortByName(
+    Array.from(taskStatusMap.value.values()).filter(
+      status => status.for_concept
+    )
+  )
+  return [allStatusItem, ...conceptTaskStatusList]
+})
+
+const filteredLinkedConcepts = computed(() =>
+  currentConceptStatus.value
+    ? linkedConcepts.value.filter(
+        concept =>
+          concept.tasks[0].task_status_id === currentConceptStatus.value
       )
-    },
+    : linkedConcepts.value
+)
 
-    nbShotsCastedIn() {
-      const castIn = this.currentAsset?.castInShotsBySequence || []
-      return castIn.reduce((acc, shots) => {
-        return acc + shots.length
-      }, 0)
-    },
+// Functions
+// --------------------------------------------------------------------------
+const getCurrentAsset = async () => {
+  const assetId = route.params.asset_id
+  if (!assetId) return null
+  let asset = assetStore.cache.assetMap.get(assetId) || null
+  if (!asset) {
+    await store.dispatch('loadAsset', assetId)
+    asset = assetStore.cache.assetMap.get(assetId)
+    if (!asset) return null
+  }
+  localTasks.value = asset.tasks
+    .map(taskId => taskMap.value.get(taskId))
+    .filter(Boolean)
+  return asset
+}
 
-    assetsPath() {
-      const route = {
-        name: 'assets',
-        params: {
-          production_id: this.currentProduction.id
-        },
-        query: {
-          search: this.assetSearchText || ''
-        }
-      }
-      if (this.currentEpisode) {
-        route.name = 'episode-assets'
-        route.params.episode_id = this.currentEpisode.id
-      }
-      return route
-    },
-
-    assetNavOptions() {
-      return [
-        ...this.entityNavOptions.slice(0, 2),
-        { label: this.$t('main.label.concepts'), value: 'concepts' },
-        ...this.entityNavOptions.slice(2),
-        { label: this.$t('main.label.output_files'), value: 'output-files' }
-      ]
-    },
-
-    assetTabs() {
-      return this.assetNavOptions.map(option => {
-        return {
-          label: option.label,
-          name: option.value
-        }
-      })
-    },
-
-    taskStatusList() {
-      const allStatusItem = {
-        id: null,
-        color: '#999',
-        name: this.$t('main.all'),
-        short_name: this.$t('main.all')
-      }
-      const conceptTaskStatusList = sortByName(
-        Array.from(this.taskStatusMap.values()).filter(
-          status => status.for_concept
-        )
-      )
-      return [allStatusItem].concat(conceptTaskStatusList)
-    },
-
-    filteredLinkedConcepts() {
-      return this.currentConceptStatus
-        ? this.linkedConcepts.filter(
-            concept =>
-              concept.tasks[0].task_status_id === this.currentConceptStatus
-          )
-        : this.linkedConcepts
-    }
-  },
-
-  methods: {
-    ...mapActions([
-      'addSelectedConcepts',
-      'clearSelectedTasks',
-      'clearSelectedConcepts',
-      'editAsset',
-      'loadAsset',
-      'loadAssets',
-      'loadAssetCastIn',
-      'loadAssetCasting',
-      'loadLinkedConcepts',
-      'loadShots',
-      'setCurrentEpisode'
-    ]),
-
-    changeTab(tab) {
-      this.selectedTab = tab
-    },
-
-    getCurrentAsset() {
-      return new Promise(resolve => {
-        const assetId = this.route.params.asset_id
-        if (!assetId) resolve(null)
-        let asset = assetStore.cache.assetMap.get(assetId) || null
-        if (!asset) {
-          if (assetId) {
-            return this.loadAsset(assetId).then(() => {
-              asset = assetStore.cache.assetMap.get(assetId)
-              if (!asset) return resolve(null)
-              this.localTasks = asset.tasks
-                .map(taskId => this.taskMap.get(taskId))
-                .filter(Boolean)
-              return resolve(asset)
-            })
-          }
-        } else {
-          this.localTasks = asset.tasks
-            .map(taskId => this.taskMap.get(taskId))
-            .filter(Boolean)
-          return resolve(asset)
-        }
-      })
-    },
-
-    getConceptTaskStatus(concept) {
-      return this.taskStatusMap.get(concept.tasks[0].task_status_id)
-    },
-
-    onEditClicked() {
-      this.modals.edit = true
-    },
-
-    confirmEditAsset(form) {
-      form.id = this.currentAsset.id
-      this.loading.edit = true
-      this.errors.edit = false
-      this.editAsset(form)
-        .then(() => {
-          this.loading.edit = false
-          this.modals.edit = false
-        })
-        .catch(err => {
-          console.error(err)
-          this.loading.edit = false
-          this.errors.edit = true
-        })
-      const asset = assetStore.cache.assetMap.get(form.id)
-      this.currentAsset = { ...asset }
-    },
-
-    resetData() {
-      this.castIn.isLoading = true
-      if (this.$route.params.episode_id === 'main') {
-        this.setCurrentEpisode('main')
-      }
-      // Next tick is needed to wait for the episode change.
-      this.$nextTick(() => {
-        this.getCurrentAsset()
-          .then(asset => {
-            this.currentAsset = asset
-            return this.loadAssetCastIn(this.currentAsset)
-          })
-          .then(() => this.loadAssetCasting(this.currentAsset))
-          .then(() => {
-            this.castIn.isLoading = false
-          })
-          .then(() => this.loadLinkedConcepts(this.currentAsset))
-          .catch(err => {
-            this.castIn.isError = true
-            this.castIn.isLoading = false
-            console.error(err)
-          })
-      })
-    },
-
-    shotPath(shot) {
-      return {
-        name: shot.episode_id ? 'episode-shot' : 'shot',
-        params: {
-          production_id: this.currentProduction.id,
-          shot_id: shot.shot_id,
-          episode_id: shot.episode_id ? shot.episode_id : undefined
-        }
-      }
-    },
-
-    init() {
-      return this.getCurrentAsset()
-        .then(asset => {
-          this.currentAsset = asset
-          this.currentSection = this.route.query.section || 'infos'
-          this.castIn.isLoading = true
-          this.castIn.isError = false
-          if (this.currentAsset) {
-            this.loadAssetCastIn(this.currentAsset)
-              .then(() => this.loadAssetCasting(this.currentAsset))
-              .then(() => {
-                this.castIn.isLoading = false
-              })
-              .then(() => this.loadLinkedConcepts(this.currentAsset))
-              .catch(err => {
-                this.castIn.isLoading = false
-                this.castIn.isError = true
-                console.error(err)
-              })
-          } else {
-            this.resetData()
-          }
-        })
-        .then(() => {
-          setTimeout(() => {
-            if (this.$refs['schedule-widget']) {
-              this.$refs['schedule-widget'].scrollToDate(
-                this.scheduleItems[0].startDate
-              )
-            }
-          }, 100)
-        })
-        .catch(console.error)
-    },
-
-    selectConcept(concept) {
-      if (this.currentConcept && this.currentConcept.id === concept.id) {
-        this.currentConcept = null
-        this.currentConceptTask = null
-        this.clearSelectedConcepts()
-      } else {
-        const selection = new Map()
-        selection.set(concept.id, concept)
-        this.clearSelectedConcepts()
-        this.addSelectedConcepts(selection)
-        this.currentConcept = concept
-        this.currentConceptTask = concept.tasks[0]
-      }
-    }
-  },
-
-  watch: {
-    currentSection() {
-      if (this.currentSection === 'schedule' && this.scheduleItems.length > 0) {
-        if (this.$refs['schedule-widget']) {
-          this.$refs['schedule-widget'].scrollToDate(
-            this.scheduleItems[0].startDate
-          )
-        }
-      }
-    },
-
-    zoomLevel() {
-      if (this.$refs['schedule-widget']) {
-        this.$refs['schedule-widget'].scrollToDate(
-          this.scheduleItems[0].startDate
-        )
-      }
-    }
-  },
-
-  head() {
-    return {
-      title: `${this.title} - Kitsu`
-    }
+const loadCastingData = async () => {
+  castIn.isLoading = true
+  castIn.isError = false
+  try {
+    await store.dispatch('loadAssetCastIn', currentAsset.value)
+    await store.dispatch('loadAssetCasting', currentAsset.value)
+    castIn.isLoading = false
+    await store.dispatch('loadLinkedConcepts', currentAsset.value)
+  } catch (err) {
+    castIn.isLoading = false
+    castIn.isError = true
+    console.error(err)
   }
 }
+
+const scrollScheduleToStart = () => {
+  scheduleWidget.value?.scrollToDate(scheduleItems.value[0].startDate)
+}
+
+const resetData = async () => {
+  castIn.isLoading = true
+  if (route.params.episode_id === 'main') {
+    store.dispatch('setCurrentEpisode', 'main')
+  }
+  // Next tick is needed to wait for the episode change.
+  await nextTick()
+  currentAsset.value = await getCurrentAsset()
+  await loadCastingData()
+}
+
+const init = async () => {
+  try {
+    currentAsset.value = await getCurrentAsset()
+    currentSection.value = route.query.section || 'infos'
+    if (currentAsset.value) {
+      loadCastingData()
+    } else {
+      resetData()
+    }
+    setTimeout(scrollScheduleToStart, 100)
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const shotPath = shot => ({
+  name: shot.episode_id ? 'episode-shot' : 'shot',
+  params: {
+    production_id: currentProduction.value.id,
+    shot_id: shot.shot_id,
+    episode_id: shot.episode_id ? shot.episode_id : undefined
+  }
+})
+
+const confirmEditAsset = async form => {
+  const data = { ...form, id: currentAsset.value.id }
+  loading.edit = true
+  errors.edit = false
+  const request = store.dispatch('editAsset', data)
+  // editAsset commits optimistically, so the cache already holds the new values.
+  currentAsset.value = { ...assetStore.cache.assetMap.get(data.id) }
+  try {
+    await request
+    modals.edit = false
+  } catch (err) {
+    console.error(err)
+    errors.edit = true
+  }
+  loading.edit = false
+}
+
+const selectConcept = concept => {
+  store.dispatch('clearSelectedConcepts')
+  if (currentConcept.value?.id === concept.id) {
+    currentConcept.value = null
+    currentConceptTask.value = null
+  } else {
+    store.dispatch('addSelectedConcepts', new Map([[concept.id, concept]]))
+    currentConcept.value = concept
+    currentConceptTask.value = concept.tasks[0]
+  }
+}
+
+const {
+  currentSection,
+  currentTask,
+  zoomLevel,
+  zoomOptions,
+  scheduleItems,
+  previousEntityPath,
+  nextEntityPath,
+  tasksStartDate,
+  tasksEndDate,
+  onTaskSelected,
+  saveTaskScheduleItem
+} = useEntity({ type: 'asset', currentEntity: currentAsset, entityList, init })
+
+// Watchers
+// --------------------------------------------------------------------------
+watch(currentSection, () => {
+  if (currentSection.value === 'schedule' && scheduleItems.value.length > 0) {
+    scrollScheduleToStart()
+  }
+})
+
+watch(zoomLevel, scrollScheduleToStart)
+
+// Lifecycle
+// --------------------------------------------------------------------------
+onMounted(() => {
+  store.dispatch('clearSelectedTasks')
+  init()
+})
+
+// Head
+// --------------------------------------------------------------------------
+useHead({ title: computed(() => `${title.value} - Kitsu`) })
 </script>
 
 <style lang="scss" scoped>
@@ -795,14 +674,9 @@ h2.subtitle {
   overflow: hidden;
 }
 
-.asset-casting,
 .asset-casted-in,
 .concepts {
   overflow-y: auto;
-}
-
-.thumbnail-picture {
-  margin-bottom: 0.5em;
 }
 
 .sequence-shots {
@@ -810,7 +684,6 @@ h2.subtitle {
 }
 
 .asset-type,
-.concept-type,
 .shot-sequence {
   text-transform: uppercase;
   font-size: 1.2em;
@@ -852,14 +725,6 @@ h2.subtitle {
   word-wrap: break-word;
 }
 
-.concept-link {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-}
-
 .field-label {
   font-weight: bold;
   width: 120px;
@@ -890,26 +755,9 @@ h2.subtitle {
   height: 100%;
   overflow: hidden;
 
-  .timelien-wrapper,
-  .timeline {
-    height: 100%;
-  }
-
-  .schedule-title {
-    margin-bottom: 5px;
-  }
-
   .wrapper {
     height: 100%;
     border-radius: 10px;
-  }
-}
-
-.section-combo {
-  width: 150px;
-
-  .option-line {
-    width: 150px;
   }
 }
 
@@ -919,10 +767,6 @@ h2.subtitle {
 }
 
 @media screen and (max-width: 768px) {
-  .task-column {
-    margin-bottom: 1em;
-  }
-
   .column:first-child {
     margin-right: 0;
   }
@@ -960,16 +804,6 @@ h2.subtitle {
     flex: unset;
     min-height: 100px;
     overflow: auto;
-  }
-}
-
-.entity-stats {
-  padding: 1em;
-  font-size: 1.2em;
-
-  .entry-label {
-    display: inline-block;
-    width: 120px;
   }
 }
 
