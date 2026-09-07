@@ -5,6 +5,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import drafts from '@/lib/drafts'
 
+// The error cases below make localStorage throw on purpose. drafts.js catches
+// and logs, so without this the warning lands in the test output as noise.
+const silenceWarn = () => vi.spyOn(console, 'warn').mockImplementation(() => {})
+
 describe('drafts', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -63,6 +67,7 @@ describe('drafts', () => {
   })
 
   it('handles localStorage errors gracefully on set', () => {
+    const warn = silenceWarn()
     const setItem = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
       throw new Error('QuotaExceeded')
     })
@@ -70,17 +75,21 @@ describe('drafts', () => {
       drafts.setTaskDraft('task-4', { text: 'text', checklist: [] })
     ).not.toThrow()
     expect(setItem).toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledWith('Failed to save draft:', expect.any(Error))
   })
 
   it('handles localStorage errors gracefully on get', () => {
+    const warn = silenceWarn()
     const getItem = vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
       throw new Error('SecurityError')
     })
     expect(drafts.getTaskDraft('task-5')).toBeNull()
     expect(getItem).toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledWith('Failed to read draft:', expect.any(Error))
   })
 
   it('handles localStorage errors gracefully on clear', () => {
+    const warn = silenceWarn()
     const removeItem = vi
       .spyOn(localStorage, 'removeItem')
       .mockImplementation(() => {
@@ -88,5 +97,6 @@ describe('drafts', () => {
       })
     expect(() => drafts.clearTaskDraft('task-6')).not.toThrow()
     expect(removeItem).toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledWith('Failed to clear draft:', expect.any(Error))
   })
 })
