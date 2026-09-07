@@ -73,6 +73,12 @@
 import { UploadIcon } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
+const EXTENSIONS = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp'
+}
+
 const props = defineProps({
   shape: {
     type: String,
@@ -81,7 +87,8 @@ const props = defineProps({
   },
   size: { type: Number, default: 180 },
   outputSize: { type: Number, default: 400 },
-  outputType: { type: String, default: 'image/jpeg' },
+  // Empty means "follow the pixels": see cropMimeType below.
+  outputType: { type: String, default: '' },
   outputQuality: { type: Number, default: 0.92 }
 })
 
@@ -253,6 +260,36 @@ onBeforeUnmount(() => {
   onPointerUp()
 })
 
+// JPEG has no alpha channel: the canvas spec composites the bitmap onto solid
+// black before encoding it, which is where the black square behind a
+// transparent logo comes from. The drawn pixels are the only reliable signal:
+// the file input filters on extensions, but a drop accepts any image/*, so an
+// SVG or HEIC source would slip through a container allowlist. Stepping by 4
+// beats a functional scan here: 640k entries, and it stops on the first hit.
+const hasAlpha = ctx => {
+  try {
+    const { data } = ctx.getImageData(0, 0, props.outputSize, props.outputSize)
+    for (let index = 3; index < data.length; index += 4) {
+      if (data[index] < 255) return true
+    }
+    return false
+  } catch {
+    // A same-origin blob: URL never taints the canvas, but PNG is the answer
+    // that cannot lose anything if it ever did.
+    return true
+  }
+}
+
+const cropMimeType = ctx =>
+  props.outputType || (hasAlpha(ctx) ? 'image/png' : 'image/jpeg')
+
+// The browser silently falls back to PNG when it cannot encode the requested
+// type, so the extension follows the blob that came out, not the request.
+const outputFileName = type => {
+  const base = (originalFile.value?.name || 'image').replace(/\.[^.]+$/, '')
+  return `${base}.${EXTENSIONS[type] || 'png'}`
+}
+
 // Public API — render the visible region of the frame onto an off-screen
 // canvas at outputSize x outputSize and return a fresh FormData. Falls back
 // to the original FormData when no image has been loaded.
@@ -286,13 +323,14 @@ const cropToFormData = () =>
           reject(new Error('Cropping failed'))
           return
         }
-        const name = originalFile.value?.name || 'image.jpg'
-        const file = new File([blob], name, { type: blob.type })
+        const file = new File([blob], outputFileName(blob.type), {
+          type: blob.type
+        })
         const data = new FormData()
         data.append('file', file, file.name)
         resolve(data)
       },
-      props.outputType,
+      cropMimeType(ctx),
       props.outputQuality
     )
   })
