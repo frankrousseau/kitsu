@@ -93,93 +93,97 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { useHead } from '@unhead/vue'
 import { LockIcon } from 'lucide-vue-next'
-import { mapActions } from 'vuex'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
+import { useStore } from 'vuex'
 
 import auth from '@/lib/auth'
 
-export default {
-  name: 'reset-change-password',
+// Composables
+// --------------------------------------------------------------------------
 
-  components: {
-    LockIcon
-  },
+const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
+const store = useStore()
 
-  data() {
-    return {
-      password: '',
-      password2: '',
-      isLoading: false,
-      isError: false,
-      isFormError: false,
-      isTokenError: false,
-      isSuccess: false,
-      secondsLeft: 5
-    }
-  },
+// State
+// --------------------------------------------------------------------------
 
-  mounted() {
-    this.$store.commit('LOGIN_SUCCESS')
-    this.isLoading = false
-    this.isError = false
-    this.secondsLeft = 5
-  },
+const password = ref('')
+const password2 = ref('')
+const isError = ref(false)
+const isFormError = ref(false)
+const isLoading = ref(false)
+const isSuccess = ref(false)
+const isTokenError = ref(false)
+const secondsLeft = ref(5)
 
-  computed: {
-    isNew() {
-      return this.$route.query.type === 'new'
-    }
-  },
+let redirectInterval = null
 
-  methods: {
-    ...mapActions(['resetChangePassword']),
+// Computed
+// --------------------------------------------------------------------------
 
-    confirmResetChangePassword() {
-      this.isError = false
-      this.isFormError = false
-      this.isTokenError = false
-      if (auth.isPasswordValid(this.password, this.password2)) {
-        this.isLoading = true
-        this.isSuccess = false
-        this.resetChangePassword({
-          email: this.$route.query.email,
-          token: this.$route.query.token,
-          password: this.password,
-          password2: this.password2
-        })
-          .then(() => {
-            this.isSuccess = true
-            const interval = setInterval(() => {
-              this.secondsLeft--
-              if (this.secondsLeft === 0) {
-                this.$router.push({ name: 'login' })
-                clearInterval(interval)
-              }
-            }, 1000)
-          })
-          .catch(error => {
-            if (error.body?.message?.includes('Wrong or expired token')) {
-              this.isTokenError = true
-            } else {
-              this.isError = true
-            }
-          })
-          .finally(() => {
-            this.isLoading = false
-          })
-      } else {
-        this.isFormError = true
+const isNew = computed(() => route.query.type === 'new')
+
+// Functions
+// --------------------------------------------------------------------------
+
+const confirmResetChangePassword = async () => {
+  isError.value = false
+  isFormError.value = false
+  isTokenError.value = false
+  if (!auth.isPasswordValid(password.value, password2.value)) {
+    isFormError.value = true
+    return
+  }
+  isLoading.value = true
+  isSuccess.value = false
+  try {
+    await store.dispatch('resetChangePassword', {
+      email: route.query.email,
+      token: route.query.token,
+      password: password.value,
+      password2: password2.value
+    })
+    isSuccess.value = true
+    redirectInterval = setInterval(() => {
+      secondsLeft.value--
+      if (secondsLeft.value === 0) {
+        clearInterval(redirectInterval)
+        router.push({ name: 'login' })
       }
+    }, 1000)
+  } catch (error) {
+    if (error.body?.message?.includes('Wrong or expired token')) {
+      isTokenError.value = true
+    } else {
+      isError.value = true
     }
-  },
-
-  head() {
-    return {
-      title: this.$t('login.reset_change_password_title')
-    }
+  } finally {
+    isLoading.value = false
   }
 }
+
+// Lifecycle
+// --------------------------------------------------------------------------
+
+onMounted(() => {
+  store.commit('LOGIN_SUCCESS')
+})
+
+onBeforeUnmount(() => {
+  clearInterval(redirectInterval)
+})
+
+// Head
+// --------------------------------------------------------------------------
+
+useHead({ title: computed(() => t('login.reset_change_password_title')) })
 </script>
 
 <style lang="scss" scoped>
