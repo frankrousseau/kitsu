@@ -325,7 +325,7 @@
                 :preview-forms="previewForms"
                 :fps="currentFps"
                 :revision="currentRevision"
-                @add-comment="addComment"
+                @add-comment="postComment"
                 @add-preview="onAddPreviewClicked"
                 @file-drop="selectFile"
                 @clear-files="clearPreviewFiles"
@@ -470,7 +470,23 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import {
+  computed,
+  getCurrentInstance,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  provide,
+  reactive,
+  ref,
+  useTemplateRef,
+  watch
+} from 'vue'
+import { useHead } from '@unhead/vue'
+import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
+import { useStore } from 'vuex'
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -479,9 +495,9 @@ import {
   CornerLeftUpIcon,
   ImageIcon
 } from 'lucide-vue-next'
-import { mapGetters, mapActions } from 'vuex'
 
 import drafts from '@/lib/drafts'
+import func from '@/lib/func'
 import { getTaskEntityPath, getTaskEntitiesPath } from '@/lib/path'
 import { formatRevision } from '@/lib/preview'
 import {
@@ -489,10 +505,19 @@ import {
   getTaskTypeWithUrl
 } from '@/lib/productions'
 import { sortPeople } from '@/lib/sorting'
+import {
+  formatDisplayDate as formatDisplayDateLib,
+  formatDuration as formatDurationLib
+} from '@/lib/time'
+import { DEFAULT_FPS } from '@/lib/video'
 
-import { formatListMixin } from '@/components/mixins/format'
-import { taskMixin } from '@/components/mixins/task'
+import assetsStore from '@/store/modules/assets'
+import editsStore from '@/store/modules/edits'
+import episodesStore from '@/store/modules/episodes'
+import sequencesStore from '@/store/modules/sequences'
+import shotsStore from '@/store/modules/shots'
 
+/* eslint-disable no-unused-vars */
 import AddComment from '@/components/widgets/AddComment.vue'
 import AddPreviewModal from '@/components/modals/AddPreviewModal.vue'
 import Comment from '@/components/widgets/Comment.vue'
@@ -503,1357 +528,1289 @@ import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import KitsuIcon from '@/components/widgets/KitsuIcon.vue'
 import PageSubtitle from '@/components/widgets/PageSubtitle.vue'
 import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
+import PreviewPlayer from '@/components/players/players/PreviewPlayer.vue'
 import Spinner from '@/components/widgets/Spinner.vue'
 import SubscribeButton from '@/components/widgets/SubscribeButton.vue'
 import TaskTypeName from '@/components/widgets/TaskTypeName.vue'
 import ValidationTag from '@/components/widgets/ValidationTag.vue'
-import PreviewPlayer from '@/components/players/players/PreviewPlayer.vue'
 import ViewPlaylistModal from '@/components/modals/ViewPlaylistModal.vue'
+/* eslint-enable no-unused-vars */
 
-import assetsStore from '@/store/modules/assets'
-import editsStore from '@/store/modules/edits'
-import episodesStore from '@/store/modules/episodes'
-import sequencesStore from '@/store/modules/sequences'
-import shotsStore from '@/store/modules/shots'
+defineOptions({
+  name: 'task'
+})
 
-export default {
-  name: 'task',
+// Composables
+// --------------------------------------------------------------------------
+const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
+const store = useStore()
+const instance = getCurrentInstance()
+const socket = instance.appContext.config.globalProperties.$socket
 
-  mixins: [formatListMixin, taskMixin],
+// State
+// --------------------------------------------------------------------------
+const task = ref(null)
+const taskComments = ref([])
+const taskPreviews = ref([])
+const commentToEdit = ref(null)
+const selectedPreviewId = ref(null)
+const previewForms = ref([])
+const currentFrame = ref(0)
+const isUseCurrentFrame = ref(false)
+const hookupPlaylistTaskIds = ref([])
+const addPreviewFormData = ref(null)
+const addExtraPreviewFormData = ref(null)
+const currentExtraPreviewId = ref(null)
 
-  components: {
-    AddComment,
-    AddPreviewModal,
-    ChevronDownIcon,
-    ChevronLeftIcon,
-    ChevronRightIcon,
-    ChevronUpIcon,
-    ComboboxStyled,
-    Comment,
-    CornerLeftUpIcon,
-    DeleteModal,
-    EditCommentModal,
-    EntityThumbnail,
-    KitsuIcon,
-    ImageIcon,
-    PageSubtitle,
-    PeopleAvatar,
-    PreviewPlayer,
-    Spinner,
-    SubscribeButton,
-    TaskTypeName,
-    ValidationTag,
-    ViewPlaylistModal
-  },
+const taskLoading = ref({ isLoading: true, isError: false })
 
-  provide() {
-    return {
-      draftComment: this.draftComment
-    }
-  },
+const modals = ref({
+  addPreview: false,
+  addExtraPreview: false,
+  deleteExtraPreview: false,
+  deleteComment: false,
+  editComment: false,
+  hookupPlaylist: false
+})
 
-  data() {
-    return {
-      draftComment: {},
-      previewForms: [],
-      currentFrame: 0,
-      isUseCurrentFrame: false,
-      currentTask: null,
-      hookupPlaylistTaskIds: [],
-      selectedTab: 'validation',
-      taskLoading: {
-        isLoading: true,
-        isError: false
-      },
-      modals: {
-        addPreview: false,
-        addExtraPreview: false,
-        deleteExtraPreview: false,
-        deleteComment: false,
-        editComment: false,
-        hookupPlaylist: false
-      },
-      loading: {
-        addComment: false,
-        addPreview: false,
-        addExtraPreview: false,
-        setPreview: false,
-        deleteComment: false,
-        editComment: false
-      },
-      errors: {
-        addComment: false,
-        addCommentMaxRetakes: false,
-        addPreview: false,
-        addExtraPreview: false,
-        setPreview: false,
-        deleteComment: false,
-        editComment: false
-      },
-      addPreviewFormData: null,
-      addExtraPreviewFormData: null,
-      task: null,
-      taskComments: [],
-      taskPreviews: [],
-      commentToEdit: null,
-      selectedPreviewId: null
-    }
-  },
+const loading = ref({
+  addComment: false,
+  addPreview: false,
+  addExtraPreview: false,
+  setPreview: false,
+  deleteComment: false,
+  editComment: false
+})
 
-  created() {
-    this.clearSelectedTasks()
-  },
+const errors = ref({
+  addComment: false,
+  addCommentMaxRetakes: false,
+  addPreview: false,
+  addExtraPreview: false,
+  setPreview: false,
+  deleteComment: false,
+  editComment: false
+})
 
-  async mounted() {
-    await this.loadTaskData()
-    await this.$nextTick()
-    await this[`load${this.currentType}s`]()
-    this.reset()
-    await this.$nextTick()
-    if (this.$refs['task-columns']) {
-      this.$refs['task-columns'].scrollTop = 100
-      window.scrollTo(0, 0)
-    }
-  },
+// AddComment injects 'draftComment' to keep an unsent comment across
+// remounts; Edit.vue mirrors the same provision.
+const draftComment = reactive({})
+provide('draftComment', draftComment)
 
-  computed: {
-    ...mapGetters([
-      'currentEpisode',
-      'currentProduction',
-      'displayedShots',
-      'displayedAssets',
-      'getTaskComments',
-      'getTaskPreviews',
-      'getTaskComment',
-      'isCurrentUserArtist',
-      'isCurrentUserClient',
-      'isSingleEpisode',
-      'isTVShow',
-      'personMap',
-      'productionMap',
-      'route',
-      'shotMap',
-      'taskEntityPreviews',
-      'taskStatus',
-      'taskStatusForCurrentUser',
-      'taskMap',
-      'taskMetadataDescriptors',
-      'taskTypeMap',
-      'user'
-    ]),
-    ...mapGetters({
-      isCurrentUserManager: 'isCurrentUserProductionManager',
-      isCurrentUserSupervisor: 'isCurrentUserProductionSupervisor'
-    }),
+const taskColumns = useTemplateRef('task-columns')
+const previewPlayerRef = useTemplateRef('preview-player')
+const addCommentRef = useTemplateRef('add-comment')
+const addPreviewModalRef = useTemplateRef('add-preview-modal')
+const addExtraPreviewModalRef = useTemplateRef('add-extra-preview-modal')
 
-    taskMetadata() {
-      if (!this.task) return []
-      return this.taskMetadataDescriptors.filter(
-        descriptor => descriptor.task_type_id === this.task.task_type_id
-      )
-    },
+// Computed (Vuex getters)
+// --------------------------------------------------------------------------
+const currentEpisode = computed(() => store.getters.currentEpisode)
+const currentProduction = computed(() => store.getters.currentProduction)
+const getTaskComments = computed(() => store.getters.getTaskComments)
+const getTaskPreviews = computed(() => store.getters.getTaskPreviews)
+const isCurrentUserArtist = computed(() => store.getters.isCurrentUserArtist)
+const isCurrentUserClient = computed(() => store.getters.isCurrentUserClient)
+const isTVShow = computed(() => store.getters.isTVShow)
+const personMap = computed(() => store.getters.personMap)
+const productionMap = computed(() => store.getters.productionMap)
+const shotMap = computed(() => store.getters.shotMap)
+const taskEntityPreviews = computed(() => store.getters.taskEntityPreviews)
+const taskStatusForCurrentUser = computed(
+  () => store.getters.taskStatusForCurrentUser
+)
+const taskMap = computed(() => store.getters.taskMap)
+const taskMetadataDescriptors = computed(
+  () => store.getters.taskMetadataDescriptors
+)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
+const user = computed(() => store.getters.user)
+const organisation = computed(() => store.getters.organisation)
+const isCurrentUserManager = computed(
+  () => store.getters.isCurrentUserProductionManager
+)
+const isCurrentUserSupervisor = computed(
+  () => store.getters.isCurrentUserProductionSupervisor
+)
 
-    assetList() {
-      return assetsStore.cache.assets
-    },
+// Computed (entity lists)
+// --------------------------------------------------------------------------
+const currentType = computed(() => {
+  const genericNames = ['Shot', 'Episode', 'Sequence', 'Edit']
+  if (genericNames.includes(task.value?.entity_type_name)) {
+    return task.value.entity_type_name
+  }
+  return 'Asset'
+})
 
-    editList() {
-      return editsStore.cache.edits
-    },
+// The legacy component reached these through `this[`${type}List`]`; an
+// explicit map keeps the dynamic lookup without relying on the instance proxy.
+const entityListsByType = {
+  Asset: () => assetsStore.cache.assets,
+  Edit: () => editsStore.cache.edits,
+  Episode: () => episodesStore.cache.episodes,
+  Sequence: () => sequencesStore.cache.sequences,
+  Shot: () => shotsStore.cache.shots
+}
 
-    episodeList() {
-      return episodesStore.cache.episodes
-    },
+const entityList = computed(() => entityListsByType[currentType.value]())
 
-    sequenceList() {
-      return sequencesStore.cache.sequences
-    },
+// Computed (task)
+// --------------------------------------------------------------------------
+const taskMetadata = computed(() => {
+  if (!task.value) return []
+  return taskMetadataDescriptors.value.filter(
+    descriptor => descriptor.task_type_id === task.value.task_type_id
+  )
+})
 
-    shotList() {
-      return shotsStore.cache.shots
-    },
+const currentEntity = computed(() => task.value && task.value.entity)
 
-    currentEntity() {
-      return this.task && this.task.entity
-    },
+const taskType = computed(() => taskTypeMap.value.get(task.value?.task_type_id))
 
-    currentType() {
-      const genericNames = ['Shot', 'Episode', 'Sequence', 'Edit']
-      if (genericNames.includes(this.task?.entity_type_name)) {
-        return this.task.entity_type_name
-      } else {
-        return 'Asset'
-      }
-    },
+// Ported from taskMixin: an entity can override the production fps via
+// data.fps; use it so the player builds its frame model on the rate the video
+// was actually rendered at (otherwise frames get duplicated/dropped). The
+// entity may be a Shot, Edit, Sequence, Episode or Asset, each in its own
+// store map, and task.entity is only { id } here.
+const getTaskEntity = currentTask => {
+  const getterByType = {
+    Shot: 'shotMap',
+    Episode: 'episodeMap',
+    Sequence: 'sequenceMap',
+    Edit: 'editMap',
+    Asset: 'assetMap'
+  }
+  const getterName = getterByType[currentTask?.entity_type_name]
+  if (!getterName || !currentTask?.entity?.id) return null
+  return store.getters[getterName]?.get(currentTask.entity.id) || null
+}
 
-    previewOptions() {
-      return [...this.taskPreviews]
-        .sort((a, b) => b.revision - a.revision)
-        .map(preview => {
-          return {
-            label: formatRevision(preview.revision, this.currentProduction),
-            value: preview.id
-          }
-        })
-    },
+const currentFps = computed(() => {
+  if (!task.value) return 25
+  const entityFps = parseFloat(getTaskEntity(task.value)?.data?.fps)
+  if (entityFps) return entityFps
+  return (
+    parseInt(productionMap.value.get(task.value.project_id)?.fps) || DEFAULT_FPS
+  )
+})
 
-    isPreviewButtonVisible() {
-      return (
-        this.isCurrentUserManager &&
-        this.task &&
-        this.task.entity &&
-        this.task.entity.preview_file_id !== this.currentPreviewId &&
-        ['png', 'mp4'].includes(this.extension)
-      )
-    },
+const entityFrames = computed(() => {
+  if (!task.value || !task.value.entity) return 0
+  const shot = shotMap.value.get(task.value.entity.id)
+  if (!shot || !shot.nb_frames) return 0
+  return shot.nb_frames
+})
 
-    isMovie() {
-      return this.extension === 'mp4'
-    },
+const isPreviews = computed(
+  () => taskPreviews.value && taskPreviews.value.length > 0
+)
 
-    isPicture() {
-      return ['png', 'gif'].includes(this.extension)
-    },
+const previewOptions = computed(() =>
+  [...taskPreviews.value]
+    .sort((a, b) => b.revision - a.revision)
+    .map(preview => ({
+      label: formatRevision(preview.revision, currentProduction.value),
+      value: preview.id
+    }))
+)
 
-    isPreviewPlayerReadOnly() {
-      if (this.task) {
-        if (this.isCurrentUserManager || this.isCurrentUserClient) {
-          return false
-        } else if (this.isCurrentUserSupervisor) {
-          if (this.user.departments.length === 0) {
-            return false
-          } else {
-            return !this.user.departments.includes(this.taskType?.department_id)
-          }
-        }
-      }
-      return true
-    },
+const currentPreview = computed(() => {
+  if (!isPreviews.value) return null
+  let preview = taskPreviews.value[0]
+  const previewId = route.params.preview_id
+  if (selectedPreviewId.value) {
+    preview = taskPreviews.value.find(item => item.id === previewId)
+  }
+  return preview
+})
 
-    extension() {
-      return this.currentPreview ? this.currentPreview.extension : ''
-    },
+const currentPreviewId = computed(() =>
+  currentPreview.value ? currentPreview.value.id : ''
+)
 
-    currentPreviewId() {
-      return this.currentPreview ? this.currentPreview.id : ''
-    },
+const currentPreviewComment = computed(() =>
+  taskComments.value.find(comment =>
+    comment.previews?.some(
+      preview => preview.revision === currentRevision.value
+    )
+  )
+)
 
-    currentPreview() {
-      if (this.isPreviews) {
-        let currentPreview = this.taskPreviews[0]
-        const previewId = this.route.params.preview_id
-        if (this.selectedPreviewId) {
-          currentPreview = this.taskPreviews.find(preview => {
-            return preview.id === previewId
-          })
-        }
-        return currentPreview
-      } else {
-        return null
-      }
-    },
+const currentRevision = computed(() => currentPreview.value?.revision || 0)
 
-    currentPreviewComment() {
-      return this.taskComments.find(comment =>
-        comment.previews?.some(
-          preview => preview.revision === this.currentRevision
-        )
-      )
-    },
+const extension = computed(() =>
+  currentPreview.value ? currentPreview.value.extension : ''
+)
 
-    currentRevision() {
-      return this.currentPreview?.revision || 0
-    },
+const isMovie = computed(() => extension.value === 'mp4')
 
-    taskTypeBorder() {
-      let border = 'transparent'
-      if (this.task) border = this.task.task_type_color
-      return {
-        'border-left': `4px solid ${border}`
-      }
-    },
+const isPicture = computed(() => ['png', 'gif'].includes(extension.value))
 
-    deleteTaskPath() {
-      return this.taskPath(this.task, 'task-delete')
-    },
-
-    isPreviews() {
-      return this.taskPreviews && this.taskPreviews.length > 0
-    },
-
-    taskEntityPath() {
-      if (this.task) {
-        const episodeId = this.currentEpisode
-          ? this.currentEpisode.id
-          : this.$route.params.episode_id
-        return getTaskEntityPath(this.task, episodeId)
-      } else {
-        return {
-          name: 'open-productions'
-        }
-      }
-    },
-
-    taskEntitiesPath() {
-      if (this.task) {
-        const episodeId = this.currentEpisode
-          ? this.currentEpisode.id
-          : this.$route.params.episode_id
-        return getTaskEntitiesPath(this.task, episodeId)
-      } else {
-        return {
-          name: 'open-productions'
-        }
-      }
-    },
-
-    entityList() {
-      return this[`${this.currentType.toLowerCase()}List`]
-    },
-
-    /*
-     * Get the path to the previous task in the current entity.
-     */
-    previousEntityTaskPath() {
-      if (!this.task) return null
-      const entity = this.entityList.find(
-        entity => entity.id === this.task.entity_id
-      )
-      if (!entity) return null
-      let tasks = entity.tasks || []
-      tasks = tasks.sort((a, b) => {
-        const taskA = this.taskMap.get(a)
-        const taskB = this.taskMap.get(b)
-        const taskTypeA = this.taskTypeMap.get(taskA?.task_type_id)
-        const taskTypeB = this.taskTypeMap.get(taskB?.task_type_id)
-        return (
-          getTaskTypePriorityOfProd(taskTypeA, this.currentProduction) -
-          getTaskTypePriorityOfProd(taskTypeB, this.currentProduction)
-        )
-      })
-      const tasksLength = tasks.length
-      const taskIndex = tasks.findIndex(taskId => taskId === this.task.id)
-      const previousTaskIndex = taskIndex - 1
-      const previousTaskId =
-        previousTaskIndex < 0
-          ? tasks[tasksLength - 1]
-          : tasks[previousTaskIndex]
-      return previousTaskId ? this.taskPath({ id: previousTaskId }) : null
-    },
-
-    /*
-     * Get the path to the next task in the current entity.
-     */
-    nextEntityTaskPath() {
-      if (!this.task) return null
-      const entity = this.entityList.find(
-        entity => entity.id === this.task.entity_id
-      )
-      if (!entity) return null
-      let tasks = entity.tasks || []
-      tasks = tasks.sort((a, b) => {
-        const taskA = this.taskMap.get(a)
-        const taskB = this.taskMap.get(b)
-        const taskTypeA = this.taskTypeMap.get(taskA?.task_type_id)
-        const taskTypeB = this.taskTypeMap.get(taskB?.task_type_id)
-        return (
-          getTaskTypePriorityOfProd(taskTypeA, this.currentProduction) -
-          getTaskTypePriorityOfProd(taskTypeB, this.currentProduction)
-        )
-      })
-      const tasksLength = tasks.length
-      const taskIndex = tasks.findIndex(taskId => taskId === this.task.id)
-      const nextTaskIndex = taskIndex + 1
-      const nextTaskId =
-        nextTaskIndex >= tasksLength ? tasks[0] : tasks[nextTaskIndex]
-      return nextTaskId ? this.taskPath({ id: nextTaskId }) : null
-    },
-
-    /*
-     * Get the path to the previous task. The previous task is the fist task
-     * found in the previous entities with the same task type.
-     */
-    previousTaskPath() {
-      if (!this.task) return null
-
-      const entityIndex = this.getEntityIndex(this.task.entity_id)
-      if (entityIndex === -1) return null
-
-      let previousEntityIndex = this.getPreviousEntityIndex(entityIndex)
-      let taskId = null
-      while (!taskId && previousEntityIndex !== entityIndex) {
-        taskId = this.getTaskIdFromEntity(previousEntityIndex)
-        if (!taskId) {
-          previousEntityIndex = this.getPreviousEntityIndex(previousEntityIndex)
-        }
-      }
-
-      return taskId ? this.taskPath({ id: taskId }) : null
-    },
-
-    /*
-     * Get the path to the next task. The next task is the fist task
-     * found in the next entities with the same task type.
-     */
-    nextTaskPath() {
-      if (!this.task) return null
-
-      const entityIndex = this.getEntityIndex(this.task.entity_id)
-      if (entityIndex === -1) return null
-
-      let nextEntityIndex = this.getNextEntityIndex(entityIndex)
-      let taskId = null
-      while (!taskId && nextEntityIndex !== entityIndex) {
-        taskId = this.getTaskIdFromEntity(nextEntityIndex)
-        if (!taskId) {
-          nextEntityIndex = this.getNextEntityIndex(nextEntityIndex)
-        }
-      }
-
-      return taskId ? this.taskPath({ id: taskId }) : null
-    },
-
-    title() {
-      if (this.task) {
-        const type = this.task.entity_type_name
-        let entityName = this.task.full_entity_name || this.task.entity_name
-        if (this.isTVShow && type === 'Shot') {
-          entityName = entityName.split('/').splice(1).join('/')
-        }
-        if (this.isTVShow && type === 'Episode') {
-          entityName = this.task.entity_name
-        }
-        return `${entityName}`
-      } else {
-        return this.$t('main.loading')
-      }
-    },
-
-    deleteText() {
-      if (this.task) {
-        const taskType = this.taskTypeMap.get(this.task.task_type_id)
-        return this.$t('main.delete_text', {
-          name: `${this.task.entity_name} / ${taskType?.name ?? ''}`
-        })
-      } else {
-        return ''
-      }
-    },
-
-    assignees() {
-      return sortPeople(
-        this.task.assignees
-          .map(personId => this.personMap.get(personId))
-          .filter(Boolean)
-      )
-    },
-
-    isAssigned() {
-      return (
-        this.task?.assignees?.some(personId => personId === this.user?.id) ??
-        false
-      )
-    },
-
-    isMentioned() {
-      const personId = this.user?.id
-      if (!personId) return false
-      const departmentIds = this.user.departments || []
-      // Replies carry their own mentions, and that is where people usually
-      // get named once a conversation is going.
-      const namesUser = entry =>
-        (entry.mentions || []).includes(personId) ||
-        (entry.department_mentions || []).some(departmentId =>
-          departmentIds.includes(departmentId)
-        )
-      return this.taskComments.some(
-        comment => namesUser(comment) || (comment.replies || []).some(namesUser)
-      )
-    },
-
-    // In the conversation only because someone named them: they may answer,
-    // but the status stays where the assignees left it.
-    isMentionedOnly() {
-      return (
-        this.isMentioned &&
-        !this.isAssigned &&
-        !this.isCurrentUserClient &&
-        !this.isDepartmentSupervisor &&
-        !this.isCurrentUserManager
-      )
-    },
-
-    isCommentingAllowed() {
-      return (
-        this.isAssigned ||
-        this.isMentioned ||
-        this.isCurrentUserClient ||
-        this.isDepartmentSupervisor ||
-        this.isCurrentUserManager
-      )
-    },
-
-    isDepartmentSupervisor() {
-      if (!this.isCurrentUserSupervisor) {
+const isPreviewPlayerReadOnly = computed(() => {
+  if (task.value) {
+    if (isCurrentUserManager.value || isCurrentUserClient.value) {
+      return false
+    } else if (isCurrentUserSupervisor.value) {
+      if (user.value.departments.length === 0) {
         return false
       }
-      if (this.user.departments.length === 0) {
-        return true
-      }
-      return this.user.departments.includes(this.taskType?.department_id)
-    },
-
-    isHookupButtonVisible() {
-      return this.task?.entity_type_name === 'Shot'
-    },
-
-    taskType() {
-      return this.taskTypeMap.get(this.task?.task_type_id)
-    },
-
-    currentTeam() {
-      return sortPeople(
-        this.currentProduction?.team
-          .map(personId => this.personMap.get(personId))
-          .filter(Boolean) ?? []
-      )
-    },
-
-    // get current task types for this project filtered by current task entity type (Shot or Asset)
-    currentTaskTypes() {
-      if (!this.task || !this.currentProduction) return []
-
-      // task types for this project
-      const task_types = this.currentProduction.task_types
-
-      // get the current task entity type eg. 'Shot' or 'Asset'
-      const current_task_type = this.taskTypeMap.get(this.task.task_type_id)
-      if (!current_task_type) return []
-      const task_type_entity = current_task_type.for_entity
-      const task_type_entity_slug = task_type_entity.toLowerCase() + 's'
-
-      // lets get a map of all tasks that are the same entity
-      // where the key is the task type id
-      const entity_tasks = {}
-      for (const keyValue of this.taskMap) {
-        const task = keyValue[1]
-        if (task.entity_id === this.task.entity_id)
-          entity_tasks[task.task_type_id] = task
-      }
-
-      const filtered = task_types
-        // get all task type objects
-        .map(taskTypeId => this.taskTypeMap.get(taskTypeId))
-
-        // filter down to just those that match this task entity type Shot, Asset etc.
-        .filter(taskType => taskType?.for_entity === task_type_entity)
-
-        // filter to tasks that exist
-        .filter(taskType => entity_tasks[taskType.id])
-
-        // add a url that points to the task
-        .map(taskType =>
-          getTaskTypeWithUrl(
-            taskType,
-            entity_tasks[taskType.id],
-            task_type_entity_slug
-          )
-        )
-      return filtered
+      return !user.value.departments.includes(taskType.value?.department_id)
     }
-  },
-
-  methods: {
-    getTaskMetadataValue(descriptor) {
-      const value = this.task?.data?.[descriptor.field_name]
-      if (value == null || value === '') return ''
-      if (descriptor.data_type === 'date') {
-        return this.formatDisplayDate(value)
-      }
-      if (descriptor.data_type === 'boolean') {
-        return value === 'true' ? this.$t('main.yes') : this.$t('main.no')
-      }
-      if (descriptor.data_type === 'person') {
-        return this.personMap.get(value)?.name || ''
-      }
-      return value
-    },
-
-    personForDescriptor(descriptor) {
-      return (
-        this.personMap.get(this.task?.data?.[descriptor.field_name]) || null
-      )
-    },
-
-    ...mapActions([
-      'addAttachmentToComment',
-      'ackComment',
-      'addCommentPreview',
-      'addCommentExtraPreview',
-      'commentTask',
-      'commentTaskWithPreview',
-      'changeCommentPreview',
-      'clearSelectedTasks',
-      'deleteAttachment',
-      'deleteTaskPreview',
-      'deleteTaskComment',
-      'editTaskComment',
-      'loadComment',
-      'loadAssets',
-      'loadEdits',
-      'loadEpisodes',
-      'loadSequences',
-      'loadShots',
-      'loadTask',
-      'loadPreviewFileFormData',
-      'loadTaskComments',
-      'refreshComment',
-      'refreshPreview',
-      'pinComment',
-      'subscribeToTask',
-      'setCurrentEpisode',
-      'unsubscribeFromTask',
-      'updatePreviewAnnotation'
-    ]),
-
-    getPreviousEntityIndex(index) {
-      const result = index - 1
-      return result < 0 ? this.entityList.length - 1 : result
-    },
-
-    getNextEntityIndex(index) {
-      const result = index + 1
-      return result >= this.entityList.length ? 0 : result
-    },
-
-    getEntityIndex(entityId) {
-      return this.entityList.findIndex(entity => entity.id === entityId)
-    },
-
-    getTaskIdFromEntity(index) {
-      const taskTypeId = this.task.task_type_id
-      const entity = this.entityList[index]
-      if (!entity?.tasks) return null
-      return entity.tasks.find(ctaskId => {
-        const task = this.taskMap.get(ctaskId)
-        return task && task.task_type_id === taskTypeId
-      })
-    },
-
-    loadTaskData() {
-      const task = this.getCurrentTask()
-      if (!task) {
-        this.taskLoading = { isLoading: true, isError: false }
-        return this.loadTask({ taskId: this.route.params.task_id })
-          .then(task => {
-            let loadingFunction = () => this.loadAssets()
-
-            if (task.entity_type_name === 'Shot') {
-              loadingFunction = () =>
-                this.loadEpisodes()
-                  .then(() => {
-                    if (this.isTVShow) {
-                      this.setCurrentEpisode(task.episode.id)
-                    }
-                    return this.loadShots()
-                  })
-                  .catch(err => console.error(err))
-            }
-            return loadingFunction().then(() => {
-              this.task = task
-              return this.loadTaskComments({
-                taskId: task.id,
-                entityId: task.entity_id
-              })
-                .then(() => {
-                  this.reset()
-                  this.taskLoading = { isLoading: false, isError: false }
-                })
-                .catch(err => {
-                  console.error(err)
-                  this.taskLoading = { isLoading: false, isError: true }
-                })
-            })
-          })
-          .catch(err => {
-            console.error(err)
-            this.taskLoading = { isLoading: false, isError: true }
-          })
-      } else {
-        const taskId = this.route.params.task_id
-        this.task = task
-        return this.loadTaskComments({
-          taskId,
-          entityId: task.entity_id
-        })
-          .then(() => {
-            this.reset()
-          })
-          .catch(err => {
-            console.error(err)
-            this.taskLoading.isError = true
-          })
-          .finally(() => {
-            this.taskLoading.isLoading = false
-          })
-      }
-    },
-
-    getCurrentTask() {
-      return this.taskMap.get(this.route.params.task_id)
-    },
-
-    getCurrentTaskComments() {
-      return this.getTaskComments(this.route.params.task_id)
-    },
-
-    getCurrentTaskPreviews() {
-      return this.getTaskPreviews(this.route.params.task_id)
-    },
-
-    addComment(
-      comment,
-      attachment,
-      checklist,
-      taskStatusId,
-      revision = undefined,
-      link = undefined,
-      forClient = false
-    ) {
-      const params = {
-        taskId: this.task.id,
-        taskStatusId,
-        attachment,
-        checklist,
-        comment,
-        links: link ? [link] : null,
-        revision,
-        forClient
-      }
-      const action =
-        this.previewForms.length > 0 ? 'commentTaskWithPreview' : 'commentTask'
-      this.loading.addComment = true
-      this.errors.addComment = false
-      this.errors.addCommentMaxRetakes = false
-      this.$store
-        .dispatch(action, params)
-        .then(() => {
-          drafts.clearTaskDraft(this.task.id)
-          this.$refs['add-comment']?.reset()
-          this.reset()
-          this.loading.addComment = false
-        })
-        .catch(err => {
-          console.error(err)
-          this.errors.addComment = true
-          this.loading.addComment = false
-          const isRetakeError = err.body?.message?.includes('retake') ?? false
-          this.errors.addComment = !isRetakeError
-          this.errors.addCommentMaxRetakes = isRetakeError
-        })
-    },
-
-    hideHookupPlaylistModal() {
-      this.modals.hookupPlaylist = false
-    },
-
-    /*
-     * Create a playlist with the previous, current and next task within the
-     * same sequence
-     */
-    showHookupPlaylistModal() {
-      const currentTaskId = this.task.id
-      const tasks = Array.from(this.taskMap.values())
-        // get all tasks for this sequence
-        .filter(
-          task =>
-            task.episode_id === this.task.episode_id &&
-            task.sequence_name === this.task.sequence_name &&
-            task.task_type_id === this.task.task_type_id
-        )
-        // sort the tasks by shot name
-        .sort((a, b) =>
-          a.entity_name.localeCompare(b.entity_name, undefined, {
-            numeric: true
-          })
-        )
-
-      const currentTaskIndex = tasks.findIndex(
-        task => task.id === currentTaskId
-      )
-
-      const previousTaskId =
-        currentTaskIndex > 0 ? tasks[currentTaskIndex - 1].id : null
-
-      const nextTaskId =
-        currentTaskIndex < tasks.length - 1
-          ? tasks[currentTaskIndex + 1].id
-          : null
-
-      this.hookupPlaylistTaskIds = [currentTaskId]
-      if (previousTaskId) this.hookupPlaylistTaskIds.unshift(previousTaskId)
-      if (nextTaskId) this.hookupPlaylistTaskIds.push(nextTaskId)
-
-      this.modals.hookupPlaylist = true
-    },
-
-    reset({ keepPreviewFiles = false } = {}) {
-      this.resetModals()
-      this.resetPreview(false)
-      if (!keepPreviewFiles) {
-        this.clearPreviewFiles(false)
-      }
-      this.taskComments = this.getCurrentTaskComments()
-      this.taskPreviews = this.getCurrentTaskPreviews()
-      this.task = this.getCurrentTask()
-      setTimeout(() => {
-        if (this.$route.params.preview_id) {
-          this.selectedPreviewId = this.$route.params.preview_id
-        }
-      }, 200)
-    },
-
-    selectFile(forms) {
-      this.previewForms = this.previewForms.concat(forms)
-      this.loadPreviewFileFormData(this.previewForms)
-    },
-
-    clearPreviewFiles() {
-      this.previewForms = []
-      this.loadPreviewFileFormData(this.previewForms)
-      this.$store.commit('CLEAR_UPLOAD_PROGRESS')
-    },
-
-    isHighlighted(comment) {
-      return comment.preview && comment.preview.id === this.currentPreviewId
-    },
-
-    createExtraPreview(forms) {
-      this.selectFile(forms)
-      this.errors.addExtraPreview = false
-      this.loading.addExtraPreview = true
-      const comment = this.getCurrentTaskComments().find(comment =>
-        comment.previews.find(preview => preview.id === this.currentPreviewId)
-      )
-      this.addCommentExtraPreview({
-        taskId: this.task.id,
-        commentId: comment?.id,
-        previewId: this.currentPreviewId
-      })
-        .then(() => {
-          this.loading.addExtraPreview = false
-          this.modals.addExtraPreview = false
-          this.$refs['add-extra-preview-modal'].reset()
-          this.clearPreviewFiles()
-          setTimeout(() => {
-            this.$refs['preview-player'].displayLast()
-          }, 0)
-        })
-        .catch(err => {
-          console.error(err)
-          this.errors.addExtraPreview = true
-          this.loading.addExtraPreview = false
-        })
-    },
-
-    resetPreview(changeRoute = true) {
-      const previews = this.taskPreviews || []
-      const preview = previews.length > 0 ? previews[0] : null
-      this.taskComments = this.getCurrentTaskComments()
-      this.taskPreviews = this.getCurrentTaskPreviews()
-      if (preview && changeRoute) {
-        this.$router.push(this.previewPath(preview.id))
-      }
-    },
-
-    setPreview() {
-      const previewPlayer = this.$refs['preview-player']
-      if (!previewPlayer) return
-      this.loading.setPreview = true
-      this.errors.setPreview = false
-      const previewId = previewPlayer.currentPreview.id
-      const frame =
-        this.isMovie && this.isUseCurrentFrame
-          ? this.currentFrame + 1
-          : undefined
-      this.$store
-        .dispatch('setPreview', {
-          taskId: this.task.id,
-          entityId: this.task.entity.id,
-          previewId,
-          frame
-        })
-        .then(() => {
-          this.loading.setPreview = false
-        })
-        .catch(err => {
-          console.error(err)
-          this.errors.setPreview = true
-        })
-    },
-
-    async saveComment(comment) {
-      try {
-        await this.editTaskComment({
-          taskId: this.task.id,
-          comment
-        })
-      } catch (err) {
-        console.error(err)
-        await this.loadTaskData()
-      }
-    },
-
-    confirmDeleteTaskComment() {
-      this.loading.deleteComment = true
-      this.errors.deleteComment = false
-      const commentId = this.commentToEdit.id
-
-      this.deleteTaskComment({
-        taskId: this.task.id,
-        commentId
-      })
-        .then(() => {
-          this.loading.deleteComment = false
-          this.reset()
-          if (this.isPreviews) this.resetPreview()
-          this.modals.deleteComment = false
-        })
-        .catch(err => {
-          console.error(err)
-          this.loading.deleteComment = false
-          this.errors.deleteComment = true
-        })
-    },
-
-    confirmDeleteTaskPreview() {
-      this.loading.deleteExtraPreview = true
-      this.errors.deleteExtraPreview = false
-      const previewId = this.currentPreviewId
-      const comment = this.getCurrentTaskComments().find(comment => {
-        return comment.previews.findIndex(p => p.id === previewId) >= 0
-      })
-
-      this.$refs['preview-player'].displayFirst()
-      this.deleteTaskPreview({
-        taskId: this.task.id,
-        commentId: comment?.id,
-        previewId: this.currentExtraPreviewId
-      })
-        .then(() => {
-          this.loading.deleteExtraPreview = false
-          this.resetPreview()
-          this.hideRemoveExtraPreviewModal()
-        })
-        .catch(err => {
-          console.error(err)
-          this.loading.deleteExtraPreview = false
-          this.errors.deleteExtraPreview = true
-        })
-    },
-
-    onPreviewAdded(eventData) {
-      const taskId = eventData.task_id
-      const commentId = eventData.comment_id
-      const previewId = eventData.preview_file_id
-      const revision = eventData.revision
-      const extension = eventData.extension
-      const comment = this.$store.getters.getTaskComment(taskId, commentId)
-
-      if (
-        this.task &&
-        comment &&
-        comment.previews &&
-        (comment.previews.length === 0 ||
-          comment.previews[0].id !== previewId) &&
-        taskId === this.task.id
-      ) {
-        this.$store.commit('ADD_PREVIEW_END', {
-          preview: {
-            id: previewId,
-            revision,
-            extension
-          },
-          taskId,
-          commentId,
-          comment
-        })
-        this.reset({ keepPreviewFiles: true })
-      }
-    },
-
-    toggleSubscribe() {
-      if (this.task && !this.isAssigned) {
-        if (this.task.is_subscribed) {
-          this.unsubscribeFromTask(this.task.id)
-        } else {
-          this.subscribeToTask(this.task.id)
-        }
-      }
-    },
-
-    taskPath(task, section = 'task') {
-      if (!task) {
-        task = this.task
-      } else {
-        task.project_id = this.task.project_id
-        task.episode_id = this.task.episode_id
-      }
-
-      let route = { name: 'open-productions' }
-      if (task) {
-        route = {
-          name: section,
-          params: {
-            type: this.currentType.toLowerCase() + 's',
-            production_id: task.project_id,
-            task_id: task.id
-          }
-        }
-
-        if (this.isTVShow && this.currentEpisode) {
-          route.name = `episode-${section}`
-          route.params.episode_id = task.episode_id || this.currentEpisode.id
-        }
-      }
-      return route
-    },
-
-    previewPath(previewId) {
-      const route = this.taskPath(this.task, 'task-preview')
-      if (this.isTVShow) {
-        const taskType = this.taskTypeMap.get(this.task.task_type_id)
-        route.name = 'episode-task-preview'
-        if (taskType?.for_entity === 'Episode') {
-          route.name = 'episode-episode-task-preview'
-        }
-      }
-      if (route.params) {
-        route.params.preview_id = previewId
-      }
-      return route
-    },
-
-    async onAnnotationChanged({ preview, additions, deletions, updates }) {
-      const taskId = this.task.id
-      const previewPlayer = this.$refs['preview-player']
-      try {
-        await this.updatePreviewAnnotation({
-          taskId,
-          preview,
-          additions,
-          deletions,
-          updates
-        })
-        previewPlayer?.confirmAnnotationsSaved()
-      } catch (err) {
-        console.error('Failed to save annotations', err)
-        previewPlayer?.restoreFailedAnnotations()
-      }
-    },
-
-    onAddExtraPreviewClicked() {
-      this.clearPreviewFiles()
-      this.modals.addExtraPreview = true
-    },
-
-    onRemoveExtraPreviewClicked(preview) {
-      this.showRemoveExtraPreviewModal(preview)
-    },
-
-    hideExtraPreviewModal() {
-      this.modals.addExtraPreview = false
-    },
-
-    showRemoveExtraPreviewModal(preview) {
-      this.currentExtraPreviewId = preview.id
-      this.modals.deleteExtraPreview = true
-    },
-
-    hideRemoveExtraPreviewModal() {
-      this.modals.deleteExtraPreview = false
-    },
-
-    onAddPreviewClicked() {
-      this.modals.addPreview = true
-    },
-
-    closeAddPreviewModal() {
-      this.modals.addPreview = false
-    },
-
-    confirmAddPreviewModal(forms) {
-      this.selectFile(forms)
-      this.closeAddPreviewModal()
-    },
-
-    onAckComment(comment) {
-      this.ackComment(comment)
-    },
-
-    onDuplicateComment(comment) {
-      this.$refs['add-comment'].setValue(comment)
-    },
-
-    onPinComment(comment) {
-      this.pinComment(comment)
-    },
-
-    onToggleForClient(comment) {
-      this.$store.dispatch('toggleCommentForClient', comment)
-    },
-
-    onEditComment(comment) {
-      this.commentToEdit = comment
-      this.modals.editComment = true
-    },
-
-    onDeleteComment(comment) {
-      this.commentToEdit = comment
-      this.modals.deleteComment = true
-    },
-
-    onCancelEditComment(comment) {
-      this.modals.editComment = false
-    },
-
-    onCancelDeleteComment(comment) {
-      this.modals.deleteComment = false
-    },
-
-    onFrameUpdated(frame) {
-      this.currentFrame = frame
-    },
-
-    onPreviewFormRemoved(previewForm) {
-      this.previewForms = this.previewForms.filter(f => f !== previewForm)
-      this.loadPreviewFileFormData(this.previewForms)
-    },
-
-    changeCurrentPreview(preview) {
-      this.$router.push(this.previewPath(preview.id))
-    },
-
-    onRemoteAcknowledge(eventData, type) {
-      if (this.task) {
-        const comment = this.taskComments.find(
-          c => c.id === eventData.comment_id
-        )
-        const user = this.personMap.get(eventData.person_id)
-        if (comment && user) {
-          if (this.user?.id === user.id) {
-            if (
-              (type === 'ack' && !comment.acknowledgements.includes(user.id)) ||
-              (type === 'unack' && comment.acknowledgements.includes(user.id))
-            ) {
-              this.$store.commit('ACK_COMMENT', { comment, user })
-            }
-          } else {
-            this.$store.commit('ACK_COMMENT', { comment, user })
-          }
-        }
-      }
-    },
-
-    isStatusChange(index) {
-      const comments = this.taskComments
-      const comment = comments[index]
-      return (
-        index === comments.length - 1 ||
-        comment.task_status_id !== comments[index + 1].task_status_id
-      )
-    },
-
-    timeCodeClicked({
-      versionRevision,
-      minutes,
-      seconds,
-      milliseconds,
-      frame
-    }) {
-      this.changeCurrentPreview(
-        this.taskPreviews.find(p => p.revision === parseInt(versionRevision))
-      )
-      setTimeout(() => {
-        this.$refs['preview-player']?.setCurrentFrame(frame)
-        this.$refs['preview-player']?.focus()
-      }, 100)
-    },
-
-    onPreviewsOrderChanged() {
-      this.taskPreviews = this.getCurrentTaskPreviews()
-    },
-
-    async extractAnnotationSnapshots(withLabel = false) {
-      this.$refs['add-comment'].showAnnotationLoading(
-        withLabel ? 'label' : 'standard'
-      )
-      const files = await this.$refs[
-        'preview-player'
-      ].extractAnnotationSnapshots({ withLabel })
-      this.$refs['add-comment'].setAnnotationSnapshots(files)
-      this.$refs['add-comment'].hideAnnotationLoading()
-      return files
+  }
+  return true
+})
+
+// Computed (navigation)
+// --------------------------------------------------------------------------
+const taskEntityPath = computed(() => {
+  if (!task.value) return { name: 'open-productions' }
+  const episodeId = currentEpisode.value
+    ? currentEpisode.value.id
+    : route.params.episode_id
+  return getTaskEntityPath(task.value, episodeId)
+})
+
+const taskEntitiesPath = computed(() => {
+  if (!task.value) return { name: 'open-productions' }
+  const episodeId = currentEpisode.value
+    ? currentEpisode.value.id
+    : route.params.episode_id
+  return getTaskEntitiesPath(task.value, episodeId)
+})
+
+const sortedEntityTasks = entity => {
+  const tasks = [...(entity.tasks || [])]
+  return tasks.sort((a, b) => {
+    const taskA = taskMap.value.get(a)
+    const taskB = taskMap.value.get(b)
+    const taskTypeA = taskTypeMap.value.get(taskA?.task_type_id)
+    const taskTypeB = taskTypeMap.value.get(taskB?.task_type_id)
+    return (
+      getTaskTypePriorityOfProd(taskTypeA, currentProduction.value) -
+      getTaskTypePriorityOfProd(taskTypeB, currentProduction.value)
+    )
+  })
+}
+
+/*
+ * Get the path to the previous task in the current entity.
+ */
+const previousEntityTaskPath = computed(() => {
+  if (!task.value) return null
+  const entity = entityList.value.find(item => item.id === task.value.entity_id)
+  if (!entity) return null
+  const tasks = sortedEntityTasks(entity)
+  const tasksLength = tasks.length
+  const taskIndex = tasks.findIndex(taskId => taskId === task.value.id)
+  const previousTaskIndex = taskIndex - 1
+  const previousTaskId =
+    previousTaskIndex < 0 ? tasks[tasksLength - 1] : tasks[previousTaskIndex]
+  return previousTaskId ? taskPath({ id: previousTaskId }) : null
+})
+
+/*
+ * Get the path to the next task in the current entity.
+ */
+const nextEntityTaskPath = computed(() => {
+  if (!task.value) return null
+  const entity = entityList.value.find(item => item.id === task.value.entity_id)
+  if (!entity) return null
+  const tasks = sortedEntityTasks(entity)
+  const tasksLength = tasks.length
+  const taskIndex = tasks.findIndex(taskId => taskId === task.value.id)
+  const nextTaskIndex = taskIndex + 1
+  const nextTaskId =
+    nextTaskIndex >= tasksLength ? tasks[0] : tasks[nextTaskIndex]
+  return nextTaskId ? taskPath({ id: nextTaskId }) : null
+})
+
+const getPreviousEntityIndex = index => {
+  const result = index - 1
+  return result < 0 ? entityList.value.length - 1 : result
+}
+
+const getNextEntityIndex = index => {
+  const result = index + 1
+  return result >= entityList.value.length ? 0 : result
+}
+
+const getEntityIndex = entityId =>
+  entityList.value.findIndex(entity => entity.id === entityId)
+
+const getTaskIdFromEntity = index => {
+  const taskTypeId = task.value.task_type_id
+  const entity = entityList.value[index]
+  if (!entity?.tasks) return null
+  return entity.tasks.find(ctaskId => {
+    const entityTask = taskMap.value.get(ctaskId)
+    return entityTask && entityTask.task_type_id === taskTypeId
+  })
+}
+
+/*
+ * Get the path to the previous task. The previous task is the fist task
+ * found in the previous entities with the same task type.
+ */
+const previousTaskPath = computed(() => {
+  if (!task.value) return null
+  const entityIndex = getEntityIndex(task.value.entity_id)
+  if (entityIndex === -1) return null
+
+  let previousEntityIndex = getPreviousEntityIndex(entityIndex)
+  let taskId = null
+  while (!taskId && previousEntityIndex !== entityIndex) {
+    taskId = getTaskIdFromEntity(previousEntityIndex)
+    if (!taskId) {
+      previousEntityIndex = getPreviousEntityIndex(previousEntityIndex)
     }
-  },
+  }
+  return taskId ? taskPath({ id: taskId }) : null
+})
 
-  watch: {
-    $route() {
-      if (this.task && this.$route.params.task_id !== this.task.id) {
-        this.loadTaskData()
-      }
-      if (this.$route.params.preview_id !== this.selectedPreviewId) {
-        this.selectedPreviewId = this.$route.params.preview_id
-      }
-    },
+/*
+ * Get the path to the next task. The next task is the fist task
+ * found in the next entities with the same task type.
+ */
+const nextTaskPath = computed(() => {
+  if (!task.value) return null
+  const entityIndex = getEntityIndex(task.value.entity_id)
+  if (entityIndex === -1) return null
 
-    currentProduction() {
-      this.loadTaskData()
-    },
+  let nextEntityIndex = getNextEntityIndex(entityIndex)
+  let taskId = null
+  while (!taskId && nextEntityIndex !== entityIndex) {
+    taskId = getTaskIdFromEntity(nextEntityIndex)
+    if (!taskId) {
+      nextEntityIndex = getNextEntityIndex(nextEntityIndex)
+    }
+  }
+  return taskId ? taskPath({ id: taskId }) : null
+})
 
-    selectedPreviewId() {
-      if (this.task && this.selectedPreviewId) {
-        this.$router.push(this.previewPath(this.selectedPreviewId))
+// Computed (people and team)
+// --------------------------------------------------------------------------
+const title = computed(() => {
+  if (!task.value) return t('main.loading')
+  const type = task.value.entity_type_name
+  let entityName = task.value.full_entity_name || task.value.entity_name
+  if (isTVShow.value && type === 'Shot') {
+    entityName = entityName.split('/').splice(1).join('/')
+  }
+  if (isTVShow.value && type === 'Episode') {
+    entityName = task.value.entity_name
+  }
+  return `${entityName}`
+})
+
+const assignees = computed(() =>
+  sortPeople(
+    task.value.assignees
+      .map(personId => personMap.value.get(personId))
+      .filter(Boolean)
+  )
+)
+
+const isAssigned = computed(
+  () =>
+    task.value?.assignees?.some(personId => personId === user.value?.id) ??
+    false
+)
+
+const isMentioned = computed(() => {
+  const personId = user.value?.id
+  if (!personId) return false
+  const departmentIds = user.value.departments || []
+  // Replies carry their own mentions, and that is where people usually
+  // get named once a conversation is going.
+  const namesUser = entry =>
+    (entry.mentions || []).includes(personId) ||
+    (entry.department_mentions || []).some(departmentId =>
+      departmentIds.includes(departmentId)
+    )
+  return taskComments.value.some(
+    comment => namesUser(comment) || (comment.replies || []).some(namesUser)
+  )
+})
+
+const isDepartmentSupervisor = computed(() => {
+  if (!isCurrentUserSupervisor.value) return false
+  if (user.value.departments.length === 0) return true
+  return user.value.departments.includes(taskType.value?.department_id)
+})
+
+// In the conversation only because someone named them: they may answer,
+// but the status stays where the assignees left it.
+const isMentionedOnly = computed(
+  () =>
+    isMentioned.value &&
+    !isAssigned.value &&
+    !isCurrentUserClient.value &&
+    !isDepartmentSupervisor.value &&
+    !isCurrentUserManager.value
+)
+
+const isCommentingAllowed = computed(
+  () =>
+    isAssigned.value ||
+    isMentioned.value ||
+    isCurrentUserClient.value ||
+    isDepartmentSupervisor.value ||
+    isCurrentUserManager.value
+)
+
+const isHookupButtonVisible = computed(
+  () => task.value?.entity_type_name === 'Shot'
+)
+
+const currentTeam = computed(() =>
+  sortPeople(
+    currentProduction.value?.team
+      .map(personId => personMap.value.get(personId))
+      .filter(Boolean) ?? []
+  )
+)
+
+// get current task types for this project filtered by current task entity type (Shot or Asset)
+const currentTaskTypes = computed(() => {
+  if (!task.value || !currentProduction.value) return []
+
+  // task types for this project
+  const task_types = currentProduction.value.task_types
+
+  // get the current task entity type eg. 'Shot' or 'Asset'
+  const current_task_type = taskTypeMap.value.get(task.value.task_type_id)
+  if (!current_task_type) return []
+  const task_type_entity = current_task_type.for_entity
+  const task_type_entity_slug = task_type_entity.toLowerCase() + 's'
+
+  // lets get a map of all tasks that are the same entity
+  // where the key is the task type id
+  const entity_tasks = {}
+  for (const keyValue of taskMap.value) {
+    const entityTask = keyValue[1]
+    if (entityTask.entity_id === task.value.entity_id)
+      entity_tasks[entityTask.task_type_id] = entityTask
+  }
+
+  return (
+    task_types
+      // get all task type objects
+      .map(taskTypeId => taskTypeMap.value.get(taskTypeId))
+
+      // filter down to just those that match this task entity type Shot, Asset etc.
+      .filter(item => item?.for_entity === task_type_entity)
+
+      // filter to tasks that exist
+      .filter(item => entity_tasks[item.id])
+
+      // add a url that points to the task
+      .map(item =>
+        getTaskTypeWithUrl(item, entity_tasks[item.id], task_type_entity_slug)
+      )
+  )
+})
+
+// Functions (formatting)
+// --------------------------------------------------------------------------
+const formatDisplayDate = date =>
+  formatDisplayDateLib(date, store.getters.dateFormat)
+
+const formatDuration = (minutes, toLocale = true) =>
+  formatDurationLib(organisation.value, minutes, toLocale)
+
+const getTaskMetadataValue = descriptor => {
+  const value = task.value?.data?.[descriptor.field_name]
+  if (value == null || value === '') return ''
+  if (descriptor.data_type === 'date') {
+    return formatDisplayDate(value)
+  }
+  if (descriptor.data_type === 'boolean') {
+    return value === 'true' ? t('main.yes') : t('main.no')
+  }
+  if (descriptor.data_type === 'person') {
+    return personMap.value.get(value)?.name || ''
+  }
+  return value
+}
+
+const personForDescriptor = descriptor =>
+  personMap.value.get(task.value?.data?.[descriptor.field_name]) || null
+
+// Functions (routing)
+// --------------------------------------------------------------------------
+function taskPath(targetTask, section = 'task') {
+  if (!targetTask) {
+    targetTask = task.value
+  } else {
+    targetTask.project_id = task.value.project_id
+    targetTask.episode_id = task.value.episode_id
+  }
+
+  let target = { name: 'open-productions' }
+  if (targetTask) {
+    target = {
+      name: section,
+      params: {
+        type: currentType.value.toLowerCase() + 's',
+        production_id: targetTask.project_id,
+        task_id: targetTask.id
       }
     }
-  },
 
-  socket: {
-    events: {
-      'preview-file:add-file'(eventData) {
-        this.onPreviewAdded(eventData)
-      },
-
-      'preview-file:update'(eventData) {
-        const comment = this.taskComments.find(
-          c =>
-            c.previews &&
-            c.previews.length > 0 &&
-            c.previews[0].id === eventData.preview_file_id
-        )
-        if (comment && this.task) {
-          this.refreshPreview({
-            taskId: this.task.id,
-            previewId: eventData.preview_file_id
-          }).then(preview => {
-            comment.previews[0].validation_status = preview.validation_status
-          })
-        }
-      },
-
-      'comment:acknowledge'(eventData) {
-        this.onRemoteAcknowledge(eventData, 'ack')
-      },
-
-      'comment:unacknowledge'(eventData) {
-        this.onRemoteAcknowledge(eventData, 'unack')
-      },
-
-      'comment:new'(eventData) {
-        setTimeout(() => {
-          if (
-            this.getCurrentTaskComments().length !== this.taskComments.length
-          ) {
-            this.taskComments = this.getCurrentTaskComments()
-            this.taskPreviews = this.getCurrentTaskPreviews()
-          }
-        }, 1000)
-      },
-
-      'comment:update'(eventData) {
-        const commentId = eventData.comment_id
-        if (!this.taskComments.some(({ id }) => id === commentId)) {
-          return
-        }
-        this.loadComment({ commentId }).catch(console.error)
-      },
-
-      'comment:reply'(eventData) {
-        if (this.task) {
-          const comment = this.taskComments.find(
-            c => c.id === eventData.comment_id
-          )
-          if (comment) {
-            if (!comment.replies) comment.replies = []
-            const hasReply = comment.replies.some(
-              reply => reply.id === eventData.reply_id
-            )
-            if (!hasReply) {
-              this.refreshComment({
-                commentId: eventData.comment_id
-              })
-                .then(remoteComment => {
-                  comment.replies = remoteComment.replies
-                })
-                .catch(console.error)
-            }
-          }
-        }
-      },
-
-      'comment:delete'(eventData) {
-        const task = this.getTask()
-        if (task) {
-          const comments = this.getComments()
-          const comment = comments.find(c => c.id === eventData.comment_id)
-          if (comment) {
-            this.$store.commit('REMOVE_TASK_COMMENT', { task, comment })
-            this.taskComments = this.getCurrentTaskComments()
-            this.taskPreviews = this.getCurrentTaskPreviews()
-          }
-        }
-      },
-
-      'comment:delete-reply'(eventData) {
-        if (this.task) {
-          const comment = this.taskComments.find(
-            c => c.id === eventData.comment_id
-          )
-          if (comment) {
-            if (!comment.replies) comment.replies = []
-            this.$store.commit('REMOVE_REPLY_FROM_COMMENT', {
-              comment,
-              reply: { id: eventData.reply_id }
-            })
-          }
-        }
-      },
-
-      'preview-file:annotation-update'(eventData) {
-        const previewPlayer = this.$refs['preview-player']
-        if (!previewPlayer) return
-        const isValid = previewPlayer.isValidPreviewModification(
-          eventData.preview_file_id,
-          eventData.updated_at
-        )
-        if (isValid) {
-          this.refreshPreview({
-            previewId: previewPlayer.currentPreview.id,
-            taskId: previewPlayer.currentPreview.task_id
-          }).then(() => {
-            if (!previewPlayer.notSaved) {
-              this.taskPreviews = this.getCurrentTaskPreviews()
-              this.$nextTick(() => {
-                previewPlayer.reloadAnnotations()
-                previewPlayer.loadAnnotation()
-              })
-            }
-          })
-        }
-      }
+    if (isTVShow.value && currentEpisode.value) {
+      target.name = `episode-${section}`
+      target.params.episode_id =
+        targetTask.episode_id || currentEpisode.value.id
     }
-  },
+  }
+  return target
+}
 
-  head() {
-    let title = `${this.$t('main.loading')} - Kitsu`
-    if (this.task) {
-      const taskTypeName =
-        this.taskTypeMap.get(this.task.task_type_id)?.name || ''
-      title = `${this.title} / ${taskTypeName} - Kitsu`
+const previewPath = previewId => {
+  const target = taskPath(task.value, 'task-preview')
+  if (isTVShow.value) {
+    const type = taskTypeMap.value.get(task.value.task_type_id)
+    target.name = 'episode-task-preview'
+    if (type?.for_entity === 'Episode') {
+      target.name = 'episode-episode-task-preview'
     }
-    return { title }
+  }
+  if (target.params) {
+    target.params.preview_id = previewId
+  }
+  return target
+}
+
+// Functions (data loading)
+// --------------------------------------------------------------------------
+const getCurrentTask = () => taskMap.value.get(route.params.task_id)
+
+const getCurrentTaskComments = () => getTaskComments.value(route.params.task_id)
+
+const getCurrentTaskPreviews = () => getTaskPreviews.value(route.params.task_id)
+
+// Ported from taskMixin, which guarded refs the legacy template could omit.
+const resetModals = () => {
+  addPreviewModalRef.value?.reset()
+}
+
+const resetPreview = (changeRoute = true) => {
+  const previews = taskPreviews.value || []
+  const preview = previews.length > 0 ? previews[0] : null
+  taskComments.value = getCurrentTaskComments()
+  taskPreviews.value = getCurrentTaskPreviews()
+  if (preview && changeRoute) {
+    router.push(previewPath(preview.id))
   }
 }
+
+const clearPreviewFiles = () => {
+  previewForms.value = []
+  store.dispatch('loadPreviewFileFormData', previewForms.value)
+  store.commit('CLEAR_UPLOAD_PROGRESS')
+}
+
+const reset = ({ keepPreviewFiles = false } = {}) => {
+  resetModals()
+  resetPreview(false)
+  if (!keepPreviewFiles) {
+    clearPreviewFiles()
+  }
+  taskComments.value = getCurrentTaskComments()
+  taskPreviews.value = getCurrentTaskPreviews()
+  task.value = getCurrentTask()
+  setTimeout(() => {
+    if (route.params.preview_id) {
+      selectedPreviewId.value = route.params.preview_id
+    }
+  }, 200)
+}
+
+const loadTaskData = () => {
+  const currentTask = getCurrentTask()
+  if (!currentTask) {
+    taskLoading.value = { isLoading: true, isError: false }
+    return store
+      .dispatch('loadTask', { taskId: route.params.task_id })
+      .then(loadedTask => {
+        let loadingFunction = () => store.dispatch('loadAssets')
+
+        if (loadedTask.entity_type_name === 'Shot') {
+          loadingFunction = () =>
+            store
+              .dispatch('loadEpisodes')
+              .then(() => {
+                if (isTVShow.value) {
+                  store.dispatch('setCurrentEpisode', loadedTask.episode.id)
+                }
+                return store.dispatch('loadShots')
+              })
+              .catch(err => console.error(err))
+        }
+        return loadingFunction().then(() => {
+          task.value = loadedTask
+          return store
+            .dispatch('loadTaskComments', {
+              taskId: loadedTask.id,
+              entityId: loadedTask.entity_id
+            })
+            .then(() => {
+              reset()
+              taskLoading.value = { isLoading: false, isError: false }
+            })
+            .catch(err => {
+              console.error(err)
+              taskLoading.value = { isLoading: false, isError: true }
+            })
+        })
+      })
+      .catch(err => {
+        console.error(err)
+        taskLoading.value = { isLoading: false, isError: true }
+      })
+  }
+
+  const taskId = route.params.task_id
+  task.value = currentTask
+  return store
+    .dispatch('loadTaskComments', {
+      taskId,
+      entityId: currentTask.entity_id
+    })
+    .then(() => {
+      reset()
+    })
+    .catch(err => {
+      console.error(err)
+      taskLoading.value.isError = true
+    })
+    .finally(() => {
+      taskLoading.value.isLoading = false
+    })
+}
+
+// Functions (comments)
+// --------------------------------------------------------------------------
+// Named postComment, not addComment: in script setup a binding whose
+// camelCase matches a component tag shadows the component (camelize wins
+// over capitalize during template resolution), so an addComment function
+// would replace the <add-comment> widget and run on every render.
+const postComment = (
+  comment,
+  attachment,
+  checklist,
+  taskStatusId,
+  revision = undefined,
+  link = undefined,
+  forClient = false
+) => {
+  const params = {
+    taskId: task.value.id,
+    taskStatusId,
+    attachment,
+    checklist,
+    comment,
+    links: link ? [link] : null,
+    revision,
+    forClient
+  }
+  const action =
+    previewForms.value.length > 0 ? 'commentTaskWithPreview' : 'commentTask'
+  loading.value.addComment = true
+  errors.value.addComment = false
+  errors.value.addCommentMaxRetakes = false
+  store
+    .dispatch(action, params)
+    .then(() => {
+      drafts.clearTaskDraft(task.value.id)
+      addCommentRef.value?.reset()
+      reset()
+      loading.value.addComment = false
+    })
+    .catch(err => {
+      console.error(err)
+      loading.value.addComment = false
+      const isRetakeError = err.body?.message?.includes('retake') ?? false
+      errors.value.addComment = !isRetakeError
+      errors.value.addCommentMaxRetakes = isRetakeError
+    })
+}
+
+const resetComments = () => {
+  taskComments.value = getTaskComments.value(task.value.id)
+}
+
+// Ported from taskMixin.
+const confirmEditTaskComment = comment => {
+  loading.value.editComment = true
+  errors.value.editComment = false
+  const attachmentFilesToDelete = comment.attachmentFilesToDelete || []
+  const newAttachmentFiles = comment.newAttachmentFiles || []
+  delete comment.attachmentFilesToDelete
+  delete comment.newAttachmentFiles
+  func
+    .runPromiseMapAsSeries(attachmentFilesToDelete, attachment =>
+      store.dispatch('deleteAttachment', {
+        attachment,
+        comment: commentToEdit.value
+      })
+    )
+    .then(() =>
+      store.dispatch('addAttachmentToComment', {
+        comment: commentToEdit.value,
+        files: newAttachmentFiles
+      })
+    )
+    .then(() =>
+      store.dispatch('editTaskComment', {
+        taskId: task.value.id,
+        comment
+      })
+    )
+    .then(() => {
+      nextTick(() => {
+        resetComments()
+      })
+      loading.value.editComment = false
+      modals.value.editComment = false
+    })
+    .catch(err => {
+      console.error(err)
+      loading.value.editComment = false
+      errors.value.editComment = true
+    })
+}
+
+const saveComment = async comment => {
+  try {
+    await store.dispatch('editTaskComment', {
+      taskId: task.value.id,
+      comment
+    })
+  } catch (err) {
+    console.error(err)
+    await loadTaskData()
+  }
+}
+
+const confirmDeleteTaskComment = () => {
+  loading.value.deleteComment = true
+  errors.value.deleteComment = false
+  const commentId = commentToEdit.value.id
+
+  store
+    .dispatch('deleteTaskComment', {
+      taskId: task.value.id,
+      commentId
+    })
+    .then(() => {
+      loading.value.deleteComment = false
+      reset()
+      if (isPreviews.value) resetPreview()
+      modals.value.deleteComment = false
+    })
+    .catch(err => {
+      console.error(err)
+      loading.value.deleteComment = false
+      errors.value.deleteComment = true
+    })
+}
+
+const isStatusChange = index => {
+  const comments = taskComments.value
+  const comment = comments[index]
+  return (
+    index === comments.length - 1 ||
+    comment.task_status_id !== comments[index + 1].task_status_id
+  )
+}
+
+const onAckComment = comment => store.dispatch('ackComment', comment)
+
+const onDuplicateComment = comment => addCommentRef.value.setValue(comment)
+
+const onPinComment = comment => store.dispatch('pinComment', comment)
+
+const onToggleForClient = comment =>
+  store.dispatch('toggleCommentForClient', comment)
+
+const onEditComment = comment => {
+  commentToEdit.value = comment
+  modals.value.editComment = true
+}
+
+const onDeleteComment = comment => {
+  commentToEdit.value = comment
+  modals.value.deleteComment = true
+}
+
+const onCancelEditComment = () => {
+  modals.value.editComment = false
+}
+
+const onCancelDeleteComment = () => {
+  modals.value.deleteComment = false
+}
+
+// Functions (previews)
+// --------------------------------------------------------------------------
+const selectFile = forms => {
+  previewForms.value = previewForms.value.concat(forms)
+  store.dispatch('loadPreviewFileFormData', previewForms.value)
+}
+
+const createExtraPreview = forms => {
+  selectFile(forms)
+  errors.value.addExtraPreview = false
+  loading.value.addExtraPreview = true
+  const comment = getCurrentTaskComments().find(item =>
+    item.previews.find(preview => preview.id === currentPreviewId.value)
+  )
+  store
+    .dispatch('addCommentExtraPreview', {
+      taskId: task.value.id,
+      commentId: comment?.id,
+      previewId: currentPreviewId.value
+    })
+    .then(() => {
+      loading.value.addExtraPreview = false
+      modals.value.addExtraPreview = false
+      addExtraPreviewModalRef.value.reset()
+      clearPreviewFiles()
+      setTimeout(() => {
+        previewPlayerRef.value.displayLast()
+      }, 0)
+    })
+    .catch(err => {
+      console.error(err)
+      errors.value.addExtraPreview = true
+      loading.value.addExtraPreview = false
+    })
+}
+
+const setPreview = () => {
+  if (!previewPlayerRef.value) return
+  loading.value.setPreview = true
+  errors.value.setPreview = false
+  const previewId = previewPlayerRef.value.currentPreview.id
+  const frame =
+    isMovie.value && isUseCurrentFrame.value
+      ? currentFrame.value + 1
+      : undefined
+  store
+    .dispatch('setPreview', {
+      taskId: task.value.id,
+      entityId: task.value.entity.id,
+      previewId,
+      frame
+    })
+    .then(() => {
+      loading.value.setPreview = false
+    })
+    .catch(err => {
+      console.error(err)
+      errors.value.setPreview = true
+    })
+}
+
+const confirmDeleteTaskPreview = () => {
+  loading.value.deleteExtraPreview = true
+  errors.value.deleteExtraPreview = false
+  const previewId = currentPreviewId.value
+  const comment = getCurrentTaskComments().find(
+    item => item.previews.findIndex(p => p.id === previewId) >= 0
+  )
+
+  previewPlayerRef.value.displayFirst()
+  store
+    .dispatch('deleteTaskPreview', {
+      taskId: task.value.id,
+      commentId: comment?.id,
+      previewId: currentExtraPreviewId.value
+    })
+    .then(() => {
+      loading.value.deleteExtraPreview = false
+      resetPreview()
+      hideRemoveExtraPreviewModal()
+    })
+    .catch(err => {
+      console.error(err)
+      loading.value.deleteExtraPreview = false
+      errors.value.deleteExtraPreview = true
+    })
+}
+
+const onPreviewAdded = eventData => {
+  const taskId = eventData.task_id
+  const commentId = eventData.comment_id
+  const previewId = eventData.preview_file_id
+  const revision = eventData.revision
+  const extensionName = eventData.extension
+  const comment = store.getters.getTaskComment(taskId, commentId)
+
+  if (
+    task.value &&
+    comment &&
+    comment.previews &&
+    (comment.previews.length === 0 || comment.previews[0].id !== previewId) &&
+    taskId === task.value.id
+  ) {
+    store.commit('ADD_PREVIEW_END', {
+      preview: {
+        id: previewId,
+        revision,
+        extension: extensionName
+      },
+      taskId,
+      commentId,
+      comment
+    })
+    reset({ keepPreviewFiles: true })
+  }
+}
+
+const onAddExtraPreviewClicked = () => {
+  clearPreviewFiles()
+  modals.value.addExtraPreview = true
+}
+
+const showRemoveExtraPreviewModal = preview => {
+  currentExtraPreviewId.value = preview.id
+  modals.value.deleteExtraPreview = true
+}
+
+const onRemoveExtraPreviewClicked = preview =>
+  showRemoveExtraPreviewModal(preview)
+
+function hideRemoveExtraPreviewModal() {
+  modals.value.deleteExtraPreview = false
+}
+
+const hideExtraPreviewModal = () => {
+  modals.value.addExtraPreview = false
+}
+
+const onAddPreviewClicked = () => {
+  modals.value.addPreview = true
+}
+
+const closeAddPreviewModal = () => {
+  modals.value.addPreview = false
+}
+
+const confirmAddPreviewModal = forms => {
+  selectFile(forms)
+  closeAddPreviewModal()
+}
+
+const onPreviewsOrderChanged = () => {
+  taskPreviews.value = getCurrentTaskPreviews()
+}
+
+const onPreviewFormRemoved = previewForm => {
+  previewForms.value = previewForms.value.filter(f => f !== previewForm)
+  store.dispatch('loadPreviewFileFormData', previewForms.value)
+}
+
+const changeCurrentPreview = preview => {
+  router.push(previewPath(preview.id))
+}
+
+const onFrameUpdated = frame => {
+  currentFrame.value = frame
+}
+
+const onAnnotationChanged = async ({
+  preview,
+  additions,
+  deletions,
+  updates
+}) => {
+  const taskId = task.value.id
+  try {
+    await store.dispatch('updatePreviewAnnotation', {
+      taskId,
+      preview,
+      additions,
+      deletions,
+      updates
+    })
+    previewPlayerRef.value?.confirmAnnotationsSaved()
+  } catch (err) {
+    console.error('Failed to save annotations', err)
+    previewPlayerRef.value?.restoreFailedAnnotations()
+  }
+}
+
+const extractAnnotationSnapshots = async (withLabel = false) => {
+  addCommentRef.value.showAnnotationLoading(withLabel ? 'label' : 'standard')
+  const files = await previewPlayerRef.value.extractAnnotationSnapshots({
+    withLabel
+  })
+  addCommentRef.value.setAnnotationSnapshots(files)
+  addCommentRef.value.hideAnnotationLoading()
+  return files
+}
+
+const timeCodeClicked = ({ versionRevision, frame }) => {
+  changeCurrentPreview(
+    taskPreviews.value.find(p => p.revision === parseInt(versionRevision))
+  )
+  setTimeout(() => {
+    previewPlayerRef.value?.setCurrentFrame(frame)
+    previewPlayerRef.value?.focus()
+  }, 100)
+}
+
+// Functions (subscription and playlist)
+// --------------------------------------------------------------------------
+const toggleSubscribe = () => {
+  if (task.value && !isAssigned.value) {
+    if (task.value.is_subscribed) {
+      store.dispatch('unsubscribeFromTask', task.value.id)
+    } else {
+      store.dispatch('subscribeToTask', task.value.id)
+    }
+  }
+}
+
+const hideHookupPlaylistModal = () => {
+  modals.value.hookupPlaylist = false
+}
+
+/*
+ * Create a playlist with the previous, current and next task within the
+ * same sequence
+ */
+const showHookupPlaylistModal = () => {
+  const currentTaskId = task.value.id
+  const tasks = Array.from(taskMap.value.values())
+    // get all tasks for this sequence
+    .filter(
+      item =>
+        item.episode_id === task.value.episode_id &&
+        item.sequence_name === task.value.sequence_name &&
+        item.task_type_id === task.value.task_type_id
+    )
+    // sort the tasks by shot name
+    .sort((a, b) =>
+      a.entity_name.localeCompare(b.entity_name, undefined, {
+        numeric: true
+      })
+    )
+
+  const currentTaskIndex = tasks.findIndex(item => item.id === currentTaskId)
+
+  const previousTaskId =
+    currentTaskIndex > 0 ? tasks[currentTaskIndex - 1].id : null
+
+  const nextTaskId =
+    currentTaskIndex < tasks.length - 1 ? tasks[currentTaskIndex + 1].id : null
+
+  hookupPlaylistTaskIds.value = [currentTaskId]
+  if (previousTaskId) hookupPlaylistTaskIds.value.unshift(previousTaskId)
+  if (nextTaskId) hookupPlaylistTaskIds.value.push(nextTaskId)
+
+  modals.value.hookupPlaylist = true
+}
+
+// Functions (socket handlers)
+// --------------------------------------------------------------------------
+const onRemoteAcknowledge = (eventData, type) => {
+  if (!task.value) return
+  const comment = taskComments.value.find(c => c.id === eventData.comment_id)
+  const person = personMap.value.get(eventData.person_id)
+  if (!comment || !person) return
+  if (user.value?.id === person.id) {
+    if (
+      (type === 'ack' && !comment.acknowledgements.includes(person.id)) ||
+      (type === 'unack' && comment.acknowledgements.includes(person.id))
+    ) {
+      store.commit('ACK_COMMENT', { comment, user: person })
+    }
+  } else {
+    store.commit('ACK_COMMENT', { comment, user: person })
+  }
+}
+
+const onPreviewFileAddFile = eventData => onPreviewAdded(eventData)
+
+const onPreviewFileUpdate = eventData => {
+  const comment = taskComments.value.find(
+    c =>
+      c.previews &&
+      c.previews.length > 0 &&
+      c.previews[0].id === eventData.preview_file_id
+  )
+  if (comment && task.value) {
+    store
+      .dispatch('refreshPreview', {
+        taskId: task.value.id,
+        previewId: eventData.preview_file_id
+      })
+      .then(preview => {
+        comment.previews[0].validation_status = preview.validation_status
+      })
+  }
+}
+
+const onCommentAcknowledge = eventData => onRemoteAcknowledge(eventData, 'ack')
+
+const onCommentUnacknowledge = eventData =>
+  onRemoteAcknowledge(eventData, 'unack')
+
+const onCommentNew = () => {
+  setTimeout(() => {
+    if (getCurrentTaskComments().length !== taskComments.value.length) {
+      taskComments.value = getCurrentTaskComments()
+      taskPreviews.value = getCurrentTaskPreviews()
+    }
+  }, 1000)
+}
+
+const onCommentUpdate = eventData => {
+  const commentId = eventData.comment_id
+  if (!taskComments.value.some(({ id }) => id === commentId)) {
+    return
+  }
+  store.dispatch('loadComment', { commentId }).catch(console.error)
+}
+
+const onCommentReply = eventData => {
+  if (!task.value) return
+  const comment = taskComments.value.find(c => c.id === eventData.comment_id)
+  if (!comment) return
+  if (!comment.replies) comment.replies = []
+  const hasReply = comment.replies.some(
+    reply => reply.id === eventData.reply_id
+  )
+  if (!hasReply) {
+    store
+      .dispatch('refreshComment', { commentId: eventData.comment_id })
+      .then(remoteComment => {
+        comment.replies = remoteComment.replies
+      })
+      .catch(console.error)
+  }
+}
+
+const onCommentDelete = eventData => {
+  if (!task.value) return
+  const comment = taskComments.value.find(c => c.id === eventData.comment_id)
+  if (comment) {
+    store.commit('REMOVE_TASK_COMMENT', { task: task.value, comment })
+    taskComments.value = getCurrentTaskComments()
+    taskPreviews.value = getCurrentTaskPreviews()
+  }
+}
+
+const onCommentDeleteReply = eventData => {
+  if (!task.value) return
+  const comment = taskComments.value.find(c => c.id === eventData.comment_id)
+  if (comment) {
+    if (!comment.replies) comment.replies = []
+    store.commit('REMOVE_REPLY_FROM_COMMENT', {
+      comment,
+      reply: { id: eventData.reply_id }
+    })
+  }
+}
+
+const onAnnotationUpdate = eventData => {
+  if (!previewPlayerRef.value) return
+  const isValid = previewPlayerRef.value.isValidPreviewModification(
+    eventData.preview_file_id,
+    eventData.updated_at
+  )
+  if (isValid) {
+    store
+      .dispatch('refreshPreview', {
+        previewId: previewPlayerRef.value.currentPreview.id,
+        taskId: previewPlayerRef.value.currentPreview.task_id
+      })
+      .then(() => {
+        if (!previewPlayerRef.value.notSaved) {
+          taskPreviews.value = getCurrentTaskPreviews()
+          nextTick(() => {
+            previewPlayerRef.value.reloadAnnotations()
+            previewPlayerRef.value.loadAnnotation()
+          })
+        }
+      })
+  }
+}
+
+const socketEvents = {
+  'preview-file:add-file': onPreviewFileAddFile,
+  'preview-file:update': onPreviewFileUpdate,
+  'preview-file:annotation-update': onAnnotationUpdate,
+  'comment:acknowledge': onCommentAcknowledge,
+  'comment:unacknowledge': onCommentUnacknowledge,
+  'comment:new': onCommentNew,
+  'comment:update': onCommentUpdate,
+  'comment:reply': onCommentReply,
+  'comment:delete': onCommentDelete,
+  'comment:delete-reply': onCommentDeleteReply
+}
+
+// Watchers
+// --------------------------------------------------------------------------
+watch(route, () => {
+  if (task.value && route.params.task_id !== task.value.id) {
+    loadTaskData()
+  }
+  if (route.params.preview_id !== selectedPreviewId.value) {
+    selectedPreviewId.value = route.params.preview_id
+  }
+})
+
+watch(currentProduction, () => {
+  loadTaskData()
+})
+
+watch(selectedPreviewId, () => {
+  if (task.value && selectedPreviewId.value) {
+    router.push(previewPath(selectedPreviewId.value))
+  }
+})
+
+// Lifecycle
+// --------------------------------------------------------------------------
+onMounted(async () => {
+  Object.entries(socketEvents).forEach(([event, handler]) =>
+    socket.on(event, handler)
+  )
+  store.dispatch('clearSelectedTasks')
+  await loadTaskData()
+  await nextTick()
+  await store.dispatch(`load${currentType.value}s`)
+  reset()
+  await nextTick()
+  if (taskColumns.value) {
+    taskColumns.value.scrollTop = 100
+    window.scrollTo(0, 0)
+  }
+})
+
+onBeforeUnmount(() => {
+  Object.entries(socketEvents).forEach(([event, handler]) =>
+    socket.off(event, handler)
+  )
+})
+
+// Head
+// --------------------------------------------------------------------------
+useHead({
+  title: computed(() => {
+    if (!task.value) return `${t('main.loading')} - Kitsu`
+    const taskTypeName =
+      taskTypeMap.value.get(task.value.task_type_id)?.name || ''
+    return `${title.value} / ${taskTypeName} - Kitsu`
+  })
+})
 </script>
 
 <style lang="scss" scoped>
