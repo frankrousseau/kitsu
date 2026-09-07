@@ -496,7 +496,7 @@ const parameters = reactive({
 
 const departmentMap = computed(() => store.getters.departmentMap)
 const notifications = computed(() => store.getters.notifications)
-const organisation = computed(() => store.getters.organisation)
+const organisationLogoPath = computed(() => store.getters.organisationLogoPath)
 const personMap = computed(() => store.getters.personMap)
 const productionMap = computed(() => store.getters.productionMap)
 const taskStatus = computed(() => store.getters.taskStatus)
@@ -505,7 +505,7 @@ const taskTypeMap = computed(() => store.getters.taskTypeMap)
 const user = computed(() => store.getters.user)
 
 const testNotificationPayload = computed(() =>
-  buildTestNotificationPayload(t, organisation.value)
+  buildTestNotificationPayload(t, organisationLogoPath.value)
 )
 
 const taskStatusList = computed(() => [

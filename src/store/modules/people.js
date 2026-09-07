@@ -192,6 +192,21 @@ const state = {
 const getters = {
   organisation: state => state.organisation,
 
+  // The topbar and the sidebar keep the same <img> src across a logo change,
+  // so the timestamp is what makes the browser refetch it. The upload stamps
+  // the store without reloading the organisation, hence the precedence: the
+  // update date the API sends only catches up on the next load, and it is the
+  // one that survives a reload, where the API asks the browser to cache the
+  // picture for a week.
+  organisationLogoPath: state => {
+    const organisation = state.organisation
+    if (!organisation.has_avatar) return null
+    const lastUpdate = organisation.updated_at || organisation.created_at
+    const timestamp = organisation.logoTimestamp || Date.parse(lastUpdate) || ''
+    const id = organisation.id
+    return `/api/pictures/thumbnails/organisations/${id}.png?t=${timestamp}`
+  },
+
   people: state => cache.people,
   peopleWithoutBot: state => cache.people.filter(person => !person.is_bot),
   activePeople: state => cache.people.filter(person => person.active),
@@ -261,13 +276,13 @@ const actions = {
   async uploadOrganisationLogo({ commit, state }, formData) {
     const organisationId = state.organisation.id
     await peopleApi.postOrganisationLogo(organisationId, formData)
-    commit(SET_ORGANISATION, { has_avatar: true })
+    commit(SET_ORGANISATION, { has_avatar: true, logoTimestamp: Date.now() })
   },
 
   async deleteOrganisationLogo({ commit, state }) {
     const organisationId = state.organisation.id
     await peopleApi.deleteOrganisationLogo(organisationId)
-    commit(SET_ORGANISATION, { has_avatar: false })
+    commit(SET_ORGANISATION, { has_avatar: false, logoTimestamp: Date.now() })
   },
 
   async loadPeople({ commit, rootGetters }) {

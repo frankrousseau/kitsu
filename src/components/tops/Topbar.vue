@@ -13,7 +13,7 @@
         >
           <img
             class="studio-logo"
-            :src="logoPath"
+            :src="organisationLogoPath"
             :alt="organisation.name"
             v-if="organisation?.has_avatar"
           />
@@ -32,7 +32,7 @@
         >
           <img
             class="studio-logo"
-            :src="logoPath"
+            :src="organisationLogoPath"
             :alt="organisation.name"
             v-if="organisation?.has_avatar"
           />
@@ -406,18 +406,12 @@ export default {
       'notifications',
       'openProductions',
       'organisation',
+      'organisationLogoPath',
       'productionEditTaskTypes',
       'productionMap',
       'projectPlugins',
       'user'
     ]),
-
-    logoPath() {
-      return (
-        '/api/pictures/thumbnails/' +
-        `organisations/${this.organisation.id}.png`
-      )
-    },
 
     assetSections() {
       return ['assets', 'assetTypes', 'playlists']
@@ -717,7 +711,10 @@ export default {
     async toggleDesktopNotifications() {
       if (this.desktopNotificationsPermission === 'denied') return
       try {
-        const payload = buildTestNotificationPayload(this.$t, this.organisation)
+        const payload = buildTestNotificationPayload(
+          this.$t,
+          this.organisationLogoPath
+        )
         await this.setDesktopNotificationsEnabled(
           !this.desktopNotificationsPreferenceEnabled,
           {
@@ -747,7 +744,7 @@ export default {
             personMap: this.$store.getters.personMap,
             productionMap: this.$store.getters.productionMap,
             taskTypeMap: this.$store.getters.taskTypeMap,
-            organisation: this.organisation
+            organisationLogoPath: this.organisationLogoPath
           })
           this.showDesktopNotification({
             ...payload,

@@ -81,6 +81,9 @@ const makeStore = (getterOverrides = {}) => {
       notifications: () => [],
       openProductions: () => [],
       organisation: () => ({ id: 'org-1', name: 'Test Studio' }),
+      // Mirrors the real getter, which returns null while the organisation
+      // carries no avatar, as the one mocked above does not.
+      organisationLogoPath: () => null,
       personMap: () => new Map(),
       productionMap: () => new Map(),
       projectPlugins: () => [],

@@ -6,8 +6,16 @@ import { vi } from 'vitest'
 // (lib/models → timezone → @/store); stub it so no Vuex store is built.
 vi.mock('@/store', () => ({ default: {} }))
 
+vi.mock('@/store/api/people', () => ({
+  default: {
+    postOrganisationLogo: vi.fn(),
+    deleteOrganisationLogo: vi.fn()
+  }
+}))
+
 import store from '@/store/modules/people'
 import taskStatusStore from '@/store/modules/taskstatus'
+import peopleApi from '@/store/api/people'
 import { buildTaskIndex } from '@/lib/indexing'
 
 describe('People store', () => {
@@ -144,6 +152,114 @@ describe('People store', () => {
       expect(doneTask.task_status_short_name).toEqual('done')
       store.mutations.SET_PERSON_TASKS_SEARCH(state, 'done')
       expect(state.displayedPersonDoneTasks).toEqual([doneTask])
+    })
+  })
+
+  describe('Organisation logo', () => {
+    const stateWith = organisation => ({ organisation })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    const updatedAt = '2026-09-08T10:00:00'
+
+    test('organisationLogoPath targets the organisation thumbnail', () => {
+      expect(
+        store.getters.organisationLogoPath(
+          stateWith({ id: 'org-1', has_avatar: true, updated_at: updatedAt })
+        )
+      ).toEqual(
+        `/api/pictures/thumbnails/organisations/org-1.png?t=${Date.parse(updatedAt)}`
+      )
+    })
+
+    test('organisationLogoPath is null while there is no logo', () => {
+      expect(
+        store.getters.organisationLogoPath(
+          stateWith({ id: 'org-1', has_avatar: false })
+        )
+      ).toBeNull()
+    })
+
+    // The topbar keeps the same <img> src across an upload, so without a fresh
+    // token the browser serves the logo it already has in cache. The upload
+    // stamps the store without reloading the organisation, so the timestamp
+    // has to win over the update date it has not caught up with yet.
+    test('organisationLogoPath carries the logo timestamp when there is one', () => {
+      expect(
+        store.getters.organisationLogoPath(
+          stateWith({
+            id: 'org-1',
+            has_avatar: true,
+            logoTimestamp: 1234,
+            updated_at: updatedAt
+          })
+        )
+      ).toEqual('/api/pictures/thumbnails/organisations/org-1.png?t=1234')
+    })
+
+    // The logo timestamp only lives in memory, so after a reload the update
+    // date is the only thing left to bust the week-long browser cache the API
+    // asks for.
+    test('organisationLogoPath survives a reload without a logo timestamp', () => {
+      expect(
+        store.getters.organisationLogoPath(
+          stateWith({
+            id: 'org-1',
+            has_avatar: true,
+            created_at: '2026-01-01T08:00:00',
+            updated_at: updatedAt
+          })
+        )
+      ).toEqual(
+        `/api/pictures/thumbnails/organisations/org-1.png?t=${Date.parse(updatedAt)}`
+      )
+    })
+
+    test('organisationLogoPath falls back to the creation date', () => {
+      const createdAt = '2026-01-01T08:00:00'
+      expect(
+        store.getters.organisationLogoPath(
+          stateWith({ id: 'org-1', has_avatar: true, created_at: createdAt })
+        )
+      ).toEqual(
+        `/api/pictures/thumbnails/organisations/org-1.png?t=${Date.parse(createdAt)}`
+      )
+    })
+
+    test('uploadOrganisationLogo stamps the organisation', async () => {
+      vi.spyOn(Date, 'now').mockReturnValue(1234)
+      const commit = vi.fn()
+
+      await store.actions.uploadOrganisationLogo(
+        { commit, state: stateWith({ id: 'org-1' }) },
+        'form-data'
+      )
+
+      expect(peopleApi.postOrganisationLogo).toHaveBeenCalledWith(
+        'org-1',
+        'form-data'
+      )
+      expect(commit).toHaveBeenCalledWith('SET_ORGANISATION', {
+        has_avatar: true,
+        logoTimestamp: 1234
+      })
+    })
+
+    test('deleteOrganisationLogo stamps the organisation too', async () => {
+      vi.spyOn(Date, 'now').mockReturnValue(5678)
+      const commit = vi.fn()
+
+      await store.actions.deleteOrganisationLogo({
+        commit,
+        state: stateWith({ id: 'org-1' })
+      })
+
+      expect(commit).toHaveBeenCalledWith('SET_ORGANISATION', {
+        has_avatar: false,
+        logoTimestamp: 5678
+      })
     })
   })
 })

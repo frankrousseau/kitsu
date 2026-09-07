@@ -5,7 +5,7 @@
         <router-link class="home-link" to="/" @click="toggleSidebar()">
           <div class="company-logo has-text-centered" :title="title">
             <img
-              :src="logoPath"
+              :src="organisationLogoPath"
               :alt="organisation.name"
               v-if="organisation && organisation.has_avatar"
             />
@@ -291,8 +291,7 @@ export default {
 
   data() {
     return {
-      title: '',
-      logoPath: ''
+      title: ''
     }
   },
 
@@ -311,6 +310,7 @@ export default {
       'isSidebarHidden',
       'mainConfig',
       'organisation',
+      'organisationLogoPath',
       'studioPlugins'
     ]),
 
@@ -324,9 +324,6 @@ export default {
 
     reset() {
       this.title = this.organisation.name
-      this.logoPath =
-        `/api/pictures/thumbnails/organisations/` +
-        `${this.organisation.id}.png?t=${new Date().toISOString()}`
     }
   },
 
