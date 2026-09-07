@@ -209,7 +209,7 @@
                     @keydown.enter.prevent="onDeleteReplyClicked(replyComment)"
                     @keydown.space.prevent="onDeleteReplyClicked(replyComment)"
                     v-if="
-                      isCurrentUserAdmin || replyComment.person_id === user.id
+                      isCurrentUserAdmin || replyComment.person_id === store.state.user.user?.id
                     "
                   >
                     x
