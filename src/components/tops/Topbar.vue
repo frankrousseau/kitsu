@@ -505,7 +505,7 @@ export default {
 
     pageTitle() {
       if (this.isProductionContext) return ''
-      const titleKey = this.$route.meta.title
+      const titleKey = this.$route.meta?.title
       return titleKey ? this.$t(titleKey) : ''
     },
 
