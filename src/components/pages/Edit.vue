@@ -96,6 +96,8 @@
             :entries="currentTasks"
             :is-loading="!currentEdit"
             :is-error="false"
+            :selected-task-id="selectedTask?.id"
+            @task-selected="onTaskSelected"
           />
           <div class="flexrow">
             <page-subtitle :text="$t('main.info')" />
@@ -374,8 +376,11 @@ const init = () => {
 
 // `useEntity` mirrors the bits of the legacy entityMixin that Edit.vue
 // needs. It is wired here because its route watcher invokes `init`.
+// the row picked in the task list, distinct from `currentTask`, which
+// follows the preview file shown in the player
 const {
   currentSection,
+  currentTask: selectedTask,
   zoomLevel,
   zoomOptions,
   scheduleItems,
@@ -384,6 +389,7 @@ const {
   currentTasks,
   tasksStartDate,
   tasksEndDate,
+  onTaskSelected,
   saveTaskScheduleItem
 } = useEntity({
   type: 'edit',
