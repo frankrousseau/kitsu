@@ -35,7 +35,7 @@
             :stroke-width="1.5"
             v-else-if="currentSection.value === 'budget'"
           />
-          {{ currentSection.label }}
+          <span class="section-label">{{ currentSection.label }}</span>
         </div>
         <chevron-down-icon class="down-icon flexrow-item" />
       </div>
@@ -308,6 +308,7 @@ hr {
 .section-icon {
   cursor: pointer;
   margin-right: 0.8em;
+  min-width: 20px;
   width: 20px;
 }
 
@@ -317,5 +318,19 @@ svg.section-icon {
 
 .dark svg.section-icon {
   color: #ffffff;
+}
+
+@media screen and (max-width: 768px) {
+  .selected-section-line {
+    min-width: auto;
+
+    .section-icon {
+      margin-right: 0;
+    }
+
+    .section-label {
+      display: none;
+    }
+  }
 }
 </style>
