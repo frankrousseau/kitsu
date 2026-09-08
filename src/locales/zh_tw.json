@@ -416,6 +416,7 @@
       "date": "日期",
       "dark_theme": "深色主題",
       "days_spent": "花費天數 | 花費天數",
+      "days_expected": "預期天數 | 預期天數",
       "days_estimated": "預計天數 | 預計天數",
       "delete": "刪除",
       "delete_all": "全部刪除",
@@ -579,6 +580,7 @@
       "no_results": "沒有結果",
       "link": "連結",
       "hours_spent": "花費的小時 | 花費的小時",
+      "hours_expected": "預期小時數 | 預期小時數",
       "hours_estimated": "小時估計 | 小時估計",
       "created_by": "創建者",
       "day": "日",
@@ -1741,6 +1743,11 @@
       "retake_filter_with_retakes": "有重拍"
     },
     "timesheets": {
+      "chart": "時間圖表",
+      "empty": "目前篩選條件下此期間沒有記錄的時間。",
+      "expected": "預期",
+      "in_salary": "按薪資",
+      "with_time_logged": "有記錄時間",
       "detail_level": "細節層次",
       "done_tasks": "已完成任務",
       "export_timesheet": "導出時間表",

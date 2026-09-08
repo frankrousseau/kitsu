@@ -779,8 +779,10 @@
       "day": "Dzień",
       "days": "dzień | dni",
       "days_spent": "dzień przepracowany | dni przepracowanych",
+      "days_expected": "oczekiwany dzień | oczekiwane dni",
       "days_estimated": "dzień szacowany | dni szacowanych",
       "hours_spent": "godzina przepracowana | godzin przepracowanych",
+      "hours_expected": "oczekiwana godzina | oczekiwane godziny",
       "hours_estimated": "godzina szacowana | godzin szacowanych",
       "delete": "Usuń",
       "delete_all": "Usuń wszystko",
@@ -2179,6 +2181,11 @@
       }
     },
     "timesheets": {
+      "chart": "Wykres czasu",
+      "empty": "Brak zarejestrowanego czasu w tym okresie przy bieżących filtrach.",
+      "expected": "oczekiwane",
+      "in_salary": "w wynagrodzeniu",
+      "with_time_logged": "Z zarejestrowanym czasem",
       "confirm_day_off": "Oznaczenie tego dnia jako dnia wolnego usunie cały czas zarejestrowany w tym dniu. Czy na pewno chcesz kontynuować?",
       "confirm_day_offs": "Oznaczenie tych dni jako dni wolnych usunie cały czas zarejestrowany w tych dniach. Czy na pewno chcesz kontynuować?",
       "confirm_unset_day_offs": "Dni wolne są obecnie ustawione od {start} do {end}. Czy na pewno chcesz usunąć ten okres?",

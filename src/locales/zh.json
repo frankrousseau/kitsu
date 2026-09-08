@@ -416,6 +416,7 @@
       "date": "日期",
       "dark_theme": "黑色主题",
       "days_spent": "消耗天数 | 消耗天数",
+      "days_expected": "预期天数 | 预期天数",
       "days_estimated": "预计天数 | 预计天数",
       "delete": "删除",
       "delete_all": "全部删除",
@@ -579,6 +580,7 @@
       "no_results": "无结果",
       "link": "链接",
       "hours_spent": "花费的小时数 | 花费的小时数",
+      "hours_expected": "预期小时数 | 预期小时数",
       "hours_estimated": "估计小时数 | 估计小时数",
       "created_by": "创建者",
       "day": "日",
@@ -1741,6 +1743,11 @@
       "retake_filter_with_retakes": "有返修"
     },
     "timesheets": {
+      "chart": "时间图表",
+      "empty": "当前筛选条件下该时段没有记录的时间。",
+      "expected": "预期",
+      "in_salary": "按薪资",
+      "with_time_logged": "有记录时间",
       "detail_level": "细节层次",
       "done_tasks": "已完成任务",
       "export_timesheet": "导出时间表",

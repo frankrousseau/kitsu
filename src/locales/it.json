@@ -416,6 +416,7 @@
       "date": "Data",
       "dark_theme": "Tema scuro",
       "days_spent": "giorno impiegato | giorni impiegati",
+      "days_expected": "giorno previsto | giorni previsti",
       "days_estimated": "giorno stimato | giorni stimati",
       "delete": "Elimina",
       "delete_all": "Elimina tutto",
@@ -582,6 +583,7 @@
       "no_results": "Nessun risultato",
       "link": "Link",
       "hours_spent": "ora impiegata | ore impiegate",
+      "hours_expected": "ora prevista | ore previste",
       "hours_estimated": "ora stimata | ore stimate",
       "created_by": "Creato da",
       "day": "Giorno",
@@ -1741,6 +1743,11 @@
       "retake_filter_with_retakes": "Con retake"
     },
     "timesheets": {
+      "chart": "Grafico del tempo",
+      "empty": "Nessun tempo registrato per questo periodo con i filtri attuali.",
+      "expected": "previsto",
+      "in_salary": "in stipendio",
+      "with_time_logged": "Con tempo registrato",
       "detail_level": "Livello di dettaglio",
       "done_tasks": "Task completati",
       "export_timesheet": "Esporta il timesheet",

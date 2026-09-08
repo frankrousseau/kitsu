@@ -416,6 +416,7 @@
       "date": "日付",
       "dark_theme": "ダークテーマ",
       "days_spent": "実績日数 | 実績日数",
+      "days_expected": "予定日数 | 予定日数",
       "days_estimated": "予定日数 | 予定日数",
       "delete": "削除",
       "delete_all": "すべて削除",
@@ -579,6 +580,7 @@
       "no_results": "結果がありません",
       "link": "リンク",
       "hours_spent": "実績時間 | 実績時間",
+      "hours_expected": "予定時間 | 予定時間",
       "hours_estimated": "予定時間 | 予定時間",
       "created_by": "作成者",
       "day": "日",
@@ -1741,6 +1743,11 @@
       "retake_filter_with_retakes": "リテイクあり"
     },
     "timesheets": {
+      "chart": "時間グラフ",
+      "empty": "現在のフィルターでは、この期間に記録された時間はありません。",
+      "expected": "予定",
+      "in_salary": "給与換算",
+      "with_time_logged": "記録あり",
       "detail_level": "詳細レベル",
       "done_tasks": "完了したタスク",
       "export_timesheet": "タイムシートをエクスポート",

@@ -416,6 +416,7 @@
       "date": "Dátum",
       "dark_theme": "Sötét téma",
       "days_spent": "eltöltött nap | eltöltött nap",
+      "days_expected": "elvárt nap | elvárt nap",
       "days_estimated": "becsült nap | becsült nap",
       "delete": "Törlés",
       "delete_all": "Összes törlése",
@@ -578,6 +579,7 @@
       "hours": "óra | óra",
       "hours_estimated": "becsült óra | becsült óra",
       "hours_spent": "eltöltött óra | eltöltött óra",
+      "hours_expected": "elvárt óra | elvárt óra",
       "import": "Importálás",
       "is_shared": "Megosztva az egész csapattal",
       "label": {
@@ -1741,6 +1743,11 @@
       "validated": "Érvényesítve"
     },
     "timesheets": {
+      "chart": "Idődiagram",
+      "empty": "Nincs rögzített idő erre az időszakra a jelenlegi szűrőkkel.",
+      "expected": "elvárt",
+      "in_salary": "bérben",
+      "with_time_logged": "Rögzített idővel",
       "detail_level": "Részletesség szintje",
       "done_tasks": "Kész feladatok",
       "export_timesheet": "Időtábla exportálása",

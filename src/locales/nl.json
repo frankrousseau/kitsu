@@ -416,6 +416,7 @@
       "date": "Datum",
       "dark_theme": "Donker thema",
       "days_spent": "dag besteed | dagen besteed",
+      "days_expected": "verwachte dag | verwachte dagen",
       "days_estimated": "dag geschat | dagen geschat",
       "delete": "Verwijderen",
       "delete_all": "Alles verwijderen",
@@ -579,6 +580,7 @@
       "no_results": "Geen resultaten",
       "link": "Link",
       "hours_spent": "uur besteed | uren besteed",
+      "hours_expected": "verwacht uur | verwachte uren",
       "hours_estimated": "uur geschat | uren geschat",
       "created_by": "Gemaakt door",
       "day": "Dag",
@@ -1741,6 +1743,11 @@
       "retake_filter_with_retakes": "Met retakes"
     },
     "timesheets": {
+      "chart": "Tijdgrafiek",
+      "empty": "Geen tijd geregistreerd voor deze periode met de huidige filters.",
+      "expected": "verwacht",
+      "in_salary": "in salaris",
+      "with_time_logged": "Met geregistreerde tijd",
       "detail_level": "Detailniveau",
       "done_tasks": "Voltooide taken",
       "export_timesheet": "Exporteer urenstaat",

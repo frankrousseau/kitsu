@@ -416,6 +416,7 @@
       "date": "Datum",
       "dark_theme": "Dunkles Design",
       "days_spent": "Tag verbracht | Tage verbracht",
+      "days_expected": "erwarteter Tag | erwartete Tage",
       "days_estimated": "Tag geschätzt | Tage geschätzt",
       "delete": "Löschen",
       "delete_all": "Alle löschen",
@@ -579,6 +580,7 @@
       "no_results": "Keine Ergebnisse",
       "link": "Link",
       "hours_spent": "verbrachte Stunde | verbrachte Stunden",
+      "hours_expected": "erwartete Stunde | erwartete Stunden",
       "hours_estimated": "Stunde geschätzt | Stunden geschätzt",
       "created_by": "Erstellt von",
       "day": "Tag",
@@ -1741,6 +1743,11 @@
       "retake_filter_with_retakes": "Mit Retakes"
     },
     "timesheets": {
+      "chart": "Zeitdiagramm",
+      "empty": "Keine Zeit für diesen Zeitraum mit den aktuellen Filtern erfasst.",
+      "expected": "erwartet",
+      "in_salary": "als Gehalt",
+      "with_time_logged": "Mit erfasster Zeit",
       "detail_level": "Detaillierungsgrad",
       "done_tasks": "Erledigte Aufgaben",
       "export_timesheet": "Zeiterfassung exportieren",

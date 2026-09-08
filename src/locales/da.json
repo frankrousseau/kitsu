@@ -416,6 +416,7 @@
       "date": "Dato",
       "dark_theme": "Mørkt Tema",
       "days_spent": "dag brugt | dage brugt",
+      "days_expected": "forventet dag | forventede dage",
       "days_estimated": "dag estimeret | dage estimeret",
       "delete": "Slet",
       "delete_all": "Slet alle",
@@ -579,6 +580,7 @@
       "no_results": "Ingen resultater",
       "link": "Link",
       "hours_spent": "time brugt | timer brugt",
+      "hours_expected": "forventet time | forventede timer",
       "hours_estimated": "time estimeret | timer estimeret",
       "created_by": "Oprettet af",
       "day": "Dag",
@@ -1741,6 +1743,11 @@
       "retake_filter_with_retakes": "Med retakes"
     },
     "timesheets": {
+      "chart": "Tidsdiagram",
+      "empty": "Ingen tid registreret for denne periode med de aktuelle filtre.",
+      "expected": "forventet",
+      "in_salary": "i løn",
+      "with_time_logged": "Med registreret tid",
       "detail_level": "Detaljeniveau",
       "done_tasks": "Færdige opgaver",
       "export_timesheet": "Eksporter Tidsregistrering",
