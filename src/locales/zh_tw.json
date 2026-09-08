@@ -1962,7 +1962,11 @@
       "title": "實體聊天",
       "delete_message": "您確定要刪除此訊息嗎？",
       "delete_message_confirm": "刪除訊息",
-      "search_entity": "搜尋實體"
+      "search_entity": "搜尋實體",
+      "join_error": "加入聊天時出現錯誤。",
+      "leave_error": "離開聊天室時出現錯誤。",
+      "loading_error": "載入聊天時出現錯誤。",
+      "send_error": "傳送訊息時出現錯誤。"
     },
     "concepts": {
       "add_links": "新增連結至資產",

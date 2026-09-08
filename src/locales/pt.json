@@ -1962,7 +1962,11 @@
       "title": "Chats de entidades",
       "delete_message": "Tem certeza de que deseja excluir esta mensagem?",
       "delete_message_confirm": "Excluir mensagem",
-      "search_entity": "Busca por entidade"
+      "search_entity": "Busca por entidade",
+      "join_error": "Ocorreu um erro ao participar do bate-papo.",
+      "leave_error": "Ocorreu um erro ao sair do bate-papo.",
+      "loading_error": "Ocorreu um erro ao carregar o bate-papo.",
+      "send_error": "Ocorreu um erro ao enviar a mensagem."
     },
     "concepts": {
       "add_links": "Adicionar links aos ativos",

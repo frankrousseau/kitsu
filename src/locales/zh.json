@@ -1962,7 +1962,11 @@
       "title": "实体聊天",
       "delete_message": "您确定要删除这条信息吗？",
       "delete_message_confirm": "删除信息",
-      "search_entity": "搜索实体"
+      "search_entity": "搜索实体",
+      "join_error": "加入聊天时出现错误。",
+      "leave_error": "离开聊天室时出现错误。",
+      "loading_error": "加载聊天时出现错误。",
+      "send_error": "发送信息时出现错误。"
     },
     "concepts": {
       "add_links": "添加资产链接",

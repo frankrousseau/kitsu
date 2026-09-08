@@ -1962,7 +1962,11 @@
       "title": "チャット",
       "delete_message": "このメッセージを削除してもよろしいですか？",
       "delete_message_confirm": "メッセージを削除",
-      "search_entity": "エンティティを検索"
+      "search_entity": "エンティティを検索",
+      "join_error": "チャットへの参加中にエラーが発生しました。",
+      "leave_error": "チャットからの退出中にエラーが発生しました。",
+      "loading_error": "チャットの読み込み中にエラーが発生しました。",
+      "send_error": "メッセージの送信中にエラーが発生しました。"
     },
     "concepts": {
       "add_links": "アセットにリンクを追加",

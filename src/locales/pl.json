@@ -218,7 +218,11 @@
       "no_message_yet": "Brak wiadomości",
       "no_chat": "Nie uczestniczysz obecnie w żadnym czacie obiektu. Wyszukaj obiekt i dołącz do czatu na jego stronie.",
       "search_entity": "Szukaj obiektu",
-      "title": "Czaty obiektów"
+      "title": "Czaty obiektów",
+      "join_error": "Wystąpił błąd podczas dołączania do czatu.",
+      "leave_error": "Wystąpił błąd podczas opuszczania czatu.",
+      "loading_error": "Wystąpił błąd podczas wczytywania czatu.",
+      "send_error": "Wystąpił błąd podczas wysyłania wiadomości."
     },
     "comments": {
       "title": "Komentarze",

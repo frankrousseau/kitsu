@@ -1962,7 +1962,11 @@
       "title": "Entity Chats",
       "delete_message": "Sind Sie sicher, dass Sie diese Nachricht löschen möchten?",
       "delete_message_confirm": "Nachricht löschen",
-      "search_entity": "Suche nach Entität"
+      "search_entity": "Suche nach Entität",
+      "join_error": "Beim Beitreten zum Chat ist ein Fehler aufgetreten.",
+      "leave_error": "Beim Verlassen des Chats ist ein Fehler aufgetreten.",
+      "loading_error": "Beim Laden des Chats ist ein Fehler aufgetreten.",
+      "send_error": "Beim Senden der Nachricht ist ein Fehler aufgetreten."
     },
     "concepts": {
       "add_links": "Links zu Assets hinzufügen",

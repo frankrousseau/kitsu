@@ -1962,7 +1962,11 @@
       "title": "Entiteit Chats",
       "delete_message": "Weet je zeker dat je dit bericht wilt verwijderen?",
       "delete_message_confirm": "Bericht verwijderen",
-      "search_entity": "Zoeken naar entiteit"
+      "search_entity": "Zoeken naar entiteit",
+      "join_error": "Er is een fout opgetreden bij het deelnemen aan de chat.",
+      "leave_error": "Er is een fout opgetreden bij het verlaten van de chat.",
+      "loading_error": "Er is een fout opgetreden bij het laden van de chat.",
+      "send_error": "Er is een fout opgetreden bij het verzenden van het bericht."
     },
     "concepts": {
       "add_links": "Koppelingen naar assets toevoegen",

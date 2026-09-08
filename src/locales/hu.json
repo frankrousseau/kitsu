@@ -2081,7 +2081,11 @@
       "no_chat": "Jelenleg nem veszel részt egyetlen elem chatben sem. Keress egy elemet, és csatlakozz egy chathez az oldaláról.",
       "no_message_yet": "Nincs üzenet",
       "search_entity": "Elem keresése",
-      "title": "Elem chatek"
+      "title": "Elem chatek",
+      "join_error": "Hiba történt a chathez való csatlakozáskor.",
+      "leave_error": "Hiba történt a chat elhagyásakor.",
+      "loading_error": "Hiba történt a chat betöltésekor.",
+      "send_error": "Hiba történt az üzenet elküldésekor."
     },
     "hard_delete": {
       "delete_for_selection_hard_lock_text": "TÖRLÉS",

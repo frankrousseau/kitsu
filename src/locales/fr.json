@@ -1962,7 +1962,11 @@
       "title": "Chats d'entités",
       "delete_message": "Êtes-vous sûr de vouloir supprimer ce message ?",
       "delete_message_confirm": "Supprimer le message",
-      "search_entity": "Recherche d'une entité"
+      "search_entity": "Recherche d'une entité",
+      "join_error": "Une erreur est survenue en rejoignant le chat.",
+      "leave_error": "Une erreur est survenue en quittant le chat.",
+      "loading_error": "Une erreur est survenue en chargeant le chat.",
+      "send_error": "Une erreur est survenue en envoyant le message."
     },
     "concepts": {
       "add_links": "Ajouter des liens vers les assets",

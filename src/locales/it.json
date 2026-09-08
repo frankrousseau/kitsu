@@ -1962,7 +1962,11 @@
       "title": "Chat delle entità",
       "delete_message": "Sei sicuro di voler eliminare questo messaggio?",
       "delete_message_confirm": "Elimina messaggio",
-      "search_entity": "Cerca un'entità"
+      "search_entity": "Cerca un'entità",
+      "join_error": "Si è verificato un errore durante l'accesso alla chat.",
+      "leave_error": "Si è verificato un errore durante l'uscita dalla chat.",
+      "loading_error": "Si è verificato un errore durante il caricamento della chat.",
+      "send_error": "Si è verificato un errore durante l'invio del messaggio."
     },
     "concepts": {
       "add_links": "Aggiungi link agli asset",

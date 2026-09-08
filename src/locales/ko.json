@@ -1962,7 +1962,11 @@
       "title": "엔티티 채팅",
       "delete_message": "이 메시지를 삭제하시겠습니까?",
       "delete_message_confirm": "메시지 삭제",
-      "search_entity": "엔티티 검색"
+      "search_entity": "엔티티 검색",
+      "join_error": "채팅에 참여하는 동안 오류가 발생했습니다.",
+      "leave_error": "채팅에서 나가는 동안 오류가 발생했습니다.",
+      "loading_error": "채팅을 불러오는 동안 오류가 발생했습니다.",
+      "send_error": "메시지를 보내는 동안 오류가 발생했습니다."
     },
     "concepts": {
       "add_links": "에셋에 링크 추가",

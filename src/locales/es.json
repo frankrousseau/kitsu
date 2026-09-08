@@ -1962,7 +1962,11 @@
       "title": "Chats de entidades",
       "delete_message": "¿Seguro que quieres borrar este mensaje?",
       "delete_message_confirm": "Borrar mensaje",
-      "search_entity": "Buscar entidad"
+      "search_entity": "Buscar entidad",
+      "join_error": "Se ha producido un error al unirse al chat.",
+      "leave_error": "Se ha producido un error al salir del chat.",
+      "loading_error": "Se ha producido un error al cargar el chat.",
+      "send_error": "Se ha producido un error al enviar el mensaje."
     },
     "concepts": {
       "add_links": "Añadir enlaces a activos",

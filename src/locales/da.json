@@ -1962,7 +1962,11 @@
       "title": "Enheds-chats",
       "delete_message": "Er du sikker på, at du vil slette denne besked?",
       "delete_message_confirm": "Slet besked",
-      "search_entity": "Søg efter enhed"
+      "search_entity": "Søg efter enhed",
+      "join_error": "Der opstod en fejl under tilslutning til chatten.",
+      "leave_error": "Der opstod en fejl, da chatten blev forladt.",
+      "loading_error": "Der opstod en fejl under indlæsning af chatten.",
+      "send_error": "Der opstod en fejl under afsendelse af beskeden."
     },
     "concepts": {
       "add_links": "Tilføj links til assets",
