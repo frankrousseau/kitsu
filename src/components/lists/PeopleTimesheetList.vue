@@ -6,7 +6,7 @@
       @mousedown="startBrowsing"
       @touchstart="startBrowsing"
     >
-      <table class="datatable">
+      <table class="datatable datatable--cards">
         <thead class="datatable-head">
           <tr>
             <th scope="col" class="name datatable-row-header">
@@ -20,7 +20,7 @@
                 scope="col"
                 class="time year"
                 :class="{ today: isCurrentColumn(year) }"
-                v-for="year in yearRange"
+                v-for="year in columnRange"
               >
                 {{ year }}
               </th>
@@ -33,7 +33,7 @@
                 scope="col"
                 class="time month"
                 :class="{ today: isCurrentColumn(month) }"
-                v-for="month in monthRange"
+                v-for="month in columnRange"
               >
                 {{ monthToString(month) }}
               </th>
@@ -47,7 +47,7 @@
                 class="daytime"
                 :class="{ today: isCurrentColumn(week) }"
                 :title="getWeekTitle(week)"
-                v-for="week in weekRange"
+                v-for="week in columnRange"
               >
                 {{ week }}
                 <span class="week-start">{{ getWeekStart(week) }}</span>
@@ -61,7 +61,7 @@
                 scope="col"
                 class="daytime"
                 :class="{ today: isCurrentColumn(day) }"
-                v-for="day in dayRange"
+                v-for="day in columnRange"
               >
                 {{ day }}
               </th>
@@ -89,7 +89,7 @@
                   today: isCurrentColumn(year),
                   selected: isSelected(person.id, { year })
                 }"
-                v-for="year in yearRange"
+                v-for="year in columnRange"
               >
                 <router-link
                   v-if="hours(year, person.id) > 0"
@@ -114,7 +114,7 @@
                   today: isCurrentColumn(month),
                   selected: isSelected(person.id, { year, month })
                 }"
-                v-for="month in monthRange"
+                v-for="month in columnRange"
               >
                 <router-link
                   v-if="hours(month, person.id) > 0"
@@ -139,7 +139,7 @@
                   today: isCurrentColumn(week),
                   selected: isSelected(person.id, { year, week })
                 }"
-                v-for="week in weekRange"
+                v-for="week in columnRange"
               >
                 <router-link
                   v-if="hours(week, person.id) > 0"
@@ -161,11 +161,11 @@
                 class="daytime"
                 :data-label="day"
                 :class="{
-                  weekend: isWeekend(year, month, day),
+                  weekend: isWeekend(moment({ year, month: month - 1, day })),
                   today: isCurrentColumn(day),
                   selected: isSelected(person.id, { year, month, day })
                 }"
-                v-for="day in dayRange"
+                v-for="day in columnRange"
               >
                 <span class="blank" v-if="isDayOff(person.id, day)">
                   {{ $t('timesheets.off').toUpperCase() }}
@@ -226,18 +226,15 @@ import { useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 
 import { useGrabList } from '@/composables/grabList'
-import { formatAmount } from '@/lib/number'
+import { formatDisplayDate, getBusinessDays, hoursToDays } from '@/lib/time'
 import {
-  formatDisplayDate,
-  getBusinessDays,
-  getDayRange,
-  getMonthRange,
-  getWeekRange,
-  hoursToDays,
-  monthToString,
-  range
-} from '@/lib/time'
-import { convertHours } from '@/lib/timesheet'
+  convertHours,
+  formatTimesheetValue,
+  getTimesheetColumns,
+  getTimesheetPeriod,
+  isCurrentTimesheetColumn,
+  timesheetColumnLabel
+} from '@/lib/timesheet'
 
 import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
 import PeopleName from '@/components/widgets/PeopleName.vue'
@@ -263,13 +260,6 @@ const props = defineProps({
   isError: { type: Boolean, default: false }
 })
 
-// State
-// --------------------------------------------------------------------------
-const currentDay = moment().date()
-const currentMonth = moment().month() + 1
-const currentWeek = moment().isoWeek()
-const currentYear = moment().year()
-
 // Computed
 // --------------------------------------------------------------------------
 const dateFormat = computed(() => store.getters.dateFormat)
@@ -278,42 +268,44 @@ const organisation = computed(() => store.getters.organisation)
 const use12HourClock = computed(() => store.getters.use12HourClock)
 const firstYear = computed(() => store.getters.firstTimesheetYear)
 
-const yearRange = computed(() => range(firstYear.value, currentYear))
-const monthRange = computed(() =>
-  getMonthRange(props.year, currentYear, currentMonth)
-)
-const weekRange = computed(() => getWeekRange(props.year, currentYear))
-const dayRange = computed(() =>
-  getDayRange(props.year, props.month, currentYear, currentMonth)
+const columnRange = computed(() =>
+  getTimesheetColumns(props.detailLevel, {
+    year: props.year,
+    month: props.month,
+    firstYear: firstYear.value
+  })
 )
 
-const columnRange = computed(
-  () =>
-    ({
-      year: yearRange.value,
-      month: monthRange.value,
-      week: weekRange.value,
-      day: dayRange.value
-    })[props.detailLevel]
-)
+const columnPeriod = index =>
+  getTimesheetPeriod(props.detailLevel, {
+    year: props.detailLevel === 'year' ? index : props.year,
+    month: props.detailLevel === 'month' ? index : props.month,
+    week: index,
+    day: index
+  })
 
 // hours a full-time person is expected to log per column: the day rate
-// over the working days the column spans (Monday to Friday, days off
-// ignored, which only makes the threshold more lenient)
+// over the working days the column spans, minus the person's days off, as
+// the side panel counts them
 const expectedHours = computed(() => {
   const hpd = organisation.value.hours_by_day
-  const expected = index => {
-    if (props.detailLevel === 'day') return hpd
-    if (props.detailLevel === 'week') return 5 * hpd
-    const start =
-      props.detailLevel === 'year'
-        ? moment({ year: index })
-        : moment({ year: props.year, month: index - 1 })
-    const end = start.clone().endOf(props.detailLevel)
-    return getBusinessDays(start, end) * hpd
+  const expected = (index, personId) => {
+    const { start, end } = columnPeriod(index)
+    const offDays = Object.keys(dayOffMap.value[personId] || {}).filter(
+      date => {
+        const day = moment(date, 'YYYY-MM-DD')
+        return day.isBetween(start, end, 'day', '[]') && !isWeekend(day)
+      }
+    ).length
+    return (getBusinessDays(start, end) - offDays) * hpd
   }
   return Object.fromEntries(
-    columnRange.value.map(index => [index, expected(index)])
+    columnRange.value.map(index => [
+      index,
+      Object.fromEntries(
+        props.people.map(({ id }) => [id, expected(index, id)])
+      )
+    ])
   )
 })
 
@@ -332,19 +324,12 @@ const amount = (index, personId) =>
     props.dailyRates[personId]
   )
 
-// one decimal max without padding, whole units of currency. Cells with no
-// time show '-': logged time at no rate reads as a 0 salary
-const format = (value, logged = value) => {
-  if (!logged) return '-'
-  if (props.unit === 'salary') {
-    return formatAmount(value, use12HourClock.value)
-  }
-  return Math.round(value * 10) / 10
-}
+// cells with no time show '-': logged time at no rate reads as a 0 salary
+const format = (value, logged = value) =>
+  logged ? formatTimesheetValue(value, props.unit, use12HourClock.value) : '-'
 
 // chip labels of the mobile cards, where the header row is hidden
-const columnLabel = index =>
-  props.detailLevel === 'month' ? monthToString(index) : index
+const columnLabel = index => timesheetColumnLabel(props.detailLevel, index)
 
 const duration = (index, personId) =>
   format(amount(index, personId), hours(index, personId))
@@ -406,7 +391,7 @@ const getCellTitle = (index, personId) => {
         : value) * 10
     ) / 10
   const logged = inTitleUnit(hours(index, personId))
-  const expected = inTitleUnit(expectedHours.value[index])
+  const expected = inTitleUnit(expectedHours.value[index][personId])
   return [
     `${logged} ${t(spentKey.value, { count: logged })}`,
     `${expected} ${t(expectedKey.value, { count: expected })}`
@@ -414,24 +399,22 @@ const getCellTitle = (index, personId) => {
 }
 
 const isCurrentColumn = index =>
-  ({
-    year: index === currentYear,
-    month: props.year === currentYear && index === currentMonth,
-    week: props.year === currentYear && index === currentWeek,
-    day:
-      props.year === currentYear &&
-      props.month === currentMonth &&
-      index === currentDay
-  })[props.detailLevel]
+  isCurrentTimesheetColumn(props.detailLevel, index, {
+    year: props.year,
+    month: props.month
+  })
 
 const isOvertime = (index, personId) =>
-  hours(index, personId) > expectedHours.value[index]
+  hours(index, personId) > expectedHours.value[index][personId]
 
 const isDayOff = (personId, day) =>
-  dayOffMap.value[personId]?.[`${day}`.padStart(2, '0')] === true
+  dayOffMap.value[personId]?.[
+    moment({ year: props.year, month: props.month - 1, day }).format(
+      'YYYY-MM-DD'
+    )
+  ] === true
 
-const isWeekend = (year, month, day) =>
-  [0, 6].includes(moment(`${year}-${month}-${day}`, 'YYYY-M-D').day())
+const isWeekend = date => [0, 6].includes(date.day())
 
 const isSelected = (personId, params) =>
   route.params.person_id === personId &&

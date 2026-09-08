@@ -31,21 +31,18 @@
 
 <script setup>
 // Imports
-import moment from 'moment-timezone'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useStore } from 'vuex'
 
 import { useChartTheme } from '@/composables/chartTheme'
-import { formatAmount } from '@/lib/number'
 import {
-  getDayRange,
-  getMonthRange,
-  getWeekRange,
-  monthToString,
-  range
-} from '@/lib/time'
-import { convertHours } from '@/lib/timesheet'
+  convertHours,
+  formatTimesheetValue,
+  getTimesheetColumns,
+  isCurrentTimesheetColumn,
+  timesheetColumnLabel
+} from '@/lib/timesheet'
 
 import Spinner from '@/components/widgets/Spinner.vue'
 
@@ -67,13 +64,6 @@ const props = defineProps({
   isError: { type: Boolean, default: false }
 })
 
-// State
-// --------------------------------------------------------------------------
-const currentDay = moment().date()
-const currentMonth = moment().month() + 1
-const currentWeek = moment().isoWeek()
-const currentYear = moment().year()
-
 // Computed
 // --------------------------------------------------------------------------
 const firstYear = computed(() => store.getters.firstTimesheetYear)
@@ -81,14 +71,12 @@ const organisation = computed(() => store.getters.organisation)
 const use12HourClock = computed(() => store.getters.use12HourClock)
 
 // the same columns as the grid
-const columns = computed(
-  () =>
-    ({
-      year: range(firstYear.value, currentYear),
-      month: getMonthRange(props.year, currentYear, currentMonth),
-      week: getWeekRange(props.year, currentYear),
-      day: getDayRange(props.year, props.month, currentYear, currentMonth)
-    })[props.detailLevel]
+const columns = computed(() =>
+  getTimesheetColumns(props.detailLevel, {
+    year: props.year,
+    month: props.month,
+    firstYear: firstYear.value
+  })
 )
 
 const totals = computed(() =>
@@ -180,23 +168,15 @@ const round = value =>
   props.unit === 'salary' ? Math.round(value) : Math.round(value * 10) / 10
 
 const format = value =>
-  props.unit === 'salary'
-    ? formatAmount(value, use12HourClock.value)
-    : round(value)
+  formatTimesheetValue(value, props.unit, use12HourClock.value)
 
-const label = index =>
-  props.detailLevel === 'month' ? monthToString(index) : `${index}`
+const label = index => timesheetColumnLabel(props.detailLevel, index)
 
 const isCurrentColumn = index =>
-  ({
-    year: index === currentYear,
-    month: props.year === currentYear && index === currentMonth,
-    week: props.year === currentYear && index === currentWeek,
-    day:
-      props.year === currentYear &&
-      props.month === currentMonth &&
-      index === currentDay
-  })[props.detailLevel]
+  isCurrentTimesheetColumn(props.detailLevel, index, {
+    year: props.year,
+    month: props.month
+  })
 </script>
 
 <style lang="scss" scoped>

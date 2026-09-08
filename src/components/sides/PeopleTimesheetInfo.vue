@@ -61,15 +61,17 @@
 <script setup>
 // Imports
 import { XIcon } from 'lucide-vue-next'
-import moment from 'moment-timezone'
 import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
-import { formatAmount } from '@/lib/number'
 import { getBusinessDays, monthToString } from '@/lib/time'
-import { convertHours } from '@/lib/timesheet'
+import {
+  convertHours,
+  formatTimesheetValue,
+  getTimesheetPeriod
+} from '@/lib/timesheet'
 
 import TimeSpentTaskList from '@/components/lists/TimeSpentTaskList.vue'
 import PageTitle from '@/components/widgets/PageTitle.vue'
@@ -107,11 +109,8 @@ const level = computed(() => route.name.split('-')[1])
 const convert = hours =>
   convertHours(hours, props.unit, organisation.value, props.dailyRate)
 
-// one decimal max without padding, whole units of currency
 const format = value =>
-  props.unit === 'salary'
-    ? formatAmount(value, use12HourClock.value)
-    : Math.round(value * 10) / 10
+  formatTimesheetValue(value, props.unit, use12HourClock.value)
 
 const total = computed(() =>
   convert(props.tasks.reduce((sum, task) => sum + task.duration, 0) / 60)
@@ -128,22 +127,7 @@ const totalKey = computed(
 
 const monthString = computed(() => monthToString(props.month))
 
-// the displayed period; weeks start on the Monday of the ISO week, as
-// aggregated by the backend
-const period = computed(() => {
-  const { year, month, week, day } = props
-  const start = {
-    year: moment({ year }),
-    month: moment({ year, month: month - 1 }),
-    week: moment(`${year}-${week}`, 'YYYY-W'),
-    day: moment({ year, month: month - 1, day })
-  }[level.value]
-  const end =
-    level.value === 'week'
-      ? start.clone().add(6, 'days')
-      : start.clone().endOf(level.value)
-  return { start, end }
-})
+const period = computed(() => getTimesheetPeriod(level.value, props))
 
 const weekDays = computed(() => {
   const { start, end } = period.value

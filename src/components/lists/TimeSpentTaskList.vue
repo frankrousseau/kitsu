@@ -51,10 +51,9 @@ import { firstBy } from 'thenby'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 
-import { formatAmount } from '@/lib/number'
 import { getTaskPath as buildTaskPath } from '@/lib/path'
 import { sortByName } from '@/lib/sorting'
-import { convertHours } from '@/lib/timesheet'
+import { convertHours, formatTimesheetValue } from '@/lib/timesheet'
 
 import ProductionName from '@/components/widgets/ProductionName.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
@@ -136,9 +135,7 @@ const duration = task => {
     organisation.value,
     props.dailyRate
   )
-  return props.unit === 'salary'
-    ? formatAmount(value, use12HourClock.value)
-    : Math.round(value * 10) / 10
+  return formatTimesheetValue(value, props.unit, use12HourClock.value)
 }
 
 // closed productions have no task page: the empty target resolves to the
