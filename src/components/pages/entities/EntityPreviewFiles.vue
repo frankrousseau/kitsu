@@ -31,7 +31,7 @@
           </div>
         </div>
       </div>
-      <table class="datatable" v-else>
+      <table class="datatable datatable--cards" v-else>
         <thead class="datatable-head">
           <tr class="datatable-row-header">
             <th class="thumbnail"></th>
@@ -68,7 +68,7 @@
             class="datatable-row"
             v-for="previewFile in taskTypePreviewFileGroups.flat()"
           >
-            <td class="thumbnail">
+            <td class="thumbnail card-head">
               <entity-thumbnail
                 class="preview-thumbnail"
                 :preview-file-id="previewFile.id"
@@ -80,30 +80,46 @@
             </td>
 
             <task-type-cell
-              class="type"
+              class="type card-head"
               :task-type="getTaskType(previewFile)"
               :production-id="currentProduction.id"
             />
-            <td class="original-name">
+            <td
+              class="original-name"
+              :data-label="$t('entities.preview_files.original_file_name')"
+            >
               {{ previewFile.original_name }}
             </td>
-            <td class="revision">
+            <td
+              class="revision"
+              :data-label="$t('entities.preview_files.revision')"
+            >
               {{ previewFile.revision }}
             </td>
-            <td class="extension">
+            <td
+              class="extension"
+              :data-label="$t('entities.preview_files.extension')"
+            >
               {{ previewFile.extension }}
             </td>
-            <td class="size">
+            <td class="size" :data-label="$t('entities.preview_files.size')">
               {{ renderFileSize(previewFile.file_size) }}
             </td>
-            <td class="status">
+            <td
+              class="status"
+              :data-label="$t('entities.preview_files.status')"
+            >
               {{ previewFile.validation_status }}
             </td>
             <people-name-cell
               class="person"
+              :data-label="$t('entities.preview_files.uploader')"
               :person="personMap.get(previewFile.person_id)"
             />
-            <td class="date">
+            <td
+              class="date"
+              :data-label="$t('entities.preview_files.uploaded_at')"
+            >
               {{ formatDate(previewFile.created_at) }}
             </td>
 
@@ -121,14 +137,16 @@
         </tbody>
       </table>
     </div>
-    <div v-else>
-      {{ $t('entities.preview_files.no_preview_files') }}
-    </div>
+    <empty-section
+      :icon="FilmIcon"
+      :text="$t('entities.preview_files.no_preview_files')"
+      v-else
+    />
   </div>
 </template>
 
 <script setup>
-import { DownloadIcon } from 'lucide-vue-next'
+import { DownloadIcon, FilmIcon } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useStore } from 'vuex'
 
@@ -142,6 +160,7 @@ import PeopleNameCell from '@/components/cells/PeopleNameCell.vue'
 import TaskTypeCell from '@/components/cells/TaskTypeCell.vue'
 import EntityPreviewFileCard from '@/components/pages/entities/EntityPreviewFileCard.vue'
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
+import EmptySection from '@/components/widgets/EmptySection.vue'
 import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import Spinner from '@/components/widgets/Spinner.vue'
 import TaskTypeName from '@/components/widgets/TaskTypeName.vue'

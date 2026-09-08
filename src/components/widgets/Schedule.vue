@@ -3854,4 +3854,21 @@ input[type='number'] {
     }
   }
 }
+@media screen and (max-width: 768px) {
+  .entities,
+  .total-man-days {
+    min-width: 180px;
+  }
+
+  .entities .entity-line {
+    max-width: 180px;
+    min-width: 180px;
+  }
+
+  .child-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
 </style>

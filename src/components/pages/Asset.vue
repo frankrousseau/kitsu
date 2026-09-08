@@ -91,6 +91,7 @@
             class="task-list"
             :entries="localTasks"
             :is-loading="!currentAsset"
+            :selected-task-id="currentTask?.id"
             :is-error="false"
             @task-selected="onTaskSelected"
           />
@@ -194,12 +195,11 @@
                 </div>
               </template>
             </div>
-            <div
-              class="mt1"
+            <empty-section
+              :icon="ClapperboardIcon"
+              :text="$t('assets.no_cast_in')"
               v-else-if="currentAsset.castingAssetsByType?.[0]?.length === 0"
-            >
-              {{ $t('assets.no_cast_in') }}
-            </div>
+            />
           </template>
           <table-info
             :is-loading="castIn.isLoading"
@@ -270,22 +270,23 @@
             :label="$t('main.status')"
             :task-status-list="taskStatusList"
             v-model="currentConceptStatus"
+            v-if="linkedConcepts.length"
           />
-          <div class="concept-list mt1">
-            <template v-if="filteredLinkedConcepts.length">
-              <concept-card
-                class="concept"
-                :class="{ selected: currentConcept?.id === concept.id }"
-                :key="'concept-' + concept.id"
-                :concept="concept"
-                @click="selectConcept(concept)"
-                v-for="concept in filteredLinkedConcepts"
-              />
-            </template>
-            <div v-else>
-              {{ $t('assets.no_concept') }}
-            </div>
+          <div class="concept-list mt1" v-if="filteredLinkedConcepts.length">
+            <concept-card
+              class="concept"
+              :class="{ selected: currentConcept?.id === concept.id }"
+              :key="'concept-' + concept.id"
+              :concept="concept"
+              @click="selectConcept(concept)"
+              v-for="concept in filteredLinkedConcepts"
+            />
           </div>
+          <empty-section
+            :icon="ImageIcon"
+            :text="$t('assets.no_concept')"
+            v-else
+          />
         </div>
 
         <div
@@ -309,6 +310,11 @@
             />
           </div>
         </div>
+        <empty-section
+          :icon="CalendarIcon"
+          :text="$t('main.empty_schedule')"
+          v-else-if="currentSection === 'schedule'"
+        />
 
         <entity-preview-files
           :entity="currentAsset"
@@ -327,13 +333,49 @@
       </div>
     </div>
 
-    <div class="column side-column" v-show="currentSection === 'infos'">
+    <div
+      class="drawer-backdrop"
+      :class="{ 'is-open': isTaskDrawerOpen }"
+      @click="closeTask"
+      v-show="currentSection === 'infos'"
+    ></div>
+    <div
+      class="column side-column"
+      :class="{ 'is-open': isTaskDrawerOpen }"
+      v-show="currentSection === 'infos'"
+    >
+      <button
+        class="drawer-close"
+        type="button"
+        :title="$t('main.close')"
+        @click="closeTask"
+      >
+        <x-icon :size="20" />
+      </button>
       <task-info :task="currentTask" entity-type="Asset" with-actions>
         <entity-news class="news-column" :entity="currentAsset" />
       </task-info>
     </div>
 
-    <div class="column side-column" v-show="currentSection === 'concepts'">
+    <div
+      class="drawer-backdrop"
+      :class="{ 'is-open': isConceptDrawerOpen }"
+      @click="closeConcept"
+      v-show="currentSection === 'concepts'"
+    ></div>
+    <div
+      class="column side-column"
+      :class="{ 'is-open': isConceptDrawerOpen }"
+      v-show="currentSection === 'concepts'"
+    >
+      <button
+        class="drawer-close"
+        type="button"
+        :title="$t('main.close')"
+        @click="closeConcept"
+      >
+        <x-icon :size="20" />
+      </button>
       <task-info entity-type="Concept" :task="currentConceptTask" />
     </div>
 
@@ -351,9 +393,13 @@
 <script setup>
 import { useHead } from '@unhead/vue'
 import {
+  CalendarIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  CornerLeftUpIcon
+  ClapperboardIcon,
+  CornerLeftUpIcon,
+  ImageIcon,
+  XIcon
 } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -378,6 +424,7 @@ import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
 import ComboboxNumber from '@/components/widgets/ComboboxNumber.vue'
 import ComboboxStatus from '@/components/widgets/ComboboxStatus.vue'
 import ConceptCard from '@/components/widgets/ConceptCard.vue'
+import EmptySection from '@/components/widgets/EmptySection.vue'
 import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import MetadataValue from '@/components/widgets/MetadataValue.vue'
 import PageSubtitle from '@/components/widgets/PageSubtitle.vue'
@@ -476,6 +523,9 @@ const taskStatusList = computed(() => {
   return [allStatusItem, ...conceptTaskStatusList]
 })
 
+const isConceptDrawerOpen = computed(() => Boolean(currentConcept.value))
+const isTaskDrawerOpen = computed(() => Boolean(currentTask.value))
+
 const filteredLinkedConcepts = computed(() =>
   currentConceptStatus.value
     ? linkedConcepts.value.filter(
@@ -573,12 +623,21 @@ const confirmEditAsset = async form => {
   loading.edit = false
 }
 
-const selectConcept = concept => {
+const closeTask = () => {
+  if (currentTask.value) onTaskSelected(currentTask.value)
+}
+
+const closeConcept = () => {
   store.dispatch('clearSelectedConcepts')
+  currentConcept.value = null
+  currentConceptTask.value = null
+}
+
+const selectConcept = concept => {
   if (currentConcept.value?.id === concept.id) {
-    currentConcept.value = null
-    currentConceptTask.value = null
+    closeConcept()
   } else {
+    store.dispatch('clearSelectedConcepts')
     store.dispatch('addSelectedConcepts', new Map([[concept.id, concept]]))
     currentConcept.value = concept
     currentConceptTask.value = concept.tasks[0]
@@ -676,6 +735,10 @@ h2.subtitle {
   overflow-y: auto;
 }
 
+.concepts {
+  flex: 1;
+}
+
 .sequence-shots {
   margin-bottom: 3em;
 }
@@ -760,13 +823,76 @@ h2.subtitle {
 }
 
 @media screen and (max-width: 768px) {
+  // The main column is the scroller, not the page: a scrolling ancestor
+  // would count the off-screen drawers in its scroll range, and focusing
+  // their content on open would shift the whole page sideways.
+  .asset {
+    overflow: visible;
+  }
+
+  .main-column {
+    flex: 1;
+    margin: 0;
+    max-width: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    width: 100%;
+  }
+
   .column:first-child {
     margin-right: 0;
+  }
+
+  .page-header {
+    margin: calc(60px + 1em) 0.5em 0.5em;
   }
 
   .entity-title {
     font-size: 1.3em;
     line-height: 1.5em;
+  }
+
+  .ready-for {
+    display: none;
+  }
+
+  .asset-data {
+    margin: 0 0.5em;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .infos,
+  .asset-casted-in,
+  .concepts,
+  .schedule {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .infos .button {
+    display: none;
+  }
+
+  .task-list {
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .schedule {
+    height: 60vh;
+    overflow-x: auto;
+
+    // The schedule widget keeps a 180px entity column on mobile: give the
+    // timeline room.
+    .wrapper {
+      min-width: 520px;
+    }
+  }
+
+  .news-column {
+    max-height: none;
   }
 }
 
@@ -815,5 +941,87 @@ h2.subtitle {
 
 .selected {
   border: 5px solid var(--background-selected);
+}
+
+.drawer-close,
+.drawer-backdrop {
+  display: none;
+}
+
+// Under 1024px the side panels slide in from the right over the page, like
+// the news feed drawer. The backdrop catches outside taps to close.
+@media (max-width: 1024px) {
+  // The xyz-in entry animation fills forward and leaves an identity
+  // transform on the page, which would turn it into the containing block
+  // and stacking context of the fixed drawers below.
+  .asset {
+    animation-fill-mode: none;
+  }
+
+  .side-column {
+    background: var(--background);
+    bottom: 0;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    margin-top: 0 !important;
+    max-width: min(100vw, 420px) !important;
+    // TaskInfo writes its resizable panel width inline on the side column.
+    min-width: 0 !important;
+    overflow-y: auto;
+    position: fixed;
+    right: 0;
+    top: 60px;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    width: min(100vw, 420px) !important;
+    z-index: 250;
+
+    &.is-open {
+      transform: translateX(0);
+    }
+  }
+
+  .drawer-close {
+    align-items: center;
+    align-self: flex-end;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    flex-shrink: 0;
+    height: 36px;
+    justify-content: center;
+    margin: 8px 12px 0 0;
+    padding: 6px;
+    position: sticky;
+    top: 8px;
+    width: 36px;
+    z-index: 2;
+
+    &:hover {
+      background: var(--background-hover);
+      border-color: var(--border-strong);
+      color: var(--text-strong);
+    }
+  }
+
+  .drawer-backdrop {
+    background: rgba(0, 0, 0, 0.4);
+    display: block;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    position: fixed;
+    transition: opacity 0.25s ease;
+    z-index: 249;
+
+    &.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
 }
 </style>

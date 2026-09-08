@@ -2692,4 +2692,92 @@ th.validation-cell {
     }
   }
 }
+// Opt-in card layout for data tables on mobile. Cells carrying a data-label
+// become a "label / value" line, .card-head cells stack on top as plain
+// blocks, every other cell is hidden.
+@media screen and (max-width: 768px) {
+  .datatable.datatable--cards {
+    background: transparent;
+    display: block;
+    width: 100%;
+
+    .datatable-head {
+      display: none;
+    }
+
+    .datatable-body {
+      display: block;
+    }
+
+    .datatable-row,
+    .datatable-row:last-child,
+    .datatable-row:hover {
+      background: var(--background) !important;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 0.5em;
+      padding: 0.5em 0.75em;
+    }
+
+    .datatable-row.selected {
+      background: var(--background-selected) !important;
+    }
+
+    .datatable-body td {
+      background: transparent !important;
+      border: 0;
+      display: none;
+      height: auto;
+      max-width: none;
+      min-width: 0;
+      padding: 0.25em 0;
+      text-align: left;
+      white-space: normal;
+      width: auto;
+    }
+
+    // Head cells come first whatever their column position.
+    .datatable-body td.card-head {
+      display: block;
+      order: -1;
+    }
+
+    .datatable-body td .tag {
+      margin-left: 0;
+      margin-right: 0;
+    }
+
+    // PeopleNameCell sizes its avatar inline for the desktop rows.
+    .datatable-body td.person .avatar,
+    .datatable-body td.person .avatar img {
+      font-size: 11px !important;
+      height: 24px !important;
+      line-height: 24px;
+      width: 24px !important;
+    }
+
+    .datatable-body td[data-label] {
+      align-items: center;
+      display: flex;
+      gap: 1em;
+      justify-content: space-between;
+
+      &::before {
+        color: var(--text-alt);
+        content: attr(data-label);
+        flex-shrink: 0;
+        font-size: 0.8em;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+    }
+  }
+
+  .dark .datatable.datatable--cards .datatable-row,
+  .dark .datatable.datatable--cards .datatable-row:last-child {
+    background: var(--background-alt) !important;
+  }
+}
 </style>

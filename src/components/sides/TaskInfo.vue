@@ -1810,6 +1810,12 @@ defineExpose({
   cursor: ew-resize;
 }
 
+@media screen and (max-width: 768px) {
+  .extend-bar {
+    display: none;
+  }
+}
+
 .empty {
   padding-top: 1em;
 }

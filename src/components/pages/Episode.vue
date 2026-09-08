@@ -83,6 +83,7 @@
             :entries="currentTasks"
             :is-loading="!currentEpisode"
             :is-error="false"
+            :selected-task-id="currentTask?.id"
             @task-selected="onTaskSelected"
           />
           <div class="flexrow">

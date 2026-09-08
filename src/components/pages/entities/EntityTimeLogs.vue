@@ -4,7 +4,7 @@
       <spinner />
     </div>
     <div v-else-if="logs.length > 0">
-      <table class="datatable">
+      <table class="datatable datatable--cards">
         <thead class="datatable-head">
           <tr class="datatable-row-header">
             <th class="date">
@@ -23,22 +23,23 @@
           </tr>
         </thead>
       </table>
-      <table class="datatable">
+      <table class="datatable datatable--cards">
         <tbody class="datatable-body">
           <tr :key="log.id" class="datatable-row" v-for="log in logs">
-            <td class="date">
+            <td class="date" :data-label="$t('main.date')">
               {{ formatDisplayDate(log.date) }}
             </td>
             <people-name-cell
               class="person"
+              :data-label="$t('main.person')"
               :person="personMap.get(log.person_id)"
             />
             <task-type-cell
-              class="type"
+              class="type card-head"
               :task-type="getTaskType(log)"
               :production-id="currentProduction.id"
             />
-            <td class="duration">
+            <td class="duration" :data-label="$t('tasks.fields.duration')">
               {{ formatDuration(log.duration) }}
             </td>
             <td class="end-cell"></td>
@@ -46,13 +47,16 @@
         </tbody>
       </table>
     </div>
-    <div v-else>
-      {{ $t('entities.logs.no_logs') }}
-    </div>
+    <empty-section
+      :icon="ClockIcon"
+      :text="$t('entities.logs.no_logs')"
+      v-else
+    />
   </div>
 </template>
 
 <script setup>
+import { ClockIcon } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useStore } from 'vuex'
 
@@ -61,6 +65,7 @@ import { useFormat } from '@/composables/format'
 /* eslint-disable no-unused-vars */
 import PeopleNameCell from '@/components/cells/PeopleNameCell.vue'
 import TaskTypeCell from '@/components/cells/TaskTypeCell.vue'
+import EmptySection from '@/components/widgets/EmptySection.vue'
 import Spinner from '@/components/widgets/Spinner.vue'
 /* eslint-enable no-unused-vars */
 

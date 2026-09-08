@@ -1,7 +1,7 @@
 <template>
   <div class="data-list">
     <div>
-      <table class="datatable" ref="headerWrapper">
+      <table class="datatable datatable--cards" ref="headerWrapper">
         <thead class="datatable-head">
           <tr class="datatable-row-header">
             <th class="type">
@@ -43,12 +43,12 @@
       @scroll.passive="onBodyScroll"
       v-if="entries.length > 0"
     >
-      <table class="datatable">
+      <table class="datatable datatable--cards">
         <tbody class="datatable-body">
           <tr
             class="datatable-row datatable-row--selectable"
             :key="task.id"
-            :class="{ selected: currentTask?.id === task.id }"
+            :class="{ selected: selectedTaskId === task.id }"
             role="button"
             tabindex="0"
             @click="selectTask(task)"
@@ -56,32 +56,59 @@
             v-for="task in sortedEntries"
           >
             <task-type-cell
-              class="type"
+              class="type card-head"
               :task-type="getTaskType(task.id)"
               :production-id="currentProduction.id"
               :task-id="task.id"
               v-if="getTaskType(task.id)"
             />
-            <td class="status">
+            <td class="status" :data-label="$t('tasks.fields.task_status')">
               <validation-tag
                 :task="getTask(task.id)"
                 :is-static="true"
                 v-if="getTask(task.id)"
               />
             </td>
-            <td class="estimation">
+            <td
+              class="estimation"
+              :data-label="
+                getTaskEstimation(task) ? $t('tasks.fields.estimation') : null
+              "
+            >
               {{ getTaskEstimation(task) }}
             </td>
-            <td class="duration">
+            <td
+              class="duration"
+              :data-label="
+                getTaskDuration(task) ? $t('tasks.fields.duration') : null
+              "
+            >
               {{ getTaskDuration(task) }}
             </td>
-            <td class="startdate">
+            <td
+              class="startdate"
+              :data-label="
+                getTaskStartDate(task)
+                  ? $t('tasks.fields.start_date_short')
+                  : null
+              "
+            >
               {{ getTaskStartDate(task) }}
             </td>
-            <td class="duedate">
+            <td
+              class="duedate"
+              :data-label="
+                getTaskDueDate(task) ? $t('tasks.fields.due_date') : null
+              "
+            >
               {{ getTaskDueDate(task) }}
             </td>
-            <td class="assignees">
+            <td
+              class="assignees"
+              :data-label="
+                getAssignees(task).length ? $t('tasks.fields.assignees') : null
+              "
+            >
               <div
                 class="flexrow"
                 v-if="!isCurrentUserClient && !isCurrentUserVendor"
@@ -104,13 +131,31 @@
             <td class="end-cell"></td>
           </tr>
           <tr class="datatable-row total-row">
-            <td>{{ $t('main.total') }}</td>
-            <td>{{ entityProgress }}</td>
-            <td class="estimation">{{ formatDuration(entityEstimation) }}</td>
-            <td class="duration">{{ formatDuration(entityDuration) }}</td>
-            <td class="startdate">{{ entityStartDate }}</td>
-            <td class="duedate">{{ entityDueDate }}</td>
-            <td class="assignees">
+            <td class="type card-head">{{ $t('main.total') }}</td>
+            <td class="status" :data-label="$t('main.tasks')">
+              {{ entityProgress }}
+            </td>
+            <td class="estimation" :data-label="$t('tasks.fields.estimation')">
+              {{ formatDuration(entityEstimation) }}
+            </td>
+            <td class="duration" :data-label="$t('tasks.fields.duration')">
+              {{ formatDuration(entityDuration) }}
+            </td>
+            <td
+              class="startdate"
+              :data-label="
+                entityStartDate ? $t('tasks.fields.start_date_short') : null
+              "
+            >
+              {{ entityStartDate }}
+            </td>
+            <td
+              class="duedate"
+              :data-label="entityDueDate ? $t('tasks.fields.due_date') : null"
+            >
+              {{ entityDueDate }}
+            </td>
+            <td class="assignees" :data-label="$t('tasks.fields.assignees')">
               {{ entityAssignees.length }}
               {{ $t('people.persons', { count: entityAssignees.length }) }}
             </td>
@@ -143,13 +188,13 @@ const { formatDuration } = useFormat()
 const props = defineProps({
   entries: { type: Array, default: () => [] },
   isLoading: { type: Boolean, default: false },
-  isError: { type: Boolean, default: false }
+  isError: { type: Boolean, default: false },
+  selectedTaskId: { type: String, default: null }
 })
 const emit = defineEmits(['task-selected'])
 
 // State
 // --------------------------------------------------------------------------
-const currentTask = ref(null)
 const headerWrapper = ref(null)
 
 // Computed
@@ -248,10 +293,7 @@ const getTaskType = entry => {
 
 const getAssignees = entry => getTask(entry)?.assignees || []
 
-const selectTask = task => {
-  currentTask.value = task.id === currentTask.value?.id ? null : task
-  emit('task-selected', task)
-}
+const selectTask = task => emit('task-selected', task)
 </script>
 
 <style lang="scss" scoped>
@@ -316,5 +358,25 @@ const selectTask = task => {
 .total-row {
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
+}
+
+@media screen and (max-width: 768px) {
+  .data-list {
+    max-width: 100%;
+  }
+
+  .task-list-body {
+    overflow: visible;
+  }
+
+  .avatar-wrapper:last-child,
+  .avatar-wrapper .person-avatar {
+    margin-right: 0;
+  }
+
+  .total-row td.type {
+    font-size: 1.1em;
+    font-weight: 600;
+  }
 }
 </style>

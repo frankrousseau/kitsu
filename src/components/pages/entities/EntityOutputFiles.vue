@@ -4,7 +4,7 @@
       <spinner />
     </div>
     <div v-else-if="outputFiles.length > 0">
-      <table class="datatable">
+      <table class="datatable datatable--cards">
         <thead class="datatable-head">
           <tr class="datatable-row-header">
             <th class="tasktype">
@@ -38,36 +38,49 @@
           <template v-for="outputFile in outputFiles" :key="outputFile.id">
             <tr class="datatable-row">
               <task-type-cell
-                class="type"
+                class="type card-head"
                 :task-type="getTaskType(outputFile)"
                 :production-id="currentProduction.id"
               />
-              <td class="type">
+              <td
+                class="type output-type"
+                :data-label="$t('entities.output_files.type')"
+              >
                 {{ getOutputType(outputFile).name }}
               </td>
-              <td class="name">
+              <td class="name" :data-label="$t('entities.output_files.name')">
                 {{ outputFile.name }}
               </td>
-              <td class="extension">
+              <td
+                class="extension"
+                :data-label="$t('entities.output_files.extension')"
+              >
                 {{ outputFile.extension }}
               </td>
-              <td class="revision">
+              <td
+                class="revision"
+                :data-label="$t('entities.output_files.revision')"
+              >
                 {{ outputFile.revision }}
               </td>
-              <td class="size">
+              <td class="size" :data-label="$t('entities.output_files.size')">
                 {{ renderFileSize(outputFile.file_size) }}
               </td>
-              <td class="status">
+              <td
+                class="status"
+                :data-label="$t('entities.output_files.status')"
+              >
                 {{ getFileStatus(outputFile).name }}
               </td>
               <people-name-cell
                 class="person"
+                :data-label="$t('entities.output_files.person')"
                 :person="personMap.get(outputFile.person_id)"
               />
               <td class="end-cell"></td>
             </tr>
             <tr class="datatable-row" v-if="outputFile.path">
-              <td colspan="9">
+              <td class="path card-head" colspan="9">
                 {{ outputFile.path }}
               </td>
             </tr>
@@ -75,13 +88,16 @@
         </tbody>
       </table>
     </div>
-    <div class="empty" v-else>
-      {{ $t('entities.output_files.no_output_files') }}
-    </div>
+    <empty-section
+      :icon="FolderOutputIcon"
+      :text="$t('entities.output_files.no_output_files')"
+      v-else
+    />
   </div>
 </template>
 
 <script setup>
+import { FolderOutputIcon } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useStore } from 'vuex'
 
@@ -90,6 +106,7 @@ import { renderFileSize } from '@/lib/render'
 /* eslint-disable no-unused-vars */
 import PeopleNameCell from '@/components/cells/PeopleNameCell.vue'
 import TaskTypeCell from '@/components/cells/TaskTypeCell.vue'
+import EmptySection from '@/components/widgets/EmptySection.vue'
 import Spinner from '@/components/widgets/Spinner.vue'
 /* eslint-enable no-unused-vars */
 
@@ -189,11 +206,11 @@ td.type {
   overflow-y: auto;
 }
 
-.datatable-row-header::after {
-  display: none;
+.dark .wrapper.output-files {
+  background: transparent;
 }
 
-.empty {
-  font-style: italic;
+.datatable-row-header::after {
+  display: none;
 }
 </style>

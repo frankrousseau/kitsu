@@ -48,13 +48,12 @@
         </div>
       </div>
     </div>
-    <div v-else>
-      {{ $t('news.no_news') }}
-    </div>
+    <empty-section :icon="NewspaperIcon" :text="$t('news.no_news')" v-else />
   </div>
 </template>
 
 <script setup>
+import { NewspaperIcon } from 'lucide-vue-next'
 import {
   computed,
   getCurrentInstance,
@@ -68,6 +67,7 @@ import { useStore } from 'vuex'
 import { useFormat } from '@/composables/format'
 
 /* eslint-disable no-unused-vars */
+import EmptySection from '@/components/widgets/EmptySection.vue'
 import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
 import Spinner from '@/components/widgets/Spinner.vue'
 import TaskTypeName from '@/components/widgets/TaskTypeName.vue'
