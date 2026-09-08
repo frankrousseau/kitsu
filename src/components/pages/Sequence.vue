@@ -372,12 +372,22 @@ const isTaskDrawerOpen = computed(() => Boolean(currentTask.value))
 
 // Functions
 // --------------------------------------------------------------------------
-// the sequence list only carries the tasks once loaded with them
+// the sequence list only carries the tasks once loaded with them, and on
+// a TV show that load is scoped to the current episode, which the route
+// without episode leaves unset: align it on the sequence's own episode
 const getCurrentSequence = async () => {
   const sequenceId = route.params.sequence_id
   let sequence = sequenceStore.cache.sequenceMap.get(sequenceId) || null
   if (!sequence?.validations) {
-    if (isTVShow.value) await store.dispatch('loadEpisodes')
+    if (isTVShow.value) {
+      await store.dispatch('loadEpisodes')
+      const { parent_id } =
+        sequence || (await store.dispatch('loadSequence', sequenceId)) || {}
+      const episodeId = currentEpisode.value?.id
+      if (parent_id && episodeId !== 'all' && episodeId !== parent_id) {
+        store.dispatch('setCurrentEpisode', parent_id)
+      }
+    }
     await store.dispatch('loadSequencesWithTasks')
     sequence = sequenceStore.cache.sequenceMap.get(sequenceId) || null
   }
