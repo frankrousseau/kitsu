@@ -335,8 +335,8 @@ const socketEvents = {
   },
 
   'department:delete': eventData => {
-    if (departmentMap.value.get(eventData.task_type_id)) {
-      store.commit('DELETE_DEPARTMENTS_END', { id: eventData.task_type_id })
+    if (departmentMap.value.get(eventData.department_id)) {
+      store.commit('DELETE_DEPARTMENTS_END', { id: eventData.department_id })
     }
   },
 
