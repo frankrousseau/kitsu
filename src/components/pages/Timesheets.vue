@@ -466,12 +466,9 @@ watch(selectablePeople, list => {
 
 // the query also carries the display filters, which the aggregate does
 // not depend on
-watch(
-  () => [route.path, productionId.value, studioId.value],
-  () => {
-    if (showInfo.value) loadAggregate()
-  }
-)
+watch([() => route.path, productionId, studioId], () => {
+  if (showInfo.value) loadAggregate()
+})
 
 // Lifecycle
 // --------------------------------------------------------------------------
