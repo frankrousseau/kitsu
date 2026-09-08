@@ -380,7 +380,7 @@ const displayedClosedProductions = computed(() =>
 )
 
 const displayedCount = computed(
-  () => openProductions.value.length + closedProductions.value.length
+  () => openProductions.value.length + displayedClosedProductions.value.length
 )
 
 const visibleProjectMetadataDescriptors = computed(() =>
