@@ -724,7 +724,7 @@ const currentTaskType = computed(() =>
 )
 
 const currentFps = computed(() => {
-  if (!props.task) return 25
+  if (!props.task) return DEFAULT_FPS
   // An entity can override the production fps via data.fps; use it so
   // the player builds its frame model on the rate the video was
   // actually rendered at (otherwise frames get duplicated/dropped).

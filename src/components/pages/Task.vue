@@ -689,7 +689,7 @@ const getTaskEntity = currentTask => {
 }
 
 const currentFps = computed(() => {
-  if (!task.value) return 25
+  if (!task.value) return DEFAULT_FPS
   const entityFps = parseFloat(getTaskEntity(task.value)?.data?.fps)
   if (entityFps) return entityFps
   return (
