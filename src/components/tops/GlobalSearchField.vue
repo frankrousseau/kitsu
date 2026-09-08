@@ -1,10 +1,5 @@
 <template>
-  <div
-    :class="{
-      'global-search-field': true,
-      'global-search-field-open': isSearchActive
-    }"
-  >
+  <div class="global-search-field">
     <span class="search-icon">
       <search-icon :size="20" />
     </span>
@@ -328,7 +323,6 @@ onUnmounted(() => {
   border: 1px solid var(--border);
   border-radius: 5px;
   color: var(--text);
-  max-height: 60px;
   min-width: 120px;
   position: absolute;
   text-align: left;
@@ -347,11 +341,6 @@ onUnmounted(() => {
   width: 180px;
   padding-top: 9px;
   position: relative;
-
-  &.global-search-field-open {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-  }
 
   input {
     border-radius: 10px;
