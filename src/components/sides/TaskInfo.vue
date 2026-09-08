@@ -325,7 +325,6 @@
 
         <move-comment-modal
           :active="modals.moveComment"
-          :comment="commentToMove"
           :source-task="task"
           :is-loading="loading.moveComment"
           :is-error="errors.moveComment"
@@ -463,10 +462,6 @@ const props = defineProps({
   inPlaylist: {
     type: Boolean,
     default: false
-  },
-  isLoading: {
-    type: Boolean,
-    default: true
   },
   isPreview: {
     type: Boolean,

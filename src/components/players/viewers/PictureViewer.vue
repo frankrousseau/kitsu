@@ -76,10 +76,6 @@ const props = defineProps({
     type: Number,
     default: 0
   },
-  panzoom: {
-    type: Boolean,
-    default: false
-  },
   preview: {
     type: Object,
     default: () => ({})

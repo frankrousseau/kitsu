@@ -88,10 +88,6 @@ const props = defineProps({
   thin: {
     type: Boolean,
     default: false
-  },
-  transparent: {
-    type: Boolean,
-    default: false
   }
 })
 

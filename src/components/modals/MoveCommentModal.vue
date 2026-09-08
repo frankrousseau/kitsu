@@ -45,7 +45,6 @@ const store = useStore()
 
 const props = defineProps({
   active: { type: Boolean, default: false },
-  comment: { type: Object, default: null },
   sourceTask: { type: Object, default: null },
   isError: { type: Boolean, default: false },
   isLoading: { type: Boolean, default: false }

@@ -90,7 +90,6 @@
         :end-date="endDate"
         :hide-man-days="true"
         :hierarchy="scheduleItems"
-        :is-error="errors.schedule"
         :is-estimation-linked="true"
         :multiline="true"
         :reassignable="true"

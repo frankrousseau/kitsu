@@ -131,7 +131,6 @@
             position: isComparisonOverlay ? 'absolute' : 'relative'
           }"
           :entities="entityListToCompare"
-          :full-screen="fullScreen"
           :is-hd="isHd"
           :is-repeating="isRepeating"
           :muted="true"
@@ -219,7 +218,6 @@
             :full-screen="fullScreen"
             :light="false"
             :margin-bottom="0"
-            :panzoom="true"
             :preview="currentPreviewToCompare"
             :is-comparing="isComparing"
             @panzoom-changed="onComparisonPanZoomChanged"
@@ -255,7 +253,6 @@
             opacity: overlayOpacity
           }"
           :entities="entityList"
-          :full-screen="fullScreen"
           :handle-in="handleIn"
           :handle-out="handleOut"
           :is-hd="isHd"
@@ -358,7 +355,6 @@
             :full-screen="fullScreen"
             :light="false"
             :margin-bottom="0"
-            :panzoom="true"
             :current-preview="{
               ...currentPreview,
               position: currentPreviewIndex + 1
@@ -619,8 +615,6 @@
           :comparison-preview-length="currentComparisonPreviewLength"
           :is-comparing="isComparing"
           :is-comparison-enabled="true"
-          :is-movie="isCurrentPreviewMovie"
-          :is-sound="isCurrentPreviewSound"
           :preview-file-options="revisionOptions"
           :task-type-options="taskTypeOptions"
           v-model:comparison-mode="comparisonMode"
@@ -829,10 +823,8 @@
       :entity-list="entityList"
       :fps="fps"
       :frame-duration="frameDuration"
-      :is-full-mode="isFullMode"
       :is-full-screen="fullScreen || isEntitiesHidden"
       :nb-frames="isCurrentPreviewMovie ? nbFrames : 0"
-      :preview-id="currentPreview ? currentPreview.id : ''"
       :playlist-duration="playlistDuration"
       :playlist-progress="playlistProgress"
       :playlist-shot-position="playlistShotPosition"

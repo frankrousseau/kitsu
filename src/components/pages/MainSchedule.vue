@@ -43,7 +43,6 @@
         :end-date="endDate"
         :hierarchy="scheduleItems"
         :is-loading="false"
-        :is-error="false"
         :start-date="startDate"
         :zoom-level="zoomLevel"
         hide-man-days

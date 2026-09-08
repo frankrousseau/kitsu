@@ -369,7 +369,7 @@
     </div>
 
     <div class="column side-column is-hidden-mobile hide-small-screen">
-      <task-info :task="currentTask" :is-loading="loading.currentTask" />
+      <task-info :task="currentTask" />
     </div>
   </div>
 </template>
@@ -477,7 +477,6 @@ const currentNotificationId = ref(null)
 
 const errors = reactive({ notifications: false })
 const loading = reactive({
-  currentTask: true,
   markAll: false,
   more: false,
   notifications: false
@@ -652,11 +651,9 @@ const onNotificationSelected = (event, notification) => {
     return
   }
   if (currentNotificationId.value !== notification.id) {
-    loading.currentTask = true
     store
       .dispatch('loadTask', { taskId: notification.task_id })
       .then(task => {
-        loading.currentTask = false
         currentTask.value = task
         currentNotificationId.value = notification.id
       })

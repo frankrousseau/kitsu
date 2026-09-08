@@ -56,7 +56,6 @@
               :is-editable="isEditable"
               :can-toggle-for-client="canToggleForClient"
               :can-move="canMoveComment"
-              :is-for-client="Boolean(comment.for_client)"
               @pin-clicked="
                 () => {
                   emit('pin-comment', comment)

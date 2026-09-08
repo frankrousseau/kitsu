@@ -116,7 +116,6 @@
         :hierarchy="filteredScheduleItems"
         :zoom-level="zoomLevel"
         :is-loading="loading.schedule"
-        :is-error="errors.schedule"
         clip-children
         is-estimation-linked
         hide-man-days
@@ -672,7 +671,6 @@ export default {
         exportSchedule: false
       },
       errors: {
-        schedule: false,
         editScheduleVersion: false,
         deleteScheduleVersion: false,
         applyScheduleVersion: false
@@ -919,7 +917,6 @@ export default {
 
     async loadData() {
       this.loading.schedule = true
-      this.errors.schedule = false
       this.availableTaskTypes = []
 
       try {
@@ -988,7 +985,6 @@ export default {
         }))
       } catch (err) {
         console.error(err)
-        this.errors.schedule = true
       } finally {
         this.loading.schedule = false
       }

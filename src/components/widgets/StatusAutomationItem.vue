@@ -57,14 +57,6 @@ const props = defineProps({
   statusAutomation: {
     type: Object,
     default: null
-  },
-  productionId: {
-    type: String,
-    default: null
-  },
-  deletable: {
-    type: Boolean,
-    default: false
   }
 })
 

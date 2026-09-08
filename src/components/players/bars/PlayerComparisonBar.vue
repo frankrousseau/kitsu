@@ -94,14 +94,6 @@ defineProps({
     type: Boolean,
     default: false
   },
-  isMovie: {
-    type: Boolean,
-    default: false
-  },
-  isSound: {
-    type: Boolean,
-    default: false
-  },
   light: {
     type: Boolean,
     default: false

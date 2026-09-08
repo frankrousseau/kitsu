@@ -95,7 +95,6 @@
     <add-attachment-modal
       :active="modals.addAttachment"
       :is-loading="loading.addAttachment"
-      :is-error="errors.addAttachment"
       :title="name"
       :name-prefix="attachmentNamePrefix"
       @cancel="closeAttachmentModal"

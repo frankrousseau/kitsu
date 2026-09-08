@@ -40,8 +40,6 @@
             <budget-total-row
               v-bind="commonRowProps"
               :total-entry="totalEntry"
-              :hardware-items-costs="hardwareItemsCosts"
-              :software-licenses-costs="softwareLicensesCosts"
             />
 
             <template

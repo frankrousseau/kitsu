@@ -903,10 +903,6 @@ const props = defineProps({
     type: Object,
     required: true
   },
-  isError: {
-    type: Boolean,
-    default: false
-  },
   isLoading: {
     type: Boolean,
     default: true
