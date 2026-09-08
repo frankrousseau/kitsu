@@ -936,11 +936,10 @@ const actions = {
     return reply
   },
 
-  deleteReply({ commit }, { comment, reply }) {
+  async deleteReply({ commit }, { comment, reply }) {
+    await tasksApi.deleteReply(comment, reply)
     commit(REMOVE_REPLY_FROM_COMMENT, { comment, reply })
-    return tasksApi.deleteReply(comment, reply).then(() => {
-      return reply
-    })
+    return reply
   },
 
   pinComment({ commit }, comment) {
