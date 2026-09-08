@@ -214,9 +214,10 @@ const currentYear = computed({
     if (['month', 'week'].includes(detailLevel.value)) {
       pushLevelRoute(detailLevel.value, { year })
     } else {
+      const lastMonth = year === moment().year() ? moment().month() + 1 : 12
       pushLevelRoute('day', {
         year,
-        month: Math.min(currentMonth.value, moment().month() + 1)
+        month: Math.min(currentMonth.value, lastMonth)
       })
     }
   }
