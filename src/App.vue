@@ -2718,7 +2718,7 @@ th.validation-cell {
       display: flex;
       flex-direction: column;
       margin-bottom: 0.5em;
-      padding: 0.5em 0.75em;
+      padding: 0.5em 1.25em 0.75em;
     }
 
     .datatable-row.selected {
@@ -2742,11 +2742,27 @@ th.validation-cell {
     .datatable-body td.card-head {
       display: block;
       order: -1;
+      padding: 0.75em 0 1em;
+    }
+
+    // Sticky first column shadow makes no sense once rows are cards.
+    .datatable-body td.datatable-row-header {
+      border-right: 0;
+      position: static;
+
+      &::after {
+        display: none;
+      }
     }
 
     .datatable-body td .tag {
       margin-left: 0;
       margin-right: 0;
+    }
+
+    .datatable-body td .department-name {
+      padding-left: 0;
+      padding-right: 0;
     }
 
     // PeopleNameCell sizes its avatar inline for the desktop rows.
@@ -2763,6 +2779,7 @@ th.validation-cell {
       display: flex;
       gap: 1em;
       justify-content: space-between;
+      text-align: right;
 
       &::before {
         color: var(--text-alt);

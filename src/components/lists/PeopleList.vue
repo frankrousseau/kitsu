@@ -1,7 +1,7 @@
 <template>
   <div class="data-list">
     <div ref="body" class="datatable-wrapper">
-      <table class="datatable" v-if="!isLoading">
+      <table class="datatable datatable--cards" v-if="!isLoading">
         <thead class="datatable-head">
           <tr>
             <th scope="col" class="user datatable-row-header">
@@ -54,7 +54,7 @@
         >
           <tr :key="person.id" class="datatable-row" v-for="person in entries">
             <people-user-cell
-              class="user datatable-row-header"
+              class="user datatable-row-header card-head"
               :person="person"
             />
             <td class="phone" v-if="!isBots && !isGuests">
@@ -66,16 +66,28 @@
                 error: isExpired(person.expiration_date),
                 warning: isSoonExpired(person.expiration_date)
               }"
+              :data-label="
+                person.expiration_date ? $t('people.list.expiration') : null
+              "
               v-if="isBots"
             >
               {{ person.expiration_date }}
               <alert-triangle-icon class="icon mr05" />
             </td>
-            <td class="role" v-if="!isGuests">
+            <td
+              class="role"
+              :data-label="$t('people.list.role')"
+              v-if="!isGuests"
+            >
               {{ $t(`people.role.${person.role}`) }}
             </td>
             <department-names-cell
               class="departments"
+              :data-label="
+                person.departments?.length
+                  ? $t('people.list.departments')
+                  : null
+              "
               :departments="person.departments"
               v-if="!isGuests"
             />
@@ -367,116 +379,13 @@ export default {
 
 @media screen and (max-width: 768px) {
   .datatable-wrapper {
+    background: transparent;
+    border: 0;
     overflow-x: visible;
-    border: 0;
-    background: transparent;
   }
 
-  table.datatable {
-    display: block;
-    background: transparent;
-  }
-
-  .datatable-head {
-    display: none;
-  }
-
-  .datatable-body {
-    display: block;
-  }
-
-  .data-list .datatable .datatable-row,
-  .data-list .datatable .datatable-row:nth-child(even),
-  .data-list .datatable .datatable-row:hover,
-  .data-list .datatable .datatable-row:last-child {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-areas:
-      'user role'
-      'departments departments'
-      'expiration expiration';
-    align-items: center;
-    column-gap: 0.5em;
-    row-gap: 0.25em;
-    padding: 0.5em;
-    margin-bottom: 0.5em;
-    background-color: var(--background) !important;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-  }
-
-  .data-list .datatable .datatable-row td,
-  .data-list .datatable .datatable-row :deep(td),
-  .data-list .datatable .datatable-row:last-child td,
-  .data-list .datatable .datatable-row:last-child:nth-child(even) td,
-  .data-list .datatable .datatable-row:last-child:hover td {
-    display: block;
-    width: auto;
-    min-width: 0;
-    padding: 0;
-    border: 0;
-    background-color: transparent !important;
-  }
-
-  .user {
-    grid-area: user;
-    width: auto;
-    min-width: 0;
-  }
-
-  .role {
-    grid-area: role;
-    width: auto;
-    min-width: 0;
-    color: var(--text-alt);
-    font-size: 0.9em;
-  }
-
-  .departments {
-    grid-area: departments;
-    width: auto;
-    min-width: 0;
-  }
-
-  .expiration {
-    grid-area: expiration;
-    width: auto;
-    min-width: 0;
-    font-size: 0.9em;
-  }
-
-  :deep(.actions) {
-    display: none !important;
-  }
-
-  :deep(.entity-thumbnail) {
-    box-shadow: none;
-  }
-
-  :deep(.datatable-row-footer) {
-    border-left: 0;
-
-    &::before {
-      display: none;
-    }
-  }
-
-  :deep(.datatable-row-header) {
-    border-right: 0;
-
-    &::after {
-      display: none;
-    }
-  }
-
-  .phone,
-  .studio,
-  .country,
-  .contract,
-  .position,
-  .seniority,
-  .salary {
-    display: none;
+  .expiration .icon {
+    margin-left: 0;
   }
 
   .footer-info {

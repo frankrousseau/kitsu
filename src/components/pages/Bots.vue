@@ -24,7 +24,7 @@
       </div>
       <span class="filler"></span>
       <button-simple
-        class="flexrow-item mr0"
+        class="flexrow-item mr0 new-button"
         :text="$t('bots.new_bot')"
         :is-responsive="true"
         icon="plus"
@@ -49,7 +49,7 @@
     <div class="has-text-centered strong" v-else>
       <p>{{ $t('bots.no_bot') }}</p>
       <button-simple
-        class="mt1"
+        class="mt1 new-button"
         :text="$t('bots.new_bot')"
         :is-responsive="true"
         @click="onNewClicked"
@@ -435,7 +435,8 @@ useHead({ title: computed(() => `${t('bots.title')} - Kitsu`) })
     order: 0;
   }
 
-  .search-options :deep(.label) {
+  .search-options :deep(.label),
+  .new-button {
     display: none;
   }
 }
