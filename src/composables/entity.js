@@ -321,6 +321,14 @@ export const useEntity = ({ type, currentEntity, entityList, init }) => {
   // mixin's `currentTasks` watcher with `immediate: true`).
   watch(currentTasks, () => initScheduleItems(), { immediate: true })
 
+  // the action panel clears the selection from its own close button
+  watch(
+    () => store.getters.nbSelectedTasks,
+    nbSelectedTasks => {
+      if (nbSelectedTasks === 0) currentTask.value = null
+    }
+  )
+
   return {
     currentSection,
     currentTask,

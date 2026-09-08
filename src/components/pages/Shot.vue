@@ -284,14 +284,6 @@
       :class="{ 'is-open': isTaskDrawerOpen }"
       v-show="currentSection === 'infos'"
     >
-      <button
-        class="drawer-close"
-        type="button"
-        :title="$t('main.close')"
-        @click="closeTask"
-      >
-        <x-icon :size="20" />
-      </button>
       <task-info :task="currentTask" entity-type="Shot" with-actions>
         <entity-news class="news-column" :entity="currentShot" />
       </task-info>
@@ -317,8 +309,7 @@ import {
   CalendarIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  CornerLeftUpIcon,
-  XIcon
+  CornerLeftUpIcon
 } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -777,7 +768,6 @@ h2.subtitle {
   max-height: 85%;
 }
 
-.drawer-close,
 .drawer-backdrop {
   display: none;
 }
@@ -807,32 +797,6 @@ h2.subtitle {
 
     &.is-open {
       transform: translateX(0);
-    }
-  }
-
-  .drawer-close {
-    align-items: center;
-    align-self: flex-end;
-    background: var(--background);
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    color: var(--text);
-    cursor: pointer;
-    display: flex;
-    flex-shrink: 0;
-    height: 36px;
-    justify-content: center;
-    margin: 8px 12px 0 0;
-    padding: 6px;
-    position: sticky;
-    top: 8px;
-    width: 36px;
-    z-index: 2;
-
-    &:hover {
-      background: var(--background-hover);
-      border-color: var(--border-strong);
-      color: var(--text-strong);
     }
   }
 
