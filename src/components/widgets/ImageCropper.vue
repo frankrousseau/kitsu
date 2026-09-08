@@ -54,10 +54,11 @@
         <input
           class="zoom-slider"
           type="range"
-          :min="minScale"
-          :max="maxScale"
-          step="0.001"
-          v-model.number="scale"
+          min="1"
+          max="4"
+          step="0.01"
+          :value="zoom"
+          @input="onZoomInput"
         />
         <span class="zoom-icon" aria-hidden="true">+</span>
       </div>
@@ -71,7 +72,7 @@
 
 <script setup>
 import { UploadIcon } from 'lucide-vue-next'
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 
 const EXTENSIONS = {
   'image/jpeg': 'jpg',
@@ -100,7 +101,7 @@ const originalFile = ref(null)
 const formData = ref(null)
 const previewUrl = ref(null)
 const naturalSize = ref({ width: 0, height: 0 })
-const scale = ref(1)
+const zoom = ref(1)
 const offset = ref({ x: 0, y: 0 })
 const isDragging = ref(false)
 const isDragOver = ref(false)
@@ -112,7 +113,11 @@ const minScale = computed(() => {
   return Math.max(props.size / width, props.size / height)
 })
 
-const maxScale = computed(() => minScale.value * 4)
+// The slider drives a 1x to 4x factor over the fit scale rather than the scale
+// itself, so its bounds never move: a range input clamps a value written under
+// its previous min/max, and Vue patches the value before the bounds, which left
+// the thumb stranded whenever a new image changed the fit scale.
+const scale = computed(() => minScale.value * zoom.value)
 
 const imageStyle = computed(() => {
   const { width, height } = naturalSize.value
@@ -154,7 +159,7 @@ const reset = () => {
   formData.value = null
   originalFile.value = null
   naturalSize.value = { width: 0, height: 0 }
-  scale.value = 1
+  zoom.value = 1
   offset.value = { x: 0, y: 0 }
   isDragOver.value = false
   if (fileInputRef.value) fileInputRef.value.value = ''
@@ -193,8 +198,22 @@ const onImageLoad = event => {
     width: event.target.naturalWidth,
     height: event.target.naturalHeight
   }
-  scale.value = minScale.value
+  zoom.value = 1
   centerOffset()
+}
+
+// Zooming holds whatever the frame is centered on, then clamps back inside the
+// image.
+const onZoomInput = event => {
+  const previous = zoom.value
+  zoom.value = Number(event.target.value)
+  if (!naturalSize.value.width) return
+  const ratio = zoom.value / previous
+  const center = props.size / 2
+  offset.value = clampOffset(
+    center - (center - offset.value.x) * ratio,
+    center - (center - offset.value.y) * ratio
+  )
 }
 
 const pointerCoords = event => {
@@ -240,20 +259,6 @@ const onPointerUp = () => {
   window.removeEventListener('touchmove', onPointerMove)
   window.removeEventListener('touchend', onPointerUp)
 }
-
-watch(scale, (value, previous) => {
-  if (!naturalSize.value.width) return
-  if (!previous || previous === value) {
-    offset.value = clampOffset(offset.value.x, offset.value.y)
-    return
-  }
-  const ratio = value / previous
-  const centerX = props.size / 2
-  const centerY = props.size / 2
-  const newX = centerX - (centerX - offset.value.x) * ratio
-  const newY = centerY - (centerY - offset.value.y) * ratio
-  offset.value = clampOffset(newX, newY)
-})
 
 onBeforeUnmount(() => {
   releasePreview()

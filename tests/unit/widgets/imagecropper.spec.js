@@ -9,7 +9,7 @@ import ImageCropper from '@/components/widgets/ImageCropper.vue'
 // toBlob() are the real node-canvas ones. drawImage still rejects a jsdom
 // <img> (nothing ever loads its src), so each test replaces just that call.
 
-const selectFile = async (wrapper, file) => {
+const selectFile = async (wrapper, file, size = {}) => {
   const input = wrapper.find('input[type="file"]')
   Object.defineProperty(input.element, 'files', {
     configurable: true,
@@ -19,15 +19,27 @@ const selectFile = async (wrapper, file) => {
   const img = wrapper.find('img.cropper-image')
   Object.defineProperty(img.element, 'naturalWidth', {
     configurable: true,
-    value: 800
+    value: size.width || 800
   })
   Object.defineProperty(img.element, 'naturalHeight', {
     configurable: true,
-    value: 600
+    value: size.height || 600
   })
   await img.trigger('load')
   await nextTick()
 }
+
+// Where the thumb sits on its track, 0 (left) to 1 (right), read off the DOM
+// the way the user sees it rather than off the model behind it.
+const sliderPosition = wrapper => {
+  const slider = wrapper.find('input.zoom-slider').element
+  const min = Number(slider.min)
+  const max = Number(slider.max)
+  return (Number(slider.value) - min) / (max - min)
+}
+
+const imageWidth = wrapper =>
+  parseFloat(wrapper.find('img.cropper-image').element.style.width)
 
 // Swap the off-screen canvas for a probe that records the requested mime type
 // and hands back a single pixel, opaque or not, as the cropped bitmap.
@@ -164,5 +176,59 @@ describe('ImageCropper crop output type', () => {
     expect(Array.from(context.getImageData(0, 0, 1, 1).data)).toEqual([
       0, 128, 255, 255
     ])
+  })
+})
+
+describe('ImageCropper zoom slider', () => {
+  let wrapper
+
+  beforeEach(() => {
+    URL.createObjectURL = vi.fn(() => 'blob:logo')
+    URL.revokeObjectURL = vi.fn()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  const logo = () =>
+    new File([new Blob(['png'])], 'logo.png', { type: 'image/png' })
+
+  it('starts the thumb at the left when an image loads', async () => {
+    wrapper = shallowMount(ImageCropper)
+
+    await selectFile(wrapper, logo(), { width: 1600, height: 1200 })
+
+    expect(imageWidth(wrapper)).toBe(240) // 1600 * (180 / 1200), the fit scale
+    expect(sliderPosition(wrapper)).toBe(0)
+    // Centered in the frame: 240px wide behind a 180px window.
+    expect(wrapper.find('img.cropper-image').element.style.transform).toBe(
+      'translate(-30px, 0px)'
+    )
+  })
+
+  it('drives the zoom up to four times the fit scale', async () => {
+    wrapper = shallowMount(ImageCropper)
+    await selectFile(wrapper, logo(), { width: 1600, height: 1200 })
+
+    const slider = wrapper.find('input.zoom-slider')
+    await slider.setValue(slider.element.max)
+
+    expect(imageWidth(wrapper)).toBe(960)
+    expect(sliderPosition(wrapper)).toBe(1)
+  })
+
+  it('brings the thumb back to the left on the next image', async () => {
+    wrapper = shallowMount(ImageCropper)
+    await selectFile(wrapper, logo(), { width: 1600, height: 1200 })
+    const slider = wrapper.find('input.zoom-slider')
+    await slider.setValue(slider.element.max)
+
+    wrapper.vm.reset()
+    await nextTick()
+    await selectFile(wrapper, logo(), { width: 1600, height: 1200 })
+
+    expect(imageWidth(wrapper)).toBe(240)
+    expect(sliderPosition(wrapper)).toBe(0)
   })
 })
