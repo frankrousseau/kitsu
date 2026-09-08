@@ -548,11 +548,7 @@
                     :style="{ left: `${dropTarget.messageLeft + 16}px` }"
                   >
                     <ban-icon :size="14" />
-                    {{
-                      dropTarget.forbidden === 'department'
-                        ? $t('schedule.drop_forbidden_department')
-                        : $t('schedule.drop_forbidden_team')
-                    }}
+                    {{ $t(`schedule.drop_forbidden_${dropTarget.forbidden}`) }}
                   </span>
                 </div>
                 <div
@@ -894,6 +890,12 @@ const props = defineProps({
   daysOff: {
     type: Array,
     default: () => []
+  },
+  // page rule (item, person) => reason of the refusal or null, asked after
+  // the team check and shown through schedule.drop_forbidden_<reason>
+  assignRule: {
+    type: Function,
+    default: null
   },
   draggedItems: {
     type: Array,
@@ -2501,6 +2503,10 @@ const getDropForbiddenReason = (item, person) => {
   )
   if (!production || !production.team.includes(person.id)) {
     return 'team'
+  }
+  const reason = props.assignRule?.(item, person)
+  if (reason) {
+    return reason
   }
   const isDepartmentMember =
     !person.departments.length ||
