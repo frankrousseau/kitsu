@@ -1,38 +1,25 @@
 <template>
   <div class="columns fixed-page edit xyz-in" xyz="fade">
     <div class="page column main-column">
-      <div class="page-header flexrow flexrow-item">
-        <div class="flexrow block mb0 main-block">
-          <router-link
-            class="flexrow-item has-text-centered back-link"
-            :to="editsPath"
-          >
-            <corner-left-up-icon />
-          </router-link>
-          <span class="flexrow-item">
-            <entity-thumbnail
-              class="entity-thumbnail"
-              :entity="currentEdit"
-              :empty-height="60"
-              :empty-width="100"
-              :height="60"
-              :width="100"
-              v-if="currentEdit"
-            />
-          </span>
-          <div class="entity-title flexrow-item mr1">
-            {{ title }}
-          </div>
-          <div
-            class="flexrow-item has-text-centered"
-            :key="currentEdit.id"
-            v-if="!isLoading && currentEdit"
-          >
-            <previews-per-task-type
-              :entity="currentEdit"
-              @preview-changed="onPreviewChanged"
-            />
-          </div>
+      <div class="page-header flexrow">
+        <router-link
+          class="flexrow-item has-text-centered back-link ml1"
+          :to="editsPath"
+        >
+          <corner-left-up-icon />
+        </router-link>
+        <span class="flexrow-item ml2">
+          <entity-thumbnail
+            class="entity-thumbnail"
+            :entity="currentEdit"
+            :empty-width="100"
+            :empty-height="60"
+            :width="100"
+            v-if="currentEdit"
+          />
+        </span>
+        <div class="entity-title flexrow-item">
+          {{ title }}
         </div>
         <div class="filler"></div>
         <router-link
@@ -51,41 +38,27 @@
         </router-link>
       </div>
 
-      <div class="edit player block">
-        <preview-player
-          ref="player"
-          v-if="!isLoading && currentEdit"
-          canvas-id="edit-annotation-canvas"
-          :previews="currentRevisions"
-          :task="currentTask"
-          :entity-preview-files="previewFiles"
-          :task-type-map="taskTypeMap"
-          entity-type="Edit"
-          :last-preview-files="currentRevisions"
-          :show-comments-button="true"
-          @annotation-changed="onAnnotationChanged"
-          @change-current-preview="onChangeCurrentPreview"
-        />
-      </div>
-
       <div class="edit-data block">
         <route-section-tabs
           class="section-tabs"
           :active-tab="currentSection"
-          :route="route"
+          :route="$route"
           :tabs="editTabs"
         />
 
-        <div class="flexrow mt1" v-if="currentSection === 'schedule'">
-          <span class="flexrow-item mt05">
-            {{ $t('schedule.zoom_level') }}:
-          </span>
-          <combobox-number
-            class="zoom-level flexrow-item"
-            is-simple
-            :options="zoomOptions"
-            v-model="zoomLevel"
-          />
+        <div class="flexrow mt1">
+          <div class="filler"></div>
+          <template v-if="currentSection === 'schedule'">
+            <span class="flexrow-item mt05">
+              {{ $t('schedule.zoom_level') }}:
+            </span>
+            <combobox-number
+              class="zoom-level flexrow-item"
+              is-simple
+              :options="zoomOptions"
+              v-model="zoomLevel"
+            />
+          </template>
         </div>
 
         <div class="flexcolumn infos" v-show="currentSection === 'infos'">
@@ -95,7 +68,7 @@
             :entries="currentTasks"
             :is-loading="!currentEdit"
             :is-error="false"
-            :selected-task-id="selectedTask?.id"
+            :selected-task-id="currentTask?.id"
             @task-selected="onTaskSelected"
           />
           <div class="flexrow">
@@ -111,7 +84,7 @@
             </div>
           </div>
 
-          <div class="table-body edit-metadata">
+          <div class="table-body metadata-infos">
             <table class="datatable no-header" v-if="currentEdit">
               <tbody class="datatable-body">
                 <tr class="datatable-row">
@@ -138,9 +111,15 @@
           </div>
         </div>
 
+        <entity-chat
+          :entity="currentEdit"
+          :name="currentEdit?.name"
+          v-if="currentSection === 'chat'"
+        />
+
         <div
           class="schedule mt1"
-          v-if="scheduleItems[0]?.children.length > 0"
+          v-if="scheduleItems[0].children.length > 0"
           v-show="currentSection === 'schedule'"
         >
           <div class="wrapper">
@@ -179,12 +158,33 @@
           :entity="currentEdit"
           v-if="currentSection === 'time-logs'"
         />
+
+        <entity-output-files
+          :entity="currentEdit"
+          v-if="currentSection === 'output-files'"
+        />
       </div>
+    </div>
+
+    <div
+      class="drawer-backdrop"
+      :class="{ 'is-open': isTaskDrawerOpen }"
+      @click="closeTask"
+      v-show="currentSection === 'infos'"
+    ></div>
+    <div
+      class="column side-column"
+      :class="{ 'is-open': isTaskDrawerOpen }"
+      v-show="currentSection === 'infos'"
+    >
+      <task-info :task="currentTask" entity-type="Edit" with-actions>
+        <entity-news class="news-column" :entity="currentEdit" />
+      </task-info>
     </div>
 
     <edit-edit-modal
       :active="modals.edit"
-      :is-loading="isLoading"
+      :is-loading="loading.edit"
       :is-error="errors.edit"
       :edit-to-edit="currentEdit"
       @cancel="modals.edit = false"
@@ -203,18 +203,7 @@ import {
   ChevronRightIcon,
   CornerLeftUpIcon
 } from 'lucide-vue-next'
-import {
-  computed,
-  getCurrentInstance,
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  provide,
-  reactive,
-  ref,
-  useTemplateRef,
-  watch
-} from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useStore } from 'vuex'
@@ -226,11 +215,12 @@ import editStore from '@/store/modules/edits'
 import DescriptionCell from '@/components/cells/DescriptionCell.vue'
 import EntityTaskList from '@/components/lists/EntityTaskList.vue'
 import EditEditModal from '@/components/modals/EditEditModal.vue'
+import EntityChat from '@/components/pages/entities/EntityChat.vue'
 import EntityNews from '@/components/pages/entities/EntityNews.vue'
+import EntityOutputFiles from '@/components/pages/entities/EntityOutputFiles.vue'
 import EntityPreviewFiles from '@/components/pages/entities/EntityPreviewFiles.vue'
 import EntityTimeLogs from '@/components/pages/entities/EntityTimeLogs.vue'
-import PreviewsPerTaskType from '@/components/players/bars/PreviewsPerTaskType.vue'
-import PreviewPlayer from '@/components/players/players/PreviewPlayer.vue'
+import TaskInfo from '@/components/sides/TaskInfo.vue'
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
 import ComboboxNumber from '@/components/widgets/ComboboxNumber.vue'
 import EmptySection from '@/components/widgets/EmptySection.vue'
@@ -247,22 +237,14 @@ defineOptions({ name: 'edit' })
 const { t } = useI18n()
 const route = useRoute()
 const store = useStore()
-const socket = getCurrentInstance().appContext.config.globalProperties.$socket
-const playerRef = useTemplateRef('player')
 
 // State
 // --------------------------------------------------------------------------
 const currentEdit = ref(null)
-const currentPreviewFile = ref(null)
-const isLoading = ref(true)
-const previewFiles = ref({})
 const scheduleWidget = ref(null)
 const errors = reactive({ edit: false })
+const loading = reactive({ edit: false })
 const modals = reactive({ edit: false })
-
-// AddComment, inside the player's TaskInfo, injects the page-level draft
-const draftComment = reactive({})
-provide('draftComment', draftComment)
 
 // Computed
 // --------------------------------------------------------------------------
@@ -275,10 +257,8 @@ const isCurrentUserManager = computed(
   () => store.getters.isCurrentUserProductionManager
 )
 const isTVShow = computed(() => store.getters.isTVShow)
-const taskMap = computed(() => store.getters.taskMap)
-const taskTypeMap = computed(() => store.getters.taskTypeMap)
 
-const entityList = computed(() => Array.from(editStore.cache.editMap.values()))
+const entityList = computed(() => editStore.cache.edits)
 
 const title = computed(() => {
   if (!currentEdit.value) return t('main.loading')
@@ -292,66 +272,44 @@ const editsPath = computed(() =>
 
 const editTabs = computed(() => [
   { label: t('main.label.info'), name: 'infos' },
+  { label: t('main.label.chat'), name: 'chat' },
   { label: t('main.label.schedule'), name: 'schedule' },
   { label: t('main.label.preview_files'), name: 'preview-files' },
   { label: t('main.activity'), name: 'activity' },
-  { label: t('main.label.timelog'), name: 'time-logs' }
+  { label: t('main.label.timelog'), name: 'time-logs' },
+  { label: t('main.label.output_files'), name: 'output-files' }
 ])
 
-// the task shown in the player follows the displayed preview file
-const currentTask = computed(() => {
-  const taskId = currentPreviewFile.value?.task_id
-  return taskId ? taskMap.value.get(taskId) : undefined
-})
-
-const currentRevisions = computed(
-  () => previewFiles.value[currentTask.value?.task_type_id] || []
-)
+const isTaskDrawerOpen = computed(() => Boolean(currentTask.value))
 
 // Functions
 // --------------------------------------------------------------------------
-const getCurrentEdit = () =>
-  editStore.cache.editMap.get(route.params.edit_id) || null
-
-// the preview flagged as current on the edit when it still belongs to one
-// of the task type buckets, otherwise the first one available
-const findCurrentPreviewFile = () => {
-  const editPreviewId = currentEdit.value?.preview_file_id
-  const buckets = Object.values(previewFiles.value)
-  const current = buckets
-    .flat()
-    .find(previewFile => previewFile.id === editPreviewId)
-  return current || buckets.find(bucket => bucket.length > 0)?.[0] || null
+const getCurrentEdit = async () => {
+  const editId = route.params.edit_id
+  let edit = editStore.cache.editMap.get(editId) || null
+  if (!edit) {
+    await store.dispatch('loadEdits')
+    edit = editStore.cache.editMap.get(editId) || null
+  }
+  return edit
 }
-
-const loadPreviewFiles = async () => {
-  const loadedPreviewFiles = await store.dispatch(
-    'loadTaskEntityPreviewFiles',
-    currentEdit.value.id
-  )
-  previewFiles.value = loadedPreviewFiles
-  // PreviewsPerTaskType reads the preview files from the entity itself
-  currentEdit.value.preview_files = loadedPreviewFiles
-}
-
-const resetData = async () => {
-  await nextTick()
-  await store.dispatch('loadEdits')
-  currentEdit.value = getCurrentEdit()
-  if (!currentEdit.value) return
-  await loadPreviewFiles()
-  currentPreviewFile.value = findCurrentPreviewFile()
-  isLoading.value = false
-}
-
-const init = () => resetData().catch(console.error)
 
 const scrollScheduleToStart = () => {
   scheduleWidget.value?.scrollToDate(scheduleItems.value[0].startDate)
 }
 
+const init = async () => {
+  try {
+    currentEdit.value = await getCurrentEdit()
+    currentSection.value = route.query.section || 'infos'
+    setTimeout(scrollScheduleToStart, 100)
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 const confirmEditEdit = async form => {
-  isLoading.value = true
+  loading.edit = true
   errors.edit = false
   try {
     await store.dispatch('editEdit', { ...form, id: currentEdit.value.id })
@@ -360,62 +318,16 @@ const confirmEditEdit = async form => {
     console.error(err)
     errors.edit = true
   }
-  isLoading.value = false
+  loading.edit = false
 }
 
-// PreviewsPerTaskType picks a task type or revision, the player picks a
-// revision: both land on the same selection
-const onPreviewChanged = (entity, previewFile) => {
-  currentPreviewFile.value = previewFile || null
-  if (previewFile && currentEdit.value) {
-    currentEdit.value.preview_file_id = previewFile.id
-  }
+const closeTask = () => {
+  if (currentTask.value) onTaskSelected(currentTask.value)
 }
 
-const onChangeCurrentPreview = previewFile => {
-  if (previewFile) onPreviewChanged(currentEdit.value, previewFile)
-}
-
-const onAnnotationChanged = async ({
-  preview,
-  additions,
-  deletions,
-  updates
-}) => {
-  try {
-    await store.dispatch('updatePreviewAnnotation', {
-      taskId: preview.task_id,
-      preview,
-      additions,
-      deletions,
-      updates
-    })
-    playerRef.value?.confirmAnnotationsSaved()
-  } catch {
-    playerRef.value?.restoreFailedAnnotations()
-  }
-}
-
-// a preview added to one of the edit tasks, or removed with its comment,
-// refreshes the buckets
-const onPreviewFileAddFile = eventData => {
-  if (eventData.project_id !== currentProduction.value.id) return
-  const isEditTask = Object.values(previewFiles.value)
-    .flat()
-    .some(previewFile => previewFile.task_id === eventData.task_id)
-  if (isEditTask) loadPreviewFiles().catch(console.error)
-}
-
-const onCommentDelete = eventData => {
-  if (eventData.project_id !== currentProduction.value.id) return
-  loadPreviewFiles().catch(console.error)
-}
-
-// the row picked in the task list, distinct from `currentTask`, which
-// follows the preview file shown in the player
 const {
   currentSection,
-  currentTask: selectedTask,
+  currentTask,
   zoomLevel,
   zoomOptions,
   scheduleItems,
@@ -450,14 +362,8 @@ watch(zoomLevel, scrollScheduleToStart)
 // Lifecycle
 // --------------------------------------------------------------------------
 onMounted(() => {
-  socket.on('preview-file:add-file', onPreviewFileAddFile)
-  socket.on('comment:delete', onCommentDelete)
+  store.dispatch('clearSelectedTasks')
   init()
-})
-
-onBeforeUnmount(() => {
-  socket.off('preview-file:add-file', onPreviewFileAddFile)
-  socket.off('comment:delete', onCommentDelete)
 })
 
 // Head
@@ -466,53 +372,49 @@ useHead({ title: computed(() => `${title.value} - Kitsu`) })
 </script>
 
 <style lang="scss" scoped>
-.dark .wrapper {
-  background: var(--background);
+.dark {
+  .table-body {
+    border: 1px solid var(--border);
+  }
+
+  .wrapper {
+    background: var(--background);
+  }
 }
 
-.block {
-  margin: 0;
+.main-column {
+  display: flex;
+  flex-direction: column;
+  background: var(--background-page);
+  padding-bottom: 1em;
 }
 
-.entity-title {
-  font-weight: bold;
+h2.subtitle {
+  border-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0.5em;
+  font-size: 1.5em;
+}
+
+.page-header {
+  align-items: center;
+  margin-top: calc(50px + 2em);
+  margin-bottom: 0.8em;
+  margin-left: 1em;
   margin-right: 1em;
-}
 
-.entity-thumbnail {
-  margin-bottom: 0;
-}
-
-.main-block {
-  padding: 0.5em 1.5em;
+  .entity-title {
+    font-weight: 500;
+  }
 }
 
 .edit-data {
   display: flex;
   flex: 1;
   flex-direction: column;
-  margin: 0 1em;
-  overflow: hidden;
-  min-height: 300px;
-}
-
-.edit-metadata {
-  min-height: 100px;
-  width: 100%;
-}
-
-.page-header {
-  margin-top: calc(50px + 2em);
-  margin-left: 1em;
-  margin-right: 1em;
-}
-
-.infos {
-  height: 100%;
-  margin-top: 1em;
-  margin-bottom: 1em;
+  margin: 0 1em 0 1em;
   max-height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .field-label {
@@ -524,35 +426,32 @@ useHead({ title: computed(() => `${title.value} - Kitsu`) })
   padding-top: 3px;
 }
 
-.datatable-row {
-  user-select: text;
-}
-
 .task-list {
   flex: 1;
   margin-bottom: 3em;
   min-height: 150px;
   min-width: 100%;
+  overflow: hidden;
+}
+
+.datatable-row {
+  user-select: text;
 }
 
 .schedule {
   position: relative;
-  height: 300px;
-  padding: 10px;
+  height: 100%;
+  overflow: hidden;
 
   .wrapper {
-    height: 230px;
+    height: 100%;
     border-radius: 10px;
   }
 }
 
-.column.main-column {
-  background: var(--background-page);
-  padding-bottom: 1em;
-}
-
-.player {
-  margin: 1em;
+.entity-thumbnail {
+  margin-bottom: 0;
+  border-radius: 10px;
 }
 
 @media screen and (max-width: 768px) {
@@ -577,18 +476,9 @@ useHead({ title: computed(() => `${title.value} - Kitsu`) })
     margin: calc(60px + 1em) 0.5em 0.5em;
   }
 
-  .main-block {
-    flex-wrap: wrap;
-    padding: 0.5em;
-  }
-
   .entity-title {
     font-size: 1.3em;
     line-height: 1.5em;
-  }
-
-  .player {
-    margin: 0.5em;
   }
 
   .edit-data {
@@ -597,7 +487,8 @@ useHead({ title: computed(() => `${title.value} - Kitsu`) })
     overflow: visible;
   }
 
-  .infos {
+  .infos,
+  .schedule {
     height: auto;
     max-height: none;
     overflow: visible;
@@ -613,10 +504,87 @@ useHead({ title: computed(() => `${title.value} - Kitsu`) })
   }
 
   .schedule {
+    height: 60vh;
     overflow-x: auto;
 
     .wrapper {
       min-width: 520px;
+    }
+  }
+
+  .news-column {
+    max-height: none;
+  }
+}
+
+.section-tabs {
+  min-height: 36px;
+  margin-bottom: 0;
+}
+
+.infos {
+  height: 100%;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  max-height: 100%;
+  overflow-y: auto;
+
+  .metadata-infos {
+    flex: unset;
+    min-height: 100px;
+    overflow: auto;
+  }
+}
+
+.news-column {
+  max-height: 85%;
+}
+
+.drawer-backdrop {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .edit {
+    animation-fill-mode: none;
+  }
+
+  .side-column {
+    background: var(--background);
+    bottom: 0;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    margin-top: 0 !important;
+    max-width: min(100vw, 420px) !important;
+    min-width: 0 !important;
+    overflow-y: auto;
+    position: fixed;
+    right: 0;
+    top: 60px;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    width: min(100vw, 420px) !important;
+    z-index: 250;
+
+    &.is-open {
+      transform: translateX(0);
+    }
+  }
+
+  .drawer-backdrop {
+    background: rgba(0, 0, 0, 0.4);
+    display: block;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    position: fixed;
+    transition: opacity 0.25s ease;
+    z-index: 249;
+
+    &.is-open {
+      opacity: 1;
+      pointer-events: auto;
     }
   }
 }
