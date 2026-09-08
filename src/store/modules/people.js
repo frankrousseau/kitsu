@@ -193,9 +193,15 @@ const state = {
 const getters = {
   organisation: state => state.organisation,
   // floor of the timesheet year selectors: nothing was tracked before the
-  // organisation existed
+  // organisation existed, unless time was backfilled, which the year table
+  // (keyed by year, the other levels by month, week or day) then reveals
   firstTimesheetYear: state =>
-    new Date(state.organisation.created_at).getFullYear() || 2018,
+    Math.min(
+      new Date(state.organisation.created_at).getFullYear() || 2018,
+      ...Object.keys(state.timesheet || {})
+        .map(Number)
+        .filter(key => key > 1000)
+    ),
 
   // The topbar and the sidebar keep the same <img> src across a logo change,
   // so the timestamp is what makes the browser refetch it. The upload stamps
