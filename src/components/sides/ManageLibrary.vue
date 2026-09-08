@@ -25,16 +25,6 @@
             >{{ $t('main.clear_selection') }}</a
           >
         </div>
-        <!--h1 class="title mt05">{{ $t('tasks.selected_entities') }}</h1>
-        <div class="pa2 mt1">
-          <div
-            class="entity-line"
-            :key="entity.id"
-            v-for="entity in selectedEntities"
-          >
-            {{ entity.full_name }}
-          </div>
-        </div-->
       </div>
 
       <hr v-if="selectedEntities.length" />
@@ -229,11 +219,10 @@ const refresh = async () => {
   loading.value = false
 }
 
-const importFromProduction = async () => {
+const shareAndRefresh = async payload => {
   loading.value = true
-  const production = productionMap.value.get(productionId.value)
   try {
-    await store.dispatch('shareAssets', { production })
+    await store.dispatch('shareAssets', payload)
     emit('library-updated')
   } catch (err) {
     console.error(err)
@@ -242,31 +231,16 @@ const importFromProduction = async () => {
   await refresh()
 }
 
-const importFromAssetType = async () => {
-  loading.value = true
-  const production = productionMap.value.get(productionId.value)
-  const assetType = assetTypeMap.value.get(entityTypeId.value)
-  try {
-    await store.dispatch('shareAssets', { production, assetType })
-    emit('library-updated')
-  } catch (err) {
-    console.error(err)
-  }
-  loading.value = false
-  await refresh()
-}
+const importFromProduction = () =>
+  shareAndRefresh({ production: productionMap.value.get(productionId.value) })
 
-const importFromEntityIds = async () => {
-  loading.value = true
-  try {
-    await store.dispatch('shareAssets', { assetIds: entityIds.value })
-    emit('library-updated')
-  } catch (err) {
-    console.error(err)
-  }
-  loading.value = false
-  await refresh()
-}
+const importFromAssetType = () =>
+  shareAndRefresh({
+    production: productionMap.value.get(productionId.value),
+    assetType: assetTypeMap.value.get(entityTypeId.value)
+  })
+
+const importFromEntityIds = () => shareAndRefresh({ assetIds: entityIds.value })
 
 const removeSharedEntities = async () => {
   loading.value = true
