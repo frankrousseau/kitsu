@@ -805,12 +805,13 @@ const isPicturePreview = computed(() =>
   ['png', 'gif'].includes(extension.value)
 )
 
-const taskStatuses = computed(() =>
-  store.getters.getTaskStatusForCurrentUser(
+const taskStatuses = computed(() => {
+  if (!props.task) return []
+  return store.getters.getTaskStatusForCurrentUser(
     props.task.project_id,
     isConceptTask.value
   )
-)
+})
 
 const taskPath = computed(() =>
   getTaskPath(
