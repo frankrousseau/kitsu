@@ -37,10 +37,10 @@ export const getEntityMap = entityType => {
 
 /**
  * Composable mirroring src/components/mixins/entity.js for pages that use
- * `<script setup>`. Intentionally narrow: only the parts Edit.vue and
- * Asset.vue need.
+ * `<script setup>`. Intentionally narrow: only the parts Edit.vue,
+ * Asset.vue and Shot.vue need.
  *
- * Other pages (Episode, Sequence, Shot) still use the legacy mixin until
+ * Other pages (Episode, Sequence) still use the legacy mixin until
  * they are migrated.
  *
  * @param {Object} options
