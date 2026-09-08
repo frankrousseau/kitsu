@@ -1559,9 +1559,11 @@ const extractAnnotationSnapshots = async (withLabel = false) => {
 }
 
 const timeCodeClicked = ({ versionRevision, frame }) => {
-  changeCurrentPreview(
-    taskPreviews.value.find(p => p.revision === parseInt(versionRevision))
+  const preview = taskPreviews.value.find(
+    p => p.revision === parseInt(versionRevision)
   )
+  if (!preview) return
+  changeCurrentPreview(preview)
   setTimeout(() => {
     previewPlayerRef.value?.setCurrentFrame(frame)
     previewPlayerRef.value?.focus()

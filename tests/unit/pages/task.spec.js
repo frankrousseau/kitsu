@@ -17,6 +17,7 @@ import '@/lib/auth'
 
 import Task from '@/components/pages/Task.vue'
 import AddComment from '@/components/widgets/AddComment.vue'
+import Comment from '@/components/widgets/Comment.vue'
 import PreviewPlayer from '@/components/players/players/PreviewPlayer.vue'
 import { DEFAULT_FPS } from '@/lib/video'
 
@@ -334,6 +335,39 @@ describe('Task.vue preview selection', () => {
     // A stale id in the url must not blank the player out.
     expect(wrapper.findComponent(PreviewPlayer).exists()).toBe(true)
     expect(playerPreviews(wrapper)).toEqual(['from-3'])
+  })
+})
+
+describe('Task.vue timecode navigation', () => {
+  const previews = [
+    { id: 'preview-2', revision: 2, extension: 'mp4' },
+    { id: 'preview-1', revision: 1, extension: 'mp4' }
+  ]
+  const comments = [{ id: 'comment-1', text: 'v1 00:04.00 (100)' }]
+
+  const clickTimeCode = (wrapper, versionRevision) => {
+    // The handler seeks the player on a timer, and the shallow player stub has
+    // no seek method. Dropping the fake clock discards that pending callback.
+    vi.useFakeTimers()
+    wrapper
+      .findComponent(Comment)
+      .vm.$emit('time-code-clicked', { versionRevision, frame: 100 })
+    vi.useRealTimers()
+    return flushPromises()
+  }
+
+  it('opens the preview the timecode names', async () => {
+    const { wrapper, router } = await mountPage({ comments, previews })
+    await clickTimeCode(wrapper, '1')
+    expect(router.currentRoute.value.params.preview_id).toBe('preview-1')
+  })
+
+  it('ignores a timecode whose revision is gone', async () => {
+    const { wrapper, router } = await mountPage({ comments, previews })
+    // The revision is parsed out of the raw comment text, so it can name a
+    // revision that was deleted or never existed.
+    await clickTimeCode(wrapper, '9')
+    expect(router.currentRoute.value.name).toBe('task')
   })
 })
 
