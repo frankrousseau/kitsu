@@ -89,7 +89,8 @@ export default defineConfig([
       'vue/order-in-components': 'off',
       'vue/require-default-prop': 'off',
       'vue/require-prop-types': 'off',
-      'vue/no-template-shadow': 'off'
+      'vue/no-template-shadow': 'off',
+      'vue/no-undef-properties': 'off' // Off until the Options API migration ends
     }
   },
 
