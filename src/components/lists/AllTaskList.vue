@@ -1,7 +1,7 @@
 <template>
   <div class="data-list">
     <div class="datatable-wrapper">
-      <table class="datatable">
+      <table class="datatable datatable--cards">
         <thead class="datatable-head">
           <tr class="row-header">
             <th class="project">
@@ -400,130 +400,92 @@ td.due-date {
     overflow-x: visible;
   }
 
-  .datatable,
-  .datatable-body {
-    background: transparent;
-    display: block;
+  .datatable.datatable--cards {
     min-height: 0;
     overflow: visible;
     white-space: normal;
-    width: 100%;
-  }
 
-  .datatable-head {
-    display: none;
-  }
-
-  // App.vue paints the last row transparent with !important, hence the
-  // pseudo-class variants
-  .datatable-row,
-  .datatable-row:last-child,
-  .datatable-row:hover {
-    align-items: center;
-    background: var(--background) !important;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    column-gap: 0.75em;
-    display: grid;
-    grid-template-areas:
-      'project type status'
-      'thumbnail parent assignees'
-      'thumbnail entity assignees'
-      'due due due';
-    grid-template-columns: auto 1fr auto;
-    margin-bottom: 0.5em;
-    padding: 0.75em 0.5em 0.75em 0.75em;
-    row-gap: 0.25em;
-  }
-
-  .dark .datatable-row,
-  .dark .datatable-row:last-child {
-    background: var(--background-alt) !important;
-  }
-
-  // three classes deep to beat App.vue's `.datatable-row:last-child td`
-  .datatable .datatable-body td,
-  .datatable .datatable-body td.name,
-  .datatable .datatable-body td.status {
-    background: transparent !important;
-    border: 0;
-    display: block;
-    height: auto;
-    max-width: none;
-    min-width: 0;
-    padding: 0;
-    text-align: left;
-    width: auto;
-  }
-
-  td.project {
-    grid-area: project;
-  }
-
-  td.thumbnail {
-    grid-area: thumbnail;
-  }
-
-  td.entity {
-    grid-area: entity;
-    font-size: 1.05em;
-  }
-
-  td.asset-type {
-    grid-area: parent;
-    color: var(--text-alt);
-    font-size: 0.9em;
-    // cancels the row gap: the parent sits right on top of the name
-    margin-bottom: -0.25em;
-  }
-
-  td.task-type {
-    grid-area: type;
-
-    // the tag carries a left margin meant for the table cell, which pushed
-    // it 10px right of the parent and entity lines below
-    :deep(.tag) {
-      margin-left: 0;
-    }
-  }
-
-  td.status {
-    grid-area: status;
-  }
-
-  td.assignees {
-    grid-area: assignees;
-    justify-self: end;
-
-    .flexrow {
-      justify-content: flex-end;
+    .datatable-body {
+      min-height: 0;
+      overflow: visible;
     }
 
-    // size and font come inline from the avatar props, tuned for the rows
-    :deep(.avatar) {
-      font-size: 12px !important;
-      height: 24px !important;
-      width: 24px !important;
+    .datatable-row {
+      align-items: center;
+      column-gap: 0.75em;
+      display: grid;
+      grid-template-areas:
+        'project type status'
+        'thumbnail parent assignees'
+        'thumbnail entity assignees'
+        'due due due';
+      grid-template-columns: auto 1fr auto;
+      padding: 0.75em 0.5em 0.75em 0.75em;
+      row-gap: 0.25em;
     }
-  }
 
-  td.due-date {
-    grid-area: due;
-    font-size: 0.9em;
+    .datatable-body td.project,
+    .datatable-body td.thumbnail,
+    .datatable-body td.entity,
+    .datatable-body td.asset-type,
+    .datatable-body td.task-type,
+    .datatable-body td.status,
+    .datatable-body td.assignees {
+      display: block;
+      padding: 0;
+    }
 
-    &[data-label]::before {
+    td.project {
+      grid-area: project;
+    }
+
+    td.thumbnail {
+      grid-area: thumbnail;
+    }
+
+    td.entity {
+      grid-area: entity;
+      font-size: 1.05em;
+    }
+
+    td.asset-type {
+      grid-area: parent;
       color: var(--text-alt);
-      content: attr(data-label) ': ';
+      font-size: 0.9em;
+      // cancels the row gap: the parent sits right on top of the name
+      margin-bottom: -0.25em;
     }
-  }
 
-  .datatable .datatable-body td.estimation,
-  .datatable .datatable-body td.duration,
-  .datatable .datatable-body td.start-date,
-  .datatable .datatable-body td.done-date,
-  .datatable .datatable-body td.empty,
-  .datatable .datatable-body td.due-date:not([data-label]) {
-    display: none;
+    td.task-type {
+      grid-area: type;
+    }
+
+    td.status {
+      grid-area: status;
+    }
+
+    td.assignees {
+      grid-area: assignees;
+      justify-self: end;
+
+      .flexrow {
+        justify-content: flex-end;
+      }
+
+      // size and font come inline from the avatar props, tuned for the rows
+      :deep(.avatar) {
+        font-size: 12px !important;
+        height: 24px !important;
+        width: 24px !important;
+      }
+    }
+
+    .datatable-body td.due-date {
+      font-size: 0.9em;
+      grid-area: due;
+      justify-content: flex-start;
+      padding: 0;
+    }
   }
 }
 </style>

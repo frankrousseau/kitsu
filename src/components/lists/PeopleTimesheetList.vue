@@ -624,105 +624,86 @@ th.today {
     overflow: visible;
   }
 
-  .datatable,
-  .datatable-body {
-    display: block;
+  .datatable.datatable--cards {
     overflow: visible;
-    width: 100%;
-  }
 
-  .datatable-head {
-    display: none;
-  }
+    .datatable-body {
+      overflow: visible;
+    }
 
-  // the global last-row rule paints the cells instead of the row
-  .datatable-row,
-  .datatable-row:last-child {
-    background: var(--background) !important;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25em;
-    margin-bottom: 0.75em;
-    padding: 0.75em;
-  }
+    // seven chips per line
+    .datatable-row {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 0.25em;
+      padding: 0.75em;
+    }
 
-  .dark .datatable-row,
-  .dark .datatable-row:last-child {
-    background: var(--background-alt) !important;
-  }
+    // the name is a th, out of the shared td rules
+    .datatable-row th.name {
+      background: transparent !important;
+      border: 0;
+      min-width: 0;
+      padding: 0 0 0.5em;
+      position: static;
+      width: 100%;
 
-  .datatable-row th.name {
-    background: transparent !important;
-    border: 0;
-    min-width: 0;
-    padding: 0 0 0.5em;
-    position: static;
-    width: 100%;
+      // the sticky column shadow would stick out of the card
+      &::after {
+        display: none;
+      }
+    }
 
-    // the sticky column shadow would stick out of the card
-    &::after {
-      display: none;
+    .datatable-body td[data-label] {
+      border-radius: 8px;
+      flex-direction: column;
+      gap: 0;
+      justify-content: flex-start;
+      padding: 0.4em 0;
+      width: calc((100% - 6 * 0.25em) / 7);
+
+      &::before {
+        font-size: 0.7em;
+        letter-spacing: 0;
+        line-height: 1;
+        margin-bottom: 0.2em;
+        text-transform: none;
+      }
+    }
+
+    // same box as the duration link so every chip line has one height
+    .blank {
+      padding: 0.5em;
+    }
+
+    // the tints, restated over the transparent cells of the shared cards
+    .datatable-body td.weekend {
+      background-color: rgba(0, 0, 0, 0.045) !important;
+    }
+
+    .datatable-body td.today {
+      background-color: rgba($green, 0.08) !important;
+    }
+
+    // the person total closes the card as a full line
+    .datatable-body td.total {
+      flex-direction: row;
+      justify-content: space-between;
+      margin-top: 0.5em;
+      padding: 0.75em 0.25em 0.25em;
+      width: 100%;
+
+      &::before {
+        font-size: 0.8em;
+        letter-spacing: 0.06em;
+        margin-bottom: 0;
+        text-transform: uppercase;
+      }
     }
   }
 
-  .datatable-row td {
-    align-items: center;
-    background-color: transparent !important;
-    border: 0;
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    padding: 0.4em 0;
-    width: calc((100% - 6 * 0.25em) / 7);
-  }
-
-  // same box as the duration link so every chip line has one height
-  .blank {
-    padding: 0.5em;
-  }
-
-  .datatable-row td[data-label]::before {
-    color: var(--text-alt);
-    content: attr(data-label);
-    font-size: 0.7em;
-    line-height: 1;
-    margin-bottom: 0.2em;
-  }
-
-  // the tints, restated over the transparent cells above
-  .datatable-row td.weekend {
-    background-color: rgba(0, 0, 0, 0.045) !important;
-  }
-
-  .dark .datatable-row td.weekend {
+  .dark .datatable.datatable--cards .datatable-body td.weekend {
     background-color: rgba(0, 0, 0, 0.16) !important;
-  }
-
-  .datatable-row td.today {
-    background-color: rgba($green, 0.08) !important;
-  }
-
-  // the person total closes the card as a full line
-  .datatable-row td.total {
-    flex-direction: row;
-    justify-content: space-between;
-    margin-top: 0.5em;
-    padding: 0.75em 0.25em 0.25em;
-    width: 100%;
-
-    &::before {
-      font-size: 0.8em;
-      margin-bottom: 0;
-      text-transform: uppercase;
-    }
-  }
-
-  .datatable-row td.actions,
-  .total-row td.total {
-    display: none;
   }
 }
 </style>
