@@ -37,6 +37,11 @@ const SOCKET_EVENTS = [
 ]
 
 const TASK_ID = 'task-1'
+const TASK_ROUTE_PARAMS = {
+  production_id: 'production-1',
+  type: 'shots',
+  task_id: TASK_ID
+}
 const taskType = {
   id: 'task-type-1',
   name: 'Animation',
@@ -68,17 +73,23 @@ const mountPage = async ({
 
   const router = createRouter({
     history: createMemoryHistory(),
+    // Same param shape as the real routes: the page builds its own targets
+    // through getTaskPath, and params the route does not declare get dropped.
     routes: [
       { path: '/', name: 'open-productions', component: { template: '<div />' } },
-      { path: '/task/:task_id', name: 'task', component: { template: '<div />' } },
       {
-        path: '/task/:task_id/preview/:preview_id',
+        path: '/productions/:production_id/:type/tasks/:task_id',
+        name: 'task',
+        component: { template: '<div />' }
+      },
+      {
+        path: '/productions/:production_id/:type/tasks/:task_id/previews/:preview_id',
         name: 'task-preview',
         component: { template: '<div />' }
       }
     ]
   })
-  await router.push({ name: 'task', params: { task_id: TASK_ID } })
+  await router.push({ name: 'task', params: TASK_ROUTE_PARAMS })
   await router.isReady()
 
   const store = createStore({
@@ -313,7 +324,7 @@ describe('Task.vue preview selection', () => {
   const selectPreview = async (router, previewId) => {
     await router.push({
       name: 'task-preview',
-      params: { task_id: TASK_ID, preview_id: previewId }
+      params: { ...TASK_ROUTE_PARAMS, preview_id: previewId }
     })
     await flushPromises()
   }

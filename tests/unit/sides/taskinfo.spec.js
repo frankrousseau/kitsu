@@ -112,6 +112,9 @@ const mountPanel = async ({
   })
   // Record every dispatch while letting the unregistered ones resolve.
   store.dispatch = vi.fn(() => Promise.resolve())
+  // The panel clears the upload progress through a real mutation, which
+  // this getter-only store does not carry.
+  store.commit = vi.fn()
 
   const wrapper = shallowMount(TaskInfo, {
     props: { task, ...props },
