@@ -1,7 +1,7 @@
 import { flushPromises, shallowMount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { createStore } from 'vuex'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 // jsdom has no layout engine, and the page scrolls its column on mount.
 window.scrollTo = vi.fn()
@@ -20,6 +20,7 @@ import AddComment from '@/components/widgets/AddComment.vue'
 import Comment from '@/components/widgets/Comment.vue'
 import PreviewPlayer from '@/components/players/players/PreviewPlayer.vue'
 import { DEFAULT_FPS } from '@/lib/video'
+import shotsStore from '@/store/modules/shots'
 
 // The ten events the page used to declare through the `socket` component
 // option, which `<script setup>` cannot express.
@@ -142,7 +143,10 @@ const mountPage = async ({
         // method and the resulting throw would cut the reset short.
         AddPreviewModal: { template: '<div />', methods: { reset: () => {} } },
         // The default stub swallows its slot, which holds the page title.
-        RouterLink: { props: ['to'], template: '<a><slot /></a>' },
+        RouterLink: {
+          props: ['to'],
+          template: '<a :data-task="to?.params?.task_id"><slot /></a>'
+        },
         // Provided by the animxyz plugin, which the specs do not install.
         XyzTransitionGroup: { template: '<div><slot /></div>' }
       },
@@ -379,6 +383,146 @@ describe('Task.vue timecode navigation', () => {
     // revision that was deleted or never existed.
     await clickTimeCode(wrapper, '9')
     expect(router.currentRoute.value.name).toBe('task')
+  })
+})
+
+describe('Task.vue navigation', () => {
+  const taskTypes = [
+    { id: 'tt-layout', name: 'Layout', for_entity: 'Shot', priority: 1 },
+    { id: 'tt-anim', name: 'Animation', for_entity: 'Shot', priority: 2 },
+    { id: 'tt-light', name: 'Lighting', for_entity: 'Shot', priority: 3 }
+  ]
+  const task = buildTask({ task_type_id: 'tt-anim' })
+  const tasks = [
+    task,
+    { id: 'task-layout', task_type_id: 'tt-layout', entity_id: 'entity-1' },
+    { id: 'task-light', task_type_id: 'tt-light', entity_id: 'entity-1' },
+    { id: 'task-0-anim', task_type_id: 'tt-anim', entity_id: 'entity-0' },
+    { id: 'task-2-layout', task_type_id: 'tt-layout', entity_id: 'entity-2' },
+    { id: 'task-4-layout', task_type_id: 'tt-layout', entity_id: 'entity-4' },
+    { id: 'task-3-anim', task_type_id: 'tt-anim', entity_id: 'entity-3' }
+  ]
+
+  // The header renders the task type chevrons inside .task-type, and the
+  // entity chevrons in the status block next to it. Each pair reads
+  // [previous, next].
+  const typeLinks = wrapper =>
+    wrapper.findAll('.task-type a').map(link => link.attributes('data-task'))
+  const entityLinks = wrapper =>
+    wrapper
+      .findAll('.header-title > div:not(.task-type) a')
+      .map(link => link.attributes('data-task'))
+
+  const mountWith = ({ entities, production = {} } = {}) => {
+    // entityList reads the module cache, not the store.
+    shotsStore.cache.shots.push(...entities)
+    return mountPage({
+      task,
+      getterOverrides: {
+        currentProduction: () => ({
+          id: 'production-1',
+          team: [],
+          task_types: taskTypes.map(taskType => taskType.id),
+          fps: 25,
+          ...production
+        }),
+        taskMap: () => new Map(tasks.map(item => [item.id, item])),
+        taskTypeMap: () =>
+          new Map(taskTypes.map(taskType => [taskType.id, taskType]))
+      }
+    })
+  }
+
+  afterEach(() => {
+    shotsStore.cache.shots.length = 0
+  })
+
+  describe('between the task types of an entity', () => {
+    it('walks the task types in priority order, not in storage order', async () => {
+      const { wrapper } = await mountWith({
+        // Declared in an order the sort has to undo.
+        entities: [{ id: 'entity-1', tasks: ['task-light', TASK_ID, 'task-layout'] }]
+      })
+      expect(typeLinks(wrapper)).toEqual(['task-layout', 'task-light'])
+    })
+
+    it('wraps back to the last task type from the first one', async () => {
+      const { wrapper } = await mountWith({
+        // Animation outranks Lighting, so the current task opens the list.
+        entities: [{ id: 'entity-1', tasks: ['task-light', TASK_ID] }]
+      })
+      expect(typeLinks(wrapper)).toEqual(['task-light', 'task-light'])
+    })
+
+    it('wraps on to the first task type from the last one', async () => {
+      const { wrapper } = await mountWith({
+        // Layout outranks Animation, so the current task closes the list.
+        entities: [{ id: 'entity-1', tasks: ['task-layout', TASK_ID] }]
+      })
+      expect(typeLinks(wrapper)).toEqual(['task-layout', 'task-layout'])
+    })
+
+    it('lets the production reorder the task types', async () => {
+      const { wrapper } = await mountWith({
+        entities: [{ id: 'entity-1', tasks: ['task-light', TASK_ID, 'task-layout'] }],
+        // Lighting and Layout swap ranks, which swaps both neighbours.
+        production: { task_types_priority: { 'tt-light': 1, 'tt-layout': 3 } }
+      })
+      expect(typeLinks(wrapper)).toEqual(['task-light', 'task-layout'])
+    })
+
+    it('offers no link when the entity is not in the list', async () => {
+      const { wrapper } = await mountWith({
+        entities: [{ id: 'entity-9', tasks: [] }]
+      })
+      expect(typeLinks(wrapper)).toEqual([])
+    })
+  })
+
+  describe('between the entities of a task type', () => {
+    it('keeps the task type while moving to another entity', async () => {
+      const { wrapper } = await mountWith({
+        entities: [
+          { id: 'entity-0', tasks: ['task-0-anim'] },
+          { id: 'entity-1', tasks: [TASK_ID] },
+          { id: 'entity-3', tasks: ['task-3-anim'] }
+        ]
+      })
+      expect(entityLinks(wrapper)).toEqual(['task-0-anim', 'task-3-anim'])
+    })
+
+    it('skips an entity that carries no task of that type', async () => {
+      const { wrapper } = await mountWith({
+        // The current entity is walled in by two entities without an
+        // Animation task, so both directions have to step over one.
+        entities: [
+          { id: 'entity-0', tasks: ['task-0-anim'] },
+          { id: 'entity-2', tasks: ['task-2-layout'] },
+          { id: 'entity-1', tasks: [TASK_ID] },
+          { id: 'entity-4', tasks: ['task-4-layout'] },
+          { id: 'entity-3', tasks: ['task-3-anim'] }
+        ]
+      })
+      expect(entityLinks(wrapper)).toEqual(['task-0-anim', 'task-3-anim'])
+    })
+
+    it('offers no link when no other entity carries that task type', async () => {
+      const { wrapper } = await mountWith({
+        entities: [
+          { id: 'entity-1', tasks: [TASK_ID] },
+          { id: 'entity-2', tasks: ['task-2-layout'] }
+        ]
+      })
+      // The search stops once it comes back to the entity it started from.
+      expect(entityLinks(wrapper)).toEqual([])
+    })
+
+    it('offers no link when the entity is not in the list', async () => {
+      const { wrapper } = await mountWith({
+        entities: [{ id: 'entity-9', tasks: ['task-3-anim'] }]
+      })
+      expect(entityLinks(wrapper)).toEqual([])
+    })
   })
 })
 
