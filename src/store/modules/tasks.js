@@ -55,6 +55,7 @@ import {
   ADD_PREVIEW_END,
   CHANGE_PREVIEW_END,
   UPDATE_PREVIEW_ANNOTATION,
+  UPDATE_PREVIEW_VALIDATION_STATUS,
   ADD_SELECTED_TASK,
   ADD_SELECTED_TASKS,
   REMOVE_SELECTED_TASK,
@@ -1045,7 +1046,8 @@ const mutations = {
               revision: p.revision,
               position: p.position,
               duration: p.duration,
-              original_name: p.original_name
+              original_name: p.original_name,
+              validation_status: p.validation_status
             }
             return prev
           })
@@ -1238,6 +1240,19 @@ const mutations = {
         p.previews.splice(index, 1)
       }
     })
+  },
+
+  // The player works on copies of the comment previews (see
+  // LOAD_TASK_COMMENTS_END), so both sides must be updated.
+  [UPDATE_PREVIEW_VALIDATION_STATUS](state, { previewFile, status }) {
+    const taskId = previewFile.task_id
+    const subPreviews = [
+      ...(state.taskComments[taskId] || []).flatMap(c => c.previews || []),
+      ...(state.taskPreviews[taskId] || []).flatMap(p => p.previews || [])
+    ]
+    subPreviews
+      .filter(p => p.id === previewFile.id)
+      .forEach(p => (p.validation_status = status))
   },
 
   [UPDATE_PREVIEW_ANNOTATION](state, { taskId, preview, annotations }) {

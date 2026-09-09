@@ -1,20 +1,37 @@
 <template>
   <div class="wrapper">
-    <div
-      class="revision-preview"
-      :class="{ selected: isSelected }"
-      draggable="true"
-      @click.prevent="onSelected"
-      @dragstart="onPreviewDragStart($event, index)"
-    >
-      <light-entity-thumbnail
-        width="150px"
-        height="103px"
-        :preview-file-id="previewFile.id"
-        :title="originalName"
-        v-if="hasThumbnail"
-      />
-      <span :title="originalName" v-else> .{{ previewFile.extension }} </span>
+    <div class="thumbnail-column">
+      <div
+        class="revision-preview"
+        :class="{ selected: isSelected }"
+        draggable="true"
+        @click.prevent="onSelected"
+        @dragstart="onPreviewDragStart($event, index)"
+      >
+        <light-entity-thumbnail
+          width="150px"
+          height="103px"
+          :preview-file-id="previewFile.id"
+          :title="originalName"
+          v-if="hasThumbnail"
+        />
+        <span :title="originalName" v-else> .{{ previewFile.extension }} </span>
+        <span
+          class="preview-status"
+          :class="{ pointer: canValidate }"
+          :title="previewFile.validation_status"
+          :data-status="previewFile.validation_status"
+          role="button"
+          tabindex="0"
+          @click.stop="canValidate && emit('validation-status-clicked')"
+          @keydown.enter.stop.prevent="
+            canValidate && emit('validation-status-clicked')
+          "
+        ></span>
+      </div>
+      <div class="preview-name" :title="originalName">
+        {{ previewFile.original_name }}
+      </div>
     </div>
     <div
       ref="dropArea"
@@ -37,6 +54,10 @@ import { computed, ref } from 'vue'
 import LightEntityThumbnail from '@/components/widgets/LightEntityThumbnail.vue'
 
 const props = defineProps({
+  canValidate: {
+    default: false,
+    type: Boolean
+  },
   index: {
     required: true,
     type: Number
@@ -51,7 +72,11 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['preview-dropped', 'selected'])
+const emit = defineEmits([
+  'preview-dropped',
+  'selected',
+  'validation-status-clicked'
+])
 
 const dropArea = ref(null)
 
@@ -103,6 +128,16 @@ const onDropped = event => {
   align-items: stretch;
 }
 
+.preview-name {
+  color: $light-grey;
+  font-size: 0.8em;
+  max-width: 156px;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .drop-area {
   width: 15px;
   transition: width 0.3s ease;
@@ -124,6 +159,24 @@ const onDropped = event => {
 
   &.selected {
     border: 3px solid $green;
+  }
+
+  .preview-status {
+    background: #aaa;
+    border: 2px solid $grey;
+    border-radius: 50%;
+    height: 16px;
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    width: 16px;
+
+    &[data-status='validated'] {
+      background: $light-green;
+    }
+    &[data-status='rejected'] {
+      background: $red;
+    }
   }
 
   img {

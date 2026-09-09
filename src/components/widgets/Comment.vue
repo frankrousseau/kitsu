@@ -452,8 +452,8 @@
         <span
           class="flexrow-item preview-status"
           :class="{ pointer: isCurrentUserManager }"
-          :title="comment.previews[0].validation_status"
-          :data-status="comment.previews[0].validation_status"
+          :title="revisionValidationStatus"
+          :data-status="revisionValidationStatus"
           role="button"
           tabindex="0"
           @click="changePreviewValidationStatus(comment.previews)"
@@ -946,6 +946,17 @@ const onChecklistTimecodeClicked = data => {
   })
 }
 
+// Aggregate of the revision files: validated wins as soon as one file is,
+// rejected only when every file is.
+const revisionValidationStatus = computed(() => {
+  const statuses = (props.comment.previews || []).map(p => p.validation_status)
+  if (statuses.includes('validated')) return 'validated'
+  if (statuses.length && statuses.every(s => s === 'rejected')) {
+    return 'rejected'
+  }
+  return 'neutral'
+})
+
 const changePreviewValidationStatus = previewFiles => {
   if (!isCurrentUserManager.value) {
     return
@@ -955,7 +966,7 @@ const changePreviewValidationStatus = previewFiles => {
     rejected: 'neutral',
     neutral: 'validated'
   }
-  const status = statusMap[previewFiles[0].validation_status] || 'validated'
+  const status = statusMap[revisionValidationStatus.value] || 'validated'
   previewFiles.forEach(previewFile => {
     store.dispatch('updatePreviewFileValidationStatus', { previewFile, status })
   })

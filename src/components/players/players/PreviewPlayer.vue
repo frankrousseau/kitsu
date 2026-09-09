@@ -322,7 +322,10 @@
             :light="light"
             :full-screen="fullScreen"
             :is-assigned="isAssigned"
+            :can-validate="isCurrentUserManager"
             @add-preview-clicked="$emit('add-extra-preview')"
+            @preview-selected="onRevisionPreviewSelected"
+            @validation-status-clicked="onValidationStatusClicked"
             @next-clicked="onNextClicked"
             @previous-clicked="onPreviousClicked"
             @remove-preview-clicked="onRemovePreviewClicked"
@@ -435,7 +438,9 @@
           :preview-file="preview"
           :index="index"
           :is-selected="currentPreview.id === preview.id"
+          :can-validate="isCurrentUserManager"
           @selected="onRevisionPreviewSelected(index + 1)"
+          @validation-status-clicked="onValidationStatusClicked(preview)"
           @preview-dropped="onRevisionPreviewDropped"
         />
       </div>
@@ -665,6 +670,13 @@ const width = ref(0)
 
 const assetMap = computed(() => store.getters.assetMap)
 const isCurrentUserArtist = computed(() => store.getters.isCurrentUserArtist)
+const isCurrentUserManager = computed(() =>
+  props.task?.project_id
+    ? store.getters.isCurrentUserAdmin ||
+      store.getters.currentUserRoleForProduction(props.task.project_id) ===
+        'manager'
+    : store.getters.isCurrentUserManager
+)
 const isTVShow = computed(() => store.getters.isTVShow)
 const organisation = computed(() => store.getters.organisation)
 const productionMap = computed(() => store.getters.productionMap)
@@ -2031,6 +2043,14 @@ const changeCurrentPreview = previewFile => {
 
 const onRemovePreviewClicked = () => {
   emit('remove-extra-preview', currentPreview.value)
+}
+
+const onValidationStatusClicked = previewFile => {
+  const next = { neutral: 'validated', validated: 'rejected' }
+  store.dispatch('updatePreviewFileValidationStatus', {
+    previewFile,
+    status: next[previewFile.validation_status] || 'neutral'
+  })
 }
 
 const onPreviousClicked = () => {
