@@ -1007,6 +1007,7 @@
       "update_to_latest_version_help": "Stel voor elke entiteit de nieuwste revisie in, met behoud van het huidige taaktype.",
       "update_versions_title": "Geselecteerde versies bijwerken",
       "created": "Afspeellijst “{name}” aangemaakt.",
+      "view_as_playlist": "Als playlist bekijken",
       "view_created": "Afspeellijst bekijken"
     },
     "productions": {

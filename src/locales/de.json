@@ -1007,6 +1007,7 @@
       "update_to_latest_version_help": "Setzt die neueste Revision für jede Entität und behält ihren aktuellen Aufgabentyp bei.",
       "update_versions_title": "Ausgewählte Versionen aktualisieren",
       "created": "Wiedergabeliste „{name}“ erstellt.",
+      "view_as_playlist": "Als Wiedergabeliste ansehen",
       "view_created": "Wiedergabeliste anzeigen"
     },
     "productions": {

@@ -1007,6 +1007,7 @@
       "update_versions_title": "Kiválasztott verziók frissítése",
       "volume_level": "Hangerő: {level}%",
       "created": "A(z) „{name}” lejátszási lista létrehozva.",
+      "view_as_playlist": "Megtekintés lejátszási listaként",
       "view_created": "Lejátszási lista megtekintése"
     },
     "productions": {

@@ -1007,6 +1007,7 @@
       "update_to_latest_version_help": "Establece la última revisión para cada entidad, manteniendo su tipo de tarea actual.",
       "update_versions_title": "Actualizar versiones seleccionadas",
       "created": "Lista de reproducción «{name}» creada.",
+      "view_as_playlist": "Ver como playlist",
       "view_created": "Ver lista de reproducción"
     },
     "productions": {

@@ -1007,6 +1007,7 @@
       "update_to_latest_version_help": "Utilise la dernière révision de chaque entité, en conservant son type de tâche actuel.",
       "update_versions_title": "Mettre à jour les versions sélectionnées",
       "created": "Playlist « {name} » créée.",
+      "view_as_playlist": "Voir en playlist",
       "view_created": "Voir la playlist"
     },
     "productions": {

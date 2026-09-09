@@ -51,6 +51,13 @@
             <span v-if="nbAssets > 0">
               {{ nbAssets }} {{ $t('assets.number', { count: nbAssets }) }}
             </span>
+            <button-simple
+              class="flexrow-item ml1"
+              icon="film"
+              :title="$t('playlists.view_as_playlist')"
+              @click="viewPlaylist(castAssets)"
+              v-if="castAssets.length > 0"
+            />
             <span
               class="tag tag-standby"
               v-if="currentSequence?.is_casting_standby"
@@ -143,11 +150,19 @@
                 "
                 v-for="typeAssets in currentSequence.castingAssetsByType"
               >
-                <div class="asset-type">
-                  {{
-                    typeAssets.length > 0 ? typeAssets[0].asset_type_name : ''
-                  }}
-                  ({{ typeAssets.length }})
+                <div class="asset-type flexrow">
+                  <span class="flexrow-item">
+                    {{
+                      typeAssets.length > 0 ? typeAssets[0].asset_type_name : ''
+                    }}
+                    ({{ typeAssets.length }})
+                  </span>
+                  <button-simple
+                    class="flexrow-item"
+                    icon="film"
+                    :title="$t('playlists.view_as_playlist')"
+                    @click="viewPlaylist(typeAssets)"
+                  />
                 </div>
                 <div class="asset-list">
                   <router-link
@@ -254,6 +269,14 @@
       </task-info>
     </div>
 
+    <view-playlist-modal
+      active
+      entity-type="asset"
+      :entity-ids="playlistEntityIds"
+      @cancel="playlistEntityIds = null"
+      v-if="playlistEntityIds"
+    />
+
     <edit-sequence-modal
       :active="modals.edit"
       :is-loading="loading.edit"
@@ -288,6 +311,7 @@ import sequenceStore from '@/store/modules/sequences'
 import DescriptionCell from '@/components/cells/DescriptionCell.vue'
 import EntityTaskList from '@/components/lists/EntityTaskList.vue'
 import EditSequenceModal from '@/components/modals/EditSequenceModal.vue'
+import ViewPlaylistModal from '@/components/modals/ViewPlaylistModal.vue'
 import EntityChat from '@/components/pages/entities/EntityChat.vue'
 import EntityNews from '@/components/pages/entities/EntityNews.vue'
 import EntityPreviewFiles from '@/components/pages/entities/EntityPreviewFiles.vue'
@@ -315,6 +339,7 @@ const store = useStore()
 // State
 // --------------------------------------------------------------------------
 const currentSequence = ref(null)
+const playlistEntityIds = ref(null)
 const scheduleWidget = ref(null)
 const casting = reactive({ isLoading: false, isError: false })
 const errors = reactive({ edit: false })
@@ -343,12 +368,10 @@ const title = computed(() => {
   return currentEpisode.value ? `${currentEpisode.value.name} / ${name}` : name
 })
 
-const nbAssets = computed(() =>
-  (currentSequence.value?.castingAssetsByType || []).reduce(
-    (acc, assets) => acc + assets.length,
-    0
-  )
+const castAssets = computed(() =>
+  (currentSequence.value?.castingAssetsByType || []).flat()
 )
+const nbAssets = computed(() => castAssets.value.length)
 
 const sequencesPath = computed(() => ({
   ...getEntitiesPath(
@@ -462,6 +485,10 @@ const confirmEditSequence = async form => {
 
 const closeTask = () => {
   if (currentTask.value) onTaskSelected(currentTask.value)
+}
+
+const viewPlaylist = assets => {
+  playlistEntityIds.value = assets.map(asset => asset.asset_id)
 }
 
 const {

@@ -1007,6 +1007,7 @@
       "update_to_latest_version_help": "为每个实体设置最新的修订版，并保持其当前的任务类型。",
       "update_versions_title": "更新所选版本",
       "created": "播放列表“{name}”已创建。",
+      "view_as_playlist": "以播放列表查看",
       "view_created": "查看播放列表"
     },
     "productions": {

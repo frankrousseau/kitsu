@@ -1007,6 +1007,7 @@
       "update_to_latest_version_help": "Angiv den seneste revision for hver enhed, idet dens aktuelle opgavetype bevares.",
       "update_versions_title": "Opdater valgte versioner",
       "created": "Playlisten “{name}” blev oprettet.",
+      "view_as_playlist": "Vis som playliste",
       "view_created": "Vis playlist"
     },
     "productions": {

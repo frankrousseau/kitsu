@@ -147,6 +147,12 @@
               <em>{{
                 $t('assets.casted_in_shots', { nbShots: nbShotsCastedIn })
               }}</em>
+              <button-simple
+                class="ml1"
+                icon="film"
+                :title="$t('playlists.view_as_playlist')"
+                @click="viewPlaylist(castInShots, 'shot')"
+              />
               <template
                 v-if="
                   currentAsset.castInShotsBySequence?.[0]?.[0]?.sequence_name
@@ -162,12 +168,20 @@
                   v-for="sequenceShots in currentAsset.castInShotsBySequence ||
                   []"
                 >
-                  <div class="shot-sequence">
-                    {{
-                      sequenceShots?.length > 0
-                        ? sequenceShots[0].sequence_name
-                        : ''
-                    }}
+                  <div class="shot-sequence flexrow">
+                    <span class="flexrow-item">
+                      {{
+                        sequenceShots?.length > 0
+                          ? sequenceShots[0].sequence_name
+                          : ''
+                      }}
+                    </span>
+                    <button-simple
+                      class="flexrow-item"
+                      icon="film"
+                      :title="$t('playlists.view_as_playlist')"
+                      @click="viewPlaylist(sequenceShots, 'shot')"
+                    />
                   </div>
                   <div class="shot-list">
                     <router-link
@@ -212,7 +226,15 @@
               currentAsset && currentAsset.castingAssetsByType?.[0]?.length > 0
             "
           >
-            <page-subtitle :text="$t('assets.linked')" />
+            <div class="flexrow">
+              <page-subtitle class="flexrow-item" :text="$t('assets.linked')" />
+              <button-simple
+                class="flexrow-item"
+                icon="film"
+                :title="$t('playlists.view_as_playlist')"
+                @click="viewPlaylist(linkedAssets, 'asset')"
+              />
+            </div>
             <template v-if="currentAsset.castingAssetsByType?.[0]?.length > 0">
               <div
                 class="type-assets"
@@ -221,11 +243,19 @@
                 "
                 v-for="typeAssets in currentAsset.castingAssetsByType"
               >
-                <div class="asset-type">
-                  {{
-                    typeAssets.length > 0 ? typeAssets[0].asset_type_name : ''
-                  }}
-                  ({{ typeAssets.length }})
+                <div class="asset-type flexrow">
+                  <span class="flexrow-item">
+                    {{
+                      typeAssets.length > 0 ? typeAssets[0].asset_type_name : ''
+                    }}
+                    ({{ typeAssets.length }})
+                  </span>
+                  <button-simple
+                    class="flexrow-item"
+                    icon="film"
+                    :title="$t('playlists.view_as_playlist')"
+                    @click="viewPlaylist(typeAssets, 'asset')"
+                  />
                 </div>
                 <div class="asset-list">
                   <router-link
@@ -371,6 +401,14 @@
       <task-info entity-type="Concept" :task="currentConceptTask" />
     </div>
 
+    <view-playlist-modal
+      active
+      :entity-ids="playlist.entityIds"
+      :entity-type="playlist.entityType"
+      @cancel="playlist = null"
+      v-if="playlist"
+    />
+
     <edit-asset-modal
       :active="modals.edit"
       :is-loading="loading.edit"
@@ -406,6 +444,7 @@ import assetStore from '@/store/modules/assets'
 import DescriptionCell from '@/components/cells/DescriptionCell.vue'
 import EntityTaskList from '@/components/lists/EntityTaskList.vue'
 import EditAssetModal from '@/components/modals/EditAssetModal.vue'
+import ViewPlaylistModal from '@/components/modals/ViewPlaylistModal.vue'
 import EntityChat from '@/components/pages/entities/EntityChat.vue'
 import EntityNews from '@/components/pages/entities/EntityNews.vue'
 import EntityOutputFiles from '@/components/pages/entities/EntityOutputFiles.vue'
@@ -439,6 +478,7 @@ const currentConcept = ref(null)
 const currentConceptStatus = ref(null)
 const currentConceptTask = ref(null)
 const localTasks = ref([])
+const playlist = ref(null)
 const scheduleWidget = ref(null)
 const castIn = reactive({ isLoading: false, isError: false })
 const errors = reactive({ edit: false })
@@ -469,11 +509,13 @@ const title = computed(() =>
     : t('main.loading')
 )
 
-const nbShotsCastedIn = computed(() =>
-  (currentAsset.value?.castInShotsBySequence || []).reduce(
-    (acc, shots) => acc + shots.length,
-    0
-  )
+const castInShots = computed(() =>
+  (currentAsset.value?.castInShotsBySequence || []).flat()
+)
+const nbShotsCastedIn = computed(() => castInShots.value.length)
+
+const linkedAssets = computed(() =>
+  (currentAsset.value?.castingAssetsByType || []).flat()
 )
 
 const assetsPath = computed(() => {
@@ -617,6 +659,14 @@ const confirmEditAsset = async form => {
 
 const closeTask = () => {
   if (currentTask.value) onTaskSelected(currentTask.value)
+}
+
+// the cast-in shots and the linked assets carry their id under their type
+const viewPlaylist = (entities, entityType) => {
+  playlist.value = {
+    entityType,
+    entityIds: entities.map(entity => entity[`${entityType}_id`])
+  }
 }
 
 const closeConcept = () => {

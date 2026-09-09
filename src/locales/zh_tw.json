@@ -1007,6 +1007,7 @@
       "update_to_latest_version_help": "為每個實體設定最新修訂，並保留其目前的任務類型。",
       "update_versions_title": "更新選取的版本",
       "created": "已建立播放清單「{name}」。",
+      "view_as_playlist": "以播放清單檢視",
       "view_created": "查看播放清單"
     },
     "productions": {

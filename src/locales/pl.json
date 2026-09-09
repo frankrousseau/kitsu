@@ -1276,6 +1276,7 @@
       "unmute": "Wyłącz wyciszenie",
       "updated_at": "Zaktualizowano:",
       "remove": "usuń",
+      "view_as_playlist": "Wyświetl jako playlistę",
       "view_created": "Wyświetl playlistę",
       "volume_level": "Głośność: {level}%",
       "fields": {

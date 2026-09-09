@@ -1321,6 +1321,7 @@ export default {
     unmute: 'Unmute',
     updated_at: 'Updated at:',
     remove: 'remove',
+    view_as_playlist: 'View as playlist',
     view_created: 'View playlist',
     volume_level: 'Volume: {level}%',
     fields: {

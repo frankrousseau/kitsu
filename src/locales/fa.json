@@ -1007,6 +1007,7 @@
       "update_to_latest_version_help": "آخرین بازبینی را برای هر موجودیت تنظیم کنید و نوع وظیفه فعلی آن را حفظ کنید.",
       "update_versions_title": "بروزرسانی نسخه‌های انتخاب شده",
       "created": "لیست پخش «{name}» ایجاد شد.",
+      "view_as_playlist": "مشاهده به صورت پلی‌لیست",
       "view_created": "نمایش لیست پخش"
     },
     "productions": {

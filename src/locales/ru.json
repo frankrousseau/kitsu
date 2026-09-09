@@ -1007,6 +1007,7 @@
       "update_to_latest_version_help": "Установить последнюю ревизию для каждого объекта, сохранив его текущий тип задачи.",
       "update_versions_title": "Обновить выбранные версии",
       "created": "Плейлист «{name}» создан.",
+      "view_as_playlist": "Смотреть как плейлист",
       "view_created": "Открыть плейлист"
     },
     "productions": {

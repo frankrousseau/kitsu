@@ -1007,6 +1007,7 @@
       "update_to_latest_version_help": "各エンティティの現在のタスクタイプを保ったまま、最新のリビジョンを設定します。",
       "update_versions_title": "選択したバージョンを更新",
       "created": "プレイリスト「{name}」を作成しました。",
+      "view_as_playlist": "プレイリストとして表示",
       "view_created": "プレイリストを表示"
     },
     "productions": {
