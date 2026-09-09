@@ -1853,6 +1853,9 @@ export default {
     delete_version_error: 'An error occurred while deleting this schedule version. Please contact our support team.',
     delete_version_message: 'Are you sure you want to delete the schedule version {name}? Please confirm by typing the schedule version name below.',
     drop_forbidden_department: 'Not part of the task department',
+    drop_forbidden_person: 'Person outside your departments',
+    drop_forbidden_role: 'No assignment right on this production',
+    drop_forbidden_task_type: 'Task type outside your departments',
     drop_forbidden_team: 'Not part of the production team',
     edit_task: 'Edit task',
     edit_version: 'Edit schedule version',
@@ -1905,6 +1908,9 @@ export default {
     busy: 'Busy on another production',
     empty:
       'No person matches the current filters. Try widening the studio, department or production filters.',
+    no_assignment_role: 'You cannot assign tasks on this production.',
+    no_department_task_type:
+      'No task type of your departments matches the production filter.',
     person_placeholder: 'Select a person...',
     title: 'Schedule',
     title_main: 'Team Schedule'

@@ -1382,6 +1382,9 @@
       "delete_version_error": "Der opstod en fejl under sletning af denne version af tidsplanen. Kontakt venligst vores supportteam.",
       "delete_version_message": "Er du sikker på, at du vil slette versionen {name} af tidsplanen? Bekræft venligst ved at skrive versionens navn nedenfor.",
       "drop_forbidden_department": "Ikke en del af opgavens afdeling",
+      "drop_forbidden_person": "Person uden for dine afdelinger",
+      "drop_forbidden_role": "Ingen tildelingsret på denne produktion",
+      "drop_forbidden_task_type": "Opgavetype uden for dine afdelinger",
       "drop_forbidden_team": "Ikke en del af produktionsholdet",
       "edit_task": "Rediger opgave",
       "edit_version": "Rediger version af tidsplan",
@@ -1896,6 +1899,8 @@
     "team_schedule": {
       "busy": "Optaget på en anden produktion",
       "empty": "Ingen personer matcher de aktuelle filtre. Prøv at udvide studie-, afdelings- eller produktionsfiltrene.",
+      "no_assignment_role": "Du kan ikke tildele opgaver på denne produktion.",
+      "no_department_task_type": "Ingen opgavetype i dine afdelinger matcher produktionsfilteret.",
       "person_placeholder": "Vælg en person...",
       "title": "Tidsplan",
       "title_main": "Teamets Tidsplan"

@@ -1382,6 +1382,9 @@
       "delete_version_error": "刪除此排程版本時發生錯誤。請聯絡我們的支援團隊。",
       "delete_version_message": "您確定要刪除排程版本 {name} 嗎？請在下方輸入排程版本名稱以確認。",
       "drop_forbidden_department": "不屬於該任務的部門",
+      "drop_forbidden_person": "不屬於您部門的人員",
+      "drop_forbidden_role": "在該製作中無指派權限",
+      "drop_forbidden_task_type": "不屬於您部門的任務類型",
       "drop_forbidden_team": "不屬於該製作的團隊",
       "edit_task": "編輯任務",
       "edit_version": "編輯排程版本",
@@ -1896,6 +1899,8 @@
     "team_schedule": {
       "busy": "忙於其他製作",
       "empty": "沒有符合目前篩選條件的人員。請嘗試放寬工作室、部門或製作的篩選條件。",
+      "no_assignment_role": "您無法在該製作中指派任務。",
+      "no_department_task_type": "沒有屬於您部門的任務類型符合製作篩選條件。",
       "person_placeholder": "選擇一個人...",
       "title": "時間表",
       "title_main": "團隊時間表"

@@ -1382,6 +1382,9 @@
       "delete_version_error": "Se ha producido un error al eliminar esta versión del programa. Póngase en contacto con nuestro equipo de asistencia.",
       "delete_version_message": "¿Está seguro de que desea eliminar la versión de planificación {name}? Confírmelo escribiendo el nombre de la versión del programa a continuación.",
       "drop_forbidden_department": "No forma parte del departamento de la tarea",
+      "drop_forbidden_person": "Persona fuera de sus departamentos",
+      "drop_forbidden_role": "Sin derecho de asignación en esta producción",
+      "drop_forbidden_task_type": "Tipo de tarea fuera de sus departamentos",
       "drop_forbidden_team": "No forma parte del equipo de la producción",
       "edit_task": "Editar tarea",
       "edit_version": "Editar la versión del calendario",
@@ -1896,6 +1899,8 @@
     "team_schedule": {
       "busy": "Ocupado en otra producción",
       "empty": "Ninguna persona coincide con los filtros actuales. Pruebe a ampliar los filtros de estudio, departamento o producción.",
+      "no_assignment_role": "No puede asignar tareas en esta producción.",
+      "no_department_task_type": "Ningún tipo de tarea de sus departamentos coincide con el filtro de producción.",
       "person_placeholder": "Selecciona una persona...",
       "title": "Horario",
       "title_main": "Horario del equipo"

@@ -1382,6 +1382,9 @@
       "delete_version_error": "Er is een fout opgetreden tijdens het verwijderen van deze planningsversie. Neem contact op met ons ondersteuningsteam.",
       "delete_version_message": "Weet u zeker dat u de planningsversie {name} wilt verwijderen? Bevestig dit door de naam van de planningsversie hieronder in te voeren.",
       "drop_forbidden_department": "Maakt geen deel uit van de afdeling van de taak",
+      "drop_forbidden_person": "Persoon buiten je afdelingen",
+      "drop_forbidden_role": "Geen toewijzingsrecht in deze productie",
+      "drop_forbidden_task_type": "Taaktype buiten je afdelingen",
       "drop_forbidden_team": "Maakt geen deel uit van het productieteam",
       "edit_task": "Taak bewerken",
       "edit_version": "Versie schema bewerken",
@@ -1896,6 +1899,8 @@
     "team_schedule": {
       "busy": "Bezet met een andere productie",
       "empty": "Geen persoon komt overeen met de huidige filters. Probeer de studio-, afdelings- of productiefilters te verruimen.",
+      "no_assignment_role": "Je kunt in deze productie geen taken toewijzen.",
+      "no_department_task_type": "Geen taaktype van je afdelingen komt overeen met het productiefilter.",
       "person_placeholder": "Een persoon selecteren...",
       "title": "Schema",
       "title_main": "Teamschema"

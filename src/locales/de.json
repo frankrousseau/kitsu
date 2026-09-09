@@ -1382,6 +1382,9 @@
       "delete_version_error": "Beim Löschen dieser Zeitplanversion ist ein Fehler aufgetreten. Bitte kontaktieren Sie unser Support-Team.",
       "delete_version_message": "Sind Sie sicher, dass Sie die Zeitplanversion {name} löschen möchten? Bitte bestätigen Sie, indem Sie den Namen der Zeitplanversion unten eingeben.",
       "drop_forbidden_department": "Nicht Teil der Abteilung der Aufgabe",
+      "drop_forbidden_person": "Person außerhalb Ihrer Abteilungen",
+      "drop_forbidden_role": "Kein Zuweisungsrecht in dieser Produktion",
+      "drop_forbidden_task_type": "Aufgabentyp außerhalb Ihrer Abteilungen",
       "drop_forbidden_team": "Nicht Teil des Produktionsteams",
       "edit_task": "Aufgabe bearbeiten",
       "edit_version": "Version des Zeitplans bearbeiten",
@@ -1896,6 +1899,8 @@
     "team_schedule": {
       "busy": "Mit einer anderen Produktion beschäftigt",
       "empty": "Keine Person entspricht den aktuellen Filtern. Erweitern Sie die Studio-, Abteilungs- oder Produktionsfilter.",
+      "no_assignment_role": "Sie können in dieser Produktion keine Aufgaben zuweisen.",
+      "no_department_task_type": "Kein Aufgabentyp Ihrer Abteilungen entspricht dem Produktionsfilter.",
       "person_placeholder": "Wählen Sie eine Person aus …",
       "title": "Zeitplan",
       "title_main": "Zeitplan des Teams"

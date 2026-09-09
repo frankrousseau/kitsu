@@ -1783,6 +1783,9 @@
       "delete_version_error": "Wystąpił błąd podczas usuwania tej wersji harmonogramu. Skontaktuj się z naszym zespołem wsparcia.",
       "delete_version_message": "Czy na pewno chcesz usunąć wersję harmonogramu {name}? Potwierdź, wpisując poniżej nazwę wersji harmonogramu.",
       "drop_forbidden_department": "Nie należy do działu zadania",
+      "drop_forbidden_person": "Osoba spoza Twoich działów",
+      "drop_forbidden_role": "Brak prawa do przypisywania w tej produkcji",
+      "drop_forbidden_task_type": "Typ zadania spoza Twoich działów",
       "drop_forbidden_team": "Nie należy do zespołu produkcji",
       "edit_task": "Edytuj zadanie",
       "edit_version": "Edytuj wersję harmonogramu",
@@ -1833,6 +1836,8 @@
     "team_schedule": {
       "busy": "Zajęty przy innej produkcji",
       "empty": "Żadna osoba nie pasuje do bieżących filtrów. Spróbuj poszerzyć filtry studia, działu lub produkcji.",
+      "no_assignment_role": "Nie możesz przypisywać zadań w tej produkcji.",
+      "no_department_task_type": "Żaden typ zadania z Twoich działów nie pasuje do filtru produkcji.",
       "person_placeholder": "Wybierz osobę...",
       "title": "Harmonogram",
       "title_main": "Harmonogram zespołu"
