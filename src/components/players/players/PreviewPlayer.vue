@@ -322,10 +322,7 @@
             :light="light"
             :full-screen="fullScreen"
             :is-assigned="isAssigned"
-            :can-validate="isCurrentUserManager"
             @add-preview-clicked="$emit('add-extra-preview')"
-            @preview-selected="onRevisionPreviewSelected"
-            @validation-status-clicked="onValidationStatusClicked"
             @next-clicked="onNextClicked"
             @previous-clicked="onPreviousClicked"
             @remove-preview-clicked="onRemovePreviewClicked"
@@ -438,7 +435,7 @@
           :preview-file="preview"
           :index="index"
           :is-selected="currentPreview.id === preview.id"
-          :can-validate="isCurrentUserManager"
+          :can-validate="canValidatePreviews"
           @selected="onRevisionPreviewSelected(index + 1)"
           @validation-status-clicked="onValidationStatusClicked(preview)"
           @preview-dropped="onRevisionPreviewDropped"
@@ -670,12 +667,8 @@ const width = ref(0)
 
 const assetMap = computed(() => store.getters.assetMap)
 const isCurrentUserArtist = computed(() => store.getters.isCurrentUserArtist)
-const isCurrentUserManager = computed(() =>
-  props.task?.project_id
-    ? store.getters.isCurrentUserAdmin ||
-      store.getters.currentUserRoleForProduction(props.task.project_id) ===
-        'manager'
-    : store.getters.isCurrentUserManager
+const canValidatePreviews = computed(() =>
+  store.getters.canValidatePreviewFiles(props.task)
 )
 const isTVShow = computed(() => store.getters.isTVShow)
 const organisation = computed(() => store.getters.organisation)

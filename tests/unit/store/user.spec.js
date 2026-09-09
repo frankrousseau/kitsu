@@ -121,6 +121,36 @@ describe('User store', () => {
     })
   })
 
+  describe('canValidatePreviewFiles', () => {
+    const task = { project_id: 'production-1', task_type_id: 'tt-1' }
+    const call = (role, departments, projectRoles = {}) => {
+      const state = { user: { id: 'person-1', role, departments }, projectRoles }
+      return store.getters.canValidatePreviewFiles(
+        state,
+        {
+          currentUserRoleForProduction:
+            store.getters.currentUserRoleForProduction(state)
+        },
+        {},
+        { taskTypeMap: new Map([['tt-1', { department_id: 'dep-1' }]]) }
+      )(task)
+    }
+
+    test('managers and admins validate', () => {
+      expect(call('manager', [])).toBe(true)
+      expect(call('admin', ['dep-2'])).toBe(true)
+    })
+
+    test('supervisors are held to their departments', () => {
+      expect(call('supervisor', [])).toBe(true)
+      expect(call('supervisor', ['dep-1'])).toBe(true)
+      expect(call('supervisor', ['dep-2'])).toBe(false)
+      expect(call('user', ['dep-1'], { 'production-1': 'supervisor' })).toBe(
+        true
+      )
+    })
+  })
+
   describe('Mutations', () => {
     test('SET_USER_PROJECT_ROLES', () => {
       const state = { projectRoles: {} }

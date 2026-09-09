@@ -451,7 +451,7 @@
         </a>
         <span
           class="flexrow-item preview-status"
-          :class="{ pointer: isCurrentUserManager }"
+          :class="{ pointer: canValidatePreviews }"
           :title="revisionValidationStatus"
           :data-status="revisionValidationStatus"
           role="button"
@@ -710,6 +710,9 @@ const isCurrentUserManager = computed(() =>
         'manager'
     : store.getters.isCurrentUserManager
 )
+const canValidatePreviews = computed(() =>
+  store.getters.canValidatePreviewFiles(props.task)
+)
 const personMap = computed(() => store.getters.personMap)
 const taskTypeMap = computed(() => store.getters.taskTypeMap)
 const user = computed(() => store.getters.user)
@@ -958,7 +961,7 @@ const revisionValidationStatus = computed(() => {
 })
 
 const changePreviewValidationStatus = previewFiles => {
-  if (!isCurrentUserManager.value) {
+  if (!canValidatePreviews.value) {
     return
   }
   const statusMap = {
