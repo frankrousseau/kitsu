@@ -67,6 +67,7 @@
       "empty": "角色分配為空",
       "label": "標籤",
       "picture_mode": "切換到圖片模式",
+      "remove_from_casting": "從選角中移除",
       "text_mode": "切換到文字模式",
       "title": "分解",
       "options": {

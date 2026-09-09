@@ -216,6 +216,14 @@ const actions = {
     }
   },
 
+  uncastAsset({ rootGetters }, { entityId, assetId }) {
+    const production = rootGetters.currentProduction
+    return breakdownApi.castAsset(production.id, assetId, {
+      entity_ids: [entityId],
+      nb_occurences: 0
+    })
+  },
+
   uploadCastingFile({ commit, state, rootGetters }, formData) {
     const currentProduction = rootGetters.currentProduction
     return breakdownApi.postCastingCsv(currentProduction, formData)

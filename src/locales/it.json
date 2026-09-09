@@ -67,6 +67,7 @@
       "empty": "Casting vuoto",
       "label": "Etichetta",
       "picture_mode": "Passa alla modalità immagini",
+      "remove_from_casting": "Rimuovi dal casting",
       "text_mode": "Passa alla modalità testo",
       "title": "Breakdown",
       "options": {

@@ -67,6 +67,7 @@
       "empty": "空的选角",
       "label": "标签",
       "picture_mode": "切换到图片模式",
+      "remove_from_casting": "从选角中移除",
       "text_mode": "切换到文字模式",
       "title": "分解",
       "options": {

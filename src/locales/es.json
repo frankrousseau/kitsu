@@ -67,6 +67,7 @@
       "empty": "Casting vacío",
       "label": "Etiqueta",
       "picture_mode": "Cambiar a modo de imagen",
+      "remove_from_casting": "Quitar del casting",
       "text_mode": "Cambiar a modo de texto",
       "title": "Desglose",
       "options": {

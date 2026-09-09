@@ -67,6 +67,7 @@
       "empty": "Leeres Casting",
       "label": "Etikett",
       "picture_mode": "Zum Bildmodus wechseln",
+      "remove_from_casting": "Aus dem Casting entfernen",
       "text_mode": "Zum Textmodus wechseln",
       "title": "Aufschlüsselung",
       "options": {

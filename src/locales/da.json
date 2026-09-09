@@ -67,6 +67,7 @@
       "empty": "Tom casting",
       "label": "Label",
       "picture_mode": "Skift til billedtilstand",
+      "remove_from_casting": "Fjern fra casting",
       "text_mode": "Skift til teksttilstand",
       "title": "Breakdown",
       "options": {

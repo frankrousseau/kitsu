@@ -212,6 +212,15 @@
                       :empty-height="103"
                       :with-link="false"
                     />
+                    <button-simple
+                      class="remove-button"
+                      icon="remove"
+                      :title="$t('breakdown.remove_from_casting')"
+                      @click.prevent.stop="
+                        uncastAsset(currentShot.id, asset.asset_id)
+                      "
+                      v-if="isCurrentUserManager"
+                    />
                     <div class="break-word">
                       {{ asset.asset_name }}
                       <template v-if="asset.nb_occurences > 1">
@@ -446,6 +455,11 @@ const getCurrentShot = async () => {
   return shot
 }
 
+const uncastAsset = async (entityId, assetId) => {
+  await store.dispatch('uncastAsset', { entityId, assetId })
+  await loadCastingData()
+}
+
 const loadCastingData = async () => {
   casting.isLoading = true
   casting.isError = false
@@ -648,6 +662,27 @@ h2.subtitle {
 
   .ready-for .no-link {
     cursor: inherit;
+  }
+}
+
+.asset-link {
+  position: relative;
+  margin-bottom: 1em;
+
+  .entity-thumbnail {
+    margin-bottom: 0.5em;
+  }
+
+  .remove-button {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    padding: 0.3em;
+    opacity: 0;
+  }
+
+  &:hover .remove-button {
+    opacity: 1;
   }
 }
 

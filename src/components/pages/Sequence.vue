@@ -615,6 +615,10 @@ h2.subtitle {
   }
 }
 
+.asset-link {
+  margin-bottom: 1em;
+}
+
 .asset-link div {
   max-width: 100px;
 }
@@ -656,7 +660,7 @@ h2.subtitle {
 }
 
 .entity-thumbnail {
-  margin-bottom: 0;
+  margin-bottom: 0.5em;
   border-radius: 10px;
 }
 

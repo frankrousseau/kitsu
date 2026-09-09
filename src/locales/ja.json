@@ -67,6 +67,7 @@
       "empty": "キャスティングなし",
       "label": "ラベル",
       "picture_mode": "ピクチャーモードに切り替え",
+      "remove_from_casting": "キャスティングから削除",
       "text_mode": "テキストモードに切り替え",
       "title": "ブレイクダウン",
       "options": {

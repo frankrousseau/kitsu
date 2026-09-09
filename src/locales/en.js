@@ -122,6 +122,7 @@ export default {
     hide_library: 'Hide Library',
     label: 'Label',
     picture_mode: 'Switch to picture mode',
+    remove_from_casting: 'Remove from casting',
     save_error: 'Error while saving casting',
     show_library: 'Display Library',
     text_mode: 'Switch to text mode',

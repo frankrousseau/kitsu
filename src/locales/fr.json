@@ -67,6 +67,7 @@
       "empty": "Casting vide",
       "label": "Label",
       "picture_mode": "Passer en mode image",
+      "remove_from_casting": "Retirer du casting",
       "text_mode": "Passer en mode texte",
       "title": "Casting",
       "options": {
