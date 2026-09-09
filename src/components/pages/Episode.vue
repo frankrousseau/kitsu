@@ -48,16 +48,6 @@
 
         <div class="flexrow mt1">
           <template v-if="currentSection === 'casting'">
-            <span>
-              {{ nbAssets }} {{ $t('assets.number', { count: nbAssets }) }}
-            </span>
-            <button-simple
-              class="flexrow-item ml1"
-              icon="film"
-              :title="$t('playlists.view_as_playlist')"
-              @click="viewPlaylist(castAssets)"
-              v-if="castAssets.length > 0"
-            />
             <span
               class="tag tag-standby"
               v-if="currentEpisode?.is_casting_standby"
@@ -147,20 +137,30 @@
         <div class="episode-casting" v-show="currentSection === 'casting'">
           <template v-if="currentEpisode">
             <div v-if="currentEpisode.castingAssetsByType?.[0]?.length > 0">
+              <div class="casting-title flexrow">
+                <page-subtitle
+                  class="flexrow-item"
+                  :text="`${nbAssets} ${$t('assets.number', { count: nbAssets })}`"
+                />
+                <div class="filler"></div>
+                <button-simple
+                  class="flexrow-item"
+                  icon="film"
+                  :title="$t('playlists.view_as_playlist')"
+                  @click="viewPlaylist(castAssets)"
+                />
+              </div>
               <div
-                class="type-assets"
-                :key="
-                  typeAssets.length > 0 ? typeAssets[0].asset_type_name : ''
-                "
+                class="casting-group"
+                :key="typeAssets[0]?.asset_type_name"
                 v-for="typeAssets in currentEpisode.castingAssetsByType"
               >
-                <div class="asset-type flexrow">
-                  <span class="flexrow-item">
-                    {{
-                      typeAssets.length > 0 ? typeAssets[0].asset_type_name : ''
-                    }}
-                    ({{ typeAssets.length }})
+                <div class="casting-group-header flexrow">
+                  <span class="flexrow-item group-name">
+                    {{ typeAssets[0]?.asset_type_name }}
                   </span>
+                  <span class="flexrow-item tag">{{ typeAssets.length }}</span>
+                  <div class="filler"></div>
                   <button-simple
                     class="flexrow-item"
                     icon="film"
@@ -168,46 +168,64 @@
                     @click="viewPlaylist(typeAssets)"
                   />
                 </div>
-                <div class="asset-list">
+                <div class="casting-grid">
                   <router-link
-                    class="asset-link"
-                    :key="asset.id"
+                    class="casting-card"
+                    :key="asset.asset_id"
                     :to="assetPath(asset)"
                     v-for="asset in typeAssets"
                   >
-                    <entity-thumbnail
-                      class="entity-thumbnail"
-                      :entity="asset"
-                      :square="true"
-                      :empty-width="103"
-                      :empty-height="103"
-                      :with-link="false"
-                    />
-                    <button-simple
-                      class="remove-button"
-                      icon="remove"
-                      :title="$t('breakdown.remove_from_casting')"
-                      @click.prevent.stop="
-                        uncastAsset(currentEpisode.id, asset.asset_id)
-                      "
-                      v-if="isCurrentUserManager"
-                    />
-                    <div class="break-word">
-                      {{ asset.asset_name }}
-                      <span v-if="asset.nb_occurences > 1">
-                        ({{ asset.nb_occurences }})
+                    <div class="card-preview">
+                      <entity-preview
+                        cover
+                        is-rounded-top-border
+                        :entity="asset"
+                        :empty-width="200"
+                        :empty-height="112"
+                        :show-movie="false"
+                      />
+                      <button-simple
+                        class="remove-button"
+                        icon="remove"
+                        :title="$t('breakdown.remove_from_casting')"
+                        @click.prevent.stop="
+                          uncastAsset(currentEpisode.id, asset.asset_id)
+                        "
+                        v-if="isCurrentUserManager"
+                      />
+                      <span
+                        class="nb-occurences"
+                        v-if="asset.nb_occurences > 1"
+                      >
+                        {{ asset.nb_occurences }}
                       </span>
                     </div>
-                    <div class="ready-for flexrow" v-if="asset.ready_for">
-                      <task-type-name
-                        class="flexrow-item"
-                        :task-type="taskTypeMap.get(asset.ready_for)"
-                        :current-production-id="currentProduction.id"
-                        :title="
-                          'Ready for: ' +
-                          (taskTypeMap.get(asset.ready_for)?.name || '')
-                        "
-                      />
+                    <div class="card-description">
+                      <div class="card-name flexrow">
+                        <span class="flexrow-item filler break-word">
+                          {{ asset.asset_name }}
+                        </span>
+                        <span
+                          class="asset-label flexrow-item"
+                          :label="asset.label"
+                        >
+                          {{ asset.label || $t('breakdown.options.animate') }}
+                        </span>
+                      </div>
+                      <div class="ready-for flexrow" v-if="asset.ready_for">
+                        <span class="flexrow-item filler">
+                          {{ $t('assets.fields.ready_for') }}
+                        </span>
+                        <task-type-name
+                          class="flexrow-item"
+                          :task-type="taskTypeMap.get(asset.ready_for)"
+                          :current-production-id="currentProduction.id"
+                          :title="
+                            'Ready for: ' +
+                            (taskTypeMap.get(asset.ready_for)?.name || '')
+                          "
+                        />
+                      </div>
                     </div>
                   </router-link>
                 </div>
@@ -332,6 +350,7 @@ import TaskInfo from '@/components/sides/TaskInfo.vue'
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
 import ComboboxNumber from '@/components/widgets/ComboboxNumber.vue'
 import EmptySection from '@/components/widgets/EmptySection.vue'
+import EntityPreview from '@/components/widgets/EntityPreview.vue'
 import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import MetadataValue from '@/components/widgets/MetadataValue.vue'
 import PageSubtitle from '@/components/widgets/PageSubtitle.vue'
@@ -460,7 +479,8 @@ const assetPath = asset =>
       params: {
         production_id: currentProduction.value.id,
         asset_id: asset.asset_id
-      }
+      },
+      query: { section: 'casting' }
     },
     currentEpisode.value.id
   )
@@ -581,60 +601,138 @@ h2.subtitle {
   overflow-y: auto;
 }
 
-.asset-type {
-  text-transform: uppercase;
-  font-size: 1.2em;
-  color: var(--text);
-  margin-top: 2em;
-  margin-bottom: 0.4em;
+.casting-title {
+  margin-top: 1em;
+  margin-bottom: 1em;
 }
 
-.asset-list {
-  color: var(--text);
-  display: flex;
-  flex-wrap: wrap;
+.casting-group {
+  margin-bottom: 2em;
 }
 
-.asset-link {
-  color: inherit;
-  margin-right: 1em;
+.casting-group-header {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1em;
+  padding-bottom: 0.3em;
+
+  .group-name {
+    color: var(--text);
+    font-size: 1.3em;
+    font-weight: 500;
+  }
+
+  .tag {
+    background: var(--background-tag);
+    color: var(--text);
+  }
+}
+
+.casting-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 200px);
+  gap: 20px;
+}
+
+.casting-card {
+  background: var(--background);
+  border-radius: 1em;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  color: var(--text-strong);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  font-size: 0.8em;
+  position: relative;
+
+  .dark & {
+    background: var(--background-alt);
+  }
+
+  &.shared {
+    box-shadow: 0 0 3px 2px var(--shared-color);
+  }
 
   .ready-for .no-link {
     cursor: inherit;
   }
-}
 
-.asset-link {
-  position: relative;
-  margin-bottom: 1em;
+  &:hover {
+    background: var(--background-hover);
+  }
 
-  .entity-thumbnail {
-    margin-bottom: 0.5em;
+  .card-preview {
+    position: relative;
+  }
+
+  .nb-occurences {
+    background: rgba(160, 160, 180, 0.8);
+    border-radius: 2px;
+    bottom: 4px;
+    color: white;
+    font-size: 0.8em;
+    padding: 2px 4px;
+    position: absolute;
+    right: 4px;
+  }
+
+  .card-description {
+    padding: 0.5em 1em;
+  }
+
+  .card-name {
+    font-weight: bold;
+  }
+
+  .asset-label {
+    background: $dark-green;
+    border-radius: 4px;
+    color: $white;
+    font-size: 0.7em;
+    font-weight: 500;
+    padding: 2px 6px;
+
+    &[label='fixed'] {
+      background: $orange-carrot;
+    }
+  }
+
+  .ready-for {
+    color: var(--text-alt);
+    font-size: 0.9em;
+    font-weight: normal;
+    margin-top: 0.4em;
   }
 
   .remove-button {
     position: absolute;
-    top: 4px;
-    right: 4px;
-    padding: 0.3em;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: $white;
     opacity: 0;
+    transition:
+      opacity 0.15s,
+      background 0.15s;
+
+    :deep(.icon) {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      background: $red;
+      color: $white;
+    }
   }
 
-  &:hover .remove-button {
+  &:hover .remove-button,
+  .remove-button:focus-visible {
     opacity: 1;
   }
-}
-
-.asset-link div {
-  max-width: 100px;
-}
-
-.asset-link span {
-  word-wrap: break-word;
 }
 
 .field-label {

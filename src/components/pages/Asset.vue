@@ -144,10 +144,13 @@
         <div class="asset-casted-in" v-show="currentSection === 'casting'">
           <template v-if="currentAsset">
             <div v-if="currentAsset.castInShotsBySequence?.[0]?.length > 0">
-              <div class="flexrow">
-                <em class="flexrow-item">{{
-                  $t('assets.casted_in_shots', { nbShots: nbShotsCastedIn })
-                }}</em>
+              <div class="casting-title flexrow">
+                <page-subtitle
+                  class="flexrow-item"
+                  :text="
+                    $t('assets.casted_in_shots', { nbShots: nbShotsCastedIn })
+                  "
+                />
                 <div class="filler"></div>
                 <button-simple
                   class="flexrow-item"
@@ -162,23 +165,19 @@
                 "
               >
                 <div
-                  class="sequence-shots"
-                  :key="
-                    sequenceShots?.length > 0
-                      ? sequenceShots[0].sequence_name
-                      : ''
-                  "
+                  class="casting-group"
+                  :key="sequenceShots[0]?.sequence_name"
                   v-for="sequenceShots in currentAsset.castInShotsBySequence ||
                   []"
                 >
-                  <div class="shot-sequence flexrow">
-                    <span class="flexrow-item">
-                      {{
-                        sequenceShots?.length > 0
-                          ? sequenceShots[0].sequence_name
-                          : ''
-                      }}
+                  <div class="casting-group-header flexrow">
+                    <span class="flexrow-item group-name">
+                      {{ sequenceShots[0]?.sequence_name }}
                     </span>
+                    <span class="flexrow-item tag">
+                      {{ sequenceShots.length }}
+                    </span>
+                    <div class="filler"></div>
                     <button-simple
                       class="flexrow-item"
                       icon="film"
@@ -186,35 +185,50 @@
                       @click="viewPlaylist(sequenceShots, 'shot')"
                     />
                   </div>
-                  <div class="shot-list">
+                  <div class="casting-grid">
                     <router-link
-                      class="shot-link"
+                      class="casting-card"
                       :key="shot.shot_id"
                       :to="shotPath(shot)"
                       v-for="shot in sequenceShots"
                     >
-                      <entity-thumbnail
-                        class="entity-thumbnail"
-                        :entity="shot"
-                        :square="true"
-                        :empty-width="103"
-                        :empty-height="103"
-                        :with-link="false"
-                      />
-                      <button-simple
-                        class="remove-button"
-                        icon="remove"
-                        :title="$t('breakdown.remove_from_casting')"
-                        @click.prevent.stop="
-                          uncastAsset(shot.shot_id, currentAsset.id)
-                        "
-                        v-if="isCurrentUserManager"
-                      />
-                      <div>
-                        <span class="break-word">{{ shot.shot_name }}</span>
-                        <span v-if="shot.nb_occurences > 1">
-                          ({{ shot.nb_occurences }})
+                      <div class="card-preview">
+                        <entity-preview
+                          cover
+                          is-rounded-top-border
+                          :entity="shot"
+                          :empty-width="200"
+                          :empty-height="112"
+                          :show-movie="false"
+                        />
+                        <button-simple
+                          class="remove-button"
+                          icon="remove"
+                          :title="$t('breakdown.remove_from_casting')"
+                          @click.prevent.stop="
+                            uncastAsset(shot.shot_id, currentAsset.id)
+                          "
+                          v-if="isCurrentUserManager"
+                        />
+                        <span
+                          class="nb-occurences"
+                          v-if="shot.nb_occurences > 1"
+                        >
+                          {{ shot.nb_occurences }}
                         </span>
+                      </div>
+                      <div class="card-description">
+                        <div class="card-name flexrow">
+                          <span class="flexrow-item filler break-word">
+                            {{ shot.shot_name }}
+                          </span>
+                          <span
+                            class="asset-label flexrow-item"
+                            :label="shot.label"
+                          >
+                            {{ shot.label || $t('breakdown.options.animate') }}
+                          </span>
+                        </div>
                       </div>
                     </router-link>
                   </div>
@@ -238,8 +252,9 @@
               currentAsset && currentAsset.castingAssetsByType?.[0]?.length > 0
             "
           >
-            <div class="flexrow">
+            <div class="casting-title flexrow">
               <page-subtitle class="flexrow-item" :text="$t('assets.linked')" />
+              <div class="filler"></div>
               <button-simple
                 class="flexrow-item"
                 icon="film"
@@ -247,48 +262,46 @@
                 @click="viewPlaylist(linkedAssets, 'asset')"
               />
             </div>
-            <template v-if="currentAsset.castingAssetsByType?.[0]?.length > 0">
-              <div
-                class="type-assets"
-                :key="
-                  typeAssets.length > 0 ? typeAssets[0].asset_type_name : ''
-                "
-                v-for="typeAssets in currentAsset.castingAssetsByType"
-              >
-                <div class="asset-type flexrow">
-                  <span class="flexrow-item">
-                    {{
-                      typeAssets.length > 0 ? typeAssets[0].asset_type_name : ''
-                    }}
-                    ({{ typeAssets.length }})
-                  </span>
-                  <button-simple
-                    class="flexrow-item"
-                    icon="film"
-                    :title="$t('playlists.view_as_playlist')"
-                    @click="viewPlaylist(typeAssets, 'asset')"
-                  />
-                </div>
-                <div class="asset-list">
-                  <router-link
-                    class="asset-link"
-                    :key="asset.id"
-                    :to="{
-                      name: 'asset',
-                      params: {
-                        production_id: currentProduction.id,
-                        asset_id: asset.asset_id
-                      }
-                    }"
-                    v-for="asset in typeAssets"
-                  >
-                    <entity-thumbnail
-                      class="entity-thumbnail"
+            <div
+              class="casting-group"
+              :key="typeAssets[0]?.asset_type_name"
+              v-for="typeAssets in currentAsset.castingAssetsByType"
+            >
+              <div class="casting-group-header flexrow">
+                <span class="flexrow-item group-name">
+                  {{ typeAssets[0]?.asset_type_name }}
+                </span>
+                <span class="flexrow-item tag">{{ typeAssets.length }}</span>
+                <div class="filler"></div>
+                <button-simple
+                  class="flexrow-item"
+                  icon="film"
+                  :title="$t('playlists.view_as_playlist')"
+                  @click="viewPlaylist(typeAssets, 'asset')"
+                />
+              </div>
+              <div class="casting-grid">
+                <router-link
+                  class="casting-card"
+                  :key="asset.asset_id"
+                  :to="{
+                    name: 'asset',
+                    params: {
+                      production_id: currentProduction.id,
+                      asset_id: asset.asset_id
+                    },
+                    query: { section: 'casting' }
+                  }"
+                  v-for="asset in typeAssets"
+                >
+                  <div class="card-preview">
+                    <entity-preview
+                      cover
+                      is-rounded-top-border
                       :entity="asset"
-                      :square="true"
-                      :empty-width="103"
-                      :empty-height="103"
-                      :with-link="false"
+                      :empty-width="200"
+                      :empty-height="112"
+                      :show-movie="false"
                     />
                     <button-simple
                       class="remove-button"
@@ -299,16 +312,26 @@
                       "
                       v-if="isCurrentUserManager"
                     />
-                    <div>
-                      <span class="break-word">{{ asset.asset_name }}</span>
-                      <span v-if="asset.nb_occurences > 1">
-                        ({{ asset.nb_occurences }})
+                    <span class="nb-occurences" v-if="asset.nb_occurences > 1">
+                      {{ asset.nb_occurences }}
+                    </span>
+                  </div>
+                  <div class="card-description">
+                    <div class="card-name flexrow">
+                      <span class="flexrow-item filler break-word">
+                        {{ asset.asset_name }}
+                      </span>
+                      <span
+                        class="asset-label flexrow-item"
+                        :label="asset.label"
+                      >
+                        {{ asset.label || $t('breakdown.options.animate') }}
                       </span>
                     </div>
-                  </router-link>
-                </div>
+                  </div>
+                </router-link>
               </div>
-            </template>
+            </div>
           </div>
         </div>
 
@@ -477,6 +500,7 @@ import ComboboxNumber from '@/components/widgets/ComboboxNumber.vue'
 import ComboboxStatus from '@/components/widgets/ComboboxStatus.vue'
 import ConceptCard from '@/components/widgets/ConceptCard.vue'
 import EmptySection from '@/components/widgets/EmptySection.vue'
+import EntityPreview from '@/components/widgets/EntityPreview.vue'
 import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import MetadataValue from '@/components/widgets/MetadataValue.vue'
 import PageSubtitle from '@/components/widgets/PageSubtitle.vue'
@@ -663,7 +687,8 @@ const shotPath = shot => ({
     production_id: currentProduction.value.id,
     shot_id: shot.shot_id,
     episode_id: shot.episode_id ? shot.episode_id : undefined
-  }
+  },
+  query: { section: 'casting' }
 })
 
 const confirmEditAsset = async form => {
@@ -807,72 +832,138 @@ h2.subtitle {
   flex: 1;
 }
 
-.sequence-shots {
-  margin-bottom: 3em;
+.casting-title {
+  margin-top: 1em;
+  margin-bottom: 1em;
 }
 
-.asset-type,
-.shot-sequence {
-  text-transform: uppercase;
-  font-size: 1.2em;
-  color: var(--text);
-  margin-top: 2em;
-  margin-bottom: 0.4em;
+.casting-group {
+  margin-bottom: 2em;
 }
 
-.asset-list,
-.shot-list,
+.casting-group-header {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1em;
+  padding-bottom: 0.3em;
+
+  .group-name {
+    color: var(--text);
+    font-size: 1.3em;
+    font-weight: 500;
+  }
+
+  .tag {
+    background: var(--background-tag);
+    color: var(--text);
+  }
+}
+
+.casting-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 200px);
+  gap: 20px;
+}
+
 .concept-list {
   color: var(--text);
   display: flex;
   flex-wrap: wrap;
-}
-
-.concept-list {
   padding-bottom: 1em;
   gap: 10px;
 }
 
-.asset-link,
-.shot-link {
-  color: inherit;
-  margin-right: 1em;
+.casting-card {
+  background: var(--background);
+  border-radius: 1em;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  color: var(--text-strong);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  font-size: 0.8em;
-}
-
-.asset-link,
-.shot-link {
   position: relative;
-  margin-bottom: 1em;
 
-  .entity-thumbnail {
-    margin-bottom: 0.5em;
+  .dark & {
+    background: var(--background-alt);
+  }
+
+  &:hover {
+    background: var(--background-hover);
+  }
+
+  .card-preview {
+    position: relative;
+  }
+
+  .nb-occurences {
+    background: rgba(160, 160, 180, 0.8);
+    border-radius: 2px;
+    bottom: 4px;
+    color: white;
+    font-size: 0.8em;
+    padding: 2px 4px;
+    position: absolute;
+    right: 4px;
+  }
+
+  .card-description {
+    padding: 0.5em 1em;
+  }
+
+  .card-name {
+    font-weight: bold;
+  }
+
+  .asset-label {
+    background: $dark-green;
+    border-radius: 4px;
+    color: $white;
+    font-size: 0.7em;
+    font-weight: 500;
+    padding: 2px 6px;
+
+    &[label='fixed'] {
+      background: $orange-carrot;
+    }
+  }
+
+  .ready-for {
+    color: var(--text-alt);
+    font-size: 0.9em;
+    font-weight: normal;
+    margin-top: 0.4em;
   }
 
   .remove-button {
     position: absolute;
-    top: 4px;
-    right: 4px;
-    padding: 0.3em;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: $white;
     opacity: 0;
+    transition:
+      opacity 0.15s,
+      background 0.15s;
+
+    :deep(.icon) {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      background: $red;
+      color: $white;
+    }
   }
 
-  &:hover .remove-button {
+  &:hover .remove-button,
+  .remove-button:focus-visible {
     opacity: 1;
   }
-}
-
-.asset-link div,
-.shot-link div {
-  max-width: 100px;
-}
-
-.asset-link span,
-.shot-link span {
-  word-wrap: break-word;
 }
 
 .field-label {
