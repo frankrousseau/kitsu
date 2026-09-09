@@ -435,7 +435,9 @@
           :preview-file="preview"
           :index="index"
           :is-selected="currentPreview.id === preview.id"
+          :can-validate="canValidatePreviews"
           @selected="onRevisionPreviewSelected(index + 1)"
+          @validation-status-clicked="onValidationStatusClicked(preview)"
           @preview-dropped="onRevisionPreviewDropped"
         />
       </div>
@@ -665,6 +667,9 @@ const width = ref(0)
 
 const assetMap = computed(() => store.getters.assetMap)
 const isCurrentUserArtist = computed(() => store.getters.isCurrentUserArtist)
+const canValidatePreviews = computed(() =>
+  store.getters.canValidatePreviewFiles(props.task)
+)
 const isTVShow = computed(() => store.getters.isTVShow)
 const organisation = computed(() => store.getters.organisation)
 const productionMap = computed(() => store.getters.productionMap)
@@ -2031,6 +2036,14 @@ const changeCurrentPreview = previewFile => {
 
 const onRemovePreviewClicked = () => {
   emit('remove-extra-preview', currentPreview.value)
+}
+
+const onValidationStatusClicked = previewFile => {
+  const next = { neutral: 'validated', validated: 'rejected' }
+  store.dispatch('updatePreviewFileValidationStatus', {
+    previewFile,
+    status: next[previewFile.validation_status] || 'neutral'
+  })
 }
 
 const onPreviousClicked = () => {

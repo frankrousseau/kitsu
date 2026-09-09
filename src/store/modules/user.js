@@ -164,6 +164,19 @@ const getters = {
     getters.currentUserEffectiveRole === 'manager',
   isCurrentUserProductionSupervisor: (state, getters) =>
     getters.currentUserEffectiveRole === 'supervisor',
+  // Mirrors zou: managers of the production, and supervisors of the task
+  // department (a supervisor without department supervises everything).
+  canValidatePreviewFiles: (state, getters, rootState, rootGetters) => task => {
+    if (!state.user) return false
+    const role = getters.currentUserRoleForProduction(task?.project_id)
+    if (state.user.role === 'admin' || role === 'manager') return true
+    if (role !== 'supervisor') return false
+    const departments = state.user.departments || []
+    const taskType = rootGetters.taskTypeMap.get(task?.task_type_id)
+    return (
+      departments.length === 0 || departments.includes(taskType?.department_id)
+    )
+  },
   use12HourClock: state => Boolean(state.user?.use_12_hour_clock),
   isSaveProfileLoading: state => state.isSaveProfileLoading,
   isSaveProfileLoadingError: state => state.isSaveProfileLoadingError,
