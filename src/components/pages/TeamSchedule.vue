@@ -84,6 +84,10 @@
         </div>
       </div>
 
+      <div class="empty-schedule schedule-error" v-if="errors.schedule">
+        <table-info is-error />
+        <button-simple :text="$t('main.reload')" @click="init" />
+      </div>
       <schedule
         ref="schedule"
         :dragged-items="draggedTasks"
@@ -101,7 +105,7 @@
         @item-drop="onScheduleItemDropped"
         @item-unassign="onScheduleItemUnassigned"
         @root-element-expanded="expandPersonElement"
-        v-if="loading.schedule || errors.schedule || scheduleItems.length > 0"
+        v-else-if="loading.schedule || scheduleItems.length > 0"
       />
       <div class="empty-schedule" v-else>
         <user-search-icon :size="40" />
@@ -433,20 +437,16 @@ const addAllValue = list => [
 
 const init = async () => {
   loading.schedule = true
+  errors.schedule = false
   try {
     await store.dispatch('loadPeople')
     await loadPersonDates()
-    await store.dispatch('loadDaysOff')
   } catch (err) {
     console.error(err)
     errors.schedule = true
     loading.schedule = false
     return
   }
-
-  refreshSchedule()
-  scrollScheduleToToday()
-
   startDate.value = moment()
   endDate.value = moment().add(3, 'months')
   Object.values(personDates.value).forEach(dates => {
@@ -457,10 +457,35 @@ const init = async () => {
       endDate.value = dates.endDate.clone()
     }
   })
+  await loadDaysOff()
+
+  loading.schedule = false
+  refreshSchedule()
+  scrollScheduleToToday()
 
   selectedStartDate.value = startDate.value.toDate()
   selectedEndDate.value = endDate.value.toDate()
-  loading.schedule = false
+}
+
+// Days off only grey out cells and snap drags to business days: a
+// failure must not blank the schedule.
+const loadDaysOff = async () => {
+  try {
+    await store.dispatch('loadDaysOff', {
+      startDate: startDate.value,
+      endDate: endDate.value
+    })
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+// The root items carry the days off of their person: patch them in
+// place, a rebuild would collapse the expanded rows.
+const refreshDaysOff = () => {
+  scheduleItems.value.forEach(item => {
+    item.daysOff = daysOffByPerson.value[item.id]
+  })
 }
 
 const toggleTaskSidePanel = () => {
@@ -559,7 +584,12 @@ const refreshPersonRootDates = person => {
   }
 }
 
+// The mount-time filter watchers fire before the person dates exist:
+// init() rebuilds the schedule itself once they are loaded.
 const refreshSchedule = () => {
+  if (loading.schedule) {
+    return
+  }
   const people = selectedPerson.value
     ? [selectedPerson.value]
     : selectablePeople.value
@@ -785,12 +815,16 @@ const expandPersonElement = async (element, refreshScheduleCallBack) => {
   element.loading = false
 }
 
-const onUpdateSelectedStartDate = date => {
+const onUpdateSelectedStartDate = async date => {
   startDate.value = parseSimpleDate(date)
+  await loadDaysOff()
+  refreshDaysOff()
 }
 
-const onUpdateSelectedEndDate = date => {
+const onUpdateSelectedEndDate = async date => {
   endDate.value = parseSimpleDate(date)
+  await loadDaysOff()
+  refreshDaysOff()
 }
 
 const scrollScheduleToToday = () => {

@@ -161,6 +161,20 @@ export const getWeekRange = (year, currentYear) => {
   }
 }
 
+// Every calendar month the [startDate, endDate] range touches, as
+// { year, month } pairs with a 1-based month. Each date is read in its own
+// calendar: the team schedule mixes UTC person dates with local moments,
+// and a diff in months truncates the offset away, dropping the last month.
+export const getMonthsBetween = (startDate, endDate) => {
+  const index = date => date.year() * 12 + date.month()
+  const first = moment(startDate).startOf('month')
+  const count = index(moment(endDate)) - index(first) + 1
+  return Array.from({ length: Math.max(count, 0) }, (_, i) => {
+    const date = first.clone().add(i, 'months')
+    return { year: date.year(), month: date.month() + 1 }
+  })
+}
+
 export const getFirstStartDateByField = items => {
   let startDate = moment()
   items.forEach(item => {

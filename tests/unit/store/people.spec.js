@@ -8,8 +8,9 @@ vi.mock('@/store', () => ({ default: {} }))
 
 vi.mock('@/store/api/people', () => ({
   default: {
-    postOrganisationLogo: vi.fn(),
-    deleteOrganisationLogo: vi.fn()
+    deleteOrganisationLogo: vi.fn(),
+    getDaysOff: vi.fn(),
+    postOrganisationLogo: vi.fn()
   }
 }))
 
@@ -261,5 +262,78 @@ describe('People store', () => {
         logoTimestamp: 5678
       })
     })
+  })
+})
+
+describe('People store loadDaysOff action', () => {
+  // The studio-wide listing stays admin-only on Zou: the action reads the
+  // scoped month route once per month of the window.
+  test('reads every month of the window and merges the days off', async () => {
+    const spanning = { id: 'off-2', date: '2026-09-28', end_date: '2026-10-02' }
+    peopleApi.getDaysOff.mockImplementation((year, month) =>
+      Promise.resolve(
+        {
+          '08': [{ id: 'off-1', date: '2026-08-12', end_date: '2026-08-12' }],
+          '09': [spanning],
+          10: [spanning, { id: 'off-3', date: '2026-10-20', end_date: '2026-10-21' }]
+        }[month] || []
+      )
+    )
+    const commit = vi.fn()
+
+    await store.actions.loadDaysOff(
+      { commit },
+      { startDate: '2026-08-20', endDate: '2026-10-03' }
+    )
+
+    expect(peopleApi.getDaysOff.mock.calls).toEqual([
+      [2026, '08'],
+      [2026, '09'],
+      [2026, '10']
+    ])
+    expect(commit).toHaveBeenCalledWith('PEOPLE_SET_DAYS_OFF', [
+      { id: 'off-1', date: '2026-08-12', end_date: '2026-08-12' },
+      spanning,
+      { id: 'off-3', date: '2026-10-20', end_date: '2026-10-21' }
+    ])
+  })
+
+  test('keeps the months that answered when one fails', async () => {
+    const error = new Error('500')
+    const dayOff = month => ({
+      id: `off-${month}`,
+      date: `2026-${month}-12`,
+      end_date: `2026-${month}-12`
+    })
+    peopleApi.getDaysOff.mockImplementation((year, month) =>
+      month === '09' ? Promise.reject(error) : Promise.resolve([dayOff(month)])
+    )
+    const commit = vi.fn()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await store.actions.loadDaysOff(
+      { commit },
+      { startDate: '2026-08-20', endDate: '2026-10-03' }
+    )
+
+    expect(commit).toHaveBeenCalledWith('PEOPLE_SET_DAYS_OFF', [
+      dayOff('08'),
+      dayOff('10')
+    ])
+    expect(consoleError).toHaveBeenCalledWith(error)
+    consoleError.mockRestore()
+  })
+
+  test('rejects when every month fails', async () => {
+    peopleApi.getDaysOff.mockRejectedValue(new Error('403'))
+    const commit = vi.fn()
+
+    await expect(
+      store.actions.loadDaysOff(
+        { commit },
+        { startDate: '2026-08-20', endDate: '2026-10-03' }
+      )
+    ).rejects.toThrow('403')
+    expect(commit).not.toHaveBeenCalled()
   })
 })
