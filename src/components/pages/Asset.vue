@@ -144,15 +144,18 @@
         <div class="asset-casted-in" v-show="currentSection === 'casting'">
           <template v-if="currentAsset">
             <div v-if="currentAsset.castInShotsBySequence?.[0]?.length > 0">
-              <em>{{
-                $t('assets.casted_in_shots', { nbShots: nbShotsCastedIn })
-              }}</em>
-              <button-simple
-                class="ml1"
-                icon="film"
-                :title="$t('playlists.view_as_playlist')"
-                @click="viewPlaylist(castInShots, 'shot')"
-              />
+              <div class="flexrow">
+                <em class="flexrow-item">{{
+                  $t('assets.casted_in_shots', { nbShots: nbShotsCastedIn })
+                }}</em>
+                <div class="filler"></div>
+                <button-simple
+                  class="flexrow-item"
+                  icon="film"
+                  :title="$t('playlists.view_as_playlist')"
+                  @click="viewPlaylist(castInShots, 'shot')"
+                />
+              </div>
               <template
                 v-if="
                   currentAsset.castInShotsBySequence?.[0]?.[0]?.sequence_name
