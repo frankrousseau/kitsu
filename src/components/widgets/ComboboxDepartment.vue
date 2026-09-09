@@ -101,6 +101,13 @@ const props = defineProps({
     default: '',
     type: String
   },
+  // with displayAllAndMyDepartments: a user attached to departments only
+  // gets "My departments" and those, without the "All" entry, whatever
+  // the global role (the page decides the scope)
+  myDepartmentsOnly: {
+    default: false,
+    type: Boolean
+  },
   width: {
     default: 250,
     type: Number
@@ -145,6 +152,21 @@ const departmentsToTakeAccount = computed(() => {
 
 const departmentList = computed(() => {
   if (props.displayAllAndMyDepartments) {
+    const hasOwnDepartments =
+      !isCurrentUserManager.value && user.value.departments.length > 0
+    const myDepartments = {
+      name: t('tasks.combobox_departments.my_departments'),
+      id: 'MY_DEPARTMENTS',
+      color: '#000000'
+    }
+    if (props.myDepartmentsOnly && user.value.departments.length > 0) {
+      return [
+        myDepartments,
+        ...departmentsToTakeAccount.value.filter(({ id }) =>
+          user.value.departments.includes(id)
+        )
+      ]
+    }
     const departmentFilter = [
       {
         name: t('tasks.combobox_departments.all_departments'),
@@ -152,12 +174,8 @@ const departmentList = computed(() => {
         color: '#CCC'
       }
     ]
-    if (!isCurrentUserManager.value && user.value.departments.length > 0) {
-      departmentFilter.unshift({
-        name: t('tasks.combobox_departments.my_departments'),
-        id: 'MY_DEPARTMENTS',
-        color: '#000000'
-      })
+    if (hasOwnDepartments) {
+      departmentFilter.unshift(myDepartments)
     }
     return [...departmentFilter, ...departmentsToTakeAccount.value]
   } else if (

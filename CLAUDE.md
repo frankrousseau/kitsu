@@ -226,7 +226,7 @@ Shared toggle/select logic for custom combobox components.
 
 ## i18n
 
-- `src/locales/en.js` is the **source of truth** — new keys go there first. The other locales are kept in sync with it. POEditor was dropped (2026-05): non-English locales are LLM-translated directly in the JSON files.
+- `src/locales/en.js` is the **source of truth**. Add the key there, then translate it into **every** `<lang>.json` in the same change: vue-i18n falls back to `en`, so a key missing from a locale renders in English without warning. The JSON files nest their messages under a top-level `default` key. `tests/unit/locales/parity.spec.js` fails on any drift, in either direction. POEditor was dropped (2026-05): non-English locales are LLM-translated directly in the JSON files.
 - Use `$t()` (or `t()` in `<script setup>`), never `$tc()` (deprecated in vue-i18n 9+).
 - Pluralization with pipe format (`"studio | studios"`): pass a **named object**, `$t('key', { count })`. Every locale uses vue-i18n's DEFAULT plural resolver, so keep the **same number of `|` segments as en.js** and don't add a language's extra grammatical plural forms.
 - For animation/VFX domain terms (shot, frame, onion skin, edit/montage, …), align translations with Blender's official terminology (`blender/blender-translations` `po/<lang>.po`, or the translated manual at `docs.blender.org/manual/<lang>/`).

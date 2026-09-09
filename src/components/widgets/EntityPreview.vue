@@ -53,6 +53,7 @@
         class="view-icon"
         role="button"
         tabindex="0"
+        v-if="!noPreview"
         @click.stop="onPictureClicked()"
         @keydown.enter.stop.prevent="onPictureClicked()"
         @keydown.space.stop.prevent="onPictureClicked()"
@@ -108,6 +109,10 @@ const props = defineProps({
   },
   showMovie: {
     default: true,
+    type: Boolean
+  },
+  noPreview: {
+    default: false,
     type: Boolean
   }
 })

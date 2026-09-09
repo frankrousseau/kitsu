@@ -38,7 +38,6 @@ const store = useStore()
 
 const props = defineProps({
   active: { type: Boolean, default: false },
-  errorText: { type: String, default: '' },
   isError: { type: Boolean, default: false },
   isLoading: { type: Boolean, default: false }
 })

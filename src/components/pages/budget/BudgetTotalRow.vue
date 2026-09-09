@@ -97,14 +97,6 @@ const props = defineProps({
     type: Array,
     required: true
   },
-  hardwareItemsCosts: {
-    type: Object,
-    required: true
-  },
-  softwareLicensesCosts: {
-    type: Object,
-    required: true
-  },
   convertedExpenses: {
     type: Object,
     required: true

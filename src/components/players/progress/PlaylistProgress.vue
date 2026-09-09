@@ -101,17 +101,9 @@ const props = defineProps({
     default: 0,
     type: Number
   },
-  isFullMode: {
-    default: false,
-    type: Boolean
-  },
   isFullScreen: {
     default: false,
     type: Boolean
-  },
-  movieDimensions: {
-    default: () => ({}),
-    type: Object
   },
   nbFrames: {
     default: 0,
@@ -128,10 +120,6 @@ const props = defineProps({
   playlistShotPosition: {
     default: () => ({}),
     type: Object
-  },
-  previewId: {
-    default: '',
-    type: String
   },
   urlPrefix: {
     default: null,

@@ -1382,6 +1382,9 @@
       "delete_version_error": "Hiba történt az időbeosztás-verzió törlésekor. Kérlek keresd fel a támogató csapatot.",
       "delete_version_message": "Biztosan törölni akarod a(z) {name} időbeosztás-verziót? Kérlek erősítsd meg az időbeosztás-verzió nevének begépelésével.",
       "drop_forbidden_department": "Nem tagja a feladat részlegének",
+      "drop_forbidden_person": "Az osztályaidon kívüli személy",
+      "drop_forbidden_role": "Nincs kiosztási jogod ezen a produkción",
+      "drop_forbidden_task_type": "Az osztályaidon kívüli feladat típus",
       "drop_forbidden_team": "Nem tagja a produkció csapatának",
       "edit_task": "Feladat szerkesztése",
       "edit_version": "Időbeosztás-verzió szerkesztése",
@@ -2081,7 +2084,11 @@
       "no_chat": "Jelenleg nem veszel részt egyetlen elem chatben sem. Keress egy elemet, és csatlakozz egy chathez az oldaláról.",
       "no_message_yet": "Nincs üzenet",
       "search_entity": "Elem keresése",
-      "title": "Elem chatek"
+      "title": "Elem chatek",
+      "join_error": "Hiba történt a chathez való csatlakozáskor.",
+      "leave_error": "Hiba történt a chat elhagyásakor.",
+      "loading_error": "Hiba történt a chat betöltésekor.",
+      "send_error": "Hiba történt az üzenet elküldésekor."
     },
     "hard_delete": {
       "delete_for_selection_hard_lock_text": "TÖRLÉS",
@@ -2232,6 +2239,8 @@
     "team_schedule": {
       "busy": "Egy másik produkción dolgozik",
       "empty": "Egyetlen személy sem felel meg a jelenlegi szűrőknek. Próbáld bővíteni a stúdió-, osztály- vagy produkciószűrőket.",
+      "no_assignment_role": "Ezen a produkción nem oszthatsz ki feladatokat.",
+      "no_department_task_type": "Az osztályaid egyetlen feladat típusa sem felel meg a produkciószűrőnek.",
       "person_placeholder": "Válassz egy személyt...",
       "title": "Időbeosztás",
       "title_main": "Stáb időbeosztása"

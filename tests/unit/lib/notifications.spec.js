@@ -3,6 +3,7 @@
 import {
   buildDesktopNotificationPayload,
   buildEntityRoute,
+  buildTestNotificationPayload,
   buildPlaylistRoute,
   isAssignation,
   isComment,
@@ -28,7 +29,8 @@ const baseContext = () => ({
   taskTypeMap: new Map([
     ['task-type-1', { for_entity: 'Shot', name: 'Animation' }]
   ]),
-  organisation: { id: 'organisation-1', name: 'My Studio', has_avatar: true }
+  organisationLogoPath:
+    '/api/pictures/thumbnails/organisations/organisation-1.png?t=1234'
 })
 
 const baseNotification = overrides => ({
@@ -222,7 +224,7 @@ describe('buildDesktopNotificationPayload', () => {
     expect(payload.body).toBe('My Project / Sequence / Shot / Animation')
     expect(payload.tag).toBe('notification-1')
     expect(payload.icon).toBe(
-      '/api/pictures/thumbnails/organisations/organisation-1.png'
+      '/api/pictures/thumbnails/organisations/organisation-1.png?t=1234'
     )
     expect(payload.route.name).toBe('task')
   })
@@ -333,6 +335,28 @@ describe('buildDesktopNotificationPayload', () => {
       ctx
     )
     expect(payload.route).toEqual({ name: 'notifications' })
+  })
+
+  // The studio logo url is built by the store, which stamps it when the logo
+  // changes. Rebuilding it here would serve the icon the browser has cached.
+  test('falls back to the Kitsu icon without a studio logo', () => {
+    const ctx = baseContext()
+    ctx.organisationLogoPath = null
+    const payload = buildDesktopNotificationPayload(
+      baseNotification({ notification_type: 'comment' }),
+      ctx
+    )
+    expect(payload.icon).not.toContain('organisations/')
+  })
+
+  test('the test notification takes the same studio logo path', () => {
+    const payload = buildTestNotificationPayload(
+      t,
+      '/api/pictures/thumbnails/organisations/organisation-1.png?t=1234'
+    )
+    expect(payload.icon).toBe(
+      '/api/pictures/thumbnails/organisations/organisation-1.png?t=1234'
+    )
   })
 
   test('uses Unknown when author is missing from personMap', () => {

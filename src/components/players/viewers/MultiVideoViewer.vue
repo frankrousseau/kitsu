@@ -77,10 +77,6 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
-  fullScreen: {
-    type: Boolean,
-    default: false
-  },
   handleIn: {
     type: Number,
     default: 0

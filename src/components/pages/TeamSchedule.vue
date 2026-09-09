@@ -62,6 +62,7 @@
           class="flexrow-item"
           :display-all-and-my-departments="true"
           :label="$t('main.department')"
+          :my-departments-only="isSupervisorWithDepartments"
           :width="300"
           v-model="selectedDepartment"
         />
@@ -84,13 +85,17 @@
         </div>
       </div>
 
+      <div class="empty-schedule schedule-error" v-if="errors.schedule">
+        <table-info is-error />
+        <button-simple :text="$t('main.reload')" @click="init" />
+      </div>
       <schedule
         ref="schedule"
+        :assign-rule="assignRule"
         :dragged-items="draggedTasks"
         :end-date="endDate"
         :hide-man-days="true"
         :hierarchy="scheduleItems"
-        :is-error="errors.schedule"
         :is-estimation-linked="true"
         :multiline="true"
         :reassignable="true"
@@ -102,7 +107,7 @@
         @item-drop="onScheduleItemDropped"
         @item-unassign="onScheduleItemUnassigned"
         @root-element-expanded="expandPersonElement"
-        v-if="loading.schedule || errors.schedule || scheduleItems.length > 0"
+        v-else-if="loading.schedule || scheduleItems.length > 0"
       />
       <div class="empty-schedule" v-else>
         <user-search-icon :size="40" />
@@ -138,6 +143,7 @@
           />
           <combobox-task-type
             class="mb05"
+            :disabled="taskTypeList.length === 0"
             :label="$t('news.task_type')"
             :task-type-list="taskTypeList"
             v-model="filters.taskTypeId"
@@ -233,6 +239,17 @@
               @click="loadUnassignedTasks()"
             />
           </div>
+        </div>
+        <div class="has-text-centered" v-else-if="taskTypeList.length === 0">
+          <em>
+            {{
+              $t(
+                isAssignmentForbidden
+                  ? 'team_schedule.no_assignment_role'
+                  : 'team_schedule.no_department_task_type'
+              )
+            }}
+          </em>
         </div>
         <div class="has-text-centered" v-else>
           <em>{{ $t('main.no_results') }}</em>
@@ -356,12 +373,16 @@ const scheduleRef = useTemplateRef('schedule')
 
 // Computed
 // --------------------------------------------------------------------------
+const currentUserRoleForProduction = computed(
+  () => store.getters.currentUserRoleForProduction
+)
 const daysOff = computed(() => store.getters.daysOff)
 const departmentMap = computed(() => store.getters.departmentMap)
 const displayedPeople = computed(() => store.getters.displayedPeople)
 const getProductionTaskTypes = computed(
   () => store.getters.getProductionTaskTypes
 )
+const isCurrentUserAdmin = computed(() => store.getters.isCurrentUserAdmin)
 const isCurrentUserManager = computed(() => store.getters.isCurrentUserManager)
 const openProductions = computed(() => store.getters.openProductions)
 const organisation = computed(() => store.getters.organisation)
@@ -374,6 +395,23 @@ const daysOffByPerson = computed(() =>
     acc[dayOff.person_id] = (acc[dayOff.person_id] || []).concat(dayOff)
     return acc
   }, {})
+)
+
+// The department filter follows the role held on the production filter,
+// the global role standing in for "All": a supervisor attached to
+// departments only browses those.
+const isSupervisorWithDepartments = computed(() =>
+  Boolean(scopedDepartments(selectedProduction.value)?.length)
+)
+
+// The unassigned panel is scoped the same way by its own production
+// filter, an artist role leaving nothing to list.
+const isDepartmentScoped = computed(() =>
+  Boolean(scopedDepartments(filters.productionId))
+)
+
+const isAssignmentForbidden = computed(
+  () => scopedDepartments(filters.productionId)?.length === 0
 )
 
 const departmentFilter = computed(() => {
@@ -417,7 +455,11 @@ const taskTypeList = computed(() => {
   const types = getProductionTaskTypes
     .value(filters.productionId)
     .filter(type => type.for_entity !== 'Concept')
-  return addAllValue(types)
+  // the open tasks API takes a single task type, so a scoped supervisor
+  // gets no "All" entry: it would list the other departments' tasks
+  return isDepartmentScoped.value
+    ? types.filter(type => canEditTaskType(type, filters.productionId))
+    : addAllValue(types)
 })
 
 // Functions
@@ -432,22 +474,62 @@ const addAllValue = list => [
   ...list
 ]
 
+// Zou lets a supervisor with departments assign and reschedule only the
+// tasks of those departments, and only to people of those departments; a
+// supervisor without any acts on everything. An artist may only
+// self-assign in their own department on Zou: the page keeps such a
+// production inert. The role is held per production, an admin never being
+// demoted by one.
+const scopedDepartments = productionId => {
+  const role = isCurrentUserAdmin.value
+    ? 'admin'
+    : currentUserRoleForProduction.value(productionId)
+  if (['admin', 'manager'].includes(role)) {
+    return null
+  }
+  if (role !== 'supervisor') {
+    return []
+  }
+  return user.value.departments.length > 0 ? user.value.departments : null
+}
+
+const canEditTaskType = (taskType, productionId) => {
+  const departments = scopedDepartments(productionId)
+  return !departments || departments.includes(taskType.department_id)
+}
+
+// Asked by the schedule before a drop and during a reassign drag: the
+// reason of the refusal, or null.
+const assignRule = (task, person) => {
+  const departments = scopedDepartments(task.project_id)
+  if (!departments) {
+    return null
+  }
+  if (departments.length === 0) {
+    return 'role'
+  }
+  const taskType = taskTypeMap.value.get(task.task_type_id)
+  if (!departments.includes(taskType?.department_id)) {
+    return 'task_type'
+  }
+  const isSharedDepartment = person.departments.some(departmentId =>
+    departments.includes(departmentId)
+  )
+  return isSharedDepartment ? null : 'person'
+}
+
 const init = async () => {
   loading.schedule = true
+  errors.schedule = false
   try {
     await store.dispatch('loadPeople')
     await loadPersonDates()
-    await store.dispatch('loadDaysOff')
   } catch (err) {
     console.error(err)
     errors.schedule = true
     loading.schedule = false
     return
   }
-
-  refreshSchedule()
-  scrollScheduleToToday()
-
   startDate.value = moment()
   endDate.value = moment().add(3, 'months')
   Object.values(personDates.value).forEach(dates => {
@@ -458,10 +540,35 @@ const init = async () => {
       endDate.value = dates.endDate.clone()
     }
   })
+  await loadDaysOff()
+
+  loading.schedule = false
+  refreshSchedule()
+  scrollScheduleToToday()
 
   selectedStartDate.value = startDate.value.toDate()
   selectedEndDate.value = endDate.value.toDate()
-  loading.schedule = false
+}
+
+// Days off only grey out cells and snap drags to business days: a
+// failure must not blank the schedule.
+const loadDaysOff = async () => {
+  try {
+    await store.dispatch('loadDaysOff', {
+      startDate: startDate.value,
+      endDate: endDate.value
+    })
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+// The root items carry the days off of their person: patch them in
+// place, a rebuild would collapse the expanded rows.
+const refreshDaysOff = () => {
+  scheduleItems.value.forEach(item => {
+    item.daysOff = daysOffByPerson.value[item.id]
+  })
 }
 
 const toggleTaskSidePanel = () => {
@@ -473,10 +580,31 @@ const toggleTaskSidePanel = () => {
   }
 }
 
+// Keep the filter on a listed task type: a production change may have
+// dropped the current one, and the scoped list has no "All" entry to
+// fall back on. Returns true when the filter moved.
+const syncTaskTypeFilter = () => {
+  const ids = taskTypeList.value.map(({ id }) => id)
+  if (ids.includes(filters.taskTypeId || '')) {
+    return false
+  }
+  filters.taskTypeId = ids[0] ?? null
+  return true
+}
+
 const loadUnassignedTasks = async (more = false) => {
-  loading.unassignedTasks = true
   errors.unassignedTasks = false
-  const page = more ? unassignedTasksPage.value + 1 : 1
+  // a moved filter restarts the list, "load more" or not
+  const append = !syncTaskTypeFilter() && more
+  if (isDepartmentScoped.value && !filters.taskTypeId) {
+    unassignedTasks.value = []
+    selectedTaskIds.value = new Set()
+    totalUnassignedTasks.value = 0
+    loading.hasMoreUnassignedTasks = false
+    return
+  }
+  loading.unassignedTasks = true
+  const page = append ? unassignedTasksPage.value + 1 : 1
   try {
     const { data, is_more, stats } = await store.dispatch('loadOpenTasks', {
       limit: 20,
@@ -486,7 +614,7 @@ const loadUnassignedTasks = async (more = false) => {
       task_type_id: filters.taskTypeId
     })
     unassignedTasksPage.value = page
-    if (!more) {
+    if (!append) {
       unassignedTasks.value = []
       // fresh list (filter change, panel reopen): stale selection ids
       // would silently survive and reattach if the tasks come back
@@ -560,7 +688,12 @@ const refreshPersonRootDates = person => {
   }
 }
 
+// The mount-time filter watchers fire before the person dates exist:
+// init() rebuilds the schedule itself once they are loaded.
 const refreshSchedule = () => {
+  if (loading.schedule) {
+    return
+  }
   const people = selectedPerson.value
     ? [selectedPerson.value]
     : selectablePeople.value
@@ -610,7 +743,7 @@ const buildTaskScheduleItem = (parentElement, task) => {
     startDate,
     endDate,
     man_days: task.estimation,
-    editable: true,
+    editable: canEditTaskType(taskType, task.project_id),
     unresizable: false,
     color: taskType.color,
     parentElement
@@ -786,12 +919,16 @@ const expandPersonElement = async (element, refreshScheduleCallBack) => {
   element.loading = false
 }
 
-const onUpdateSelectedStartDate = date => {
+const onUpdateSelectedStartDate = async date => {
   startDate.value = parseSimpleDate(date)
+  await loadDaysOff()
+  refreshDaysOff()
 }
 
-const onUpdateSelectedEndDate = date => {
+const onUpdateSelectedEndDate = async date => {
   endDate.value = parseSimpleDate(date)
+  await loadDaysOff()
+  refreshDaysOff()
 }
 
 const scrollScheduleToToday = () => {
@@ -804,6 +941,23 @@ const clearHiddenSelectedPerson = () => {
     !selectablePeople.value.includes(selectedPerson.value)
   ) {
     peopleFieldRef.value.clear()
+  }
+}
+
+// Keep the department filter on an entry the combobox lists: the scope
+// follows the production filter, and a bookmark may carry any value.
+const syncDepartmentFilter = () => {
+  const department = selectedDepartment.value
+  if (isSupervisorWithDepartments.value) {
+    if (
+      department !== 'MY_DEPARTMENTS' &&
+      !user.value.departments.includes(department)
+    ) {
+      selectedDepartment.value = 'MY_DEPARTMENTS'
+    }
+  } else if (department === 'MY_DEPARTMENTS' && isCurrentUserManager.value) {
+    // the unscoped list only offers "My departments" to a global supervisor
+    selectedDepartment.value = 'ALL'
   }
 }
 
@@ -859,6 +1013,8 @@ watch(selectedProduction, value => {
   refreshSchedule()
 })
 
+watch(isSupervisorWithDepartments, syncDepartmentFilter)
+
 watch(zoomLevel, value => {
   updateRoute({ zoom: value })
 })
@@ -872,15 +1028,17 @@ watch(isTaskSidePanelOpen, open => {
 // Lifecycle
 // --------------------------------------------------------------------------
 onMounted(() => {
+  selectedStudio.value = route.query.studio || undefined
+  selectedProduction.value = route.query.production || undefined
+  // Supervisors land on their own departments (issue #1579), a bookmarked
+  // department outside them included.
   const department = route.query.department
   if (department) {
     selectedDepartment.value = department
-  } else if (!isCurrentUserManager.value && user.value.departments.length) {
-    // Supervisors land on their own departments (issue #1579).
+  } else if (isSupervisorWithDepartments.value) {
     selectedDepartment.value = 'MY_DEPARTMENTS'
   }
-  selectedStudio.value = route.query.studio || undefined
-  selectedProduction.value = route.query.production || undefined
+  syncDepartmentFilter()
   const zoom = Number(route.query.zoom)
   zoomLevel.value = zoomOptions.some(option => option.value === zoom)
     ? zoom

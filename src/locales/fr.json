@@ -1382,6 +1382,9 @@
       "delete_version_error": "Une erreur s'est produite lors de la suppression de cette version du planning. Veuillez contacter notre équipe d'assistance.",
       "delete_version_message": "Êtes-vous sûr de vouloir supprimer la version du planning {name} ? Veuillez confirmer en tapant le nom de la version du planning ci-dessous.",
       "drop_forbidden_department": "Ne fait pas partie du département de la tâche",
+      "drop_forbidden_person": "Personne hors de vos départements",
+      "drop_forbidden_role": "Aucun droit d'assignation sur cette production",
+      "drop_forbidden_task_type": "Type de tâche hors de vos départements",
       "drop_forbidden_team": "Ne fait pas partie de l'équipe de la production",
       "edit_task": "Modifier la tâche",
       "edit_version": "Modifier la version du planning",
@@ -1896,6 +1899,8 @@
     "team_schedule": {
       "busy": "Occupé sur une autre production",
       "empty": "Personne ne correspond aux filtres actuels. Essayez d'élargir les filtres studio, département ou production.",
+      "no_assignment_role": "Vous ne pouvez pas assigner de tâches sur cette production.",
+      "no_department_task_type": "Aucun type de tâche de vos départements ne correspond au filtre de production.",
       "person_placeholder": "Sélectionner une personne...",
       "title": "Planning",
       "title_main": "Planning d'équipe"
@@ -1962,7 +1967,11 @@
       "title": "Chats d'entités",
       "delete_message": "Êtes-vous sûr de vouloir supprimer ce message ?",
       "delete_message_confirm": "Supprimer le message",
-      "search_entity": "Recherche d'une entité"
+      "search_entity": "Recherche d'une entité",
+      "join_error": "Une erreur est survenue en rejoignant le chat.",
+      "leave_error": "Une erreur est survenue en quittant le chat.",
+      "loading_error": "Une erreur est survenue en chargeant le chat.",
+      "send_error": "Une erreur est survenue en envoyant le message."
     },
     "concepts": {
       "add_links": "Ajouter des liens vers les assets",

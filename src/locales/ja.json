@@ -1382,6 +1382,9 @@
       "delete_version_error": "このスケジュールバージョンの削除中にエラーが発生しました。サポートチームまでお問い合わせください。",
       "delete_version_message": "スケジュールバージョン {name} を削除してもよろしいですか？確認のため、下にバージョン名を入力してください。",
       "drop_forbidden_department": "タスクの部門に属していません",
+      "drop_forbidden_person": "自分の部門外のユーザー",
+      "drop_forbidden_role": "このプロダクションでのアサイン権限がありません",
+      "drop_forbidden_task_type": "自分の部門外のタスクタイプ",
       "drop_forbidden_team": "プロダクションのチームに属していません",
       "edit_task": "タスクを編集",
       "edit_version": "スケジュールバージョンの編集",
@@ -1896,6 +1899,8 @@
     "team_schedule": {
       "busy": "別のプロダクションで作業中",
       "empty": "現在のフィルターに一致するユーザーがいません。スタジオ、部門、プロダクションのフィルターを広げてみてください。",
+      "no_assignment_role": "このプロダクションではタスクをアサインできません。",
+      "no_department_task_type": "プロダクションフィルターに一致する自分の部門のタスクタイプがありません。",
       "person_placeholder": "ユーザーを選択…",
       "title": "スケジュール",
       "title_main": "チームスケジュール"
@@ -1962,7 +1967,11 @@
       "title": "チャット",
       "delete_message": "このメッセージを削除してもよろしいですか？",
       "delete_message_confirm": "メッセージを削除",
-      "search_entity": "エンティティを検索"
+      "search_entity": "エンティティを検索",
+      "join_error": "チャットへの参加中にエラーが発生しました。",
+      "leave_error": "チャットからの退出中にエラーが発生しました。",
+      "loading_error": "チャットの読み込み中にエラーが発生しました。",
+      "send_error": "メッセージの送信中にエラーが発生しました。"
     },
     "concepts": {
       "add_links": "アセットにリンクを追加",

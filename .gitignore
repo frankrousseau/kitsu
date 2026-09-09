@@ -46,6 +46,9 @@ test/e2e/reports
 test/test-bundle.js
 tests/test-bundle.js
 
+# Vitest 5 writes reports, blob results and attachments here
+.vitest
+
 # IDE
 .idea/
 .vscode/

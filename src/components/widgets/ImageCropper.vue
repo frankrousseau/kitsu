@@ -54,10 +54,11 @@
         <input
           class="zoom-slider"
           type="range"
-          :min="minScale"
-          :max="maxScale"
-          step="0.001"
-          v-model.number="scale"
+          min="1"
+          max="4"
+          step="0.01"
+          :value="zoom"
+          @input="onZoomInput"
         />
         <span class="zoom-icon" aria-hidden="true">+</span>
       </div>
@@ -71,7 +72,13 @@
 
 <script setup>
 import { UploadIcon } from 'lucide-vue-next'
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
+
+const EXTENSIONS = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp'
+}
 
 const props = defineProps({
   shape: {
@@ -81,7 +88,8 @@ const props = defineProps({
   },
   size: { type: Number, default: 180 },
   outputSize: { type: Number, default: 400 },
-  outputType: { type: String, default: 'image/jpeg' },
+  // Empty means "follow the pixels": see cropMimeType below.
+  outputType: { type: String, default: '' },
   outputQuality: { type: Number, default: 0.92 }
 })
 
@@ -93,7 +101,7 @@ const originalFile = ref(null)
 const formData = ref(null)
 const previewUrl = ref(null)
 const naturalSize = ref({ width: 0, height: 0 })
-const scale = ref(1)
+const zoom = ref(1)
 const offset = ref({ x: 0, y: 0 })
 const isDragging = ref(false)
 const isDragOver = ref(false)
@@ -105,7 +113,11 @@ const minScale = computed(() => {
   return Math.max(props.size / width, props.size / height)
 })
 
-const maxScale = computed(() => minScale.value * 4)
+// The slider drives a 1x to 4x factor over the fit scale rather than the scale
+// itself, so its bounds never move: a range input clamps a value written under
+// its previous min/max, and Vue patches the value before the bounds, which left
+// the thumb stranded whenever a new image changed the fit scale.
+const scale = computed(() => minScale.value * zoom.value)
 
 const imageStyle = computed(() => {
   const { width, height } = naturalSize.value
@@ -147,7 +159,7 @@ const reset = () => {
   formData.value = null
   originalFile.value = null
   naturalSize.value = { width: 0, height: 0 }
-  scale.value = 1
+  zoom.value = 1
   offset.value = { x: 0, y: 0 }
   isDragOver.value = false
   if (fileInputRef.value) fileInputRef.value.value = ''
@@ -186,8 +198,22 @@ const onImageLoad = event => {
     width: event.target.naturalWidth,
     height: event.target.naturalHeight
   }
-  scale.value = minScale.value
+  zoom.value = 1
   centerOffset()
+}
+
+// Zooming holds whatever the frame is centered on, then clamps back inside the
+// image.
+const onZoomInput = event => {
+  const previous = zoom.value
+  zoom.value = Number(event.target.value)
+  if (!naturalSize.value.width) return
+  const ratio = zoom.value / previous
+  const center = props.size / 2
+  offset.value = clampOffset(
+    center - (center - offset.value.x) * ratio,
+    center - (center - offset.value.y) * ratio
+  )
 }
 
 const pointerCoords = event => {
@@ -234,24 +260,40 @@ const onPointerUp = () => {
   window.removeEventListener('touchend', onPointerUp)
 }
 
-watch(scale, (value, previous) => {
-  if (!naturalSize.value.width) return
-  if (!previous || previous === value) {
-    offset.value = clampOffset(offset.value.x, offset.value.y)
-    return
-  }
-  const ratio = value / previous
-  const centerX = props.size / 2
-  const centerY = props.size / 2
-  const newX = centerX - (centerX - offset.value.x) * ratio
-  const newY = centerY - (centerY - offset.value.y) * ratio
-  offset.value = clampOffset(newX, newY)
-})
-
 onBeforeUnmount(() => {
   releasePreview()
   onPointerUp()
 })
+
+// JPEG has no alpha channel: the canvas spec composites the bitmap onto solid
+// black before encoding it, which is where the black square behind a
+// transparent logo comes from. The drawn pixels are the only reliable signal:
+// the file input filters on extensions, but a drop accepts any image/*, so an
+// SVG or HEIC source would slip through a container allowlist. Stepping by 4
+// beats a functional scan here: 640k entries, and it stops on the first hit.
+const hasAlpha = ctx => {
+  try {
+    const { data } = ctx.getImageData(0, 0, props.outputSize, props.outputSize)
+    for (let index = 3; index < data.length; index += 4) {
+      if (data[index] < 255) return true
+    }
+    return false
+  } catch {
+    // A same-origin blob: URL never taints the canvas, but PNG is the answer
+    // that cannot lose anything if it ever did.
+    return true
+  }
+}
+
+const cropMimeType = ctx =>
+  props.outputType || (hasAlpha(ctx) ? 'image/png' : 'image/jpeg')
+
+// The browser silently falls back to PNG when it cannot encode the requested
+// type, so the extension follows the blob that came out, not the request.
+const outputFileName = type => {
+  const base = (originalFile.value?.name || 'image').replace(/\.[^.]+$/, '')
+  return `${base}.${EXTENSIONS[type] || 'png'}`
+}
 
 // Public API — render the visible region of the frame onto an off-screen
 // canvas at outputSize x outputSize and return a fresh FormData. Falls back
@@ -286,13 +328,14 @@ const cropToFormData = () =>
           reject(new Error('Cropping failed'))
           return
         }
-        const name = originalFile.value?.name || 'image.jpg'
-        const file = new File([blob], name, { type: blob.type })
+        const file = new File([blob], outputFileName(blob.type), {
+          type: blob.type
+        })
         const data = new FormData()
         data.append('file', file, file.name)
         resolve(data)
       },
-      props.outputType,
+      cropMimeType(ctx),
       props.outputQuality
     )
   })

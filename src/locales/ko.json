@@ -1382,6 +1382,9 @@
       "delete_version_error": "이 일정 버전을 삭제하는 동안 오류가 발생했습니다. 지원팀에 문의하세요.",
       "delete_version_message": "일정 버전 {name}을 삭제하시겠습니까? 아래에 일정 버전 이름을 입력하여 확인해 주세요.",
       "drop_forbidden_department": "태스크의 부서에 속해 있지 않습니다",
+      "drop_forbidden_person": "내 부서 외의 사람",
+      "drop_forbidden_role": "이 프로덕션에 할당 권한이 없습니다",
+      "drop_forbidden_task_type": "내 부서 외의 작업 유형",
       "drop_forbidden_team": "제작 팀에 속해 있지 않습니다",
       "edit_task": "작업 편집",
       "edit_version": "일정 버전 편집",
@@ -1896,6 +1899,8 @@
     "team_schedule": {
       "busy": "다른 제작 작업 중",
       "empty": "현재 필터와 일치하는 사람이 없습니다. 스튜디오, 부서 또는 제작 필터를 넓혀 보세요.",
+      "no_assignment_role": "이 프로덕션에서는 작업을 할당할 수 없습니다.",
+      "no_department_task_type": "프로덕션 필터와 일치하는 내 부서의 작업 유형이 없습니다.",
       "person_placeholder": "사람 선택...",
       "title": "일정",
       "title_main": "팀 일정"
@@ -1962,7 +1967,11 @@
       "title": "엔티티 채팅",
       "delete_message": "이 메시지를 삭제하시겠습니까?",
       "delete_message_confirm": "메시지 삭제",
-      "search_entity": "엔티티 검색"
+      "search_entity": "엔티티 검색",
+      "join_error": "채팅에 참여하는 동안 오류가 발생했습니다.",
+      "leave_error": "채팅에서 나가는 동안 오류가 발생했습니다.",
+      "loading_error": "채팅을 불러오는 동안 오류가 발생했습니다.",
+      "send_error": "메시지를 보내는 동안 오류가 발생했습니다."
     },
     "concepts": {
       "add_links": "에셋에 링크 추가",

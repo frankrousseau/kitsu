@@ -8,24 +8,25 @@ import {
   formatDisplayDate,
   formatDuration,
   formatFullDate,
-  formatFullDateWithTimezone,
   formatFullDateWithRevertedTimezone,
+  formatFullDateWithTimezone,
   formatShortDate,
   formatSimpleDate,
   formatTimeOfDay,
   formatVerboseDate,
-  hoursToDays,
   getBusinessDays,
-  getDayOffRange,
-  getDayRange,
   getDatesFromEndDate,
   getDatesFromStartDate,
+  getDayOffRange,
+  getDayRange,
   getEndDateFromString,
   getFirstStartDate,
   getLastEndDate,
   getMonthRange,
+  getMonthsBetween,
   getStartDateFromString,
   getWeekRange,
+  hoursToDays,
   minutesToDays,
   monthToString,
   parseDate,
@@ -453,5 +454,51 @@ describe('time', () => {
       { id: 'off-2', date: '2023-05-02', end_date: '2023-05-03' },
       { id: 'off-2', date: '2023-05-03', end_date: '2023-05-03' }
     ])
+  })
+})
+
+describe('getMonthsBetween', () => {
+  it('lists every month the range touches', () => {
+    expect(getMonthsBetween('2026-08-20', '2026-10-03')).toEqual([
+      { year: 2026, month: 8 },
+      { year: 2026, month: 9 },
+      { year: 2026, month: 10 }
+    ])
+  })
+
+  it('crosses the year and accepts moments', () => {
+    expect(
+      getMonthsBetween(moment('2026-12-31'), moment('2027-01-01'))
+    ).toEqual([
+      { year: 2026, month: 12 },
+      { year: 2027, month: 1 }
+    ])
+  })
+
+  it('keeps a single month when both dates share it', () => {
+    expect(getMonthsBetween('2026-09-01', '2026-09-30')).toEqual([
+      { year: 2026, month: 9 }
+    ])
+  })
+
+  it('returns nothing when the end precedes the start', () => {
+    expect(getMonthsBetween('2026-10-01', '2026-09-30')).toEqual([])
+  })
+
+  // The team schedule mixes UTC person dates with local moments: a diff in
+  // months truncates the offset away and used to drop the last month.
+  it('reads each date in its own calendar', () => {
+    expect(
+      getMonthsBetween(
+        moment.utc('2026-09-01'),
+        moment.tz('2026-12-09 10:00', 'Europe/Paris')
+      ).map(({ month }) => month)
+    ).toEqual([9, 10, 11, 12])
+    expect(
+      getMonthsBetween(
+        moment.tz('2026-09-01', 'America/Los_Angeles'),
+        moment.utc('2026-12-09')
+      ).map(({ month }) => month)
+    ).toEqual([9, 10, 11, 12])
   })
 })

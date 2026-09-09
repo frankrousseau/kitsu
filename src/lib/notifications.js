@@ -107,30 +107,27 @@ const buildBody = (notification, { taskTypeMap }) => {
   return segments.join(' / ')
 }
 
-const buildIcon = organisation => {
-  if (organisation?.has_avatar) {
-    return `/api/pictures/thumbnails/organisations/${organisation.id}.png`
-  }
-  return fallbackIcon
-}
+// The studio logo url comes from the store, which stamps it when the logo
+// changes. Rebuilding it here would pin the icon the browser has cached.
+const buildIcon = organisationLogoPath => organisationLogoPath || fallbackIcon
 
 export const buildDesktopNotificationPayload = (notification, context) => {
-  const { taskTypeMap, productionMap, organisation } = context
+  const { taskTypeMap, productionMap, organisationLogoPath } = context
   const route = isPlaylistReady(notification)
     ? buildPlaylistRoute(notification, productionMap)
     : buildEntityRoute(notification, taskTypeMap) || { name: 'notifications' }
   return {
     title: buildTitle(notification, context),
     body: buildBody(notification, context),
-    icon: buildIcon(organisation),
+    icon: buildIcon(organisationLogoPath),
     tag: notification.id,
     route
   }
 }
 
-export const buildTestNotificationPayload = (t, organisation) => ({
+export const buildTestNotificationPayload = (t, organisationLogoPath) => ({
   title: t('notifications.desktop.test_notification_title'),
   body: t('notifications.desktop.test_notification_body'),
-  icon: buildIcon(organisation),
+  icon: buildIcon(organisationLogoPath),
   route: { name: 'notifications' }
 })

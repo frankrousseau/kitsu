@@ -142,7 +142,7 @@
 
 <script setup>
 import { useHead } from '@unhead/vue'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useStore } from 'vuex'
 
@@ -186,11 +186,10 @@ const modals = reactive({
   avatar: false
 })
 
-const organisationLogoPath = ref('')
-
 // Computed
 
 const organisation = computed(() => store.getters.organisation)
+const organisationLogoPath = computed(() => store.getters.organisationLogoPath)
 
 // Functions
 
@@ -236,13 +235,7 @@ const uploadAvatarFile = formData => {
   errors.saveAvatar = false
   store
     .dispatch('uploadOrganisationLogo', formData)
-    .then(() => {
-      setTimeout(() => {
-        modals.avatar = false
-        const timestamp = Date.now()
-        organisationLogoPath.value = `/api/pictures/thumbnails/organisations/${organisation.value.id}.png?t=${timestamp}`
-      }, 500)
-    })
+    .then(hideAvatarModal)
     .catch(err => {
       console.error(err)
       errors.saveAvatar = true
@@ -291,12 +284,6 @@ watch(
   },
   { immediate: true }
 )
-
-// Lifecycle
-
-onMounted(() => {
-  organisationLogoPath.value = `/api/pictures/thumbnails/organisations/${organisation.value.id}.png`
-})
 
 // Head
 

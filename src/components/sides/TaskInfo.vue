@@ -325,7 +325,6 @@
 
         <move-comment-modal
           :active="modals.moveComment"
-          :comment="commentToMove"
           :source-task="task"
           :is-loading="loading.moveComment"
           :is-error="errors.moveComment"
@@ -463,10 +462,6 @@ const props = defineProps({
   inPlaylist: {
     type: Boolean,
     default: false
-  },
-  isLoading: {
-    type: Boolean,
-    default: true
   },
   isPreview: {
     type: Boolean,
@@ -729,7 +724,7 @@ const currentTaskType = computed(() =>
 )
 
 const currentFps = computed(() => {
-  if (!props.task) return 25
+  if (!props.task) return DEFAULT_FPS
   // An entity can override the production fps via data.fps; use it so
   // the player builds its frame model on the rate the video was
   // actually rendered at (otherwise frames get duplicated/dropped).
@@ -810,12 +805,13 @@ const isPicturePreview = computed(() =>
   ['png', 'gif'].includes(extension.value)
 )
 
-const taskStatuses = computed(() =>
-  store.getters.getTaskStatusForCurrentUser(
+const taskStatuses = computed(() => {
+  if (!props.task) return []
+  return store.getters.getTaskStatusForCurrentUser(
     props.task.project_id,
     isConceptTask.value
   )
-)
+})
 
 const taskPath = computed(() =>
   getTaskPath(
@@ -1315,9 +1311,11 @@ const timeCodeClicked = payload => {
     return
   }
   const { versionRevision, frame } = payload
-  changeCurrentPreview(
-    taskPreviews.value.find(p => p.revision === parseInt(versionRevision))
+  const preview = taskPreviews.value.find(
+    p => p.revision === parseInt(versionRevision)
   )
+  if (!preview) return
+  changeCurrentPreview(preview)
   setTimeout(() => {
     previewPlayerRef.value?.setCurrentFrame(frame)
     previewPlayerRef.value?.focus()

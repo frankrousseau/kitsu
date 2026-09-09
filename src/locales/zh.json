@@ -1382,6 +1382,9 @@
       "delete_version_error": "删除此计划表版本时发生错误。请联系我们的支持团队。",
       "delete_version_message": "您确定要删除计划表版本 {name}？请在下面输入计划表版本名称确认。",
       "drop_forbidden_department": "不属于该任务的部门",
+      "drop_forbidden_person": "不属于您部门的人员",
+      "drop_forbidden_role": "在该制作中无分配权限",
+      "drop_forbidden_task_type": "不属于您部门的任务类型",
       "drop_forbidden_team": "不属于该制作的团队",
       "edit_task": "编辑任务",
       "edit_version": "编辑时间表版本",
@@ -1896,6 +1899,8 @@
     "team_schedule": {
       "busy": "忙于其他制作",
       "empty": "没有符合当前筛选条件的人员。请尝试放宽工作室、部门或制作的筛选条件。",
+      "no_assignment_role": "您无法在该制作中分配任务。",
+      "no_department_task_type": "没有属于您部门的任务类型符合制作筛选条件。",
       "person_placeholder": "选择一个人...",
       "title": "时间安排",
       "title_main": "团队日程"
@@ -1962,7 +1967,11 @@
       "title": "实体聊天",
       "delete_message": "您确定要删除这条信息吗？",
       "delete_message_confirm": "删除信息",
-      "search_entity": "搜索实体"
+      "search_entity": "搜索实体",
+      "join_error": "加入聊天时出现错误。",
+      "leave_error": "离开聊天室时出现错误。",
+      "loading_error": "加载聊天时出现错误。",
+      "send_error": "发送信息时出现错误。"
     },
     "concepts": {
       "add_links": "添加资产链接",

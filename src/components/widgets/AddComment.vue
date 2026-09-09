@@ -382,7 +382,6 @@
       ref="addAttachmentModalRef"
       :active="modals.addCommentAttachment"
       :is-loading="loading.addCommentAttachment"
-      :is-error="errors.addCommentAttachment"
       :is-movie="isMovie"
       :is-picture="isPicture"
       :title="`${task.entity_name} / ${
@@ -512,10 +511,6 @@ const props = defineProps({
   revision: {
     type: Number,
     default: 1
-  },
-  time: {
-    type: Number,
-    default: 0
   },
   previewForms: {
     type: Array,

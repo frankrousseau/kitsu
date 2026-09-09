@@ -11,7 +11,6 @@
       :is-comparing="isComparing"
       :light="light"
       :margin-bottom="marginBottom"
-      :panzoom="panzoom"
       :preview="preview"
       @loaded="onViewerLoaded(preview)"
       @panzoom-changed="$event => $emit('panzoom-changed', $event)"
@@ -63,10 +62,6 @@ const props = defineProps({
   marginBottom: {
     type: Number,
     default: 0
-  },
-  panzoom: {
-    type: Boolean,
-    default: false
   },
   previews: {
     type: Array,

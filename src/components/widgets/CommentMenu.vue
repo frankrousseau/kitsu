@@ -79,10 +79,6 @@ defineProps({
   canMove: {
     type: Boolean,
     default: false
-  },
-  isForClient: {
-    type: Boolean,
-    default: false
   }
 })
 

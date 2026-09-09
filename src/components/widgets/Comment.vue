@@ -56,7 +56,6 @@
               :is-editable="isEditable"
               :can-toggle-for-client="canToggleForClient"
               :can-move="canMoveComment"
-              :is-for-client="Boolean(comment.for_client)"
               @pin-clicked="
                 () => {
                   emit('pin-comment', comment)
@@ -209,7 +208,7 @@
                     @keydown.enter.prevent="onDeleteReplyClicked(replyComment)"
                     @keydown.space.prevent="onDeleteReplyClicked(replyComment)"
                     v-if="
-                      isCurrentUserAdmin || replyComment.person_id === store.state.user.user?.id
+                      isCurrentUserAdmin || replyComment.person_id === user?.id
                     "
                   >
                     x
@@ -713,6 +712,7 @@ const isCurrentUserManager = computed(() =>
 )
 const personMap = computed(() => store.getters.personMap)
 const taskTypeMap = computed(() => store.getters.taskTypeMap)
+const user = computed(() => store.getters.user)
 const use12HourClock = computed(() => store.getters.use12HourClock)
 
 const attachmentNamePrefix = computed(() =>

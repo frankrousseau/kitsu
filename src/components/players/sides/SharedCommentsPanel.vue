@@ -148,7 +148,6 @@
         <add-attachment-modal
           :active="modals.attachment"
           :is-loading="false"
-          :is-error="false"
           :is-movie="false"
           :title="entity?.name || ''"
           :name-prefix="attachmentNamePrefix"

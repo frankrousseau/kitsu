@@ -30,6 +30,7 @@
           v-if="isInChat"
         />
       </div>
+      <error-text :text="$t('chats.leave_error')" :hidden="!errors.leave" />
       <div class="has-text-centered filler" v-if="loading.chat">
         <spinner class="mt1" />
       </div>
@@ -39,10 +40,12 @@
         @delete-message="showConfirmDeleteMessage"
         v-else
       />
+      <error-text :text="$t('chats.loading_error')" :hidden="!errors.chat" />
       <div class="join-chat" v-if="!isInChat">
         <button class="button" :is-loading="loading.join" @click="joinChat">
           {{ $t('chats.join') }}
         </button>
+        <error-text :text="$t('chats.join_error')" :hidden="!errors.join" />
       </div>
       <div class="message-box" v-else>
         <div>
@@ -89,13 +92,13 @@
             </span>
           </div>
         </div>
+        <error-text :text="$t('chats.send_error')" :hidden="!errors.send" />
       </div>
     </template>
 
     <add-attachment-modal
       :active="modals.addAttachment"
       :is-loading="loading.addAttachment"
-      :is-error="errors.addAttachment"
       :title="name"
       :name-prefix="attachmentNamePrefix"
       @cancel="closeAttachmentModal"
@@ -139,6 +142,7 @@ import ConfirmModal from '@/components/modals/ConfirmModal.vue'
 import EntityChatDays from '@/components/pages/entities/EntityChatDays.vue'
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
 import EmojiButton from '@/components/widgets/EmojiButton.vue'
+import ErrorText from '@/components/widgets/ErrorText.vue'
 import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
 import Spinner from '@/components/widgets/Spinner.vue'
 
@@ -217,7 +221,9 @@ const participantList = computed(() =>
 // --------------------------------------------------------------------------
 const reset = async () => {
   loading.chat = true
-  errors.chat = false
+  // the panel stays mounted across an entity change, so the errors of the
+  // previous chat would otherwise show under the new one
+  Object.keys(errors).forEach(key => (errors[key] = false))
   try {
     chat.value = await store.dispatch('getEntityChat', props.entity.id)
     messages.value = await store.dispatch(

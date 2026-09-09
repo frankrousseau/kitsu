@@ -369,7 +369,7 @@
     </div>
 
     <div class="column side-column is-hidden-mobile hide-small-screen">
-      <task-info :task="currentTask" :is-loading="loading.currentTask" />
+      <task-info :task="currentTask" />
     </div>
   </div>
 </template>
@@ -477,7 +477,6 @@ const currentNotificationId = ref(null)
 
 const errors = reactive({ notifications: false })
 const loading = reactive({
-  currentTask: true,
   markAll: false,
   more: false,
   notifications: false
@@ -496,7 +495,7 @@ const parameters = reactive({
 
 const departmentMap = computed(() => store.getters.departmentMap)
 const notifications = computed(() => store.getters.notifications)
-const organisation = computed(() => store.getters.organisation)
+const organisationLogoPath = computed(() => store.getters.organisationLogoPath)
 const personMap = computed(() => store.getters.personMap)
 const productionMap = computed(() => store.getters.productionMap)
 const taskStatus = computed(() => store.getters.taskStatus)
@@ -505,7 +504,7 @@ const taskTypeMap = computed(() => store.getters.taskTypeMap)
 const user = computed(() => store.getters.user)
 
 const testNotificationPayload = computed(() =>
-  buildTestNotificationPayload(t, organisation.value)
+  buildTestNotificationPayload(t, organisationLogoPath.value)
 )
 
 const taskStatusList = computed(() => [
@@ -652,11 +651,9 @@ const onNotificationSelected = (event, notification) => {
     return
   }
   if (currentNotificationId.value !== notification.id) {
-    loading.currentTask = true
     store
       .dispatch('loadTask', { taskId: notification.task_id })
       .then(task => {
-        loading.currentTask = false
         currentTask.value = task
         currentNotificationId.value = notification.id
       })

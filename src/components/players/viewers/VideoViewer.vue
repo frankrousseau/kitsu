@@ -52,10 +52,6 @@ import { DEFAULT_FPS, formatFrame } from '@/lib/video'
 import Spinner from '@/components/widgets/Spinner.vue'
 
 const props = defineProps({
-  big: {
-    type: Boolean,
-    default: false
-  },
   currentFrame: {
     type: Number,
     default: 0
@@ -80,10 +76,6 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  isDrawing: {
-    type: Boolean,
-    default: false
-  },
   isHd: {
     type: Boolean,
     default: false
@@ -97,10 +89,6 @@ const props = defineProps({
     default: false
   },
   isRoundedTopBorder: {
-    type: Boolean,
-    default: false
-  },
-  isTyping: {
     type: Boolean,
     default: false
   },

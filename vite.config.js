@@ -104,15 +104,14 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['vitest-localstorage-mock', 'tests/unit.setup.js'],
-    mockReset: false,
+    // Anchored at the repo root, so a stray copy of the suite elsewhere in the
+    // tree (an agent worktree, a build output) can never be collected.
+    include: ['tests/unit/**/*.spec.js'],
+    setupFiles: ['tests/storage.setup.js', 'tests/unit.setup.js'],
     // A fresh runner spawns per spec file, so spawn cost dominates: threads
     // reuse the process where the default 'forks' pool pays a Node bootstrap.
     pool: 'threads',
     isolate: true,
-    // Agent worktrees under .claude/ carry their own copy of the suite;
-    // without this exclude `vitest tests/unit` picks them up too.
-    exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'],
     deps: {
       optimizer: {
         client: {

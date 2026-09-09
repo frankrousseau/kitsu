@@ -115,8 +115,7 @@ const props = defineProps({
   isError: { type: Boolean, default: false },
   isLoading: { type: Boolean, default: false },
   isLoadingStay: { type: Boolean, default: false },
-  isSuccess: { type: Boolean, default: false },
-  text: { type: String, default: '' }
+  isSuccess: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['cancel', 'confirm', 'confirm-and-stay'])

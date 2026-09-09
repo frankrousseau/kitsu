@@ -77,7 +77,6 @@
       </button>
       <task-info
         :entity-type="currentEntityType"
-        :is-loading="loading.currentTask"
         :task="currentTask"
         with-actions
       />
@@ -139,7 +138,7 @@ const taskStatusId = ref('')
 const taskTypeId = ref('')
 
 const errors = reactive({ news: false })
-const loading = reactive({ more: false, news: false, currentTask: true })
+const loading = reactive({ more: false, news: false })
 
 // Non-reactive scheduling/selection state.
 const newsRefs = new Map()
@@ -217,14 +216,12 @@ const closeTask = () => {
 }
 
 const onNewsSelected = news => {
-  loading.currentTask = true
   const index = newsList.value.findIndex(n => n.id === news.id)
   if (lastSelection !== index) {
     lastSelection = index
     store
       .dispatch('loadTask', { taskId: news.task_id })
       .then(task => {
-        loading.currentTask = false
         currentTask.value = task
         currentNewsId.value = news.id
       })

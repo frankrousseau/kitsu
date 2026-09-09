@@ -159,8 +159,6 @@ const props = defineProps({
   active: { type: Boolean, default: false },
   allowRecording: { type: Boolean, default: true },
   extensions: { type: String, default: files.ALL_EXTENSIONS_STRING },
-  isEditing: { type: Boolean, default: false },
-  isError: { type: Boolean, default: false },
   isLoading: { type: Boolean, default: false },
   isMovie: { type: Boolean, default: false },
   isPicture: { type: Boolean, default: false },
