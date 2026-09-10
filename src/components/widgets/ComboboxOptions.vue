@@ -4,7 +4,7 @@
       class="combo"
       :class="{
         open: showList,
-        reversed: isReversed,
+        reversed: isReversed || openUp,
         thin
       }"
       ref="select"
@@ -30,6 +30,7 @@
       <div
         ref="list"
         class="select-input"
+        :class="{ 'align-right': alignRight }"
         role="listbox"
         aria-multiselectable="true"
         v-if="showList"
@@ -68,6 +69,8 @@ import { useComboboxKeyboard } from '@/composables/comboboxKeyboard'
 
 import ToggleButton from '@/components/widgets/ToggleButton.vue'
 
+const MAX_VISIBLE_OPTIONS = 7
+
 const emit = defineEmits(['change', 'update:model-value'])
 
 const props = defineProps({
@@ -97,6 +100,8 @@ const lastScrollPosition = ref(0)
 const list = ref(null)
 const showList = ref(false)
 const select = ref(null)
+const alignRight = ref(false)
+const openUp = ref(false)
 
 const optionList = computed(() => {
   return props.isReversed ? props.options.slice().reverse() : props.options
@@ -108,7 +113,18 @@ const toggleList = () => {
   }
   showList.value = !showList.value
   if (showList.value) {
+    // Reset before measuring: a list already flipped always fits.
+    alignRight.value = false
+    openUp.value = false
     nextTick(() => {
+      // Measured after the first default-position paint: the list size is
+      // only known once its options are rendered.
+      const rect = list.value?.getBoundingClientRect()
+      alignRight.value = !!rect && rect.right > window.innerWidth
+      if (rect && rect.bottom > window.innerHeight) {
+        const comboTop = select.value.getBoundingClientRect().top
+        openUp.value = comboTop >= rect.height
+      }
       const top =
         lastScrollPosition.value ||
         (props.isReversed && list.value?.scrollHeight) ||
@@ -204,7 +220,8 @@ const { activeIndex, onKeydown, optionId } = useComboboxKeyboard({
   border-top-right-radius: 1em;
   left: 0;
   margin-left: -1px;
-  max-height: 270px;
+  // Each row: 0.8em padding × 2 + 1.5em line-height + 1px border
+  max-height: calc(v-bind(MAX_VISIBLE_OPTIONS) * (3.1em + 1px) + 2px);
   overflow-x: hidden;
   overflow-y: auto;
   position: absolute;
@@ -215,6 +232,15 @@ const { activeIndex, onKeydown, optionId } = useComboboxKeyboard({
   .option-line {
     padding-right: 0.4em;
     white-space: nowrap;
+  }
+
+  &.align-right {
+    border-top-left-radius: 1em;
+    border-top-right-radius: 0;
+    left: auto;
+    margin-left: 0;
+    margin-right: -1px;
+    right: 0;
   }
 }
 
@@ -245,8 +271,12 @@ const { activeIndex, onKeydown, optionId } = useComboboxKeyboard({
     border-top-right-radius: 1em;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
-    height: 180px;
-    top: -180px;
+    bottom: 100%;
+    top: auto;
+
+    &.align-right {
+      border-bottom-left-radius: 1em;
+    }
   }
 }
 </style>
