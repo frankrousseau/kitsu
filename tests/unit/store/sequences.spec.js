@@ -203,3 +203,74 @@ describe('Sequences store, all-episodes pseudo-episode', () => {
     })
   })
 })
+
+describe('Sequences store, task entity name', () => {
+  const production = { id: 'p1' }
+  const episodeMap = new Map([['ep-a', { id: 'ep-a', name: 'E01' }]])
+  const taskTypeMap = new Map([
+    ['tt-1', { id: 'tt-1', name: 'Layout', priority: 1 }]
+  ])
+  const taskStatusMap = new Map()
+  const taskPayload = task => ({ task, production, taskTypeMap, taskStatusMap })
+  const buildTask = () => ({
+    id: 't-1',
+    entity_id: 'seq-1',
+    task_type_id: 'tt-1',
+    task_status_id: 'ts-1'
+  })
+  const buildState = () => ({
+    displayedSequences: [],
+    sequenceValidationColumns: [],
+    sequenceFilledColumns: {}
+  })
+
+  beforeEach(() => {
+    sequencesStore.cache.sequenceMap.clear()
+    sequencesStore.cache.sequences = []
+  })
+
+  // newSequence commits NEW_SEQUENCE_END then creates the entity tasks, so
+  // the task must get its name from a sequence never loaded with tasks.
+  test('a task created right after its sequence is named after it', () => {
+    const state = buildState()
+    const sequence = {
+      id: 'seq-1',
+      name: 'SQ01',
+      project_id: 'p1',
+      episode_id: 'ep-a',
+      parent_id: 'ep-a'
+    }
+    sequencesStore.mutations.NEW_SEQUENCE_END(state, { sequence, episodeMap })
+    const task = buildTask()
+    sequencesStore.mutations.NEW_TASK_END(state, taskPayload(task))
+    expect(task.entity_name).toEqual('E01 / SQ01')
+  })
+
+  test('a sequence loaded alone names the tasks created for it', () => {
+    const state = buildState()
+    const sequence = {
+      id: 'seq-1',
+      name: 'SQ01',
+      project_id: 'p1',
+      parent_id: 'ep-a',
+      tasks: [],
+      validations: new Map()
+    }
+    sequencesStore.mutations.ADD_SEQUENCE(state, { sequence, episodeMap })
+    const task = buildTask()
+    sequencesStore.mutations.CREATE_TASKS_END(
+      state,
+      { ...taskPayload(task), tasks: [task] }
+    )
+    expect(task.entity_name).toEqual('E01 / SQ01')
+  })
+
+  test('a sequence without episode names its tasks by itself', () => {
+    const state = buildState()
+    const sequence = { id: 'seq-1', name: 'SQ01', project_id: 'p1' }
+    sequencesStore.mutations.NEW_SEQUENCE_END(state, { sequence, episodeMap })
+    const task = buildTask()
+    sequencesStore.mutations.NEW_TASK_END(state, taskPayload(task))
+    expect(task.entity_name).toEqual('SQ01')
+  })
+})

@@ -12,6 +12,7 @@ import {
   sortTaskTypeScheduleItems,
   sortSequences,
   sortShots,
+  sortTaskNames,
   sortTaskTypes,
   sortTasks,
   sortValidationColumns, sortComments, sortRevisionPreviewFiles, sortAssetResult, sortShotResult
@@ -365,6 +366,20 @@ describe('lib/sorting', () => {
 
     results = sortProductions([])
     expect(results).toHaveLength(0)
+  })
+
+  it('sortTaskNames and sortTasks tolerate a task without entity names', () => {
+    // A task populated from a sequence loaded without full_name carries
+    // neither full_entity_name nor entity_name.
+    const build = () => [
+      { task_type_id: 'task-type-1', entity_name: 'Tree', priority: 0, id: 1 },
+      { task_type_id: 'task-type-1', priority: 0, id: 2 },
+      { task_type_id: 'task-type-1', entity_name: 'Chair', priority: 0, id: 3 }
+    ]
+    expect(sortTaskNames(build(), taskTypeMap).map(t => t.id)).toEqual([
+      2, 3, 1
+    ])
+    expect(sortTasks(build(), taskTypeMap).map(t => t.id)).toEqual([2, 3, 1])
   })
 
   it('sortValidationColumns', () => {

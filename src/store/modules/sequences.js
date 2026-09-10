@@ -107,6 +107,27 @@ const helpers = {
     return result
   },
 
+  getSequenceName(sequence) {
+    if (sequence.episode_name) {
+      return `${sequence.episode_name} / ${sequence.name}`
+    }
+    return sequence.name
+  },
+
+  // Sequences reach the cache from several loads (with tasks, plain list,
+  // single fetch, creation); resolve the episode the same way for all so
+  // the derived names never depend on which one ran.
+  setEpisodeInfo(sequence, episodeMap) {
+    const episode = episodeMap?.get(sequence.parent_id || sequence.episode_id)
+    if (episode) {
+      Object.assign(sequence, {
+        episode_id: episode.id,
+        episode_name: episode.name
+      })
+    }
+    sequence.full_name = helpers.getSequenceName(sequence)
+  },
+
   populateTask(production, task, sequence, taskTypeMap, taskStatusMap) {
     task.name = getTaskTypePriorityOfProd(
       taskTypeMap.get(task.task_type_id),
@@ -119,7 +140,7 @@ const helpers = {
     Object.assign(task, {
       project_id: sequence.production_id,
       sequence_id: sequence.id,
-      entity_name: sequence.full_name,
+      entity_name: helpers.getSequenceName(sequence),
       entity_type_name: 'Sequence',
       entity: {
         id: sequence.id,
@@ -689,14 +710,9 @@ const mutations = {
       const validations = new Map()
       let timeSpent = 0
       let estimation = 0
-      const episode = episodeMap.get(sequence.episode_id)
       sequence.project_name = production.name
       sequence.production_id = production.id
-      if (episode) {
-        sequence.full_name = `${episode.name} / ${sequence.name}`
-      } else {
-        sequence.full_name = sequence.name
-      }
+      helpers.setEpisodeInfo(sequence, episodeMap)
       sequence.tasks.forEach(task => {
         helpers.populateTask(
           production,
@@ -826,12 +842,13 @@ const mutations = {
     )
   },
 
-  [NEW_SEQUENCE_END](state, { sequence }) {
+  [NEW_SEQUENCE_END](state, { sequence, episodeMap }) {
     sequence.production_id = sequence.project_id
     sequence.preview_file_id = ''
     sequence.tasks = []
     sequence.validations = new Map()
     sequence.data = {}
+    helpers.setEpisodeInfo(sequence, episodeMap)
 
     state.sequenceSelectionGrid = buildSelectionGrid()
 
@@ -907,15 +924,7 @@ const mutations = {
     if (!sequences) sequences = []
     sequences.forEach(sequence => {
       cache.sequenceMap.set(sequence.id, sequence)
-      if (sequence.parent_id) {
-        const episode = episodeMap.get(sequence.parent_id)
-        if (episode) {
-          Object.assign(sequence, {
-            episode_id: episode.id,
-            episode_name: episode.name
-          })
-        }
-      }
+      helpers.setEpisodeInfo(sequence, episodeMap)
     })
     cache.sequences = sortByName(sequences)
     state.sequenceIndex = buildSequenceIndex(cache.sequences)
@@ -1061,15 +1070,7 @@ const mutations = {
     cache.sequences.push(sequence)
     const sortedSequences = sortSequences(cache.sequences)
     cache.sequenceMap.set(sequence.id, sequence)
-    if (sequence.parent_id) {
-      const episode = episodeMap.get(sequence.parent_id)
-      if (episode) {
-        Object.assign(sequence, {
-          episode_id: episode.id,
-          episode_name: episode.name
-        })
-      }
-    }
+    helpers.setEpisodeInfo(sequence, episodeMap)
     cache.sequences = sortedSequences
     state.displayedSequences.push(sequence)
     state.displayedSequences = sortSequences(state.displayedSequences)
