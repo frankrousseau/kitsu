@@ -25,7 +25,6 @@ import {
   ADD_PRODUCTION,
   UPDATE_PRODUCTION,
   REMOVE_PRODUCTION,
-  RESET_PRODUCTION_PATH,
   SET_CURRENT_PRODUCTION,
   PRODUCTION_PICTURE_FILE_SELECTED,
   PRODUCTION_AVATAR_UPLOADED,
@@ -74,24 +73,24 @@ const initialState = {
   isProductionsLoadingError: false,
   isOpenProductionsLoading: false,
 
-  lastProductionRoute: { name: 'open-productions' },
-
-  assetsPath: { name: 'open-productions' },
-  assetTypesPath: { name: 'open-productions' },
-  shotsPath: { name: 'open-productions' },
-  editsPath: { name: 'open-productions' },
-  episodesPath: { name: 'open-productions' },
-  sequencesPath: { name: 'open-productions' },
-  sequenceStatsPath: { name: 'open-productions' },
-  episodeStatsPath: { name: 'open-productions' },
-  breakdownPath: { name: 'open-productions' },
-  playlistsPath: { name: 'open-productions' },
-  teamPath: { name: 'open-productions' }
+  lastProductionRoute: { name: 'open-productions' }
 }
 
 const state = { ...initialState }
 
 const helpers = {
+  // Route of a production section, following the current production and
+  // episode so the back links never point to a scope left behind.
+  getSectionPath(getters, rootGetters, routeName, episodic = true) {
+    const episodeId =
+      episodic && getters.isTVShow ? rootGetters.currentEpisode?.id : undefined
+    return helpers.getProductionComponentPath(
+      routeName,
+      getters.currentProduction?.id,
+      episodeId
+    )
+  },
+
   getProductionComponentPath(routeName, productionId, episodeId) {
     let route = { name: 'open-productions' }
     if (episodeId) {
@@ -231,16 +230,28 @@ const getters = {
   isProductionsLoadingError: state => state.isProductionsLoadingError,
   isOpenProductionsLoading: state => state.isOpenProductionsLoading,
 
-  assetsPath: state => state.assetsPath,
-  assetTypesPath: state => state.assetTypesPath,
-  shotsPath: state => state.shotsPath,
-  sequencesPath: state => state.sequencesPath,
-  editsPath: state => state.editsPath,
-  episodesPath: state => state.episodesPath,
-  episodeStatsPath: state => state.episodeStatsPath,
-  breakdownPath: state => state.breakdownPath,
-  playlistsPath: state => state.playlistsPath,
-  teamPath: state => state.teamPath,
+  assetsPath: (state, getters, rootState, rootGetters) =>
+    helpers.getSectionPath(getters, rootGetters, 'assets'),
+  assetTypesPath: (state, getters, rootState, rootGetters) =>
+    helpers.getSectionPath(getters, rootGetters, 'production-asset-types'),
+  shotsPath: (state, getters, rootState, rootGetters) =>
+    helpers.getSectionPath(getters, rootGetters, 'shots'),
+  sequencesPath: (state, getters, rootState, rootGetters) =>
+    helpers.getSectionPath(getters, rootGetters, 'sequences'),
+  sequenceStatsPath: (state, getters, rootState, rootGetters) =>
+    helpers.getSectionPath(getters, rootGetters, 'sequence-stats'),
+  editsPath: (state, getters, rootState, rootGetters) =>
+    helpers.getSectionPath(getters, rootGetters, 'edits'),
+  episodesPath: (state, getters, rootState, rootGetters) =>
+    helpers.getSectionPath(getters, rootGetters, 'episodes', false),
+  episodeStatsPath: (state, getters, rootState, rootGetters) =>
+    helpers.getSectionPath(getters, rootGetters, 'episode-stats', false),
+  breakdownPath: (state, getters, rootState, rootGetters) =>
+    helpers.getSectionPath(getters, rootGetters, 'breakdown'),
+  playlistsPath: (state, getters, rootState, rootGetters) =>
+    helpers.getSectionPath(getters, rootGetters, 'playlists'),
+  teamPath: (state, getters, rootState, rootGetters) =>
+    helpers.getSectionPath(getters, rootGetters, 'team', false),
 
   lastProductionRoute: state => state.lastProductionRoute,
 
@@ -509,21 +520,10 @@ const actions = {
     })
   },
 
-  setProduction({ commit, rootGetters }, productionId) {
+  setProduction({ commit }, productionId) {
     commit(SET_CURRENT_PRODUCTION, productionId)
     commit(CLEAR_ASSETS)
     commit(CLEAR_SHOTS)
-    if (rootGetters.isTVShow) {
-      const episode = rootGetters.currentEpisode
-      const episodeId = episode ? episode.id : null
-      if (productionId) {
-        commit(RESET_PRODUCTION_PATH, { productionId, episodeId })
-      }
-    } else {
-      if (productionId) {
-        commit(RESET_PRODUCTION_PATH, { productionId })
-      }
-    }
   },
 
   storeProductionPicture({ commit }, formData) {
@@ -1061,58 +1061,6 @@ const mutations = {
     const production = state.productionMap.get(productionId)
     state.currentProduction = production
     state.currentTeamRoles = {}
-  },
-
-  [RESET_PRODUCTION_PATH](state, { productionId, episodeId }) {
-    state.assetsPath = helpers.getProductionComponentPath(
-      'assets',
-      productionId,
-      episodeId
-    )
-    state.assetTypesPath = helpers.getProductionComponentPath(
-      'production-asset-types',
-      productionId,
-      episodeId
-    )
-    state.shotsPath = helpers.getProductionComponentPath(
-      'shots',
-      productionId,
-      episodeId
-    )
-    state.editsPath = helpers.getProductionComponentPath(
-      'edits',
-      productionId,
-      episodeId
-    )
-    state.episodesPath = helpers.getProductionComponentPath(
-      'episodes',
-      productionId
-    )
-    state.sequencesPath = helpers.getProductionComponentPath(
-      'sequences',
-      productionId,
-      episodeId
-    )
-    state.sequenceStatsPath = helpers.getProductionComponentPath(
-      'sequence-stats',
-      productionId,
-      episodeId
-    )
-    state.episodeStatsPath = helpers.getProductionComponentPath(
-      'episode-stats',
-      productionId
-    )
-    state.breakdownPath = helpers.getProductionComponentPath(
-      'breakdown',
-      productionId,
-      episodeId
-    )
-    state.playlistsPath = helpers.getProductionComponentPath(
-      'playlists',
-      productionId,
-      episodeId
-    )
-    state.teamPath = helpers.getProductionComponentPath('team', productionId)
   },
 
   [TEAM_ADD_PERSON](state, personId) {

@@ -39,7 +39,6 @@ import {
   REMOVE_SEQUENCE,
   REMOVE_SEQUENCE_SEARCH,
   REMOVE_SELECTED_TASK,
-  RESET_PRODUCTION_PATH,
   SAVE_SEQUENCE_SEARCH_END,
   REMOVE_SEQUENCE_SEARCH_END,
   SET_CURRENT_EPISODE,
@@ -277,10 +276,8 @@ const getters = {
 }
 
 const actions = {
-  setCurrentSequence({ commit, rootGetters }, sequenceId) {
+  setCurrentSequence({ commit }, sequenceId) {
     commit(SET_CURRENT_SEQUENCE, sequenceId)
-    const productionId = rootGetters.currentProduction.id
-    commit(RESET_PRODUCTION_PATH, { productionId, sequenceId })
   },
 
   changeSequenceSort({ commit, rootGetters }, sortInfo) {

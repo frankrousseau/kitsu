@@ -35,7 +35,6 @@ import {
   REMOVE_EPISODE,
   REMOVE_EPISODE_SEARCH,
   REMOVE_SELECTED_TASK,
-  RESET_PRODUCTION_PATH,
   SET_CURRENT_EPISODE,
   SET_EPISODE_LIST_SCROLL_POSITION,
   SET_EPISODE_SELECTION,
@@ -260,10 +259,8 @@ const getters = {
 }
 
 const actions = {
-  setCurrentEpisode({ commit, rootGetters }, episodeId) {
+  setCurrentEpisode({ commit }, episodeId) {
     commit(SET_CURRENT_EPISODE, episodeId)
-    const productionId = rootGetters.currentProduction.id
-    commit(RESET_PRODUCTION_PATH, { productionId, episodeId })
   },
 
   setEpisodeListScrollPosition({ commit }, scrollPosition) {

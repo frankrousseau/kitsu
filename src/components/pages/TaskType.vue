@@ -1975,10 +1975,6 @@ const onRemoteTaskUpdate = eventData => {
 // Equivalent of the Options API created() hook: runs during setup.
 if (!currentProduction.value) {
   store.dispatch('setProduction', route.params.production_id)
-} else {
-  const options = { productionId: currentProduction.value.id }
-  if (currentEpisode.value) options.episodeId = currentEpisode.value.id
-  store.commit('RESET_PRODUCTION_PATH', options)
 }
 
 // Watchers
@@ -2037,17 +2033,6 @@ watch(currentProduction, () => {
 
 watch(nbSelectedTasks, () => {
   updateTaskInQuery()
-})
-
-// Quickfix for the edge case where the backPath is not properly set
-// because it was set when the episode was not fully loaded.
-watch(currentEpisode, () => {
-  if (currentEpisode.value && !backPath.value.params?.episode_id) {
-    store.commit('RESET_PRODUCTION_PATH', {
-      productionId: currentProduction.value.id,
-      episodeId: currentEpisode.value.id
-    })
-  }
 })
 
 watch(
