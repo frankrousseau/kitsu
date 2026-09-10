@@ -671,12 +671,16 @@ export default {
     return {
       currentPlaylist: { name: '' },
       currentShareLinksCount: 0,
-      currentSort: 'updated_at',
+      currentSort: localStorage.getItem('playlist-sort') || 'updated_at',
       currentEntitiesMap: {},
       currentEntitiesList: [],
       entitiesAddedWhilePanelOpen: false,
       entityLoading: {},
       isAddingEntity: false,
+      isReloadPending: false,
+      servedScope: null,
+      isServedScopeStale: false,
+      isUnmounted: false,
       isListToggled: false,
       isMorePlaylists: true,
       page: 1,
@@ -1749,21 +1753,83 @@ export default {
 
     // Loading
 
-    async reloadAll() {
-      if (!this.loading.playlists) {
-        this.loading.playlists = true
-        await this.loadShotsData()
-        await this.loadAssetsData()
-        await this.loadEditsData()
-        await this.loadEpisodesData()
-        this.page = 1
-        await this.loadPlaylistsData(this.isPlaylistListStale)
+    // What a run serves: the scope of the loads plus the list filters.
+    reloadScope() {
+      return [
+        this.currentProduction?.id,
+        this.currentEpisode?.id ?? '',
+        this.allForEntity ?? '',
+        this.currentSort,
+        this.taskTypeId
+      ].join('/')
+    },
+
+    // Every reload goes through this gate. The watchers can ask again while
+    // a run is in flight: remember it and, once the run settles, run a full
+    // forced reload if the run did not serve the scope asked for since.
+    // `work` publishes the scope it serves through servedScope, or throws.
+    async runReload(work) {
+      if (this.loading.playlists) {
+        this.isReloadPending = true
+        // The scope may come back before the run settles while the loads
+        // made in between served the other one: remember the move itself.
+        if (this.servedScope && this.servedScope !== this.reloadScope()) {
+          this.isServedScopeStale = true
+        }
+        return
+      }
+      this.loading.playlists = true
+      let isServed = false
+      try {
+        await work()
+        isServed = true
+      } finally {
         this.loading.playlists = false
+        const isStale =
+          !isServed ||
+          this.isServedScopeStale ||
+          this.servedScope !== this.reloadScope()
+        this.servedScope = null
+        this.isServedScopeStale = false
+        if (this.isReloadPending) {
+          this.isReloadPending = false
+          if (!this.isUnmounted && isStale) await this.reloadAll(true)
+        }
+      }
+    },
+
+    async reloadAll(force = false) {
+      await this.runReload(async () => {
+        // Resolve the episode first: the fallback fires the currentEpisode
+        // watcher, whose request this very run serves.
+        if (this.isTVShow && !this.currentEpisode) await this.loadEpisodes()
+        this.servedScope = this.reloadScope()
+        // Leaving the page stops the run: a further load would blank the
+        // page displayed instead.
+        await this.loadShotsData()
+        if (this.isUnmounted) return
+        await this.loadAssetsData()
+        if (this.isUnmounted) return
+        await this.loadEditsData()
+        if (this.isUnmounted) return
+        await this.loadEpisodesData()
+        if (this.isUnmounted) return
+        this.page = 1
+        await this.loadPlaylistsData(force || this.isPlaylistListStale)
+        if (this.isUnmounted) return
         this.resetPlaylist()
         setTimeout(() => {
           this.loading.playlistsInit = false
         }, 300)
-      }
+      })
+    },
+
+    // The sort and the task type filter only need the list again.
+    reloadPlaylistList() {
+      return this.runReload(() => {
+        this.servedScope = this.reloadScope()
+        return this.loadPlaylistsData(true)
+      })
     }
   },
 
@@ -1771,11 +1837,12 @@ export default {
     // Next tick needed to ensure that current production is properly set.
     this.$nextTick(() => {
       this.reloadAll()
-      if (localStorage.getItem('playlist-sort')) {
-        this.currentSort = localStorage.getItem('playlist-sort')
-      }
       this.resetSorting()
     })
+  },
+
+  beforeUnmount() {
+    this.isUnmounted = true
   },
 
   watch: {
@@ -1815,11 +1882,8 @@ export default {
 
     currentSort() {
       localStorage.setItem('playlist-sort', this.currentSort)
-      this.loading.playlists = true
       this.page = 1
-      this.loadPlaylistsData(true).then(() => {
-        this.loading.playlists = false
-      })
+      this.reloadPlaylistList()
     },
 
     isListToggled() {
@@ -1827,7 +1891,7 @@ export default {
     },
 
     taskTypeId() {
-      this.loadPlaylistsData(true)
+      this.reloadPlaylistList()
     }
   },
 
