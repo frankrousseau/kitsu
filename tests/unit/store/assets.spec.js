@@ -592,12 +592,18 @@ describe('Assets store, loadAsset live insertion', () => {
   })
 
   test('adds any asset to a production-wide dataset, whatever the topbar shows', async () => {
-    const types = await committedTypes(
+    const full = await committedTypes(
       { assetId: 'a-scope-5', onlyInScope: true },
       'p1/all',
       { id: 'a-scope-5', episode_id: 'ep-b' }
     )
-    expect(types).toContain('ADD_ASSET')
+    const partial = await committedTypes(
+      { assetId: 'a-scope-6', onlyInScope: true },
+      'p1/all#partial',
+      { id: 'a-scope-6', episode_id: 'ep-b' }
+    )
+    expect(full).toContain('ADD_ASSET')
+    expect(partial).toContain('ADD_ASSET')
   })
 
   // A production switch during the second the handler waits leaves the store
@@ -673,5 +679,40 @@ describe('Assets store, ADD_ASSET', () => {
   test('falls back to the source_id the list payloads carry', () => {
     const asset = addAsset({ id: 'a-add-3', name: 'A3', source_id: 'ep-b' })
     expect(asset.episode_id).toEqual('ep-b')
+  })
+})
+
+describe('Assets store, partial loads', () => {
+  // The schedule loads the assets without tasks nor shared assets: that
+  // dataset cannot stand in for the one the list pages display, so its scope
+  // must not match theirs.
+  const startLoad = options => {
+    vi.spyOn(assetsApi, 'getAssets').mockResolvedValue([])
+    vi.spyOn(assetsApi, 'getUsedSharedAssets').mockResolvedValue([])
+    const state = { isAssetsLoading: false, isAssetsLoadingError: false }
+    const rootGetters = baseRootGetters()
+    const ctx = { commit: realCommit(state), dispatch: vi.fn(), state, rootGetters }
+    const loading = assetsStore.actions.loadAssets(ctx, options)
+    // Switch away so the response short-circuits before LOAD_ASSETS_END.
+    rootGetters.currentProduction = { id: 'p2' }
+    return { state, loading }
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    assetsStore.cache.assetsLoadingPromise = null
+  })
+
+  test('a full load records the plain scope', async () => {
+    const { state, loading } = startLoad({})
+    expect(state.assetsLoadingKey).toBe('p1/')
+    await loading
+  })
+
+  test('a load without tasks or shared assets records a partial scope', async () => {
+    const { state, loading } = startLoad({ withTasks: false, withShared: false })
+    expect(state.assetsLoadingKey).not.toBe('p1/')
+    expect(state.assetsLoadingKey.startsWith('p1/')).toBe(true)
+    await loading
   })
 })

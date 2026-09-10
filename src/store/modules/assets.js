@@ -439,7 +439,12 @@ const actions = {
     // from another (an episode load legitimately holds assets cast in from
     // other episodes, and 'all' / 'main' are pseudo-episodes), so the store
     // records it for the pages that decide whether their cache is stale.
-    const loadingKey = `${production.id}/${all ? 'all' : (episode?.id ?? '')}`
+    // A load without tasks or shared assets (schedule) cannot stand in for
+    // the dataset the list pages display: mark its scope so their check
+    // refetches instead of adopting it.
+    const partial = withTasks && withShared ? '' : '#partial'
+    const scope = all ? 'all' : (episode?.id ?? '')
+    const loadingKey = `${production.id}/${scope}${partial}`
 
     if (state.isAssetsLoading) {
       if (state.assetsLoadingKey === loadingKey) {
