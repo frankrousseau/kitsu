@@ -45,6 +45,7 @@ describe('Playlist page, loadEditsData', () => {
     isTVShow: true,
     displayedEdits: [{ id: 'e1', project_id: 'p1', episode_id: 'ep-a' }],
     editsLoadingKey: 'p1/ep-a',
+    isEditsLoading: false,
     loadEdits: vi.fn(() => Promise.resolve()),
     loadEpisodes: vi.fn(() => Promise.resolve()),
     ...overrides
@@ -68,6 +69,24 @@ describe('Playlist page, loadEditsData', () => {
 
   it('keeps the edits loaded for the displayed episode', async () => {
     const context = buildContext()
+
+    await Playlist.methods.loadEditsData.call(context)
+
+    expect(context.loadEdits).not.toHaveBeenCalled()
+  })
+
+  // LOAD_EDITS_START records the key and empties the map: a load in flight
+  // for the displayed scope must still be awaited.
+  it('awaits a load in flight for the displayed episode', async () => {
+    const context = buildContext({ isEditsLoading: true, displayedEdits: [] })
+
+    await Playlist.methods.loadEditsData.call(context)
+
+    expect(context.loadEdits).toHaveBeenCalled()
+  })
+
+  it('keeps an episode loaded without any edit', async () => {
+    const context = buildContext({ displayedEdits: [] })
 
     await Playlist.methods.loadEditsData.call(context)
 
@@ -313,5 +332,88 @@ describe('Playlist page, reloadAll', () => {
     await expect(context.reloadAll()).rejects.toThrow('down')
 
     expect(context.loading.playlists).toBe(false)
+  })
+})
+
+describe('Playlist page, loadShotsData', () => {
+  const buildContext = (overrides = {}) => ({
+    currentProduction: { id: 'p1' },
+    currentEpisode: { id: 'ep-a' },
+    isTVShow: true,
+    displayedShots: [{ id: 's1', project_id: 'p1', episode_id: 'ep-a' }],
+    shotsLoadingKey: 'p1/ep-a',
+    isShotsLoading: false,
+    loadShots: vi.fn(() => Promise.resolve()),
+    loadEpisodes: vi.fn(() => Promise.resolve()),
+    ...overrides
+  })
+
+  // The first row says nothing about the loaded scope: a production-wide
+  // dataset whose first shot belongs to the displayed episode passed the
+  // check and the add panel listed the shots of every episode.
+  it('reloads the shots when the store holds the production-wide dataset', async () => {
+    const context = buildContext({ shotsLoadingKey: 'p1/all' })
+
+    await Playlist.methods.loadShotsData.call(context)
+
+    expect(context.loadShots).toHaveBeenCalled()
+  })
+
+  it('reloads the shots when the store holds another episode', async () => {
+    const context = buildContext({ currentEpisode: { id: 'ep-b' } })
+
+    await Playlist.methods.loadShotsData.call(context)
+
+    expect(context.loadShots).toHaveBeenCalled()
+  })
+
+  it('keeps the shots loaded for the displayed episode', async () => {
+    const context = buildContext()
+
+    await Playlist.methods.loadShotsData.call(context)
+
+    expect(context.loadShots).not.toHaveBeenCalled()
+  })
+
+  // LOAD_SHOTS_START records the key and empties the map: a load in flight
+  // for the displayed scope must still be awaited, or the playlist is rebuilt
+  // against an empty map and loses its shots.
+  it('awaits a load in flight for the displayed episode', async () => {
+    const context = buildContext({ isShotsLoading: true, displayedShots: [] })
+
+    await Playlist.methods.loadShotsData.call(context)
+
+    expect(context.loadShots).toHaveBeenCalled()
+  })
+
+  it('keeps an episode loaded without any shot', async () => {
+    const context = buildContext({ displayedShots: [] })
+
+    await Playlist.methods.loadShotsData.call(context)
+
+    expect(context.loadShots).not.toHaveBeenCalled()
+  })
+
+  it('loads nothing for the pseudo-episodes', async () => {
+    const context = buildContext({
+      currentEpisode: { id: 'all' },
+      shotsLoadingKey: 'p1/ep-a'
+    })
+
+    await Playlist.methods.loadShotsData.call(context)
+
+    expect(context.loadShots).not.toHaveBeenCalled()
+  })
+
+  it('keeps the shots of a production without episodes', async () => {
+    const context = buildContext({
+      isTVShow: false,
+      currentEpisode: null,
+      shotsLoadingKey: 'p1/'
+    })
+
+    await Playlist.methods.loadShotsData.call(context)
+
+    expect(context.loadShots).not.toHaveBeenCalled()
   })
 })

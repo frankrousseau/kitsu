@@ -748,6 +748,7 @@ export default {
       'playlists',
       'playlistsPath',
       'shotsByEpisode',
+      'shotsLoadingKey',
       'shotSearchText',
       'taskMap',
       'taskStatusMap',
@@ -990,11 +991,13 @@ export default {
     // Data loading
 
     async loadShotsData() {
+      // Only the scope the store recorded tells an episode dataset from the
+      // production-wide one, and a load in flight has emptied the map: await
+      // it, or the playlist is rebuilt without its shots.
+      const scope = this.isTVShow ? (this.currentEpisode?.id ?? '') : ''
       if (
-        this.displayedShots.length === 0 ||
-        this.displayedShots[0].project_id !== this.currentProduction.id ||
-        (this.currentEpisode &&
-          this.displayedShots[0].episode_id !== this.currentEpisode.id)
+        this.isShotsLoading ||
+        this.shotsLoadingKey !== `${this.currentProduction.id}/${scope}`
       ) {
         if (
           this.isTVShow &&
@@ -1019,11 +1022,10 @@ export default {
     },
 
     async loadEditsData() {
-      // The first row says nothing about the loaded scope: only the scope the
-      // store recorded tells an episode dataset from another one.
+      // Same rule as loadShotsData.
       const scope = this.isTVShow ? (this.currentEpisode?.id ?? '') : ''
       if (
-        this.displayedEdits.length === 0 ||
+        this.isEditsLoading ||
         this.editsLoadingKey !== `${this.currentProduction.id}/${scope}`
       ) {
         if (this.isTVShow && !this.currentEpisode) {
