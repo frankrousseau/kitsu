@@ -1,0 +1,182 @@
+import { vi } from 'vitest'
+
+// Importing the page transitively pulls in the root store
+// (lib/models → timezone → @/store); stub it so no Vuex store is built.
+vi.mock('@/store', () => ({ default: {} }))
+
+import Breakdown from '@/components/pages/Breakdown.vue'
+
+describe('Breakdown page, reloadEntities', () => {
+  const production = { id: 'p1', production_type: 'tvshow' }
+
+  // The method only reads its component instance, so a plain object is
+  // enough to exercise the reload decision without mounting the page.
+  const buildContext = (overrides = {}) => ({
+    isTVShow: true,
+    currentProduction: production,
+    currentEpisode: { id: 'ep-a' },
+    episodeId: '',
+    assetTypeId: null,
+    sequenceId: null,
+    isLoading: false,
+    isUnmounted: false,
+    hasScopeMoved: false,
+    loadEpisodes: vi.fn(() => Promise.resolve()),
+    castingType: 'shot',
+    loadSequences: vi.fn(() => Promise.resolve()),
+    loadShots: vi.fn(() => Promise.resolve()),
+    loadAssets: vi.fn(() => Promise.resolve()),
+    setCastingEpisode: vi.fn(),
+    setCastingForProductionEpisodes: vi.fn(),
+    displayMoreAssets: vi.fn(),
+    fillAssetList: vi.fn(),
+    setCastingAssetTypes: vi.fn(),
+    setCastingAssetType: vi.fn(),
+    setCastingSequence: vi.fn(),
+    resetSequenceOption: vi.fn(),
+    resetSelection: vi.fn(),
+    resetColumnWidth: vi.fn(),
+    reset: vi.fn(),
+    ...overrides
+  })
+
+  // The currentEpisode watcher ignores a change made while the page loads:
+  // the load itself has to notice the switch once it settles.
+  test('reloads when the episode changed during the load', async () => {
+    const context = buildContext()
+    context.loadShots = vi.fn(() => {
+      context.currentEpisode = { id: 'ep-b' }
+      return Promise.resolve()
+    })
+
+    await Breakdown.methods.reloadEntities.call(context)
+
+    expect(context.isLoading).toBe(false)
+    expect(context.reset).toHaveBeenCalledTimes(1)
+    expect(context.resetColumnWidth).not.toHaveBeenCalled()
+  })
+
+  test('reloads when the production changed during the load', async () => {
+    const context = buildContext()
+    context.loadShots = vi.fn(() => {
+      context.currentProduction = { id: 'p2', production_type: 'tvshow' }
+      return Promise.resolve()
+    })
+
+    await Breakdown.methods.reloadEntities.call(context)
+
+    expect(context.reset).toHaveBeenCalledTimes(1)
+    // Same as the currentProduction watcher, which the load short-circuited.
+    expect(context.resetColumnWidth).toHaveBeenCalledTimes(1)
+  })
+
+  // Leaving the page during the load must not replay it: the ghost reload
+  // would push a production-wide dataset under the page displayed next.
+  test('does not reload once the page is unmounted', async () => {
+    const context = buildContext()
+    context.loadShots = vi.fn(() => {
+      context.currentEpisode = { id: 'ep-b' }
+      context.isUnmounted = true
+      return Promise.resolve()
+    })
+
+    await Breakdown.methods.reloadEntities.call(context)
+
+    expect(context.reset).not.toHaveBeenCalled()
+    // The production-wide load would land under the page displayed next.
+    expect(context.loadAssets).not.toHaveBeenCalled()
+    expect(context.setCastingEpisode).not.toHaveBeenCalled()
+  })
+
+  // The watchers are inert while the page loads, so a switch that comes back
+  // to the episode the run started with leaves the store on the other one.
+  test('reloads when the episode moved and came back during the load', async () => {
+    const context = buildContext()
+    context.loadSequences = vi.fn(() => {
+      Breakdown.watch.currentEpisode.call(
+        Object.assign(context, { currentEpisode: { id: 'ep-b' } })
+      )
+      return Promise.resolve()
+    })
+    context.loadShots = vi.fn(() => {
+      Breakdown.watch.currentEpisode.call(
+        Object.assign(context, { currentEpisode: { id: 'ep-a' } })
+      )
+      return Promise.resolve()
+    })
+
+    await Breakdown.methods.reloadEntities.call(context)
+
+    expect(context.reset).toHaveBeenCalledTimes(1)
+  })
+
+  test('does not reload when nothing moved', async () => {
+    const context = buildContext()
+
+    await Breakdown.methods.reloadEntities.call(context)
+
+    expect(context.reset).not.toHaveBeenCalled()
+  })
+
+  // The topbar resolves the route episode asynchronously: starting the load
+  // before it lands costs a full production-wide second pass. The resolution
+  // fires the episode watcher like any change: it must not count as a move.
+  test('resolves the episode before loading on a direct link', async () => {
+    const context = buildContext({ currentEpisode: null })
+    context.loadEpisodes = vi.fn(() => {
+      Breakdown.watch.currentEpisode.call(
+        Object.assign(context, { currentEpisode: { id: 'ep-a' } })
+      )
+      return Promise.resolve()
+    })
+
+    await Breakdown.methods.reloadEntities.call(context)
+
+    expect(context.loadEpisodes).toHaveBeenCalledTimes(1)
+    expect(context.reset).not.toHaveBeenCalled()
+    expect(context.episodeId).toBe('ep-a')
+  })
+
+  // The episodes fetch can fail like any other: the page must come back
+  // to life, or the watchers stay muted behind a stuck loading flag.
+  test('releases the loading flag when the episodes fetch fails', async () => {
+    const context = buildContext({ currentEpisode: null })
+    context.loadEpisodes = vi.fn(() => Promise.reject(new Error('down')))
+
+    await Breakdown.methods.reloadEntities.call(context)
+
+    expect(context.isLoading).toBe(false)
+    expect(context.reset).not.toHaveBeenCalled()
+  })
+
+  test('loads nothing when the page unmounts during the episodes fetch', async () => {
+    const context = buildContext({ currentEpisode: null })
+    context.loadEpisodes = vi.fn(() => {
+      context.isUnmounted = true
+      return Promise.resolve()
+    })
+
+    await Breakdown.methods.reloadEntities.call(context)
+
+    expect(context.loadSequences).not.toHaveBeenCalled()
+    expect(context.loadAssets).not.toHaveBeenCalled()
+  })
+
+  test('loads nothing on an unmounted page', async () => {
+    const context = buildContext({ isUnmounted: true })
+
+    await Breakdown.methods.reloadEntities.call(context)
+
+    expect(context.loadSequences).not.toHaveBeenCalled()
+    expect(context.loadAssets).not.toHaveBeenCalled()
+  })
+
+  test('settles on the episode it loaded', async () => {
+    const context = buildContext()
+
+    await Breakdown.methods.reloadEntities.call(context)
+
+    expect(context.episodeId).toBe('ep-a')
+    expect(context.reset).not.toHaveBeenCalled()
+  })
+})
