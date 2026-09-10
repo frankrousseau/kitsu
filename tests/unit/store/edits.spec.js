@@ -282,3 +282,14 @@ describe('Edits store, loadEdit live insertion', () => {
     expect(types).toContain('ADD_EDIT')
   })
 })
+
+describe('Edits store, LOAD_EDITS_ERROR', () => {
+  // The pages decide from the recorded scope whether a reload is needed: a
+  // failed load must not leave its scope behind an empty dataset, or they
+  // never retry.
+  test('forgets the scope of the failed load', () => {
+    const state = { editsLoadingKey: 'p1/ep-a' }
+    editsStore.mutations.LOAD_EDITS_ERROR(state)
+    expect(state.editsLoadingKey).toBeNull()
+  })
+})

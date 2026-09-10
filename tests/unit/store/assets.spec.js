@@ -716,3 +716,52 @@ describe('Assets store, partial loads', () => {
     await loading
   })
 })
+
+describe('Assets store, LOAD_ASSETS_ERROR', () => {
+  // The pages decide from the recorded scope whether a reload is needed: a
+  // failed load must not leave its scope behind an empty dataset, or they
+  // never retry.
+  test('forgets the scope of the failed load', () => {
+    const state = { assetsLoadingKey: 'p1/ep-a' }
+    assetsStore.mutations.LOAD_ASSETS_ERROR(state)
+    expect(state.assetsLoadingKey).toBeNull()
+  })
+
+  // A production switch starts a new load before the previous one fails:
+  // that rejection must not forget the scope of the load running now.
+  const failingLoad = () => {
+    const rootGetters = { ...baseRootGetters(), currentProduction: { id: 'p1' } }
+    let rejectLoad
+    vi.spyOn(assetsApi, 'getAssets').mockReturnValue(
+      new Promise((resolve, reject) => {
+        rejectLoad = reject
+      })
+    )
+    const commit = vi.fn()
+    const loading = assetsStore.actions.loadAssets({
+      commit,
+      dispatch: vi.fn(),
+      state: { isAssetsLoading: false },
+      rootGetters
+    })
+    return {
+      rootGetters,
+      types: async () => {
+        rejectLoad(new Error('down'))
+        await loading
+        return commit.mock.calls.map(([type]) => type)
+      }
+    }
+  }
+
+  test('forgets the scope when the displayed load fails', async () => {
+    const { types } = failingLoad()
+    expect(await types()).toContain('LOAD_ASSETS_ERROR')
+  })
+
+  test('keeps the scope when the failure comes from the production left', async () => {
+    const { rootGetters, types } = failingLoad()
+    rootGetters.currentProduction = { id: 'p2' }
+    expect(await types()).not.toContain('LOAD_ASSETS_ERROR')
+  })
+})

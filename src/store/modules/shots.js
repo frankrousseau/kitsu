@@ -497,7 +497,11 @@ const actions = {
         }
       })
       .catch(err => {
-        commit(LOAD_SHOTS_ERROR)
+        // Same guard as the success path: a rejection for a production the
+        // user already left would forget the scope of the load running now.
+        if (production.id === rootGetters.currentProduction?.id) {
+          commit(LOAD_SHOTS_ERROR)
+        }
         console.error(err)
       })
     cache.shotsLoadingPromise = loadingPromise
@@ -937,6 +941,7 @@ const mutations = {
   [LOAD_SHOTS_ERROR](state) {
     state.isShotsLoading = false
     state.isShotsLoadingError = true
+    state.shotsLoadingKey = null
   },
 
   [LOAD_SHOTS_END](
@@ -1052,6 +1057,7 @@ const mutations = {
 
   [END_SHOTS_LOADING](state) {
     state.isShotsLoading = false
+    state.shotsLoadingKey = null
   },
 
   [SAVE_SHOT_SEARCH_END](state, { searchQuery }) {

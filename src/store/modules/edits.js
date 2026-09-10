@@ -388,7 +388,11 @@ const actions = {
       })
       .catch(err => {
         console.error('an error occurred while loading edits', err)
-        commit(LOAD_EDITS_ERROR)
+        // Same guard as the success path: a rejection for a production the
+        // user already left would forget the scope of the load running now.
+        if (production.id === rootGetters.currentProduction?.id) {
+          commit(LOAD_EDITS_ERROR)
+        }
         return []
       })
     cache.editsLoadingPromise = loadingPromise
@@ -731,6 +735,7 @@ const mutations = {
   [LOAD_EDITS_ERROR](state) {
     state.isEditsLoading = false
     state.isEditsLoadingError = true
+    state.editsLoadingKey = null
   },
 
   [LOAD_EDITS_END](

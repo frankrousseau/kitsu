@@ -389,6 +389,28 @@ describe('Shots store', () => {
   })
 })
 
+describe('Shots store, END_SHOTS_LOADING', () => {
+  // A response discarded after an episode switch ends the load with the
+  // dataset emptied by LOAD_SHOTS_START: its scope must go with it.
+  test('forgets the scope of the discarded load', () => {
+    const state = { shotsLoadingKey: 'p1/ep-a', isShotsLoading: true }
+    shotsStore.mutations.END_SHOTS_LOADING(state)
+    expect(state.shotsLoadingKey).toBeNull()
+    expect(state.isShotsLoading).toBe(false)
+  })
+})
+
+describe('Shots store, LOAD_SHOTS_ERROR', () => {
+  // The pages decide from the recorded scope whether a reload is needed: a
+  // failed load must not leave its scope behind an empty dataset, or they
+  // never retry.
+  test('forgets the scope of the failed load', () => {
+    const state = { shotsLoadingKey: 'p1/ep-a' }
+    shotsStore.mutations.LOAD_SHOTS_ERROR(state)
+    expect(state.shotsLoadingKey).toBeNull()
+  })
+})
+
 describe('Shots store, loadShot live insertion', () => {
   // A socket event announces a shot created elsewhere: the scope comes from
   // the key the store recorded, not from the topbar, which may show another

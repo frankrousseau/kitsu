@@ -508,7 +508,11 @@ const actions = {
       })
       .catch(err => {
         console.error('an error occurred while loading assets', err)
-        commit(LOAD_ASSETS_ERROR)
+        // Same guard as the success path: a rejection for a production the
+        // user already left would forget the scope of the load running now.
+        if (production.id === rootGetters.currentProduction?.id) {
+          commit(LOAD_ASSETS_ERROR)
+        }
         return []
       })
     cache.assetsLoadingPromise = loadingPromise
@@ -997,6 +1001,7 @@ const mutations = {
   [LOAD_ASSETS_ERROR](state) {
     state.isAssetsLoading = false
     state.isAssetsLoadingError = true
+    state.assetsLoadingKey = null
   },
 
   [LOAD_ASSETS_END](
