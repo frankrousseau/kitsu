@@ -399,12 +399,15 @@ const actions = {
 
   loadEpisodes({ commit, state, rootGetters }) {
     const currentProduction = rootGetters.currentProduction
-    const routeEpisodeId = rootGetters.route.params.episode_id
     const userFilters = rootGetters.userFilters
     return shotsApi.getEpisodes(currentProduction).then(episodes => {
       if (currentProduction?.id !== rootGetters.currentProduction?.id) {
         return episodes
       }
+      // Read the route once the response is in: the user may have changed
+      // episode during the fetch, and a snapshot taken at dispatch would
+      // silently move the store back to the episode left behind.
+      const routeEpisodeId = rootGetters.route.params.episode_id
       commit(LOAD_EPISODES_END, { episodes, routeEpisodeId, userFilters })
       return episodes
     })
