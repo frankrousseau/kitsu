@@ -698,14 +698,16 @@ const mutations = {
   },
 
   [ADD_EPISODE](state, episode) {
-    state.episodes.push(episode)
-    const sortedEpisodes = sortByName(state.episodes)
+    // Each list copied from itself: after LOAD_EPISODES_END the lists are
+    // the same array, and pushing into each in place inserted the episode
+    // twice, while the Episodes page keeps its rows with tasks in
+    // cache.episodes only and must not get the plain list instead.
     cache.episodeMap.set(episode.id, episode)
-    state.episodes = sortedEpisodes
-    state.displayedEpisodes.push(episode)
-    state.displayedEpisodes = sortByName(state.displayedEpisodes)
-    cache.episodeIndex = buildEpisodeIndex(sortedEpisodes)
-    state.displayedEpisodesLength = sortedEpisodes.length
+    state.episodes = sortByName([...state.episodes, episode])
+    cache.episodes = sortByName([...cache.episodes, episode])
+    state.displayedEpisodes = sortByName([...state.displayedEpisodes, episode])
+    cache.episodeIndex = buildEpisodeIndex(cache.episodes)
+    state.displayedEpisodesLength = state.displayedEpisodes.length
   },
 
   [UPDATE_EPISODE](state, episode) {
@@ -718,6 +720,7 @@ const mutations = {
     cache.episodes = removeModelFromList(cache.episodes, episodeToDelete)
     cache.result = removeModelFromList(cache.episodes, episodeToDelete)
     cache.episodeIndex = buildEpisodeIndex(cache.episodes)
+    state.episodes = removeModelFromList(state.episodes, episodeToDelete)
     state.displayedEpisodes = removeModelFromList(
       state.displayedEpisodes,
       episodeToDelete

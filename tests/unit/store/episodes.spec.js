@@ -69,4 +69,90 @@ describe('Episodes store', () => {
       )
     })
   })
+
+  describe('ADD_EPISODE', () => {
+    // The Episodes page loads its rows with tasks into cache.episodes while
+    // state.episodes keeps the plain list the topbar loaded: a live episode
+    // must not replace one dataset by the other.
+    test('keeps the with-tasks dataset of the Episodes page', () => {
+      const state = { episodes: [], displayedEpisodes: [] }
+      episodesStore.mutations.LOAD_EPISODES_END(state, {
+        episodes: [{ id: 'episode-1', name: 'E01', status: 'running' }],
+        routeEpisodeId: 'episode-1'
+      })
+      episodesStore.mutations.SET_EPISODES_WITH_TASKS(state, {
+        production: { id: 'production-1', name: 'Prod' },
+        episodes: [
+          {
+            id: 'episode-1',
+            name: 'E01',
+            status: 'running',
+            tasks: [],
+            data: {}
+          }
+        ],
+        userFilters: {},
+        taskMap: new Map(),
+        taskTypeMap: new Map(),
+        personMap: new Map(),
+        taskStatusMap: new Map()
+      })
+      const withTasks = episodesStore.cache.episodes[0]
+      expect(withTasks.validations).toBeInstanceOf(Map)
+
+      episodesStore.mutations.ADD_EPISODE(state, {
+        id: 'episode-2',
+        name: 'E02',
+        status: 'running'
+      })
+
+      expect(episodesStore.cache.episodes[0]).toBe(withTasks)
+      expect(state.episodes.map(({ id }) => id)).toEqual([
+        'episode-1',
+        'episode-2'
+      ])
+      expect(state.displayedEpisodes.map(({ id }) => id)).toEqual([
+        'episode-1',
+        'episode-2'
+      ])
+    })
+  })
+
+  describe('REMOVE_EPISODE', () => {
+    // The topbar validates route episodes against the episodes getter: a
+    // deleted episode must leave that list too, not only the map.
+    test('drops the episode from the episodes list', () => {
+      const state = { episodes: [] }
+      episodesStore.mutations.LOAD_EPISODES_END(state, {
+        episodes: [
+          { id: 'episode-1', name: 'E01', status: 'running' },
+          { id: 'episode-2', name: 'E02', status: 'running' }
+        ],
+        routeEpisodeId: 'episode-1'
+      })
+      episodesStore.mutations.REMOVE_EPISODE(state, { id: 'episode-2' })
+      expect(state.episodes.map(({ id }) => id)).toEqual(['episode-1'])
+    })
+
+    test('keeps an episode added live', () => {
+      const state = { episodes: [], displayedEpisodes: [] }
+      episodesStore.mutations.LOAD_EPISODES_END(state, {
+        episodes: [
+          { id: 'episode-1', name: 'E01', status: 'running' },
+          { id: 'episode-2', name: 'E02', status: 'running' }
+        ],
+        routeEpisodeId: 'episode-1'
+      })
+      episodesStore.mutations.ADD_EPISODE(state, {
+        id: 'episode-3',
+        name: 'E03',
+        status: 'running'
+      })
+      episodesStore.mutations.REMOVE_EPISODE(state, { id: 'episode-1' })
+      expect(state.episodes.map(({ id }) => id)).toEqual([
+        'episode-2',
+        'episode-3'
+      ])
+    })
+  })
 })

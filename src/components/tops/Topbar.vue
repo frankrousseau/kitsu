@@ -416,6 +416,12 @@ export default {
       'user'
     ]),
 
+    // A video-game production has no main pack: its assets all belong to a
+    // chapter, so the selector never offers the pseudo-episode.
+    hasMainPack() {
+      return this.currentProduction?.production_style !== 'video-game'
+    },
+
     assetSections() {
       return ['assets', 'assetTypes', 'playlists']
     },
@@ -789,7 +795,7 @@ export default {
 
     getBaseEpisodeOptionGroups(allLabel) {
       const episodeList = [{ label: this.$t(allLabel), value: 'all' }]
-      if (this.currentProduction.production_style !== 'video-game') {
+      if (this.hasMainPack) {
         episodeList.push({ label: this.$t('main.main_pack'), value: 'main' })
       }
       return episodeList
@@ -845,35 +851,42 @@ export default {
             this.currentProjectSection = this.getCurrentSectionFromRoute()
             if (this.currentProjectSection === 'assets') {
               const isValidEpisode =
-                ['all', 'main'].includes(routeEpisodeId) ||
-                this.episodes.some(({ id }) => id === routeEpisodeId)
+                this.keepsPseudoEpisode(
+                  'assets',
+                  routeEpisodeId,
+                  this.$route.params.plugin_id
+                ) || this.episodes.some(({ id }) => id === routeEpisodeId)
               this.currentEpisodeId =
                 isInitialLoad && routeEpisodeId && isValidEpisode
                   ? routeEpisodeId
                   : 'all'
             } else if (
-              ['playlists', 'schedule'].includes(this.currentProjectSection) &&
-              ['all', 'main'].includes(routeEpisodeId)
+              this.keepsPseudoEpisode(
+                this.currentProjectSection,
+                routeEpisodeId,
+                this.$route.params.plugin_id
+              )
             ) {
-              this.currentEpisodeId = routeEpisodeId
-            } else if (
-              this.$route.params.plugin_id &&
-              ['all', 'main'].includes(routeEpisodeId)
-            ) {
-              this.currentEpisodeId = routeEpisodeId
-            } else if (
-              this.shotSections.includes(this.currentProjectSection) &&
-              routeEpisodeId === 'all'
-            ) {
-              // No main pack for shots: only 'all' survives a direct link.
               this.currentEpisodeId = routeEpisodeId
             } else {
-              let episode = episodes.find(({ id }) => id === routeEpisodeId)
-              if (!episode) {
-                episode = episodes.find(({ status }) => status === 'running')
-                query.search = ''
-              }
-              this.currentEpisodeId = episode?.id || 'all'
+              const episode = episodes.find(({ id }) => id === routeEpisodeId)
+              // Only a direct link with an id the production does not know
+              // resolves like a stale in-session link. A production switch
+              // carries the episode of the production left and a
+              // pseudo-episode the section does not keep needs an episode:
+              // both open the running one.
+              const isStaleLink =
+                isInitialLoad &&
+                routeEpisodeId &&
+                !['all', 'main'].includes(routeEpisodeId)
+              this.currentEpisodeId =
+                episode?.id ||
+                (isStaleLink
+                  ? this.fallbackEpisodeId(
+                      this.currentProjectSection,
+                      this.$route.params.plugin_id
+                    )
+                  : this.runningEpisodeId())
             }
             this.$router.push({
               params: {
@@ -882,7 +895,10 @@ export default {
               },
               query
             })
-            this.updateCombosFromRoute()
+            // The push is confirmed asynchronously: pass the episode just
+            // resolved, or the route still names the one being left and the
+            // coercion navigates a second time, over this very push.
+            this.updateCombosFromRoute(this.currentEpisodeId)
           })
           .catch(console.error)
       } else {
@@ -925,7 +941,11 @@ export default {
       const routeEpisodeId = this.$route.params.episode_id
       if (this.isEpisodeChanged(routeEpisodeId)) {
         if (routeEpisodeId && this.isTVShow) {
-          this.setCurrentEpisode(routeEpisodeId)
+          if (this.isKnownEpisode(routeEpisodeId)) {
+            this.setCurrentEpisode(routeEpisodeId)
+          } else {
+            this.redirectToKnownEpisode()
+          }
         }
       } else if (!routeEpisodeId) {
         this.silent = true
@@ -935,48 +955,107 @@ export default {
       }
     },
 
-    updateCombosFromRoute() {
+    isKnownEpisode(episodeId) {
+      return (
+        ['all', 'main'].includes(episodeId) ||
+        this.episodes.some(({ id }) => id === episodeId)
+      )
+    },
+
+    // A stale link (deleted episode, URL copied from another production)
+    // must not reach the store: SET_CURRENT_EPISODE cannot resolve the id,
+    // the combobox goes blank and a mounted page keeps the list it had.
+    redirectToKnownEpisode() {
+      const episodeId = this.fallbackEpisodeId(
+        this.getCurrentSectionFromRoute(),
+        this.$route.params.plugin_id
+      )
+      this.$router
+        .replace({
+          name: this.$route.name,
+          params: { ...this.$route.params, episode_id: episodeId },
+          query: this.$route.query
+        })
+        .catch(console.error)
+    },
+
+    runningEpisodeId() {
+      const episode =
+        this.episodes.find(({ status }) => status === 'running') ||
+        this.episodes[0]
+      return episode?.id || 'all'
+    },
+
+    // Episode shown instead of one the route names but the production does
+    // not have: 'all' where the section offers it, the running episode
+    // elsewhere. Shared by the direct link and the in-session paths.
+    fallbackEpisodeId(section, pluginId) {
+      return this.offersAllEpisodes(section, pluginId)
+        ? 'all'
+        : this.runningEpisodeId()
+    },
+
+    // Sections whose episode selector offers the all pseudo-episode. Plugin
+    // pages forward it to their iframe; the Shots page lists every shot of
+    // the production under it but has no main pack.
+    offersAllEpisodes(section, pluginId) {
+      return (
+        pluginId !== undefined ||
+        this.assetSections.includes(section) ||
+        this.editSections.includes(section) ||
+        this.breakdownSections.includes(section) ||
+        this.scheduleSections.includes(section) ||
+        this.shotSections.includes(section)
+      )
+    },
+
+    // Sections whose episode selector offers the main pack: the Edits and
+    // Shots pages list episode-bound entities only.
+    offersMainPack(section, pluginId) {
+      return (
+        this.hasMainPack &&
+        (pluginId !== undefined ||
+          this.assetSections.includes(section) ||
+          this.breakdownSections.includes(section) ||
+          this.scheduleSections.includes(section))
+      )
+    },
+
+    // Whether the route keeps the pseudo-episode it names: only where the
+    // selector of the section offers it.
+    keepsPseudoEpisode(section, episodeId, pluginId) {
+      if (episodeId === 'all') return this.offersAllEpisodes(section, pluginId)
+      if (episodeId === 'main') return this.offersMainPack(section, pluginId)
+      return false
+    },
+
+    updateCombosFromRoute(resolvedEpisodeId = null) {
       const productionId = this.$route.params.production_id
       const pluginId = this.$route.params.plugin_id
       const section = this.getCurrentSectionFromRoute()
-      let episodeId = this.$route.params.episode_id
+      let episodeId = resolvedEpisodeId ?? this.$route.params.episode_id
       this.silent = true
       this.currentProductionId = productionId
       this.currentProjectSection = section
       this.currentPluginId = pluginId
-      const isAssetSection = this.assetSections.includes(section)
-      const isEditSection = this.editSections.includes(section)
-      const isBreakdownSection = this.breakdownSections.includes(section)
-      // The schedule keeps both pseudo-episodes: 'all' displays its
-      // production-wide planning, 'main' scopes it to the main pack.
-      const isScheduleSection = this.scheduleSections.includes(section)
-      // Plugin pages keep the all / main pseudo-episodes: coercing to the
-      // first episode desyncs the combobox from the episode_id actually
-      // forwarded to the plugin iframe.
-      // The Shots page keeps 'all' (every shot of the production) but has no
-      // main pack: 'main' is coerced to the first episode like before.
-      const isShotSection = this.shotSections.includes(section)
-      const keepsPseudoEpisode =
-        pluginId !== undefined ||
-        isAssetSection ||
-        isEditSection ||
-        isBreakdownSection ||
-        isScheduleSection ||
-        (isShotSection && episodeId === 'all')
+      // A pseudo-episode the section does not offer is coerced to the first
+      // episode like before.
       if (
-        !keepsPseudoEpisode &&
         ['all', 'main'].includes(episodeId) &&
+        !this.keepsPseudoEpisode(section, episodeId, pluginId) &&
         this.episodes.length > 0
       ) {
         episodeId = this.episodes[0].id
         this.currentEpisodeId = episodeId
-        this.pushContextRoute(section, pluginId)
+        // Replace: the URL just rejected must not stay in the history, or
+        // the back button lands on it and is coerced here again.
+        this.pushContextRoute(section, pluginId, true)
       } else {
         this.currentEpisodeId = episodeId
       }
     },
 
-    pushContextRoute(section, pluginId = null) {
+    pushContextRoute(section, pluginId = null, replace = false) {
       const isAssetSection = this.assetSections.includes(section)
       const production = this.productionMap.get(this.currentProductionId)
       const isTVShow = production?.production_type === 'tvshow'
@@ -990,19 +1069,28 @@ export default {
           episodeId = production?.first_episode_id
         }
       }
+      // The router names the asset types, news feed and plugin pages
+      // differently from the sections the topbar reads off the path: a
+      // plugin page is a section named after the plugin itself.
+      const routeSection = pluginId
+        ? 'production-plugin'
+        : { assetTypes: 'production-asset-types', newsFeed: 'news-feed' }[
+            section
+          ] || section
       let route = {
-        name: section,
+        name: routeSection,
         params: {
           production_id: this.currentProductionId,
           plugin_id: pluginId
         }
       }
-      route = this.episodifyRoute(route, section, episodeId, isTVShow)
+      route = this.episodifyRoute(route, routeSection, episodeId, isTVShow)
       if (['assets', 'shots'].includes(section)) {
         route.query = { search: '' }
       }
       if (route && route.params.production_id) {
-        this.$router.push(route).catch(err => {
+        const navigate = replace ? this.$router.replace : this.$router.push
+        navigate.call(this.$router, route).catch(err => {
           console.error(err)
         })
       }
@@ -1049,6 +1137,19 @@ export default {
       this.$nextTick(() => {
         this.silent = false
       })
+    },
+
+    // A live deletion of the displayed episode leaves the route, the store
+    // and the selector on an id the production no longer has: move to the
+    // same fallback as a stale link. A production switch also rewrites the
+    // list, but the store resolves another episode from the new list then.
+    episodes() {
+      const routeEpisodeId = this.$route.params.episode_id
+      const isDisplayedEpisodeGone =
+        routeEpisodeId &&
+        this.currentEpisode?.id === routeEpisodeId &&
+        !this.isKnownEpisode(routeEpisodeId)
+      if (isDisplayedEpisodeGone) this.redirectToKnownEpisode()
     },
 
     currentSectionOption() {
