@@ -158,6 +158,26 @@ describe('Sequences store, all-episodes pseudo-episode', () => {
       sequencesStore.mutations.CLEAR_SEQUENCES(state)
       expect(state.sequencesLoadingKey).toBeNull()
     })
+
+    // A production switch clears the sequences through CLEAR_SHOTS: the
+    // scope of the emptied dataset must go with it, or the live insertion
+    // fills the next production's list from the previous scope.
+    test('drops the scope with the dataset on a production switch', () => {
+      const state = {}
+      sequencesStore.mutations.SET_SEQUENCES_WITH_TASKS(state, {
+        episodeMap: new Map(),
+        userFilters: {},
+        personMap: new Map(),
+        production,
+        sequences: [],
+        taskMap: new Map(),
+        taskTypeMap: new Map(),
+        taskStatusMap: new Map(),
+        loadingKey: 'p-all/all'
+      })
+      sequencesStore.mutations.CLEAR_SHOTS(state)
+      expect(state.sequencesLoadingKey).toBeNull()
+    })
   })
 
   describe('sequenceOptions', () => {
@@ -272,5 +292,72 @@ describe('Sequences store, task entity name', () => {
     const task = buildTask()
     sequencesStore.mutations.NEW_TASK_END(state, taskPayload(task))
     expect(task.entity_name).toEqual('SQ01')
+  })
+})
+
+describe('Sequences store, loadSequence live insertion', () => {
+  const rootGetters = {
+    currentProduction: { id: 'p-live' },
+    currentEpisode: { id: 'ep-a' },
+    episodeMap: new Map(),
+    isTVShow: true
+  }
+
+  const committedTypes = async (payload, sequencesLoadingKey, sequence) => {
+    vi.spyOn(shotsApi, 'getSequence').mockResolvedValue(sequence)
+    const commit = vi.fn()
+    await sequencesStore.actions.loadSequence(
+      { commit, state: { sequencesLoadingKey }, rootGetters },
+      payload
+    )
+    return commit.mock.calls.map(([type]) => type)
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  test('skips a sequence of another episode when asked to stay in scope', async () => {
+    const types = await committedTypes(
+      { sequenceId: 's-scope-1', onlyInScope: true },
+      'p-live/ep-a',
+      { id: 's-scope-1', parent_id: 'ep-b' }
+    )
+    expect(types).not.toContain('ADD_SEQUENCE')
+  })
+
+  test('adds a sequence of the loaded episode', async () => {
+    const types = await committedTypes(
+      { sequenceId: 's-scope-2', onlyInScope: true },
+      'p-live/ep-a',
+      { id: 's-scope-2', parent_id: 'ep-a' }
+    )
+    expect(types).toContain('ADD_SEQUENCE')
+  })
+
+  test('adds any sequence to a production-wide dataset', async () => {
+    const types = await committedTypes(
+      { sequenceId: 's-scope-3', onlyInScope: true },
+      'p-live/all',
+      { id: 's-scope-3', parent_id: 'ep-b' }
+    )
+    expect(types).toContain('ADD_SEQUENCE')
+  })
+
+  test('skips a sequence of another production', async () => {
+    const types = await committedTypes(
+      { sequenceId: 's-scope-6', onlyInScope: true },
+      'p-live/all',
+      { id: 's-scope-6', parent_id: 'ep-b', project_id: 'p-other' }
+    )
+    expect(types).not.toContain('ADD_SEQUENCE')
+  })
+
+  test('still adds an out-of-scope sequence loaded by id', async () => {
+    const types = await committedTypes('s-scope-4', 'p-live/ep-a', {
+      id: 's-scope-4',
+      parent_id: 'ep-b'
+    })
+    expect(types).toContain('ADD_SEQUENCE')
   })
 })

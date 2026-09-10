@@ -2,6 +2,7 @@ import peopleApi from '@/store/api/people'
 import shotsApi from '@/store/api/shots'
 import shotStore from '@/store/modules/shots'
 
+import { isEpisodeInLoadedScope } from '@/lib/episodes'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import { buildSequenceIndex, indexSearch } from '@/lib/indexing'
 import {
@@ -532,7 +533,12 @@ const actions = {
     })
   },
 
-  loadSequence({ commit, state, rootGetters }, sequenceId) {
+  // A socket event passes { sequenceId, onlyInScope: true } so a sequence
+  // created in another episode stays out of the loaded dataset. A load by id
+  // (detail page) always adds.
+  loadSequence({ commit, state, rootGetters }, payload) {
+    const { sequenceId, onlyInScope = false } =
+      typeof payload === 'string' ? { sequenceId: payload } : payload
     const sequence = cache.sequenceMap.get(sequenceId)
     if (sequence?.lock) return
 
@@ -542,7 +548,14 @@ const actions = {
       .then(sequence => {
         if (cache.sequenceMap.get(sequence.id)) {
           commit(UPDATE_SEQUENCE, sequence)
-        } else {
+        } else if (
+          !onlyInScope ||
+          isEpisodeInLoadedScope(
+            state.sequencesLoadingKey,
+            sequence.parent_id,
+            sequence.project_id
+          )
+        ) {
           commit(ADD_SEQUENCE, { sequence, episodeMap })
         }
         return sequence
@@ -652,6 +665,7 @@ const mutations = {
     cache.sequences = []
     state.currentSequence = null
     state.displayedSequences = []
+    state.sequencesLoadingKey = null
     cache.sequenceMap.clear()
     state.selectedSequences = new Map()
   },

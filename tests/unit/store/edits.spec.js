@@ -217,3 +217,68 @@ describe('Edits store', () => {
     })
   })
 })
+
+describe('Edits store, loadEdit live insertion', () => {
+  const rootGetters = {
+    currentProduction: { id: 'p-live' },
+    currentEpisode: { id: 'ep-a' },
+    isTVShow: true,
+    personMap: new Map(),
+    taskMap: new Map(),
+    taskTypeMap: new Map()
+  }
+
+  const committedTypes = async (payload, editsLoadingKey, edit) => {
+    editsApi.getEdit = vi.fn(() => Promise.resolve({ tasks: [], ...edit }))
+    const commit = vi.fn()
+    await editsStore.actions.loadEdit(
+      { commit, state: { editsLoadingKey }, rootGetters },
+      payload
+    )
+    return commit.mock.calls.map(([type]) => type)
+  }
+
+  test('skips an edit of another episode when asked to stay in scope', async () => {
+    const types = await committedTypes(
+      { editId: 'e-scope-1', onlyInScope: true },
+      'p-live/ep-a',
+      { id: 'e-scope-1', parent_id: 'ep-b' }
+    )
+    expect(types).not.toContain('ADD_EDIT')
+  })
+
+  test('adds an edit of the loaded episode', async () => {
+    const types = await committedTypes(
+      { editId: 'e-scope-2', onlyInScope: true },
+      'p-live/ep-a',
+      { id: 'e-scope-2', parent_id: 'ep-a' }
+    )
+    expect(types).toContain('ADD_EDIT')
+  })
+
+  test('adds any edit to a production-wide dataset', async () => {
+    const types = await committedTypes(
+      { editId: 'e-scope-3', onlyInScope: true },
+      'p-live/all',
+      { id: 'e-scope-3', parent_id: 'ep-b' }
+    )
+    expect(types).toContain('ADD_EDIT')
+  })
+
+  test('skips an edit of another production', async () => {
+    const types = await committedTypes(
+      { editId: 'e-scope-5', onlyInScope: true },
+      'p-live/all',
+      { id: 'e-scope-5', parent_id: 'ep-b', project_id: 'p-other' }
+    )
+    expect(types).not.toContain('ADD_EDIT')
+  })
+
+  test('still adds an out-of-scope edit loaded by id', async () => {
+    const types = await committedTypes('e-scope-4', 'p-live/ep-a', {
+      id: 'e-scope-4',
+      parent_id: 'ep-b'
+    })
+    expect(types).toContain('ADD_EDIT')
+  })
+})

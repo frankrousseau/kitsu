@@ -388,3 +388,77 @@ describe('Shots store', () => {
     })
   })
 })
+
+describe('Shots store, loadShot live insertion', () => {
+  // A socket event announces a shot created elsewhere: the scope comes from
+  // the key the store recorded, not from the topbar, which may show another
+  // page's episode by then.
+  const rootGetters = {
+    currentProduction: { id: 'p-live' },
+    currentEpisode: { id: 'ep-a' },
+    isTVShow: true,
+    personMap: new Map(),
+    people: [],
+    taskMap: new Map(),
+    taskStatusMap: new Map(),
+    taskTypeMap: new Map()
+  }
+
+  const committedTypes = async (payload, shotsLoadingKey, shot) => {
+    vi.spyOn(shotsApi, 'getShot').mockResolvedValue({ tasks: [], ...shot })
+    const commit = vi.fn()
+    await shotsStore.actions.loadShot(
+      { commit, state: { shotsLoadingKey }, rootGetters },
+      payload
+    )
+    return commit.mock.calls.map(([type]) => type)
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  test('skips a shot of another episode when asked to stay in scope', async () => {
+    const types = await committedTypes(
+      { shotId: 'sh-scope-1', onlyInScope: true },
+      'p-live/ep-a',
+      { id: 'sh-scope-1', episode_id: 'ep-b' }
+    )
+    expect(types).not.toContain('ADD_SHOT')
+  })
+
+  test('adds a shot of the loaded episode', async () => {
+    const types = await committedTypes(
+      { shotId: 'sh-scope-2', onlyInScope: true },
+      'p-live/ep-a',
+      { id: 'sh-scope-2', episode_id: 'ep-a' }
+    )
+    expect(types).toContain('ADD_SHOT')
+  })
+
+  test('adds any shot to a production-wide dataset', async () => {
+    const types = await committedTypes(
+      { shotId: 'sh-scope-3', onlyInScope: true },
+      'p-live/all',
+      { id: 'sh-scope-3', episode_id: 'ep-b' }
+    )
+    expect(types).toContain('ADD_SHOT')
+  })
+
+  test('skips a shot of another production', async () => {
+    const types = await committedTypes(
+      { shotId: 'sh-scope-5', onlyInScope: true },
+      'p-live/all',
+      { id: 'sh-scope-5', episode_id: 'ep-b', project_id: 'p-other' }
+    )
+    expect(types).not.toContain('ADD_SHOT')
+  })
+
+  test('still adds an out-of-scope shot loaded by id', async () => {
+    const types = await committedTypes('sh-scope-4', 'p-live/ep-a', {
+      id: 'sh-scope-4',
+      episode_id: 'ep-b'
+    })
+    expect(types).toContain('ADD_SHOT')
+  })
+})

@@ -12,6 +12,7 @@ import tasksStore from '@/store/modules/tasks'
 import taskStatusStore from '@/store/modules/taskstatus'
 import taskTypesStore from '@/store/modules/tasktypes'
 
+import { isEpisodeInLoadedScope } from '@/lib/episodes'
 import { PAGE_SIZE } from '@/lib/pagination'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import {
@@ -503,11 +504,13 @@ const actions = {
     return loadingPromise
   },
 
-  /*
-   * Function useds mainly to reload shot data after an update or creation
-   * event. If the shot was updated a few times ago, it is not reloaded.
-   */
-  loadShot({ commit, state, rootGetters }, shotId) {
+  // Reloads a shot after a remote change, unless it is locked by a recent
+  // local update. A socket event passes { shotId, onlyInScope: true } so a
+  // shot created in another episode stays out of the loaded dataset. A load
+  // by id (detail page) always adds.
+  loadShot({ commit, state, rootGetters }, payload) {
+    const { shotId, onlyInScope = false } =
+      typeof payload === 'string' ? { shotId: payload } : payload
     const shot = cache.shotMap.get(shotId)
     if (shot?.lock) return
 
@@ -523,7 +526,14 @@ const actions = {
       .then(shot => {
         if (cache.shotMap.get(shot.id)) {
           commit(UPDATE_SHOT, shot)
-        } else {
+        } else if (
+          !onlyInScope ||
+          isEpisodeInLoadedScope(
+            state.shotsLoadingKey,
+            shot.episode_id,
+            shot.project_id
+          )
+        ) {
           shot.tasks.forEach(task => {
             commit(NEW_TASK_END, { task })
           })

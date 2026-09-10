@@ -528,3 +528,150 @@ describe('Assets store', () => {
     })
   })
 })
+
+describe('Assets store, loadAsset live insertion', () => {
+  // A socket event announces an asset created elsewhere: a fresh asset is
+  // cast nowhere yet, so its episode alone says whether the loaded dataset
+  // should hold it. The single-asset payload carries `episode_id` as a
+  // string, empty for the main pack, and no `source_id`. The scope comes from
+  // the key the store recorded, not from the topbar: Breakdown loads every
+  // asset under a real episode.
+  const rootGetters = () => ({
+    ...baseRootGetters(),
+    isTVShow: true,
+    currentEpisode: { id: 'ep-a' },
+    people: [],
+    taskStatusMap: new Map()
+  })
+
+  const committedTypes = async (payload, assetsLoadingKey, asset) => {
+    vi.spyOn(assetsApi, 'getAsset').mockResolvedValue({ tasks: [], ...asset })
+    const commit = vi.fn()
+    await assetsStore.actions.loadAsset(
+      { commit, state: { assetsLoadingKey }, rootGetters: rootGetters() },
+      payload
+    )
+    return commit.mock.calls.map(([type]) => type)
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  test('skips an asset of another episode when asked to stay in scope', async () => {
+    const types = await committedTypes(
+      { assetId: 'a-scope-1', onlyInScope: true },
+      'p1/ep-a',
+      { id: 'a-scope-1', episode_id: 'ep-b' }
+    )
+    expect(types).not.toContain('ADD_ASSET')
+  })
+
+  test('adds an asset of the loaded episode', async () => {
+    const types = await committedTypes(
+      { assetId: 'a-scope-2', onlyInScope: true },
+      'p1/ep-a',
+      { id: 'a-scope-2', episode_id: 'ep-a' }
+    )
+    expect(types).toContain('ADD_ASSET')
+  })
+
+  test('adds only the assets without episode on the main pack', async () => {
+    const inPack = await committedTypes(
+      { assetId: 'a-scope-3', onlyInScope: true },
+      'p1/main',
+      { id: 'a-scope-3', episode_id: '' }
+    )
+    const inEpisode = await committedTypes(
+      { assetId: 'a-scope-4', onlyInScope: true },
+      'p1/main',
+      { id: 'a-scope-4', episode_id: 'ep-a' }
+    )
+    expect(inPack).toContain('ADD_ASSET')
+    expect(inEpisode).not.toContain('ADD_ASSET')
+  })
+
+  test('adds any asset to a production-wide dataset, whatever the topbar shows', async () => {
+    const types = await committedTypes(
+      { assetId: 'a-scope-5', onlyInScope: true },
+      'p1/all',
+      { id: 'a-scope-5', episode_id: 'ep-b' }
+    )
+    expect(types).toContain('ADD_ASSET')
+  })
+
+  // A production switch during the second the handler waits leaves the store
+  // on another production: the payload says which one the asset belongs to.
+  test('skips an asset of another production', async () => {
+    const types = await committedTypes(
+      { assetId: 'a-scope-9', onlyInScope: true },
+      'p1/all',
+      { id: 'a-scope-9', episode_id: 'ep-b', project_id: 'p2' }
+    )
+    expect(types).not.toContain('ADD_ASSET')
+  })
+
+  test('still adds an out-of-scope asset loaded by id', async () => {
+    // The detail page reads the map after the load: a deep link to a main
+    // pack asset cast in the displayed episode must keep working.
+    const types = await committedTypes('a-scope-7', 'p1/ep-a', {
+      id: 'a-scope-7',
+      episode_id: ''
+    })
+    expect(types).toContain('ADD_ASSET')
+  })
+
+  test('reads the episode from source_id when a payload carries it', async () => {
+    const types = await committedTypes(
+      { assetId: 'a-scope-8', onlyInScope: true },
+      'p1/ep-a',
+      { id: 'a-scope-8', source_id: 'ep-a' }
+    )
+    expect(types).toContain('ADD_ASSET')
+  })
+})
+
+describe('Assets store, ADD_ASSET', () => {
+  // The episode column and the scope checks read asset.episode_id. The
+  // single-asset payload of a TV show carries it as a string, empty for the
+  // main pack, and carries no source_id: the list payloads are the ones that
+  // carry source_id.
+  const addAsset = payload => {
+    const state = { assetSearchText: '', assetSelectionGrid: {} }
+    // The mutation completes the asset in place, so it is the object the
+    // store keeps: assert on it, not on the fixture.
+    const asset = {
+      tasks: [],
+      project_id: 'p1',
+      asset_type_name: 'Character',
+      description: '',
+      data: {},
+      ...payload
+    }
+    assetsStore.mutations.ADD_ASSET(state, {
+      taskStatusMap: new Map(),
+      taskTypeMap: new Map(),
+      taskMap: new Map(),
+      persons: [],
+      personMap: new Map(),
+      production: { id: 'p1', name: 'Prod', descriptors: [] },
+      asset
+    })
+    return asset
+  }
+
+  test('keeps the episode of a single-asset payload', () => {
+    const asset = addAsset({ id: 'a-add-1', name: 'A1', episode_id: 'ep-a' })
+    expect(asset.episode_id).toEqual('ep-a')
+  })
+
+  test('resolves the main pack to no episode', () => {
+    const asset = addAsset({ id: 'a-add-2', name: 'A2', episode_id: '' })
+    expect(asset.episode_id).toBeNull()
+  })
+
+  test('falls back to the source_id the list payloads carry', () => {
+    const asset = addAsset({ id: 'a-add-3', name: 'A3', source_id: 'ep-b' })
+    expect(asset.episode_id).toEqual('ep-b')
+  })
+})

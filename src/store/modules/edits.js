@@ -10,6 +10,7 @@ import tasksStore from '@/store/modules/tasks'
 import taskTypesStore from '@/store/modules/tasktypes'
 import taskStatusStore from '@/store/modules/taskstatus'
 
+import { isEpisodeInLoadedScope } from '@/lib/episodes'
 import { PAGE_SIZE } from '@/lib/pagination'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import {
@@ -394,11 +395,12 @@ const actions = {
     return loadingPromise
   },
 
-  /*
-   * Function useds mainly to reload edit data after an update or creation
-   * event. If the edit was updated a few times ago, it is not reloaded.
-   */
-  loadEdit({ commit, state, rootGetters }, editId) {
+  // Reloads an edit after a remote change, unless it is locked by a recent
+  // local update. A socket event passes { editId, onlyInScope: true } so an
+  // edit created in another episode stays out of the loaded dataset.
+  loadEdit({ commit, state, rootGetters }, payload) {
+    const { editId, onlyInScope = false } =
+      typeof payload === 'string' ? { editId: payload } : payload
     const edit = cache.editMap.get(editId)
     if (edit?.lock) return
 
@@ -411,7 +413,14 @@ const actions = {
       .then(edit => {
         if (cache.editMap.get(edit.id)) {
           commit(UPDATE_EDIT, edit)
-        } else {
+        } else if (
+          !onlyInScope ||
+          isEpisodeInLoadedScope(
+            state.editsLoadingKey,
+            edit.parent_id,
+            edit.project_id
+          )
+        ) {
           commit(ADD_EDIT, {
             edit,
             taskTypeMap,

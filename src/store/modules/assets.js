@@ -12,6 +12,7 @@ import tasksStore from '@/store/modules/tasks'
 import taskStatusStore from '@/store/modules/taskstatus'
 import taskTypesStore from '@/store/modules/tasktypes'
 
+import { isEpisodeInLoadedScope } from '@/lib/episodes'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import { minutesToDays } from '@/lib/time'
 import { PAGE_SIZE } from '@/lib/pagination'
@@ -513,11 +514,14 @@ const actions = {
     return assetsApi.getAsset(assetId)
   },
 
-  /*
-   * Function used mainly to reload asset information when a remote change
-   * occurs.
-   */
-  loadAsset({ commit, state, rootGetters }, assetId) {
+  // Reloads an asset after a remote change. A socket event passes
+  // { assetId, onlyInScope: true }: a freshly created asset is cast nowhere
+  // yet, so its episode alone says whether the loaded dataset should hold
+  // it. The single-asset payload carries `episode_id` (empty for the main
+  // pack) and no `source_id`. A load by id (detail page) always adds.
+  loadAsset({ commit, state, rootGetters }, payload) {
+    const { assetId, onlyInScope = false } =
+      typeof payload === 'string' ? { assetId: payload } : payload
     const asset = cache.assetMap.get(assetId)
     if (asset?.lock) return
 
@@ -533,7 +537,14 @@ const actions = {
       .then(asset => {
         if (cache.assetMap.get(asset.id)) {
           commit(UPDATE_ASSET, asset)
-        } else {
+        } else if (
+          !onlyInScope ||
+          isEpisodeInLoadedScope(
+            state.assetsLoadingKey,
+            asset.episode_id || asset.source_id || null,
+            asset.project_id
+          )
+        ) {
           asset.tasks.forEach(task => {
             commit(NEW_TASK_END, { task })
           })
@@ -1101,7 +1112,7 @@ const mutations = {
     asset.tasks = sortTasks(asset.tasks, taskTypeMap)
     asset.validations = new Map()
     asset.production_id = asset.project_id
-    asset.episode_id = asset.source_id
+    asset.episode_id = asset.source_id || asset.episode_id || null
     helpers.populateAndRegisterAsset(
       new Map(),
       taskMap,
