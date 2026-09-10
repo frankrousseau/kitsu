@@ -109,6 +109,13 @@ export default {
     return client.ppost(path, { task_ids: taskIds })
   },
 
+  // one entry per entity, on the task holding its current preview
+  loadTempPlaylistFromEntities(production, entityIds, sort) {
+    let path = `/api/data/projects/${production.id}/playlists/temp`
+    if (sort) path += '?sort=true'
+    return client.ppost(path, { entity_ids: entityIds })
+  },
+
   notifyClients(playlist, studioId, departmentId) {
     const data = { studio_id: studioId, department_id: departmentId }
     return client.ppost(

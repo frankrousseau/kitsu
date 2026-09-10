@@ -12,7 +12,7 @@
     <div class="has-text-centered" v-if="isLoading">
       <spinner />
     </div>
-    <div v-else-if="previewFiles.length > 0 && !isLoading">
+    <div v-else-if="previewFiles.length > 0">
       <div class="contact-sheet flexcolumn" v-if="contactSheetMode">
         <div
           :key="`task-type-group-${index}`"
@@ -31,7 +31,7 @@
           </div>
         </div>
       </div>
-      <table class="datatable" v-else>
+      <table class="datatable datatable--cards" v-else>
         <thead class="datatable-head">
           <tr class="datatable-row-header">
             <th class="thumbnail"></th>
@@ -68,7 +68,7 @@
             class="datatable-row"
             v-for="previewFile in taskTypePreviewFileGroups.flat()"
           >
-            <td class="thumbnail">
+            <td class="thumbnail card-head">
               <entity-thumbnail
                 class="preview-thumbnail"
                 :preview-file-id="previewFile.id"
@@ -80,30 +80,46 @@
             </td>
 
             <task-type-cell
-              class="type"
+              class="type card-head"
               :task-type="getTaskType(previewFile)"
               :production-id="currentProduction.id"
             />
-            <td class="original-name">
+            <td
+              class="original-name"
+              :data-label="$t('entities.preview_files.original_file_name')"
+            >
               {{ previewFile.original_name }}
             </td>
-            <td class="revision">
+            <td
+              class="revision"
+              :data-label="$t('entities.preview_files.revision')"
+            >
               {{ previewFile.revision }}
             </td>
-            <td class="extension">
+            <td
+              class="extension"
+              :data-label="$t('entities.preview_files.extension')"
+            >
               {{ previewFile.extension }}
             </td>
-            <td class="size">
+            <td class="size" :data-label="$t('entities.preview_files.size')">
               {{ renderFileSize(previewFile.file_size) }}
             </td>
-            <td class="status">
+            <td
+              class="status"
+              :data-label="$t('entities.preview_files.status')"
+            >
               {{ previewFile.validation_status }}
             </td>
             <people-name-cell
               class="person"
+              :data-label="$t('entities.preview_files.uploader')"
               :person="personMap.get(previewFile.person_id)"
             />
-            <td class="date">
+            <td
+              class="date"
+              :data-label="$t('entities.preview_files.uploaded_at')"
+            >
               {{ formatDate(previewFile.created_at) }}
             </td>
 
@@ -121,160 +137,129 @@
         </tbody>
       </table>
     </div>
-    <div v-else>
-      {{ $t('entities.preview_files.no_preview_files') }}
-    </div>
+    <empty-section
+      :icon="FilmIcon"
+      :text="$t('entities.preview_files.no_preview_files')"
+      v-else
+    />
   </div>
 </template>
 
-<script>
-import { DownloadIcon } from 'lucide-vue-next'
-import { mapGetters, mapActions } from 'vuex'
+<script setup>
+import { DownloadIcon, FilmIcon } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useStore } from 'vuex'
 
-import { renderFileSize } from '@/lib/render'
-import { formatDate as formatDateBase } from '@/lib/time'
+import { useFormat } from '@/composables/format'
 import preferences from '@/lib/preferences'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
+import { renderFileSize } from '@/lib/render'
 
-import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
-import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
-import EntityPreviewFileCard from '@/components/pages/entities/EntityPreviewFileCard.vue'
+/* eslint-disable no-unused-vars */
 import PeopleNameCell from '@/components/cells/PeopleNameCell.vue'
+import TaskTypeCell from '@/components/cells/TaskTypeCell.vue'
+import EntityPreviewFileCard from '@/components/pages/entities/EntityPreviewFileCard.vue'
+import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
+import EmptySection from '@/components/widgets/EmptySection.vue'
+import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import Spinner from '@/components/widgets/Spinner.vue'
 import TaskTypeName from '@/components/widgets/TaskTypeName.vue'
-import TaskTypeCell from '@/components/cells/TaskTypeCell.vue'
+/* eslint-enable no-unused-vars */
 
-export default {
-  name: 'entity-preview-files',
+const store = useStore()
+const { formatDate } = useFormat()
 
-  components: {
-    ButtonSimple,
-    DownloadIcon,
-    EntityPreviewFileCard,
-    EntityThumbnail,
-    PeopleNameCell,
-    Spinner,
-    TaskTypeCell,
-    TaskTypeName
-  },
+// Props
+// --------------------------------------------------------------------------
+const props = defineProps({
+  entity: { type: Object, default: null }
+})
 
-  data() {
-    return {
-      contactSheetMode: false,
-      isLoading: false,
-      previewFiles: []
+// State
+// --------------------------------------------------------------------------
+const contactSheetMode = ref(false)
+const isLoading = ref(false)
+const previewFiles = ref([])
+
+// Computed
+// --------------------------------------------------------------------------
+const currentProduction = computed(() => store.getters.currentProduction)
+const isCurrentUserArtist = computed(() => store.getters.isCurrentUserArtist)
+const personMap = computed(() => store.getters.personMap)
+const taskMap = computed(() => store.getters.taskMap)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
+
+const taskTypePreviewFileGroups = computed(() => {
+  const groups = previewFiles.value.reduce((acc, previewFile) => {
+    const taskType = getTaskType(previewFile)
+    if (taskType) {
+      acc.set(taskType.id, [...(acc.get(taskType.id) || []), previewFile])
     }
-  },
-
-  props: {
-    entity: {
-      type: Object,
-      default: () => {}
-    }
-  },
-
-  mounted() {
-    if (!this.entity) return
-    this.reset()
-    this.contactSheetMode = preferences.getBoolPreference(
-      'entity:preview-files-contact-sheet'
+    return acc
+  }, new Map())
+  const priorityOf = taskTypeId =>
+    getTaskTypePriorityOfProd(
+      taskTypeMap.value.get(taskTypeId),
+      currentProduction.value
     )
-  },
+  return Array.from(groups.keys())
+    .sort((a, b) => priorityOf(b) - priorityOf(a))
+    .map(taskTypeId => groups.get(taskTypeId))
+})
 
-  computed: {
-    ...mapGetters([
-      'currentProduction',
-      'dateFormat',
-      'isCurrentUserArtist',
-      'personMap',
-      'taskMap',
-      'taskTypeMap',
-      'use12HourClock'
-    ]),
-
-    taskTypePreviewFileGroups() {
-      const taskTypePreviewFiles = new Map()
-      this.previewFiles.forEach(previewFile => {
-        const taskType = this.getTaskType(previewFile)
-        if (taskType) {
-          if (!taskTypePreviewFiles.has(taskType.id)) {
-            taskTypePreviewFiles.set(taskType.id, [])
-          }
-          taskTypePreviewFiles.get(taskType.id).push(previewFile)
-        }
-      })
-      return Array.from(taskTypePreviewFiles.keys())
-        .sort((a, b) => {
-          const taskTypeA = this.taskTypeMap.get(a)
-          const taskTypeB = this.taskTypeMap.get(b)
-          const priorityA = getTaskTypePriorityOfProd(
-            taskTypeA,
-            this.currentProduction
-          )
-          const priorityB = getTaskTypePriorityOfProd(
-            taskTypeB,
-            this.currentProduction
-          )
-          return priorityB - priorityA
-        })
-        .map(taskTypeId => {
-          return taskTypePreviewFiles.get(taskTypeId)
-        })
-    }
-  },
-
-  methods: {
-    ...mapActions(['getEntityPreviewFiles']),
-
-    getTaskType(previewFile) {
-      const task = this.taskMap.get(previewFile.task_id)
-      return task && this.taskTypeMap.get(task.task_type_id)
-    },
-
-    getDownloadPath(previewFileId) {
-      const previewFile = this.previewFiles.find(
-        file => file.id === previewFileId
-      )
-      if (!previewFile) return ''
-
-      const type = previewFile.extension === 'mp4' ? 'movies' : 'pictures'
-      return `/api/${type}/originals/preview-files/${previewFileId}/download`
-    },
-
-    renderFileSize,
-
-    formatDate(date) {
-      return formatDateBase(date, this.dateFormat, this.use12HourClock)
-    },
-
-    reset() {
-      this.isLoading = true
-      this.getEntityPreviewFiles(this.entity.id)
-        .then(previewFiles => {
-          this.previewFiles = previewFiles
-          this.isLoading = false
-        })
-        .catch(err => {
-          console.error(err)
-          this.previewFiles = []
-          this.isLoading = false
-        })
-    }
-  },
-
-  watch: {
-    entity() {
-      if (this.entity) this.reset()
-    },
-
-    contactSheetMode() {
-      preferences.setPreference(
-        'entity:preview-files-contact-sheet',
-        this.contactSheetMode
-      )
-    }
-  }
+// Functions
+// --------------------------------------------------------------------------
+const getTaskType = previewFile => {
+  const task = taskMap.value.get(previewFile.task_id)
+  return task && taskTypeMap.value.get(task.task_type_id)
 }
+
+const getDownloadPath = previewFileId => {
+  const previewFile = previewFiles.value.find(file => file.id === previewFileId)
+  if (!previewFile) return ''
+  const type = previewFile.extension === 'mp4' ? 'movies' : 'pictures'
+  return `/api/${type}/originals/preview-files/${previewFileId}/download`
+}
+
+const reset = async () => {
+  isLoading.value = true
+  try {
+    previewFiles.value = await store.dispatch(
+      'getEntityPreviewFiles',
+      props.entity.id
+    )
+  } catch (err) {
+    console.error(err)
+    previewFiles.value = []
+  }
+  isLoading.value = false
+}
+
+// Watchers
+// --------------------------------------------------------------------------
+watch(
+  () => props.entity,
+  () => {
+    if (props.entity) reset()
+  }
+)
+
+watch(contactSheetMode, () => {
+  preferences.setPreference(
+    'entity:preview-files-contact-sheet',
+    contactSheetMode.value
+  )
+})
+
+// Lifecycle
+// --------------------------------------------------------------------------
+onMounted(() => {
+  if (!props.entity) return
+  reset()
+  contactSheetMode.value = preferences.getBoolPreference(
+    'entity:preview-files-contact-sheet'
+  )
+})
 </script>
 
 <style lang="scss" scoped>
@@ -326,8 +311,11 @@ td.type {
 }
 
 .preview-files {
+  flex: 1;
+  margin-top: 0;
   overflow-y: auto;
 }
+
 .dark .preview-files.wrapper {
   background: transparent;
 }
@@ -339,11 +327,6 @@ td.type {
 
 .datatable-row-header::after {
   display: none;
-}
-
-.preview-files {
-  margin-top: 0;
-  flex: 1;
 }
 
 .contact-sheet {

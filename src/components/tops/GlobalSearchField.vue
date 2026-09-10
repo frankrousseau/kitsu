@@ -1,15 +1,10 @@
 <template>
-  <div
-    :class="{
-      'global-search-field': true,
-      'global-search-field-open': isSearchActive
-    }"
-  >
+  <div class="global-search-field">
     <span class="search-icon">
       <search-icon :size="20" />
     </span>
     <input
-      ref="global-search-field"
+      ref="searchInput"
       class="input"
       placeholder="ctrl+alt+f"
       @focus="isSearchActive = true"
@@ -145,9 +140,17 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { SearchIcon } from 'lucide-vue-next'
-import { mapGetters, mapActions } from 'vuex'
+import {
+  computed,
+  onMounted,
+  onUnmounted,
+  ref,
+  useTemplateRef,
+  watch
+} from 'vue'
+import { useStore } from 'vuex'
 
 import { getEntityPath, getPersonPath } from '@/lib/path'
 import peopleStore from '@/store/modules/people'
@@ -157,140 +160,134 @@ import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
 import PeopleName from '@/components/widgets/PeopleName.vue'
 import Spinner from '@/components/widgets/Spinner.vue'
 
-export default {
-  name: 'global-search-field',
+// Composables
+// --------------------------------------------------------------------------
 
-  components: {
-    EntityThumbnail,
-    PeopleAvatar,
-    PeopleName,
-    SearchIcon,
-    Spinner
-  },
+const store = useStore()
 
-  data() {
-    return {
-      isLoading: false,
-      isSearchActive: false,
-      assets: [],
-      persons: [],
-      shots: [],
-      selectedIndex: 0,
-      searchQuery: ''
-    }
-  },
+// State
+// --------------------------------------------------------------------------
 
-  mounted() {
-    window.addEventListener('keydown', this.onKeyDown)
-  },
+const searchInput = useTemplateRef('searchInput')
 
-  unmounted() {
-    window.removeEventListener('keydown', this.onKeyDown)
-  },
+const assets = ref([])
+const isLoading = ref(false)
+const isSearchActive = ref(false)
+const persons = ref([])
+const searchQuery = ref('')
+const selectedIndex = ref(0)
+const shots = ref([])
 
-  computed: {
-    ...mapGetters(['productionMap']),
+// Computed
+// --------------------------------------------------------------------------
 
-    nbResults() {
-      return this.assets.length + this.persons.length + this.shots.length
-    }
-  },
+const productionMap = computed(() => store.getters.productionMap)
 
-  methods: {
-    ...mapActions(['searchData']),
+const nbResults = computed(
+  () => assets.value.length + persons.value.length + shots.value.length
+)
 
-    entityPath(entity, section) {
-      const project = this.productionMap.get(entity.project_id)
-      const isTVShow = project?.production_type === 'tvshow'
-      let episodeId = null
-      if (isTVShow) episodeId = entity.episode_id || 'main'
-      return getEntityPath(entity.id, entity.project_id, section, episodeId)
-    },
+// Functions
+// --------------------------------------------------------------------------
 
-    personPath(person) {
-      return getPersonPath(person.id)
-    },
+const entityPath = (entity, section) => {
+  const project = productionMap.value.get(entity.project_id)
+  const isTVShow = project?.production_type === 'tvshow'
+  const episodeId = isTVShow ? entity.episode_id || 'main' : null
+  return getEntityPath(entity.id, entity.project_id, section, episodeId)
+}
 
-    selectPrevious() {
-      this.selectedIndex--
-      if (this.selectedIndex < 0) {
-        this.selectedIndex = this.nbResults - 1
-      }
-    },
+const personPath = person => getPersonPath(person.id)
 
-    selectNext() {
-      this.selectedIndex++
-      if (this.selectedIndex >= this.nbResults) {
-        this.selectedIndex = 0
-      }
-    },
-
-    onElementSelected() {
-      const element = document.getElementById(
-        `result-link-${this.selectedIndex}`
-      )
-      if (element) {
-        element.click()
-        this.isSearchActive = false
-        this.searchQuery = ''
-      }
-    },
-
-    onBlur(event) {
-      if (!event.relatedTarget?.id.startsWith('result-link-')) {
-        this.isSearchActive = false
-      }
-    },
-
-    onKeyDown(event) {
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.altKey &&
-        event.code === 'KeyF'
-      ) {
-        this.$refs['global-search-field']?.focus()
-      } else if (this.isSearchActive && event.key === 'ArrowDown') {
-        this.selectNext()
-      } else if (this.isSearchActive && event.key === 'ArrowUp') {
-        this.selectPrevious()
-      }
-    }
-  },
-
-  watch: {
-    searchQuery() {
-      if (this.searchQuery.length > 0) {
-        this.isSearchActive = true
-      }
-
-      if (this.searchQuery.length > 2) {
-        this.isLoading = true
-        this.searchData({ query: this.searchQuery })
-          .then(results => {
-            this.assets = results.assets
-            this.persons = results.persons.map(
-              peopleStore.helpers.addAdditionalInformation
-            )
-            this.shots = results.shots
-          })
-          .catch(console.error)
-          .finally(() => {
-            this.isLoading = false
-          })
-      } else {
-        this.assets = []
-        this.persons = []
-        this.shots = []
-      }
-    },
-
-    isSearchActive() {
-      if (this.isSearchActive) {
-        this.selectedIndex = 0
-      }
-    }
+const selectPrevious = () => {
+  selectedIndex.value--
+  if (selectedIndex.value < 0) {
+    selectedIndex.value = nbResults.value - 1
   }
 }
+
+const selectNext = () => {
+  selectedIndex.value++
+  if (selectedIndex.value >= nbResults.value) {
+    selectedIndex.value = 0
+  }
+}
+
+const onElementSelected = () => {
+  const element = document.getElementById(`result-link-${selectedIndex.value}`)
+  if (element) {
+    element.click()
+    isSearchActive.value = false
+    searchQuery.value = ''
+  }
+}
+
+const onBlur = event => {
+  if (!event.relatedTarget?.id.startsWith('result-link-')) {
+    isSearchActive.value = false
+  }
+}
+
+const onKeyDown = event => {
+  if (
+    (event.ctrlKey || event.metaKey) &&
+    event.altKey &&
+    event.code === 'KeyF'
+  ) {
+    searchInput.value?.focus()
+  } else if (isSearchActive.value && event.key === 'ArrowDown') {
+    selectNext()
+  } else if (isSearchActive.value && event.key === 'ArrowUp') {
+    selectPrevious()
+  }
+}
+
+// Watchers
+// --------------------------------------------------------------------------
+
+watch(searchQuery, async () => {
+  if (searchQuery.value.length > 0) {
+    isSearchActive.value = true
+  }
+
+  if (searchQuery.value.length > 2) {
+    isLoading.value = true
+    try {
+      const results = await store.dispatch('searchData', {
+        query: searchQuery.value
+      })
+      assets.value = results.assets
+      persons.value = results.persons.map(
+        peopleStore.helpers.addAdditionalInformation
+      )
+      shots.value = results.shots
+    } catch (error) {
+      console.error(error)
+    }
+    isLoading.value = false
+  } else {
+    assets.value = []
+    persons.value = []
+    shots.value = []
+  }
+})
+
+watch(isSearchActive, () => {
+  if (isSearchActive.value) {
+    selectedIndex.value = 0
+  }
+})
+
+// Lifecycle
+// --------------------------------------------------------------------------
+
+onMounted(() => {
+  window.addEventListener('keydown', onKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeyDown)
+})
 </script>
 
 <style lang="scss" scoped>
@@ -326,7 +323,6 @@ export default {
   border: 1px solid var(--border);
   border-radius: 5px;
   color: var(--text);
-  max-height: 60px;
   min-width: 120px;
   position: absolute;
   text-align: left;
@@ -345,11 +341,6 @@ export default {
   width: 180px;
   padding-top: 9px;
   position: relative;
-
-  &.global-search-field-open {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-  }
 
   input {
     border-radius: 10px;

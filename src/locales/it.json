@@ -66,7 +66,11 @@
       "edit_label": "Cambia l'etichetta dell'asset",
       "empty": "Casting vuoto",
       "label": "Etichetta",
+      "occurrences": "Occorrenze",
       "picture_mode": "Passa alla modalità immagini",
+      "remove_from_casting": "Rimuovi dal casting",
+      "view_as_cards": "Visualizza come schede",
+      "view_as_list": "Visualizza come elenco",
       "text_mode": "Passa alla modalità testo",
       "title": "Breakdown",
       "options": {
@@ -416,6 +420,7 @@
       "date": "Data",
       "dark_theme": "Tema scuro",
       "days_spent": "giorno impiegato | giorni impiegati",
+      "days_expected": "giorno previsto | giorni previsti",
       "days_estimated": "giorno stimato | giorni stimati",
       "delete": "Elimina",
       "delete_all": "Elimina tutto",
@@ -449,6 +454,8 @@
       "remove": "Rimuovi",
       "save": "Salva",
       "sort_by": "Ordina per",
+      "grouped_by": "Raggruppato per",
+      "none": "Nessuno",
       "sorted_by": "Ordinato per",
       "start_date": "Data di inizio",
       "studio": "Studio",
@@ -580,6 +587,7 @@
       "no_results": "Nessun risultato",
       "link": "Link",
       "hours_spent": "ora impiegata | ore impiegate",
+      "hours_expected": "ora prevista | ore previste",
       "hours_estimated": "ora stimata | ore stimate",
       "created_by": "Creato da",
       "day": "Giorno",
@@ -1003,6 +1011,7 @@
       "update_to_latest_version_help": "Imposta l'ultima revisione per ogni entità, mantenendo il tipo di task corrente.",
       "update_versions_title": "Aggiorna le versioni selezionate",
       "created": "Playlist “{name}” creata.",
+      "view_as_playlist": "Vedi come playlist",
       "view_created": "Visualizza playlist"
     },
     "productions": {
@@ -1166,7 +1175,8 @@
         "shots": "Shot",
         "sequences": "Sequenze"
       },
-      "load_stats": "Carica le statistiche"
+      "hide_stats": "Nascondi statistiche",
+      "show_stats": "Mostra statistiche"
     },
     "profile": {
       "change_avatar": "Cambia avatar",
@@ -1738,6 +1748,11 @@
       "retake_filter_with_retakes": "Con retake"
     },
     "timesheets": {
+      "chart": "Grafico del tempo",
+      "empty": "Nessun tempo registrato per questo periodo con i filtri attuali.",
+      "expected": "previsto",
+      "in_salary": "in stipendio",
+      "with_time_logged": "Con tempo registrato",
       "detail_level": "Livello di dettaglio",
       "done_tasks": "Task completati",
       "export_timesheet": "Esporta il timesheet",

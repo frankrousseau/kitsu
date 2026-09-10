@@ -14,579 +14,554 @@
       v-if="previewFileIdToShow"
       active
       :preview-file-id="previewFileIdToShow"
-      @cancel="() => $store.commit('HIDE_PREVIEW_FILE')"
+      @cancel="hidePreviewFile"
     />
   </div>
 </template>
 
-<script>
-import { mapGetters, mapActions } from 'vuex'
+<script setup>
+import { computed, getCurrentInstance, nextTick, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useStore } from 'vuex'
+
+import auth from '@/lib/auth'
+import crisp from '@/lib/crisp'
+import i18n from '@/lib/i18n'
+import localPreferences from '@/lib/preferences'
+import sentry from '@/lib/sentry'
+import assetsStore from '@/store/modules/assets.js'
+import editStore from '@/store/modules/edits.js'
+import episodeStore from '@/store/modules/episodes.js'
+import sequenceStore from '@/store/modules/sequences.js'
+import shotsStore from '@/store/modules/shots.js'
 
 import PreviewModal from '@/components/modals/PreviewModal.vue'
 import Spinner from '@/components/widgets/Spinner.vue'
 
-import auth from '@/lib/auth'
-import crisp from '@/lib/crisp'
-import localPreferences from '@/lib/preferences'
-import sentry from '@/lib/sentry'
-
-import assetsStore from '@/store/modules/assets.js'
-import shotsStore from '@/store/modules/shots.js'
-import editStore from '@/store/modules/edits.js'
-import episodeStore from '@/store/modules/episodes.js'
-import sequenceStore from '@/store/modules/sequences.js'
-
-export default {
-  name: 'app',
-
-  components: {
-    PreviewModal,
-    Spinner
-  },
-
-  computed: {
-    ...mapGetters([
-      'assetTypeMap',
-      'currentEpisode',
-      'currentProduction',
-      'departmentMap',
-      'todoMap',
-      'isCurrentUserAdmin',
-      'isDataLoading',
-      'isDarkTheme',
-      'isSavingCommentPreview',
-      'isTVShow',
-      'mainConfig',
-      'previewFileIdToShow',
-      'personMap',
-      'productionMap',
-      'taskComments',
-      'taskMap',
-      'taskStatusMap',
-      'taskTypeMap',
-      'user'
-    ]),
-
-    assetMap() {
-      return assetsStore.cache.assetMap
-    },
-
-    shotMap() {
-      return shotsStore.cache.shotMap
-    },
-
-    editMap() {
-      return editStore.cache.editMap
-    },
-
-    episodeMap() {
-      return episodeStore.cache.episodeMap
-    },
-
-    sequenceMap() {
-      return sequenceStore.cache.sequenceMap
-    }
-  },
-
-  async mounted() {
-    const config = await this.setMainConfig()
-    this.setupDarkTheme()
-    this.setupCrisp(config)
-    this.setupSentry(config)
-    this.setupAuthChannel()
-  },
-
-  methods: {
-    ...mapActions([
-      'getOrganisation',
-      'loadAsset',
-      'loadAssetType',
-      'loadComment',
-      'loadDepartment',
-      'loadEdit',
-      'loadEpisode',
-      'loadOpenProductions',
-      'loadPerson',
-      'loadProduction',
-      'loadSequence',
-      'loadShot',
-      'loadTask',
-      'loadTaskStatus',
-      'loadTaskType',
-      'refreshMetadataDescriptor',
-      'setMainConfig',
-      'setSupportChat'
-    ]),
-
-    onAssignation(eventData, assign = true) {
-      if (this.currentProduction?.id !== eventData.project_id) {
-        return
-      }
-
-      const personId = eventData.person_id
-      const taskIds = [eventData.task_id]
-
-      // for entity lists
-      if (assign) {
-        this.$store.commit('ASSIGN_TASKS', { taskIds, personId })
-      } else {
-        this.$store.commit('UNASSIGN_TASKS', taskIds)
-      }
-    },
-
-    setupDarkTheme() {
-      const darkTheme = localStorage.getItem('dark-theme')
-      const isDarkTheme =
-        darkTheme === 'true' ||
-        (darkTheme !== 'false' &&
-          Boolean(this.mainConfig?.dark_theme_by_default))
-      this.$store.commit('TOGGLE_DARK_THEME', isDarkTheme)
-    },
-
-    setupCrisp(config) {
-      // Never load Crisp on the guest share page: the widget reports the
-      // page URL, which contains the share token.
-      if (window.location.pathname.startsWith('/playlists/shared/')) return
-      if (config.crisp_token?.length) {
-        crisp.init(config.crisp_token)
-        const supportChat = localPreferences.getBoolPreference(
-          'support:show',
-          true
-        )
-        this.setSupportChat(supportChat)
-      }
-    },
-
-    setupSentry(config) {
-      if (config.sentry?.dsn?.length) {
-        const app = this.$.appContext.app
-        sentry.init(app, this.$router, {
-          dsn: config.sentry.dsn,
-          sampleRate: config.sentry.sampleRate
-        })
-      }
-    },
-
-    setupAuthChannel() {
-      if (auth.getBroadcastChannel()) {
-        auth.getBroadcastChannel().onmessage = async event => {
-          if (this.$route.name !== 'login' && event.data === 'logout') {
-            // Another tab logged out: purge this tab's session too,
-            // otherwise store and socket keep the previous user's data.
-            // Navigate first: purging while the current page is still
-            // mounted crashes the computed properties reading the user.
-            // The push resolves before the render flush unmounts the page,
-            // so also wait for the next tick.
-            await this.$router.push({
-              name: 'login',
-              query: { redirect: this.$route.fullPath }
-            })
-            await this.$nextTick()
-            this.$store.dispatch('logoutLocal')
-          }
-        }
-      }
-    }
-  },
-
-  watch: {
-    isDarkTheme: {
-      immediate: true,
-      handler() {
-        const background = this.isDarkTheme ? '#36393F' : '#FFF'
-        document.documentElement.style.background = background
-        document.body.style.background = background
-      }
-    },
-
-    currentProduction: {
-      immediate: true,
-      handler() {
-        const userLocale = (this.user?.locale || 'en').substring(0, 2)
-        const variant = this.currentProduction?.production_style
-        if (userLocale !== 'en') {
-          return
-        }
-        if (['nft', 'video-game'].includes(variant)) {
-          this.$i18n.silentFallbackWarn = true
-          this.$i18n.locale = `en_${variant}`
-        } else {
-          this.$i18n.silentFallbackWarn = false
-          this.$i18n.locale = 'en'
-        }
-      }
-    }
-  },
-
-  socket: {
-    events: {
-      'project:new'(eventData) {
-        if (!this.productionMap.get(eventData.project_id)) {
-          this.loadProduction(eventData.project_id).catch(err => {
-            console.error(err)
-          })
-        }
-      },
-
-      'project:update'(eventData) {
-        if (this.productionMap.get(eventData.project_id)) {
-          this.loadProduction(eventData.project_id).catch(err => {
-            this.$store.commit('REMOVE_PRODUCTION', {
-              id: eventData.project_id
-            })
-          })
-        } else {
-          this.loadOpenProductions()
-        }
-      },
-
-      'project:delete'(eventData) {
-        if (this.productionMap.get(eventData.project_id)) {
-          this.$store.commit('REMOVE_PRODUCTION', { id: eventData.project_id })
-        }
-      },
-
-      'sequence:new'(eventData) {
-        if (
-          !this.sequenceMap.get(eventData.sequence_id) &&
-          this.currentProduction?.id === eventData.project_id
-        ) {
-          this.loadSequence(eventData.sequence_id)
-        }
-      },
-
-      'sequence:update'(eventData) {
-        const sequence = this.sequenceMap.get(eventData.sequence_id)
-        if (sequence && !sequence.lock) {
-          this.loadSequence(eventData.sequence_id)
-        }
-      },
-
-      'sequence:delete'(eventData) {
-        if (this.sequenceMap.get(eventData.sequence_id)) {
-          this.$store.commit('REMOVE_SEQUENCE', { id: eventData.sequence_id })
-        }
-      },
-
-      'edit:new'(eventData) {
-        if (
-          !this.editMap.get(eventData.edit_id) &&
-          this.currentProduction?.id === eventData.project_id
-        ) {
-          this.loadEdit(eventData.edit_id)
-        }
-      },
-
-      'edit:update'(eventData) {
-        const edit = this.editMap.get(eventData.edit_id)
-        if (edit && !edit.lock) {
-          this.loadEdit(eventData.edit_id)
-        }
-      },
-
-      'edit:delete'(eventData) {
-        if (this.editMap.get(eventData.edit_id)) {
-          this.$store.commit('REMOVE_EDIT', { id: eventData.edit_id })
-        }
-      },
-
-      'episode:new'(eventData) {
-        if (
-          !this.episodeMap.get(eventData.episode_id) &&
-          this.currentProduction?.id === eventData.project_id
-        ) {
-          this.loadEpisode(eventData.episode_id)
-        }
-      },
-
-      'episode:update'(eventData) {
-        const episode = this.episodeMap.get(eventData.episode_id)
-        if (episode && !episode.lock) {
-          this.loadEpisode(eventData.episode_id)
-        }
-      },
-
-      'episode:delete'(eventData) {
-        if (this.episodeMap.get(eventData.episode_id)) {
-          this.$store.commit('REMOVE_EPISODE', { id: eventData.episode_id })
-        }
-      },
-
-      'shot:new'(eventData) {
-        if (
-          !this.shotMap.get(eventData.shot_id) &&
-          this.currentProduction?.id === eventData.project_id &&
-          (!this.isTVShow || this.currentEpisode?.id === eventData.episode_id)
-        ) {
-          setTimeout(() => {
-            this.loadShot(eventData.shot_id)
-          }, 1000)
-        }
-      },
-
-      'shot:update'(eventData) {
-        const shot = this.shotMap.get(eventData.shot_id)
-        if (
-          shot &&
-          !shot.lock &&
-          this.currentProduction?.id === eventData.project_id
-        ) {
-          this.loadShot(eventData.shot_id)
-        }
-      },
-
-      'shot:delete'(eventData) {
-        if (this.shotMap.get(eventData.shot_id)) {
-          this.$store.commit('REMOVE_SHOT', { id: eventData.shot_id })
-        }
-      },
-
-      'asset:new'(eventData) {
-        if (
-          !this.assetMap.get(eventData.asset_id) &&
-          this.currentProduction?.id === eventData.project_id
-        ) {
-          setTimeout(() => {
-            this.loadAsset(eventData.asset_id)
-          }, 1000)
-        }
-      },
-
-      'asset:update'(eventData) {
-        const asset = this.assetMap.get(eventData.asset_id)
-        if (asset && !asset.lock) {
-          this.loadAsset(eventData.asset_id)
-        }
-      },
-
-      'asset:delete'(eventData) {
-        if (this.assetMap.get(eventData.asset_id)) {
-          this.$store.commit('REMOVE_ASSET', { id: eventData.asset_id })
-        }
-      },
-
-      // Emitted by Zou when a production has "set preview automatically"
-      // enabled: reflect the new entity thumbnail without a manual refresh.
-      'preview-file:set-main'(eventData) {
-        this.$store.commit('SET_PREVIEW', {
-          entityId: eventData.entity_id,
-          previewId: eventData.preview_file_id,
-          taskMap: this.taskMap
-        })
-      },
-
-      'task:delete'(eventData) {
-        const task = this.taskMap.get(eventData.task_id)
-        if (task) {
-          this.$store.commit('DELETE_TASK_END', task)
-        }
-      },
-
-      'department:new'(eventData) {
-        if (!this.departmentMap.get(eventData.department_id)) {
-          this.loadDepartment(eventData.department_id)
-        }
-      },
-
-      'department:update'(eventData) {
-        this.loadDepartment(eventData.department_id)
-      },
-
-      'department:delete'(eventData) {
-        if (this.departmentMap.get(eventData.task_type_id)) {
-          this.$store.commit('DELETE_DEPARTMENTS_END', {
-            id: eventData.task_type_id
-          })
-        }
-      },
-
-      'task-type:new'(eventData) {
-        if (!this.taskTypeMap.get(eventData.task_type_id)) {
-          this.loadTaskType(eventData.task_type_id)
-        }
-      },
-
-      'task-type:update'(eventData) {
-        // Do nothing to avoid side effects when reordering task types.
-      },
-
-      'task-type:delete'(eventData) {
-        if (this.taskTypeMap.get(eventData.task_type_id)) {
-          this.$store.commit('DELETE_TASK_TYPE_END', {
-            id: eventData.task_type_id
-          })
-        }
-      },
-
-      'task-status:new'(eventData) {
-        if (!this.taskStatusMap.get(eventData.task_status_id)) {
-          this.loadTaskStatus(eventData.task_status_id)
-        }
-      },
-
-      'task-status:update'(eventData) {
-        if (this.taskStatusMap.get(eventData.task_status_id)) {
-          this.loadTaskStatus(eventData.task_status_id)
-        }
-      },
-
-      'task-status:delete'(eventData) {
-        if (this.taskStatusMap.get(eventData.task_status_id)) {
-          this.$store.commit('DELETE_TASK_STATUS_END', {
-            id: eventData.task_status_id
-          })
-        }
-      },
-
-      'asset-type:new'(eventData) {
-        if (!this.assetTypeMap.get(eventData.asset_type_id)) {
-          this.loadAssetType(eventData.asset_type_id)
-        }
-      },
-
-      'asset-type:update'(eventData) {
-        if (this.assetTypeMap.get(eventData.asset_type_id)) {
-          this.loadAssetType(eventData.asset_type_id)
-        }
-      },
-
-      'asset-type:delete'(eventData) {
-        if (this.assetTypeMap.get(eventData.asset_type_id)) {
-          this.$store.commit('DELETE_ASSET_TYPE_END', {
-            id: eventData.asset_type_id
-          })
-        }
-      },
-
-      'person:new'(eventData) {
-        if (!this.personMap.get(eventData.person_id)) {
-          this.loadPerson(eventData.person_id)
-        }
-      },
-
-      'person:update'(eventData) {
-        if (this.personMap.get(eventData.person_id)) {
-          this.loadPerson(eventData.person_id)
-        }
-      },
-
-      'person:delete'(eventData) {
-        const person = this.personMap.get(eventData.person_id)
-        if (person) {
-          this.$store.commit('DELETE_PEOPLE_END', person)
-        }
-      },
-
-      'task:assign'(eventData) {
-        this.onAssignation(eventData)
-      },
-
-      'task:unassign'(eventData) {
-        this.onAssignation(eventData, false)
-      },
-
-      'comment:new'(eventData) {
-        const commentId = eventData.comment_id
-        const task = this.taskMap.get(eventData.task_id)
-        if (!this.isSavingCommentPreview && task) {
-          if (
-            this.taskComments[eventData.task_id] ||
-            this.todoMap.get(eventData.task_id)
-          ) {
-            this.loadComment({ commentId }).catch(console.error)
-          } else {
-            this.$store.commit('UPDATE_TASK', {
-              task,
-              taskStatusId: eventData.task_status_id
-            })
-          }
-        }
-      },
-
-      'comment:update'(eventData) {
-        const commentId = eventData.comment_id
-        const taskId = eventData.task_id
-        const task = taskId ? this.taskMap.get(taskId) : null
-        if (!task && !this.taskComments[taskId]) return
-        this.loadComment({ commentId }).catch(err => {
-          // A manager may have just flipped for_client off — the client
-          // loses access and gets a 403. Keep the row but blank its
-          // content locally.
-          if (err?.status === 403 || err?.body?.status === 403) {
-            this.$store.commit('BLANK_COMMENT_CONTENT', {
-              taskId,
-              commentId
-            })
-          } else {
-            console.error(err)
-          }
-        })
-      },
-
-      'task:update'(eventData) {
-        if (this.taskMap.get(eventData.task_id)) {
-          this.$nextTick(() => {
-            this.loadTask({ taskId: eventData.task_id })
-          })
-        }
-      },
-
-      'task:update-casting-stats'(eventData) {
-        const task = this.taskMap.get(eventData.task_id)
-        if (task) {
-          this.$store.commit('UPDATE_TASK', {
-            task,
-            nbAssetsReady: eventData.nb_assets_ready
-          })
-        }
-      },
-
-      'episode:casting-update'(eventData) {
-        const episode = this.episodeMap.get(eventData.episode_id)
-        if (episode) {
-          this.$store.commit('UPDATE_EPISODE', {
-            id: episode.id,
-            nb_entities_out: eventData.nb_entities_out
-          })
-        }
-      },
-
-      'shot:casting-update'(eventData) {
-        const shot = this.shotMap.get(eventData.shot_id)
-        if (shot) {
-          this.$store.commit('UPDATE_SHOT', {
-            id: shot.id,
-            nb_entities_out: eventData.nb_entities_out
-          })
-        }
-      },
-
-      'metadata-descriptor:new'(eventData) {
-        if (this.currentProduction?.id === eventData.project_id) {
-          this.refreshMetadataDescriptor(eventData.metadata_descriptor_id)
-        }
-      },
-
-      'metadata-descriptor:update'(eventData) {
-        if (this.currentProduction?.id === eventData.project_id) {
-          this.refreshMetadataDescriptor(eventData.metadata_descriptor_id)
-        }
-      },
-
-      'metadata-descriptor:delete'(eventData) {
-        this.$store.commit('DELETE_METADATA_DESCRIPTOR_END', {
-          id: eventData.metadata_descriptor_id
-        })
-      },
-
-      'organisation:update'(eventData) {
-        if (this.isCurrentUserAdmin) {
-          this.getOrganisation()
-        }
-      }
+// Composables
+// --------------------------------------------------------------------------
+
+const instance = getCurrentInstance()
+const route = useRoute()
+const router = useRouter()
+const store = useStore()
+const socket = instance.appContext.config.globalProperties.$socket
+
+// State
+// --------------------------------------------------------------------------
+
+// Entity caches are Maps built once and mutated in place, they carry no
+// reactivity and are only read from socket handlers.
+const assetMap = assetsStore.cache.assetMap
+const editMap = editStore.cache.editMap
+const episodeMap = episodeStore.cache.episodeMap
+const sequenceMap = sequenceStore.cache.sequenceMap
+const shotMap = shotsStore.cache.shotMap
+
+// Computed
+// --------------------------------------------------------------------------
+
+const assetTypeMap = computed(() => store.getters.assetTypeMap)
+const currentEpisode = computed(() => store.getters.currentEpisode)
+const currentProduction = computed(() => store.getters.currentProduction)
+const departmentMap = computed(() => store.getters.departmentMap)
+const isCurrentUserAdmin = computed(() => store.getters.isCurrentUserAdmin)
+const isDarkTheme = computed(() => store.getters.isDarkTheme)
+const isDataLoading = computed(() => store.getters.isDataLoading)
+const isSavingCommentPreview = computed(
+  () => store.getters.isSavingCommentPreview
+)
+const isTVShow = computed(() => store.getters.isTVShow)
+const mainConfig = computed(() => store.getters.mainConfig)
+const personMap = computed(() => store.getters.personMap)
+const previewFileIdToShow = computed(() => store.getters.previewFileIdToShow)
+const productionMap = computed(() => store.getters.productionMap)
+const taskComments = computed(() => store.getters.taskComments)
+const taskMap = computed(() => store.getters.taskMap)
+const taskStatusMap = computed(() => store.getters.taskStatusMap)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
+const todoMap = computed(() => store.getters.todoMap)
+const user = computed(() => store.getters.user)
+
+// Functions
+// --------------------------------------------------------------------------
+
+const hidePreviewFile = () => {
+  store.commit('HIDE_PREVIEW_FILE')
+}
+
+const onAssignation = (eventData, assign = true) => {
+  if (currentProduction.value?.id !== eventData.project_id) {
+    return
+  }
+
+  const personId = eventData.person_id
+  const taskIds = [eventData.task_id]
+
+  // for entity lists
+  if (assign) {
+    store.commit('ASSIGN_TASKS', { taskIds, personId })
+  } else {
+    store.commit('UNASSIGN_TASKS', taskIds)
+  }
+}
+
+const setupDarkTheme = () => {
+  const darkTheme = localStorage.getItem('dark-theme')
+  store.commit(
+    'TOGGLE_DARK_THEME',
+    darkTheme === 'true' ||
+      (darkTheme !== 'false' &&
+        Boolean(mainConfig.value?.dark_theme_by_default))
+  )
+}
+
+const setupCrisp = config => {
+  // Never load Crisp on the guest share page: the widget reports the
+  // page URL, which contains the share token.
+  if (window.location.pathname.startsWith('/playlists/shared/')) return
+  if (config.crisp_token?.length) {
+    crisp.init(config.crisp_token)
+    store.dispatch(
+      'setSupportChat',
+      localPreferences.getBoolPreference('support:show', true)
+    )
+  }
+}
+
+const setupSentry = config => {
+  if (config.sentry?.dsn?.length) {
+    sentry.init(instance.appContext.app, router, {
+      dsn: config.sentry.dsn,
+      sampleRate: config.sentry.sampleRate
+    })
+  }
+}
+
+const setupAuthChannel = () => {
+  const channel = auth.getBroadcastChannel()
+  if (!channel) return
+  channel.onmessage = async event => {
+    if (route.name !== 'login' && event.data === 'logout') {
+      // Another tab logged out: purge this tab's session too, otherwise
+      // store and socket keep the previous user's data. Navigate first:
+      // purging while the current page is still mounted crashes the
+      // computed properties reading the user. The push resolves before the
+      // render flush unmounts the page, so also wait for the next tick.
+      await router.push({
+        name: 'login',
+        query: { redirect: route.fullPath }
+      })
+      await nextTick()
+      store.dispatch('logoutLocal')
     }
   }
 }
+
+// Socket events
+// --------------------------------------------------------------------------
+
+// 'task-type:update' is deliberately left out: reloading the task type on
+// every update fires side effects while task types are being reordered.
+const socketEvents = {
+  'project:new': eventData => {
+    if (!productionMap.value.get(eventData.project_id)) {
+      store.dispatch('loadProduction', eventData.project_id).catch(err => {
+        console.error(err)
+      })
+    }
+  },
+
+  'project:update': eventData => {
+    if (productionMap.value.get(eventData.project_id)) {
+      store.dispatch('loadProduction', eventData.project_id).catch(() => {
+        store.commit('REMOVE_PRODUCTION', { id: eventData.project_id })
+      })
+    } else {
+      store.dispatch('loadOpenProductions')
+    }
+  },
+
+  'project:delete': eventData => {
+    if (productionMap.value.get(eventData.project_id)) {
+      store.commit('REMOVE_PRODUCTION', { id: eventData.project_id })
+    }
+  },
+
+  'sequence:new': eventData => {
+    if (
+      !sequenceMap.get(eventData.sequence_id) &&
+      currentProduction.value?.id === eventData.project_id
+    ) {
+      store.dispatch('loadSequence', eventData.sequence_id)
+    }
+  },
+
+  'sequence:update': eventData => {
+    const sequence = sequenceMap.get(eventData.sequence_id)
+    if (sequence && !sequence.lock) {
+      store.dispatch('loadSequence', eventData.sequence_id)
+    }
+  },
+
+  'sequence:delete': eventData => {
+    if (sequenceMap.get(eventData.sequence_id)) {
+      store.commit('REMOVE_SEQUENCE', { id: eventData.sequence_id })
+    }
+  },
+
+  'edit:new': eventData => {
+    if (
+      !editMap.get(eventData.edit_id) &&
+      currentProduction.value?.id === eventData.project_id
+    ) {
+      store.dispatch('loadEdit', eventData.edit_id)
+    }
+  },
+
+  'edit:update': eventData => {
+    const edit = editMap.get(eventData.edit_id)
+    if (edit && !edit.lock) {
+      store.dispatch('loadEdit', eventData.edit_id)
+    }
+  },
+
+  'edit:delete': eventData => {
+    if (editMap.get(eventData.edit_id)) {
+      store.commit('REMOVE_EDIT', { id: eventData.edit_id })
+    }
+  },
+
+  'episode:new': eventData => {
+    if (
+      !episodeMap.get(eventData.episode_id) &&
+      currentProduction.value?.id === eventData.project_id
+    ) {
+      store.dispatch('loadEpisode', eventData.episode_id)
+    }
+  },
+
+  'episode:update': eventData => {
+    const episode = episodeMap.get(eventData.episode_id)
+    if (episode && !episode.lock) {
+      store.dispatch('loadEpisode', eventData.episode_id)
+    }
+  },
+
+  'episode:delete': eventData => {
+    if (episodeMap.get(eventData.episode_id)) {
+      store.commit('REMOVE_EPISODE', { id: eventData.episode_id })
+    }
+  },
+
+  'shot:new': eventData => {
+    if (
+      !shotMap.get(eventData.shot_id) &&
+      currentProduction.value?.id === eventData.project_id &&
+      (!isTVShow.value || currentEpisode.value?.id === eventData.episode_id)
+    ) {
+      setTimeout(() => {
+        store.dispatch('loadShot', eventData.shot_id)
+      }, 1000)
+    }
+  },
+
+  'shot:update': eventData => {
+    const shot = shotMap.get(eventData.shot_id)
+    if (
+      shot &&
+      !shot.lock &&
+      currentProduction.value?.id === eventData.project_id
+    ) {
+      store.dispatch('loadShot', eventData.shot_id)
+    }
+  },
+
+  'shot:delete': eventData => {
+    if (shotMap.get(eventData.shot_id)) {
+      store.commit('REMOVE_SHOT', { id: eventData.shot_id })
+    }
+  },
+
+  'asset:new': eventData => {
+    if (
+      !assetMap.get(eventData.asset_id) &&
+      currentProduction.value?.id === eventData.project_id
+    ) {
+      setTimeout(() => {
+        store.dispatch('loadAsset', eventData.asset_id)
+      }, 1000)
+    }
+  },
+
+  'asset:update': eventData => {
+    const asset = assetMap.get(eventData.asset_id)
+    if (asset && !asset.lock) {
+      store.dispatch('loadAsset', eventData.asset_id)
+    }
+  },
+
+  'asset:delete': eventData => {
+    if (assetMap.get(eventData.asset_id)) {
+      store.commit('REMOVE_ASSET', { id: eventData.asset_id })
+    }
+  },
+
+  // Emitted by Zou when a production has "set preview automatically"
+  // enabled: reflect the new entity thumbnail without a manual refresh.
+  'preview-file:set-main': eventData => {
+    store.commit('SET_PREVIEW', {
+      entityId: eventData.entity_id,
+      previewId: eventData.preview_file_id,
+      taskMap: taskMap.value
+    })
+  },
+
+  'task:delete': eventData => {
+    const task = taskMap.value.get(eventData.task_id)
+    if (task) {
+      store.commit('DELETE_TASK_END', task)
+    }
+  },
+
+  'department:new': eventData => {
+    if (!departmentMap.value.get(eventData.department_id)) {
+      store.dispatch('loadDepartment', eventData.department_id)
+    }
+  },
+
+  'department:update': eventData => {
+    store.dispatch('loadDepartment', eventData.department_id)
+  },
+
+  'department:delete': eventData => {
+    if (departmentMap.value.get(eventData.department_id)) {
+      store.commit('DELETE_DEPARTMENTS_END', { id: eventData.department_id })
+    }
+  },
+
+  'task-type:new': eventData => {
+    if (!taskTypeMap.value.get(eventData.task_type_id)) {
+      store.dispatch('loadTaskType', eventData.task_type_id)
+    }
+  },
+
+  'task-type:delete': eventData => {
+    if (taskTypeMap.value.get(eventData.task_type_id)) {
+      store.commit('DELETE_TASK_TYPE_END', { id: eventData.task_type_id })
+    }
+  },
+
+  'task-status:new': eventData => {
+    if (!taskStatusMap.value.get(eventData.task_status_id)) {
+      store.dispatch('loadTaskStatus', eventData.task_status_id)
+    }
+  },
+
+  'task-status:update': eventData => {
+    if (taskStatusMap.value.get(eventData.task_status_id)) {
+      store.dispatch('loadTaskStatus', eventData.task_status_id)
+    }
+  },
+
+  'task-status:delete': eventData => {
+    if (taskStatusMap.value.get(eventData.task_status_id)) {
+      store.commit('DELETE_TASK_STATUS_END', { id: eventData.task_status_id })
+    }
+  },
+
+  'asset-type:new': eventData => {
+    if (!assetTypeMap.value.get(eventData.asset_type_id)) {
+      store.dispatch('loadAssetType', eventData.asset_type_id)
+    }
+  },
+
+  'asset-type:update': eventData => {
+    if (assetTypeMap.value.get(eventData.asset_type_id)) {
+      store.dispatch('loadAssetType', eventData.asset_type_id)
+    }
+  },
+
+  'asset-type:delete': eventData => {
+    if (assetTypeMap.value.get(eventData.asset_type_id)) {
+      store.commit('DELETE_ASSET_TYPE_END', { id: eventData.asset_type_id })
+    }
+  },
+
+  'person:new': eventData => {
+    if (!personMap.value.get(eventData.person_id)) {
+      store.dispatch('loadPerson', eventData.person_id)
+    }
+  },
+
+  'person:update': eventData => {
+    if (personMap.value.get(eventData.person_id)) {
+      store.dispatch('loadPerson', eventData.person_id)
+    }
+  },
+
+  'person:delete': eventData => {
+    const person = personMap.value.get(eventData.person_id)
+    if (person) {
+      store.commit('DELETE_PEOPLE_END', person)
+    }
+  },
+
+  'task:assign': eventData => onAssignation(eventData),
+
+  'task:unassign': eventData => onAssignation(eventData, false),
+
+  'comment:new': eventData => {
+    const commentId = eventData.comment_id
+    const task = taskMap.value.get(eventData.task_id)
+    if (!isSavingCommentPreview.value && task) {
+      if (
+        taskComments.value[eventData.task_id] ||
+        todoMap.value.get(eventData.task_id)
+      ) {
+        store.dispatch('loadComment', { commentId }).catch(console.error)
+      } else {
+        store.commit('UPDATE_TASK', {
+          task,
+          taskStatusId: eventData.task_status_id
+        })
+      }
+    }
+  },
+
+  'comment:update': eventData => {
+    const commentId = eventData.comment_id
+    const taskId = eventData.task_id
+    const task = taskId ? taskMap.value.get(taskId) : null
+    if (!task && !taskComments.value[taskId]) return
+    store.dispatch('loadComment', { commentId }).catch(err => {
+      // A manager may have just flipped for_client off — the client
+      // loses access and gets a 403. Keep the row but blank its
+      // content locally.
+      if (err?.status === 403 || err?.body?.status === 403) {
+        store.commit('BLANK_COMMENT_CONTENT', { taskId, commentId })
+      } else {
+        console.error(err)
+      }
+    })
+  },
+
+  'task:update': eventData => {
+    if (taskMap.value.get(eventData.task_id)) {
+      nextTick(() => {
+        store.dispatch('loadTask', { taskId: eventData.task_id })
+      })
+    }
+  },
+
+  'task:update-casting-stats': eventData => {
+    const task = taskMap.value.get(eventData.task_id)
+    if (task) {
+      store.commit('UPDATE_TASK', {
+        task,
+        nbAssetsReady: eventData.nb_assets_ready
+      })
+    }
+  },
+
+  'episode:casting-update': eventData => {
+    const episode = episodeMap.get(eventData.episode_id)
+    if (episode) {
+      store.commit('UPDATE_EPISODE', {
+        id: episode.id,
+        nb_entities_out: eventData.nb_entities_out
+      })
+    }
+  },
+
+  'shot:casting-update': eventData => {
+    const shot = shotMap.get(eventData.shot_id)
+    if (shot) {
+      store.commit('UPDATE_SHOT', {
+        id: shot.id,
+        nb_entities_out: eventData.nb_entities_out
+      })
+    }
+  },
+
+  'metadata-descriptor:new': eventData => {
+    if (currentProduction.value?.id === eventData.project_id) {
+      store.dispatch(
+        'refreshMetadataDescriptor',
+        eventData.metadata_descriptor_id
+      )
+    }
+  },
+
+  'metadata-descriptor:update': eventData => {
+    if (currentProduction.value?.id === eventData.project_id) {
+      store.dispatch(
+        'refreshMetadataDescriptor',
+        eventData.metadata_descriptor_id
+      )
+    }
+  },
+
+  'metadata-descriptor:delete': eventData => {
+    store.commit('DELETE_METADATA_DESCRIPTOR_END', {
+      id: eventData.metadata_descriptor_id
+    })
+  },
+
+  'organisation:update': () => {
+    if (isCurrentUserAdmin.value) {
+      store.dispatch('getOrganisation')
+    }
+  }
+}
+
+// Bind before the child views mount, since Main connects the socket from its
+// own mounted hook. App is the root component and never unmounts, so these
+// listeners need no teardown.
+Object.entries(socketEvents).forEach(([event, handler]) =>
+  socket.on(event, handler)
+)
+
+// Watchers
+// --------------------------------------------------------------------------
+
+watch(
+  isDarkTheme,
+  () => {
+    const background = isDarkTheme.value ? '#36393F' : '#FFF'
+    document.documentElement.style.background = background
+    document.body.style.background = background
+  },
+  { immediate: true }
+)
+
+watch(
+  currentProduction,
+  () => {
+    const userLocale = (user.value?.locale || 'en').substring(0, 2)
+    if (userLocale !== 'en') return
+    const variant = currentProduction.value?.production_style
+    if (['nft', 'video-game'].includes(variant)) {
+      i18n.global.silentFallbackWarn = true
+      i18n.global.locale = `en_${variant}`
+    } else {
+      i18n.global.silentFallbackWarn = false
+      i18n.global.locale = 'en'
+    }
+  },
+  { immediate: true }
+)
+
+// Lifecycle
+// --------------------------------------------------------------------------
+
+onMounted(async () => {
+  const config = await store.dispatch('setMainConfig')
+  setupDarkTheme()
+  setupCrisp(config)
+  setupSentry(config)
+  setupAuthChannel()
+})
 </script>
 
 <style lang="scss">
@@ -2252,20 +2227,37 @@ td.fps {
   margin: auto;
 }
 
-.tabs li a {
-  color: var(--text);
-
-  &:hover {
-    color: var(--text-selectable);
-    border-color: var(--text-selectable);
+// underline look shared by every tab bar (RouteTabs, RouteSectionTabs and
+// the raw Bulma markup pages): plain labels sitting on a hairline, the
+// active one marked by a 2px rule, so the bar reads as text anchored to its
+// content rather than as a row of buttons
+.tabs {
+  ul {
+    border-bottom: 1px solid var(--border-alt);
   }
-}
 
-.tabs li.is-active a {
-  font-weight: bold;
+  li a {
+    border-bottom: 2px solid transparent;
+    color: var(--text);
+    margin-bottom: -1px;
+    padding: 0.5em 0.9em;
+    transition: color 0.15s ease;
 
-  color: var(--text-selected);
-  border-color: var(--text-selected);
+    &:hover {
+      border-bottom-color: transparent;
+      color: var(--text-strong);
+    }
+  }
+
+  li.is-active a {
+    border-bottom-color: var(--text-selected);
+    color: var(--text-strong);
+    font-weight: 600;
+
+    &:hover {
+      border-bottom-color: var(--text-selected);
+    }
+  }
 }
 
 .page .columns:last-child {
@@ -2698,6 +2690,111 @@ th.validation-cell {
     ::-webkit-scrollbar-thumb:active {
       background-color: #5e6169;
     }
+  }
+}
+// Opt-in card layout for data tables on mobile. Cells carrying a data-label
+// become a "label / value" line, .card-head cells stack on top as plain
+// blocks, every other cell is hidden.
+@media screen and (max-width: 768px) {
+  .datatable.datatable--cards {
+    background: transparent;
+    display: block;
+    width: 100%;
+
+    .datatable-head {
+      display: none;
+    }
+
+    .datatable-body {
+      display: block;
+    }
+
+    .datatable-row,
+    .datatable-row:last-child,
+    .datatable-row:hover {
+      background: var(--background) !important;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 0.5em;
+      padding: 0.5em 1.25em 0.75em;
+    }
+
+    .datatable-row.selected {
+      background: var(--background-selected) !important;
+    }
+
+    .datatable-body td {
+      background: transparent !important;
+      border: 0;
+      display: none;
+      height: auto;
+      max-width: none;
+      min-width: 0;
+      padding: 0.25em 0;
+      text-align: left;
+      white-space: normal;
+      width: auto;
+    }
+
+    // Head cells come first whatever their column position.
+    .datatable-body td.card-head {
+      display: block;
+      order: -1;
+      padding: 0.75em 0 1em;
+    }
+
+    // Sticky first column shadow makes no sense once rows are cards.
+    .datatable-body td.datatable-row-header {
+      border-right: 0;
+      position: static;
+
+      &::after {
+        display: none;
+      }
+    }
+
+    .datatable-body td .tag {
+      margin-left: 0;
+      margin-right: 0;
+    }
+
+    .datatable-body td .department-name {
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    // PeopleNameCell sizes its avatar inline for the desktop rows.
+    .datatable-body td.person .avatar,
+    .datatable-body td.person .avatar img {
+      font-size: 11px !important;
+      height: 24px !important;
+      line-height: 24px;
+      width: 24px !important;
+    }
+
+    .datatable-body td[data-label] {
+      align-items: center;
+      display: flex;
+      gap: 1em;
+      justify-content: space-between;
+      text-align: right;
+
+      &::before {
+        color: var(--text-alt);
+        content: attr(data-label);
+        flex-shrink: 0;
+        font-size: 0.8em;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+    }
+  }
+
+  .dark .datatable.datatable--cards .datatable-row,
+  .dark .datatable.datatable--cards .datatable-row:last-child {
+    background: var(--background-alt) !important;
   }
 }
 </style>

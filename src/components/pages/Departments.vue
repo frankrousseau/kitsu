@@ -1,14 +1,14 @@
 <template>
   <div class="departments page fixed-page">
     <list-page-header
-      :title="$t('departments.title')"
+      class="mt2 mb1"
+      :active-tab="activeTab"
+      :tabs="tabs"
       :new-entry-label="$t('departments.new_departments')"
       :is-exportable="isActiveTab"
       @export-clicked="onExportClicked"
       @new-clicked="onNewClicked"
     />
-
-    <route-tabs class="tabs" :active-tab="activeTab" :tabs="tabs" />
 
     <department-list
       class="department-list"
@@ -68,7 +68,6 @@ import DeleteModal from '@/components/modals/DeleteModal.vue'
 import EditDepartmentsModal from '@/components/modals/EditDepartmentsModal.vue'
 import DepartmentLinks from '@/components/pages/departments/DepartmentLinks.vue'
 import ListPageHeader from '@/components/widgets/ListPageHeader.vue'
-import RouteTabs from '@/components/widgets/RouteTabs.vue'
 
 const { t } = useI18n()
 const route = useRoute()

@@ -1,12 +1,28 @@
 <template>
   <div class="productions page fixed-page">
     <div class="flexrow page-header">
-      <page-title class="filler" :text="$t('productions.title')" />
+      <search-field
+        class="search flexrow-item"
+        placeholder="ex: Big Buck Bunny"
+        @change="searchQuery = $event"
+      />
+      <combobox
+        class="flexrow-item group-by"
+        :label="$t('main.grouped_by')"
+        :options="groupByOptions"
+        :with-margin="false"
+        v-model="groupBy"
+      />
+      <div class="filler"></div>
       <button-simple
         class="flexrow-item"
-        :text="$t('productions.load_stats')"
+        :text="
+          isStatsDisplayed
+            ? $t('productions.hide_stats')
+            : $t('productions.show_stats')
+        "
         :is-loading="loading.stats"
-        @click="reloadStats"
+        @click="toggleStats"
       />
       <button-link
         class="flexrow-item"
@@ -20,6 +36,8 @@
       v-model:metadata-display-headers="metadataDisplayHeaders"
       :entries="productions"
       :production-stats="productionStats"
+      :group-by="groupBy"
+      :search="searchQuery"
       :is-loading="isProductionsLoading"
       :is-error="isProductionsLoadingError"
       @add-metadata="onAddProjectMetadata"
@@ -87,7 +105,8 @@ import EditProductionModal from '@/components/modals/EditProductionModal.vue'
 import HardDeleteModal from '@/components/modals/HardDeleteModal.vue'
 import ButtonLink from '@/components/widgets/ButtonLink.vue'
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
-import PageTitle from '@/components/widgets/PageTitle.vue'
+import Combobox from '@/components/widgets/Combobox.vue'
+import SearchField from '@/components/widgets/SearchField.vue'
 
 const { t } = useI18n()
 const store = useStore()
@@ -100,6 +119,8 @@ const fieldNameForDeleteMetadata = ref(null)
 const productionStats = ref({})
 const productionToDelete = ref(null)
 const productionToEdit = ref(null)
+const searchQuery = ref('')
+const groupBy = ref('')
 
 const errors = reactive({
   addMetadata: false,
@@ -135,6 +156,28 @@ const productionAvatarFormData = computed(
 const productions = computed(() => store.getters.productions)
 
 const currentLockText = computed(() => productionToDelete.value?.name || '')
+
+const mergedProjectMetadataDescriptors = computed(
+  () => store.getters.mergedProjectMetadataDescriptors
+)
+
+const groupByOptions = computed(() => [
+  { label: t('main.none'), value: '' },
+  { label: t('productions.fields.type'), value: 'production_type' },
+  { label: t('productions.fields.style'), value: 'production_style' },
+  // Checklists are stored as a JSON blob: grouping on them yields one group
+  // per raw payload.
+  ...mergedProjectMetadataDescriptors.value
+    .filter(descriptor => descriptor.data_type !== 'checklist')
+    .map(descriptor => ({
+      label: descriptor.name,
+      value: descriptor.field_name
+    }))
+])
+
+const isStatsDisplayed = computed(
+  () => Object.keys(productionStats.value).length > 0
+)
 
 const deleteProjectMetadataText = computed(() => {
   const d = findFirstProjectDescriptorByFieldName(
@@ -306,7 +349,13 @@ const confirmDeleteProjectMetadata = () => {
     })
 }
 
-const reloadStats = async () => {
+// Hiding drops the stats rather than caching them: showing again is a single
+// request and comes back with fresh numbers.
+const toggleStats = async () => {
+  if (isStatsDisplayed.value) {
+    productionStats.value = {}
+    return
+  }
   loading.stats = true
   productionStats.value = await store.dispatch('loadProductionStats')
   loading.stats = false
@@ -320,3 +369,25 @@ store.dispatch('loadProductions')
 
 useHead({ title: computed(() => `${t('productions.title')} - Kitsu`) })
 </script>
+
+<style lang="scss" scoped>
+// Controls of unequal height (pill input, select under its label, buttons)
+// only line up on their bottom edge, as in the People search row.
+.page-header {
+  align-items: flex-end;
+
+  // One height for the whole row: buttons, select and the search pill are all
+  // sized differently by default.
+  :deep(.button),
+  :deep(.select select),
+  :deep(.search-field-wrapper) {
+    height: 2.5em;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .page-header .flexrow-item:not(.search) {
+    display: none;
+  }
+}
+</style>

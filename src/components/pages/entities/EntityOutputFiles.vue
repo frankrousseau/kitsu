@@ -4,7 +4,7 @@
       <spinner />
     </div>
     <div v-else-if="outputFiles.length > 0">
-      <table class="datatable">
+      <table class="datatable datatable--cards">
         <thead class="datatable-head">
           <tr class="datatable-row-header">
             <th class="tasktype">
@@ -38,36 +38,49 @@
           <template v-for="outputFile in outputFiles" :key="outputFile.id">
             <tr class="datatable-row">
               <task-type-cell
-                class="type"
+                class="type card-head"
                 :task-type="getTaskType(outputFile)"
                 :production-id="currentProduction.id"
               />
-              <td class="type">
+              <td
+                class="type output-type"
+                :data-label="$t('entities.output_files.type')"
+              >
                 {{ getOutputType(outputFile).name }}
               </td>
-              <td class="name">
+              <td class="name" :data-label="$t('entities.output_files.name')">
                 {{ outputFile.name }}
               </td>
-              <td class="extension">
+              <td
+                class="extension"
+                :data-label="$t('entities.output_files.extension')"
+              >
                 {{ outputFile.extension }}
               </td>
-              <td class="revision">
+              <td
+                class="revision"
+                :data-label="$t('entities.output_files.revision')"
+              >
                 {{ outputFile.revision }}
               </td>
-              <td class="size">
+              <td class="size" :data-label="$t('entities.output_files.size')">
                 {{ renderFileSize(outputFile.file_size) }}
               </td>
-              <td class="status">
+              <td
+                class="status"
+                :data-label="$t('entities.output_files.status')"
+              >
                 {{ getFileStatus(outputFile).name }}
               </td>
               <people-name-cell
                 class="person"
+                :data-label="$t('entities.output_files.person')"
                 :person="personMap.get(outputFile.person_id)"
               />
               <td class="end-cell"></td>
             </tr>
             <tr class="datatable-row" v-if="outputFile.path">
-              <td colspan="10">
+              <td class="path card-head" colspan="9">
                 {{ outputFile.path }}
               </td>
             </tr>
@@ -75,96 +88,88 @@
         </tbody>
       </table>
     </div>
-    <div class="empty" v-else>
-      {{ $t('entities.output_files.no_output_files') }}
-    </div>
+    <empty-section
+      :icon="FolderOutputIcon"
+      :text="$t('entities.output_files.no_output_files')"
+      v-else
+    />
   </div>
 </template>
 
-<script>
-import { mapGetters, mapActions } from 'vuex'
+<script setup>
+import { FolderOutputIcon } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useStore } from 'vuex'
+
 import { renderFileSize } from '@/lib/render'
 
+/* eslint-disable no-unused-vars */
 import PeopleNameCell from '@/components/cells/PeopleNameCell.vue'
-import Spinner from '@/components/widgets/Spinner.vue'
 import TaskTypeCell from '@/components/cells/TaskTypeCell.vue'
+import EmptySection from '@/components/widgets/EmptySection.vue'
+import Spinner from '@/components/widgets/Spinner.vue'
+/* eslint-enable no-unused-vars */
 
-export default {
-  name: 'entity-output-files',
+const store = useStore()
 
-  components: {
-    PeopleNameCell,
-    Spinner,
-    TaskTypeCell
-  },
+// Props
+// --------------------------------------------------------------------------
+const props = defineProps({
+  entity: { type: Object, default: null }
+})
 
-  data() {
-    return {
-      isLoading: false,
-      outputFiles: []
-    }
-  },
+// State
+// --------------------------------------------------------------------------
+const isLoading = ref(false)
+const outputFiles = ref([])
 
-  props: {
-    entity: {
-      type: Object,
-      default: () => {}
-    }
-  },
+// Computed
+// --------------------------------------------------------------------------
+const currentProduction = computed(() => store.getters.currentProduction)
+const fileStatusMap = computed(() => store.getters.fileStatusMap)
+const outputFileTypeMap = computed(() => store.getters.outputFileTypeMap)
+const personMap = computed(() => store.getters.personMap)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
 
-  mounted() {
-    if (!this.entity) return
-    this.reset()
-  },
+// Functions
+// --------------------------------------------------------------------------
+const getTaskType = outputFile => taskTypeMap.value.get(outputFile.task_type_id)
 
-  computed: {
-    ...mapGetters([
-      'currentProduction',
-      'isCurrentUserArtist',
-      'personMap',
-      'fileStatusMap',
-      'outputFileTypeMap',
-      'taskMap',
-      'taskTypeMap'
-    ])
-  },
+const getFileStatus = outputFile =>
+  fileStatusMap.value.get(outputFile.file_status_id)
 
-  methods: {
-    ...mapActions([
-      'loadEntityOutputFiles',
-      'loadFileStatuses',
-      'loadOutputTypes'
-    ]),
+const getOutputType = outputFile =>
+  outputFileTypeMap.value.get(outputFile.output_type_id)
 
-    getTaskType(outputFile) {
-      return this.taskTypeMap.get(outputFile.task_type_id)
-    },
-
-    getFileStatus(outputFile) {
-      return this.fileStatusMap.get(outputFile.file_status_id)
-    },
-
-    getOutputType(outputFile) {
-      return this.outputFileTypeMap.get(outputFile.output_type_id)
-    },
-
-    renderFileSize,
-
-    async reset() {
-      this.isLoading = true
-      if (this.fileStatusMap.size === 0) await this.loadFileStatuses()
-      if (this.outputFileTypeMap.size === 0) await this.loadOutputTypes()
-      this.outputFiles = await this.loadEntityOutputFiles(this.entity.id)
-      this.isLoading = false
-    }
-  },
-
-  watch: {
-    entity() {
-      if (this.entity) this.reset()
-    }
+const reset = async () => {
+  isLoading.value = true
+  if (fileStatusMap.value.size === 0) {
+    await store.dispatch('loadFileStatuses')
   }
+  if (outputFileTypeMap.value.size === 0) {
+    await store.dispatch('loadOutputTypes')
+  }
+  outputFiles.value = await store.dispatch(
+    'loadEntityOutputFiles',
+    props.entity.id
+  )
+  isLoading.value = false
 }
+
+// Watchers
+// --------------------------------------------------------------------------
+watch(
+  () => props.entity,
+  () => {
+    if (props.entity) reset()
+  }
+)
+
+// Lifecycle
+// --------------------------------------------------------------------------
+onMounted(() => {
+  if (props.entity) reset()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -201,16 +206,11 @@ td.type {
   overflow-y: auto;
 }
 
-.output-thumbnail {
-  cursor: pointer;
-  border-radius: 4px;
+.dark .wrapper.output-files {
+  background: transparent;
 }
 
 .datatable-row-header::after {
   display: none;
-}
-
-.empty {
-  font-style: italic;
 }
 </style>

@@ -68,7 +68,7 @@
         <two-factor-authentication
           v-if="isMissingOTP || isWrongOTP"
           :preferred-two-fa="preferredTwoFA"
-          :two-fas-enabled="TwoFAsEnabled"
+          :two-fas-enabled="twoFAsEnabled"
           :is-loading="isLoginLoading"
           :email="email"
           :is-wrong-otp="isWrongOTP"
@@ -116,139 +116,128 @@
   </div>
 </template>
 
-<script>
-import { mapGetters, mapActions } from 'vuex'
-import { MailIcon, LockIcon } from 'lucide-vue-next'
+<script setup>
+import { useHead } from '@unhead/vue'
+import { LockIcon, MailIcon } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
+import { useStore } from 'vuex'
 
 import TwoFactorAuthentication from '@/components/widgets/TwoFactorAuthentication.vue'
 
-export default {
-  name: 'login',
+// Composables
+// --------------------------------------------------------------------------
 
-  components: {
-    MailIcon,
-    LockIcon,
-    TwoFactorAuthentication
-  },
+const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
+const store = useStore()
 
-  data() {
-    return {
-      email: '',
-      password: '',
-      isInactiveUserError: false,
-      isTooMuchLoginFailedAttemps: false,
-      isWrongOTP: false,
-      isMissingOTP: false,
-      isServerError: false,
-      preferredTwoFA: '',
-      TwoFAsEnabled: [],
-      fadeAway: false
-    }
-  },
+// State
+// --------------------------------------------------------------------------
 
-  mounted() {
-    this.fadeAway = false
-    this.email = this.$store.state.login.email
-    this.password = this.$store.state.login.password
-  },
+const email = ref('')
+const password = ref('')
+const fadeAway = ref(false)
+const isInactiveUserError = ref(false)
+const isMissingOTP = ref(false)
+const isServerError = ref(false)
+const isTooMuchLoginFailedAttemps = ref(false)
+const isWrongOTP = ref(false)
+const preferredTwoFA = ref('')
+const twoFAsEnabled = ref([])
 
-  computed: {
-    ...mapGetters([
-      'isDarkTheme',
-      'isAuthenticated',
-      'isLoginLoading',
-      'isLoginError',
-      'mainConfig'
-    ]),
+// Computed
+// --------------------------------------------------------------------------
 
-    loginSAMLButtonInfo() {
-      if (this.mainConfig?.saml_idp_name) {
-        return this.$t('login.login_with_saml', {
-          saml_idp_name: this.mainConfig.saml_idp_name
-        })
-      } else {
-        return this.$t('login.saml')
-      }
-    },
+const isAuthenticated = computed(() => store.getters.isAuthenticated)
+const isDarkTheme = computed(() => store.getters.isDarkTheme)
+const isLoginError = computed(() => store.getters.isLoginError)
+const isLoginLoading = computed(() => store.getters.isLoginLoading)
+const mainConfig = computed(() => store.getters.mainConfig)
 
-    loginOIDCButtonInfo() {
-      if (this.mainConfig?.oidc_idp_name) {
-        return this.$t('login.login_with_oidc', {
-          oidc_idp_name: this.mainConfig.oidc_idp_name
-        })
-      } else {
-        return this.$t('login.oidc')
-      }
-    }
-  },
+const loginSAMLButtonInfo = computed(() =>
+  mainConfig.value?.saml_idp_name
+    ? t('login.login_with_saml', {
+        saml_idp_name: mainConfig.value.saml_idp_name
+      })
+    : t('login.saml')
+)
 
-  methods: {
-    ...mapActions(['logIn']),
+const loginOIDCButtonInfo = computed(() =>
+  mainConfig.value?.oidc_idp_name
+    ? t('login.login_with_oidc', {
+        oidc_idp_name: mainConfig.value.oidc_idp_name
+      })
+    : t('login.oidc')
+)
 
-    updateEmail(e) {
-      this.$store.dispatch('changeEmail', e.target.value)
-    },
+// Functions
+// --------------------------------------------------------------------------
 
-    updatePassword(e) {
-      this.$store.dispatch('changePassword', e.target.value)
-    },
+const updateEmail = event => {
+  store.dispatch('changeEmail', event.target.value)
+}
 
-    confirmLogIn(twoFactorPayload) {
-      this.isInactiveUserError = false
-      this.isTooMuchLoginFailedAttemps = false
-      this.isWrongOTP = false
-      this.isMissingOTP = false
-      this.isServerError = false
-      this.logIn(twoFactorPayload)
-        .then(() => {
-          this.fadeAway = true
-          setTimeout(() => {
-            if (this.$route.query.redirect) {
-              this.$router.push(this.$route.query.redirect)
-            } else {
-              this.$router.push('/')
-            }
-          }, 500)
-        })
-        .catch(err => {
-          if (err.default_password) {
-            this.$router.push({
-              name: 'reset-change-password',
-              query: { email: this.email, token: err.token }
-            })
-          } else if (err.too_many_failed_login_attemps) {
-            this.isTooMuchLoginFailedAttemps = true
-          } else if (err.wrong_OTP) {
-            this.isWrongOTP = true
-          } else if (err.missing_OTP) {
-            this.isMissingOTP = true
-            this.preferredTwoFA = err.preferred_two_factor_authentication
-            this.TwoFAsEnabled = err.two_factor_authentication_enabled
-          } else if (err.two_factor_authentication_required) {
-            this.$router.push({
-              name: 'login-2fa'
-            })
-          } else if (err.unactive) {
-            this.isInactiveUserError = true
-          } else if (err.server_error) {
-            this.isServerError = true
-          } else {
-            console.error(err)
-          }
-        })
-    },
+const updatePassword = event => {
+  store.dispatch('changePassword', event.target.value)
+}
 
-    changedTwoFA(twoFA) {
-      this.isWrongOTP = false
-    }
-  },
-
-  head() {
-    return {
-      title: this.$t('login.title')
+const confirmLogIn = async twoFactorPayload => {
+  isInactiveUserError.value = false
+  isTooMuchLoginFailedAttemps.value = false
+  isWrongOTP.value = false
+  isMissingOTP.value = false
+  isServerError.value = false
+  try {
+    await store.dispatch('logIn', twoFactorPayload)
+    fadeAway.value = true
+    setTimeout(() => {
+      router.push(route.query.redirect || '/')
+    }, 500)
+  } catch (err) {
+    if (err.default_password) {
+      router.push({
+        name: 'reset-change-password',
+        query: { email: email.value, token: err.token }
+      })
+    } else if (err.too_many_failed_login_attemps) {
+      isTooMuchLoginFailedAttemps.value = true
+    } else if (err.wrong_OTP) {
+      isWrongOTP.value = true
+    } else if (err.missing_OTP) {
+      isMissingOTP.value = true
+      preferredTwoFA.value = err.preferred_two_factor_authentication
+      twoFAsEnabled.value = err.two_factor_authentication_enabled
+    } else if (err.two_factor_authentication_required) {
+      router.push({ name: 'login-2fa' })
+    } else if (err.unactive) {
+      isInactiveUserError.value = true
+    } else if (err.server_error) {
+      isServerError.value = true
+    } else {
+      console.error(err)
     }
   }
 }
+
+const changedTwoFA = () => {
+  isWrongOTP.value = false
+}
+
+// Lifecycle
+// --------------------------------------------------------------------------
+
+onMounted(() => {
+  email.value = store.state.login.email
+  password.value = store.state.login.password
+})
+
+// Head
+// --------------------------------------------------------------------------
+
+useHead({ title: computed(() => t('login.title')) })
 </script>
 
 <style lang="scss" scoped>

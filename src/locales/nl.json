@@ -66,7 +66,11 @@
       "edit_label": "Asset label aanpassen",
       "empty": "Lege casting",
       "label": "Label",
+      "occurrences": "Voorkomens",
       "picture_mode": "Wissel naar galerij modus",
+      "remove_from_casting": "Uit de casting verwijderen",
+      "view_as_cards": "Als kaarten weergeven",
+      "view_as_list": "Als lijst weergeven",
       "text_mode": "Wissel naar tekst modus",
       "title": "Breakdown",
       "options": {
@@ -416,6 +420,7 @@
       "date": "Datum",
       "dark_theme": "Donker thema",
       "days_spent": "dag besteed | dagen besteed",
+      "days_expected": "verwachte dag | verwachte dagen",
       "days_estimated": "dag geschat | dagen geschat",
       "delete": "Verwijderen",
       "delete_all": "Alles verwijderen",
@@ -447,6 +452,8 @@
       "remove": "Verwijderen",
       "save": "Opslaan",
       "sort_by": "Sorteren op",
+      "grouped_by": "Gegroepeerd op",
+      "none": "Geen",
       "sorted_by": "Gesorteerd op",
       "start_date": "Startdatum",
       "studio": "Studio",
@@ -577,6 +584,7 @@
       "no_results": "Geen resultaten",
       "link": "Link",
       "hours_spent": "uur besteed | uren besteed",
+      "hours_expected": "verwacht uur | verwachte uren",
       "hours_estimated": "uur geschat | uren geschat",
       "created_by": "Gemaakt door",
       "day": "Dag",
@@ -1003,6 +1011,7 @@
       "update_to_latest_version_help": "Stel voor elke entiteit de nieuwste revisie in, met behoud van het huidige taaktype.",
       "update_versions_title": "Geselecteerde versies bijwerken",
       "created": "Afspeellijst “{name}” aangemaakt.",
+      "view_as_playlist": "Als playlist bekijken",
       "view_created": "Afspeellijst bekijken"
     },
     "productions": {
@@ -1166,7 +1175,8 @@
         "shots": "Opnamen",
         "sequences": "Sequenties"
       },
-      "load_stats": "Statistieken laden"
+      "hide_stats": "Verberg statistieken",
+      "show_stats": "Toon statistieken"
     },
     "profile": {
       "change_avatar": "Avatar wijzigen",
@@ -1738,6 +1748,11 @@
       "retake_filter_with_retakes": "Met retakes"
     },
     "timesheets": {
+      "chart": "Tijdgrafiek",
+      "empty": "Geen tijd geregistreerd voor deze periode met de huidige filters.",
+      "expected": "verwacht",
+      "in_salary": "in salaris",
+      "with_time_logged": "Met geregistreerde tijd",
       "detail_level": "Detailniveau",
       "done_tasks": "Voltooide taken",
       "export_timesheet": "Exporteer urenstaat",

@@ -4,12 +4,8 @@ import { downloadBlob } from '@/lib/download'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import { getPercentage } from '@/lib/stats'
 import stringHelpers from '@/lib/string'
-import {
-  getDayRange,
-  getMonthRange,
-  getWeekRange,
-  hoursToDays
-} from '@/lib/time'
+import { getDayRange, getMonthRange, getWeekRange } from '@/lib/time'
+import { convertHours } from '@/lib/timesheet'
 
 const csv = {
   generateTimesheet({
@@ -17,6 +13,7 @@ const csv = {
     timesheet,
     people,
     unit,
+    dailyRates = {},
     organisation,
     detailLevel,
     todayYear,
@@ -40,7 +37,8 @@ const csv = {
       detailLevel,
       headers,
       people,
-      timesheet
+      timesheet,
+      dailyRates
     )
     csv.buildCsvFile(name, entries)
   },
@@ -83,18 +81,26 @@ const csv = {
     detailLevel,
     headers,
     people,
-    timesheet
+    timesheet,
+    dailyRates = {}
   ) {
     const entries = [headers]
+    const convert = (person, minutes) => {
+      const value = convertHours(
+        minutes / 60,
+        unit,
+        organisation,
+        dailyRates[person.id]
+      )
+      return unit === 'salary' ? Math.round(value) : value
+    }
     people.forEach(person => {
       const line = [person.full_name]
       if (detailLevel === 'year') {
         headers.forEach((h, index) => {
           if (index > 0) {
             if (timesheet[h] && timesheet[h][person.id]) {
-              let value = timesheet[h][person.id] / 60
-              if (unit !== 'hour') value = hoursToDays(organisation, value)
-              line.push(value)
+              line.push(convert(person, timesheet[h][person.id]))
             } else {
               line.push('-')
             }
@@ -104,9 +110,7 @@ const csv = {
         headers.forEach((h, index) => {
           if (index > 0) {
             if (timesheet && timesheet[index] && timesheet[index][person.id]) {
-              let value = timesheet[index][person.id] / 60
-              if (unit !== 'hour') value = hoursToDays(organisation, value)
-              line.push(value)
+              line.push(convert(person, timesheet[index][person.id]))
             } else {
               line.push('-')
             }

@@ -1,8 +1,6 @@
 <template>
   <div class="people page fixed-page">
     <div class="flexrow page-header">
-      <page-title class="flexrow-item filler" :text="$t('people.title')" />
-
       <button-simple
         class="flexrow-item"
         :title="$t('main.csv.import_file')"
@@ -209,7 +207,6 @@ import HardDeleteModal from '@/components/modals/HardDeleteModal.vue'
 import ImportModal from '@/components/modals/ImportModal.vue'
 import ImportRenderModal from '@/components/modals/ImportRenderModal.vue'
 import PeopleList from '@/components/lists/PeopleList.vue'
-import PageTitle from '@/components/widgets/PageTitle.vue'
 import RouteTabs from '@/components/widgets/RouteTabs.vue'
 import SearchField from '@/components/widgets/SearchField.vue'
 import SearchQueryList from '@/components/widgets/SearchQueryList.vue'
@@ -232,7 +229,6 @@ export default {
     HardDeleteModal,
     ImportModal,
     ImportRenderModal,
-    PageTitle,
     PeopleList,
     RouteTabs,
     SearchField,

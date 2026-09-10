@@ -2,7 +2,6 @@
   <page-layout :side="false">
     <template #main>
       <div class="flexcolumn page">
-        <page-title class="mt1" :text="$t('budget.salary_scale_title')" />
         <div class="has-text-centered" v-if="isLoading">
           <spinner />
         </div>
@@ -123,7 +122,6 @@ import { useStore } from 'vuex'
 
 import PageLayout from '@/components/layouts/PageLayout.vue'
 import DepartmentName from '@/components/widgets/DepartmentName.vue'
-import PageTitle from '@/components/widgets/PageTitle.vue'
 import Spinner from '@/components/widgets/Spinner.vue'
 
 const store = useStore()

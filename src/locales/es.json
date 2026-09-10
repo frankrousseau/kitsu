@@ -66,7 +66,11 @@
       "edit_label": "Cambiar la etiqueta del recurso",
       "empty": "Casting vacío",
       "label": "Etiqueta",
+      "occurrences": "Ocurrencias",
       "picture_mode": "Cambiar a modo de imagen",
+      "remove_from_casting": "Quitar del casting",
+      "view_as_cards": "Ver como tarjetas",
+      "view_as_list": "Ver como lista",
       "text_mode": "Cambiar a modo de texto",
       "title": "Desglose",
       "options": {
@@ -416,6 +420,7 @@
       "date": "Fecha",
       "dark_theme": "Tema oscuro",
       "days_spent": "día usado | días usados",
+      "days_expected": "día previsto | días previstos",
       "days_estimated": "día estimado | días estimados",
       "delete": "Borrar",
       "delete_all": "Borrar todo",
@@ -447,6 +452,8 @@
       "remove": "Quitar",
       "save": "Guardar",
       "sort_by": "Ordenar por",
+      "grouped_by": "Agrupado por",
+      "none": "Ninguno",
       "sorted_by": "Ordenado por",
       "start_date": "Fecha de inicio",
       "studio": "Estudio",
@@ -577,6 +584,7 @@
       "no_results": "Sin resultados",
       "link": "Enlace",
       "hours_spent": "hora invertida | horas invertidas",
+      "hours_expected": "hora prevista | horas previstas",
       "hours_estimated": "hora estimada | horas estimadas",
       "created_by": "Creado por",
       "day": "Día",
@@ -1003,6 +1011,7 @@
       "update_to_latest_version_help": "Establece la última revisión para cada entidad, manteniendo su tipo de tarea actual.",
       "update_versions_title": "Actualizar versiones seleccionadas",
       "created": "Lista de reproducción «{name}» creada.",
+      "view_as_playlist": "Ver como playlist",
       "view_created": "Ver lista de reproducción"
     },
     "productions": {
@@ -1166,7 +1175,8 @@
         "shots": "Tomas",
         "sequences": "Secuencias"
       },
-      "load_stats": "Cargar estadísticas"
+      "hide_stats": "Ocultar estadísticas",
+      "show_stats": "Mostrar estadísticas"
     },
     "profile": {
       "change_avatar": "Cambiar avatar",
@@ -1738,6 +1748,11 @@
       "retake_filter_with_retakes": "Con retomas"
     },
     "timesheets": {
+      "chart": "Gráfico de tiempo",
+      "empty": "No hay tiempo registrado para este período con los filtros actuales.",
+      "expected": "previsto",
+      "in_salary": "en salario",
+      "with_time_logged": "Con tiempo registrado",
       "detail_level": "Nivel de detalle",
       "done_tasks": "Tareas realizadas",
       "export_timesheet": "Exportar hoja de horas",

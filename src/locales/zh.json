@@ -66,7 +66,11 @@
       "edit_label": "更改资产的标签",
       "empty": "空的选角",
       "label": "标签",
+      "occurrences": "出现次数",
       "picture_mode": "切换到图片模式",
+      "remove_from_casting": "从选角中移除",
+      "view_as_cards": "卡片视图",
+      "view_as_list": "列表视图",
       "text_mode": "切换到文字模式",
       "title": "分解",
       "options": {
@@ -416,6 +420,7 @@
       "date": "日期",
       "dark_theme": "黑色主题",
       "days_spent": "消耗天数 | 消耗天数",
+      "days_expected": "预期天数 | 预期天数",
       "days_estimated": "预计天数 | 预计天数",
       "delete": "删除",
       "delete_all": "全部删除",
@@ -447,6 +452,8 @@
       "remove": "移除",
       "save": "保存",
       "sort_by": "排序方式",
+      "grouped_by": "分组方式",
+      "none": "无",
       "sorted_by": "排序",
       "start_date": "开始日期",
       "studio": "工作室",
@@ -577,6 +584,7 @@
       "no_results": "无结果",
       "link": "链接",
       "hours_spent": "花费的小时数 | 花费的小时数",
+      "hours_expected": "预期小时数 | 预期小时数",
       "hours_estimated": "估计小时数 | 估计小时数",
       "created_by": "创建者",
       "day": "日",
@@ -1003,6 +1011,7 @@
       "update_to_latest_version_help": "为每个实体设置最新的修订版，并保持其当前的任务类型。",
       "update_versions_title": "更新所选版本",
       "created": "播放列表“{name}”已创建。",
+      "view_as_playlist": "以播放列表查看",
       "view_created": "查看播放列表"
     },
     "productions": {
@@ -1166,7 +1175,8 @@
         "shots": "镜头",
         "sequences": "序列"
       },
-      "load_stats": "加载统计"
+      "hide_stats": "隐藏统计",
+      "show_stats": "显示统计数据"
     },
     "profile": {
       "change_avatar": "更换头像",
@@ -1738,6 +1748,11 @@
       "retake_filter_with_retakes": "有返修"
     },
     "timesheets": {
+      "chart": "时间图表",
+      "empty": "当前筛选条件下该时段没有记录的时间。",
+      "expected": "预期",
+      "in_salary": "按薪资",
+      "with_time_logged": "有记录时间",
       "detail_level": "细节层次",
       "done_tasks": "已完成任务",
       "export_timesheet": "导出时间表",

@@ -13,7 +13,7 @@
               nbSelectedAssets: selectedEntities.length
             })
           "
-          @confirm="removeSharedEntities(selectedEntities)"
+          @confirm="removeSharedEntities"
         />
         <div class="has-text-centered pa1">
           <a
@@ -25,16 +25,6 @@
             >{{ $t('main.clear_selection') }}</a
           >
         </div>
-        <!--h1 class="title mt05">{{ $t('tasks.selected_entities') }}</h1>
-        <div class="pa2 mt1">
-          <div
-            class="entity-line"
-            :key="entity.id"
-            v-for="entity in selectedEntities"
-          >
-            {{ entity.full_name }}
-          </div>
-        </div-->
       </div>
 
       <hr v-if="selectedEntities.length" />
@@ -68,7 +58,7 @@
             :disabled="!productionId"
             :is-loading="loading"
             :text="$t('library.import_from_production')"
-            @click="importFromProduction(productionId)"
+            @click="importFromProduction"
           />
 
           <button-simple
@@ -76,7 +66,7 @@
             :disabled="!productionId"
             :is-loading="loading"
             :text="$t('library.import_from_asset_type')"
-            @click="importFromAssetType(productionId, entityTypeId)"
+            @click="importFromAssetType"
           />
           <hr class="mt1" />
 
@@ -85,7 +75,7 @@
             :disabled="!entityIds.length"
             :is-loading="loading"
             :text="$t('library.import_from_list')"
-            @click="importFromEntityIds(entityIds)"
+            @click="importFromEntityIds"
           />
         </div>
         <div class="flexcolumn">
@@ -135,186 +125,157 @@
   </div>
 </template>
 
-<script>
-import { mapGetters, mapActions } from 'vuex'
+<script setup>
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useStore } from 'vuex'
 
+import DeleteEntities from '@/components/tops/actions/DeleteEntities.vue'
 import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
 import Combobox from '@/components/widgets/Combobox.vue'
 import ComboboxProduction from '@/components/widgets/ComboboxProduction.vue'
-import DeleteEntities from '@/components/tops/actions/DeleteEntities.vue'
 import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 
-export default {
-  name: 'manage-library',
+// Composables
+// --------------------------------------------------------------------------
 
-  components: {
-    ButtonSimple,
-    Combobox,
-    ComboboxProduction,
-    DeleteEntities,
-    EntityThumbnail
-  },
+const store = useStore()
 
-  props: {
-    extendable: {
-      type: Boolean,
-      default: true
-    }
-  },
+// Props / Emits
+// --------------------------------------------------------------------------
 
-  emits: ['library-updated'],
+defineProps({
+  extendable: {
+    type: Boolean,
+    default: true
+  }
+})
 
-  data() {
-    return {
-      productionId: null,
-      entityTypeId: null,
-      entityIds: [],
-      loading: false,
-      error: false
-    }
-  },
+const emit = defineEmits(['library-updated'])
 
-  async mounted() {
-    this.productionId = this.openProductions[0]?.id
-    this.$nextTick(() => {
-      this.entityTypeId = this.productionEntityTypes[0]?.value
-    })
-    await this.refresh()
-  },
+// State
+// --------------------------------------------------------------------------
 
-  computed: {
-    ...mapGetters([
-      'assetTypes',
-      'assetTypeMap',
-      'openProductions',
-      'productionMap',
-      'selectedAssets',
-      'unsharedAssets'
-    ]),
+const entityIds = ref([])
+const entityTypeId = ref(null)
+const error = ref(false)
+const loading = ref(false)
+const productionId = ref(null)
 
-    productionEntityTypes() {
-      const production = this.productionMap.get(this.productionId)
-      if (!production) return []
+// Computed
+// --------------------------------------------------------------------------
 
-      const types = !production.asset_types?.length
-        ? this.assetTypes
-        : this.assetTypes.filter(type =>
-            production.asset_types.includes(type.id)
-          )
+const assetTypeMap = computed(() => store.getters.assetTypeMap)
+const assetTypes = computed(() => store.getters.assetTypes)
+const openProductions = computed(() => store.getters.openProductions)
+const productionMap = computed(() => store.getters.productionMap)
+const selectedAssets = computed(() => store.getters.selectedAssets)
+const unsharedAssets = computed(() => store.getters.unsharedAssets)
 
-      return types.map(type => ({ label: type.name, value: type.id }))
-    },
+const productionEntityTypes = computed(() => {
+  const production = productionMap.value.get(productionId.value)
+  if (!production) return []
 
-    productionUnsharedEntities() {
-      return this.unsharedAssets.filter(
-        entity =>
-          entity.project_id === this.productionId &&
-          entity.entity_type_id === this.entityTypeId
-      )
-    },
+  const types = !production.asset_types?.length
+    ? assetTypes.value
+    : assetTypes.value.filter(type => production.asset_types.includes(type.id))
 
-    selectedEntities() {
-      return [...this.selectedAssets.values()]
-    }
-  },
+  return types.map(type => ({ label: type.name, value: type.id }))
+})
 
-  methods: {
-    ...mapActions([
-      'clearSelectedAssets',
-      'loadUnsharedAssets',
-      'shareAssets',
-      'unshareAssets'
-    ]),
+const productionUnsharedEntities = computed(() =>
+  unsharedAssets.value.filter(
+    entity =>
+      entity.project_id === productionId.value &&
+      entity.entity_type_id === entityTypeId.value
+  )
+)
 
-    async refresh() {
-      this.loading = true
-      this.entityIds = []
-      const production = this.productionMap.get(this.productionId)
-      try {
-        await this.loadUnsharedAssets({ production })
-      } catch (error) {
-        console.error(error)
-      }
-      this.loading = false
-    },
+const selectedEntities = computed(() => [...selectedAssets.value.values()])
 
-    toggleEntities(entities) {
-      const allSelected = entities.every(entity => this.isSelected(entity))
-      entities.forEach(entity => this.toggleEntity(entity, !allSelected))
-    },
+// Functions
+// --------------------------------------------------------------------------
 
-    toggleEntity(entity, force = false) {
-      if (force || !this.isSelected(entity)) {
-        this.entityIds.push(entity.id)
-      } else {
-        this.entityIds = this.entityIds.filter(id => id !== entity.id)
-      }
-    },
+const clearSelectedAssets = () => store.dispatch('clearSelectedAssets')
 
-    isSelected(entity) {
-      return this.entityIds.includes(entity.id)
-    },
+const isSelected = entity => entityIds.value.includes(entity.id)
 
-    async importFromProduction(productionId) {
-      this.loading = true
-      const production = this.productionMap.get(productionId)
-      try {
-        await this.shareAssets({ production })
-        this.$emit('library-updated')
-      } catch (error) {
-        console.error(error)
-      }
-      this.loading = false
-      await this.refresh()
-    },
-
-    async importFromAssetType(productionId, assetTypeId) {
-      this.loading = true
-      const production = this.productionMap.get(productionId)
-      const assetType = this.assetTypeMap.get(assetTypeId)
-      try {
-        await this.shareAssets({ production, assetType })
-        this.$emit('library-updated')
-      } catch (error) {
-        console.error(error)
-      }
-      this.loading = false
-      await this.refresh()
-    },
-
-    async importFromEntityIds(entityIds) {
-      this.loading = true
-      try {
-        await this.shareAssets({ assetIds: entityIds })
-        this.$emit('library-updated')
-      } catch (error) {
-        console.error(error)
-      }
-      this.loading = false
-      await this.refresh()
-    },
-
-    async removeSharedEntities(entities) {
-      this.loading = true
-      const entityIds = entities.map(entitie => entitie.id)
-      try {
-        await this.unshareAssets({ assetIds: entityIds })
-        this.$emit('library-updated')
-        this.clearSelectedAssets()
-      } catch (error) {
-        console.error(error)
-      }
-      this.loading = false
-      await this.refresh()
-    }
-  },
-
-  watch: {
-    productionId() {
-      this.refresh()
-    }
+const toggleEntity = (entity, force = false) => {
+  if (force || !isSelected(entity)) {
+    entityIds.value.push(entity.id)
+  } else {
+    entityIds.value = entityIds.value.filter(id => id !== entity.id)
   }
 }
+
+const refresh = async () => {
+  loading.value = true
+  entityIds.value = []
+  const production = productionMap.value.get(productionId.value)
+  try {
+    await store.dispatch('loadUnsharedAssets', { production })
+  } catch (err) {
+    console.error(err)
+  }
+  loading.value = false
+}
+
+const shareAndRefresh = async payload => {
+  loading.value = true
+  try {
+    await store.dispatch('shareAssets', payload)
+    emit('library-updated')
+  } catch (err) {
+    console.error(err)
+  }
+  loading.value = false
+  await refresh()
+}
+
+const importFromProduction = () =>
+  shareAndRefresh({ production: productionMap.value.get(productionId.value) })
+
+const importFromAssetType = () =>
+  shareAndRefresh({
+    production: productionMap.value.get(productionId.value),
+    assetType: assetTypeMap.value.get(entityTypeId.value)
+  })
+
+const importFromEntityIds = () => shareAndRefresh({ assetIds: entityIds.value })
+
+const removeSharedEntities = async () => {
+  loading.value = true
+  error.value = false
+  try {
+    await store.dispatch('unshareAssets', {
+      assetIds: selectedEntities.value.map(entity => entity.id)
+    })
+    emit('library-updated')
+    clearSelectedAssets()
+  } catch (err) {
+    console.error(err)
+    error.value = true
+  }
+  loading.value = false
+  await refresh()
+}
+
+// Watchers
+// --------------------------------------------------------------------------
+
+watch(productionId, () => {
+  refresh()
+})
+
+// Lifecycle
+// --------------------------------------------------------------------------
+
+onMounted(async () => {
+  productionId.value = openProductions.value[0]?.id
+  nextTick(() => {
+    entityTypeId.value = productionEntityTypes.value[0]?.value
+  })
+  await refresh()
+})
 </script>
 
 <style lang="scss" scoped>

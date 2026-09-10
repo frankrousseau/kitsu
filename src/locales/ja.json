@@ -66,7 +66,11 @@
       "edit_label": "アセットのラベルを変更",
       "empty": "キャスティングなし",
       "label": "ラベル",
+      "occurrences": "出現回数",
       "picture_mode": "ピクチャーモードに切り替え",
+      "remove_from_casting": "キャスティングから削除",
+      "view_as_cards": "カード表示",
+      "view_as_list": "リスト表示",
       "text_mode": "テキストモードに切り替え",
       "title": "ブレイクダウン",
       "options": {
@@ -416,6 +420,7 @@
       "date": "日付",
       "dark_theme": "ダークテーマ",
       "days_spent": "実績日数 | 実績日数",
+      "days_expected": "予定日数 | 予定日数",
       "days_estimated": "予定日数 | 予定日数",
       "delete": "削除",
       "delete_all": "すべて削除",
@@ -447,6 +452,8 @@
       "remove": "削除",
       "save": "保存",
       "sort_by": "並び順",
+      "grouped_by": "グループ化",
+      "none": "なし",
       "sorted_by": "並び順",
       "start_date": "開始日",
       "studio": "スタジオ",
@@ -577,6 +584,7 @@
       "no_results": "結果がありません",
       "link": "リンク",
       "hours_spent": "実績時間 | 実績時間",
+      "hours_expected": "予定時間 | 予定時間",
       "hours_estimated": "予定時間 | 予定時間",
       "created_by": "作成者",
       "day": "日",
@@ -1003,6 +1011,7 @@
       "update_to_latest_version_help": "各エンティティの現在のタスクタイプを保ったまま、最新のリビジョンを設定します。",
       "update_versions_title": "選択したバージョンを更新",
       "created": "プレイリスト「{name}」を作成しました。",
+      "view_as_playlist": "プレイリストとして表示",
       "view_created": "プレイリストを表示"
     },
     "productions": {
@@ -1166,7 +1175,8 @@
         "shots": "ショット",
         "sequences": "シーケンス"
       },
-      "load_stats": "統計を読み込み"
+      "hide_stats": "統計を隠す",
+      "show_stats": "統計を表示"
     },
     "profile": {
       "change_avatar": "アバターを変更",
@@ -1738,6 +1748,11 @@
       "retake_filter_with_retakes": "リテイクあり"
     },
     "timesheets": {
+      "chart": "時間グラフ",
+      "empty": "現在のフィルターでは、この期間に記録された時間はありません。",
+      "expected": "予定",
+      "in_salary": "給与換算",
+      "with_time_logged": "記録あり",
       "detail_level": "詳細レベル",
       "done_tasks": "完了したタスク",
       "export_timesheet": "タイムシートをエクスポート",

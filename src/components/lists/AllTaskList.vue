@@ -1,7 +1,7 @@
 <template>
   <div class="data-list">
     <div class="datatable-wrapper">
-      <table class="datatable">
+      <table class="datatable datatable--cards">
         <thead class="datatable-head">
           <tr class="row-header">
             <th class="project">
@@ -46,12 +46,12 @@
           <tr
             :key="task.id"
             class="task-line datatable-row"
-            :class="{ selected: selectionGrid[task.id] }"
+            :class="{ selected: selectedTaskId === task.id }"
             role="button"
             tabindex="0"
-            @click="selectTask(index, task)"
-            @keydown.enter.prevent="selectTask(index, task)"
-            v-for="(task, index) in tasks"
+            @click="selectTask(task)"
+            @keydown.enter.prevent="selectTask(task)"
+            v-for="task in tasks"
           >
             <td class="project">
               <production-name-cell
@@ -74,11 +74,11 @@
             <td class="asset-type">
               {{ getParentName(task) }}
             </td>
-            <td class="name">
+            <td class="entity name">
               {{ task.entity_name }}
             </td>
             <task-type-cell
-              class="name"
+              class="task-type name"
               :task-type="taskTypeMap.get(task.task_type_id)"
             />
             <validation-cell
@@ -114,7 +114,11 @@
             <td class="start-date">
               {{ formatDisplayDate(task.start_date) }}
             </td>
-            <td class="due-date">
+            <td
+              class="due-date"
+              :class="{ error: isLate(task) }"
+              :data-label="task.due_date ? $t('tasks.fields.due_date') : null"
+            >
               {{ formatDisplayDate(task.due_date) }}
             </td>
             <td class="done-date">
@@ -143,6 +147,7 @@
 
 <script setup>
 // Imports
+import moment from 'moment'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useStore } from 'vuex'
 
@@ -195,8 +200,7 @@ const emit = defineEmits(['more-clicked', 'task-selected'])
 
 // State
 // --------------------------------------------------------------------------
-const lastSelection = ref(null)
-const selectionGrid = ref({})
+const selectedTaskId = ref(null)
 
 // Computed
 // --------------------------------------------------------------------------
@@ -218,6 +222,11 @@ const getParentName = task => {
 const isEstimationBurned = task =>
   task.estimation > 0 && task.duration > task.estimation
 
+const isLate = task =>
+  task.due_date &&
+  !task.done_date &&
+  moment(task.due_date).isBefore(moment(), 'day')
+
 const onUnassign = (task, person) =>
   store
     .dispatch('unassignPersonFromTask', { task, person })
@@ -233,28 +242,26 @@ const onKeyDown = event => {
       : 0
   if (delta === 0) return
   const { length } = props.tasks
-  const index = ((lastSelection.value || 0) + delta + length) % length
-  selectTask(index, props.tasks[index])
+  const current = props.tasks.findIndex(({ id }) => id === selectedTaskId.value)
+  const index = (Math.max(current, 0) + delta + length) % length
+  selectTask(props.tasks[index])
   pauseEvent(event)
 }
 
-const selectTask = (index, task) => {
-  const isSelected = selectionGrid.value[task.id]
-  const isManySelection = Object.keys(selectionGrid.value).length > 1
+const selectTask = task => {
+  const wasSelected = selectedTaskId.value === task.id
   store.dispatch('clearSelectedTasks', { task })
   resetSelection()
 
-  if (!isSelected || isManySelection) {
+  if (!wasSelected) {
     store.dispatch('addSelectedTask', { task })
     emit('task-selected', task)
-    selectionGrid.value[task.id] = true
-    lastSelection.value = index
+    selectedTaskId.value = task.id
   }
 }
 
 const resetSelection = () => {
-  selectionGrid.value = {}
-  lastSelection.value = null
+  selectedTaskId.value = null
 }
 
 // Watchers
@@ -382,5 +389,103 @@ td.due-date {
 
 .datatable-row:hover {
   background: var(--background-selectable);
+}
+
+// read-only cards below the tablet breakpoint, like the admin lists
+@media screen and (max-width: 768px) {
+  .datatable-wrapper {
+    background: transparent;
+    border: 0;
+    min-height: 0;
+    overflow-x: visible;
+  }
+
+  .datatable.datatable--cards {
+    min-height: 0;
+    overflow: visible;
+    white-space: normal;
+
+    .datatable-body {
+      min-height: 0;
+      overflow: visible;
+    }
+
+    .datatable-row {
+      align-items: center;
+      column-gap: 0.75em;
+      display: grid;
+      grid-template-areas:
+        'project type status'
+        'thumbnail parent assignees'
+        'thumbnail entity assignees'
+        'due due due';
+      grid-template-columns: auto 1fr auto;
+      padding: 0.75em 0.5em 0.75em 0.75em;
+      row-gap: 0.25em;
+    }
+
+    .datatable-body td.project,
+    .datatable-body td.thumbnail,
+    .datatable-body td.entity,
+    .datatable-body td.asset-type,
+    .datatable-body td.task-type,
+    .datatable-body td.status,
+    .datatable-body td.assignees {
+      display: block;
+      padding: 0;
+    }
+
+    td.project {
+      grid-area: project;
+    }
+
+    td.thumbnail {
+      grid-area: thumbnail;
+    }
+
+    td.entity {
+      grid-area: entity;
+      font-size: 1.05em;
+    }
+
+    td.asset-type {
+      grid-area: parent;
+      color: var(--text-alt);
+      font-size: 0.9em;
+      // cancels the row gap: the parent sits right on top of the name
+      margin-bottom: -0.25em;
+    }
+
+    td.task-type {
+      grid-area: type;
+    }
+
+    td.status {
+      grid-area: status;
+    }
+
+    td.assignees {
+      grid-area: assignees;
+      justify-self: end;
+
+      .flexrow {
+        justify-content: flex-end;
+      }
+
+      // size and font come inline from the avatar props, tuned for the rows
+      :deep(.avatar) {
+        font-size: 12px !important;
+        height: 24px !important;
+        width: 24px !important;
+      }
+    }
+
+    .datatable-body td.due-date {
+      font-size: 0.9em;
+      grid-area: due;
+      justify-content: flex-start;
+      padding: 0;
+    }
+  }
 }
 </style>

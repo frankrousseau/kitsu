@@ -10,7 +10,7 @@
       @edit-clicked="onEditMetadataClicked"
     />
     <div class="datatable-wrapper">
-      <table class="datatable multi-section">
+      <table class="datatable datatable--cards multi-section">
         <thead
           class="datatable-head"
           id="datatable-productions"
@@ -79,92 +79,113 @@
           </tr>
         </thead>
         <tbody class="datatable-body">
-          <tr class="datatable-type-header">
-            <th
-              scope="rowgroup"
-              :colspan="8 + visibleProjectMetadataDescriptors.length"
-            >
-              <span class="datatable-row-header">
-                {{ $t('productions.status.open') }}
-                ({{ openProductions.length }})
-              </span>
-            </th>
-          </tr>
-          <template :key="entry.id" v-for="entry in openProductions">
-            <tr class="datatable-row">
-              <th class="name datatable-row-header" scope="row">
-                <production-name-cell
-                  :with-avatar="true"
-                  :entry="entry"
-                  :last-production-screen="lastProductionScreen"
-                />
+          <template :key="section.label" v-for="section in openSections">
+            <tr class="datatable-type-header">
+              <th
+                scope="rowgroup"
+                :colspan="8 + visibleProjectMetadataDescriptors.length"
+              >
+                <span class="datatable-row-header">
+                  {{ section.label }}
+                  ({{ section.productions.length }})
+                </span>
               </th>
-              <td class="code">
-                {{ entry.code }}
-              </td>
-              <td class="type">
-                {{ $t(`productions.type.${entry.production_type || 'short'}`) }}
-              </td>
-              <td class="style">
-                {{
-                  $t(
-                    `productions.style.${
-                      getProductionStyleLabel(entry.production_style) || '2d3d'
-                    }`
-                  )
-                }}
-              </td>
-              <td class="fps">
-                {{ entry.fps }}
-              </td>
-              <td class="ratio">
-                {{ entry.ratio }}
-              </td>
-              <td class="resolution">
-                {{ entry.resolution }}
-              </td>
-              <td
-                class="metadata-descriptor"
-                :key="entry.id + '-pm-' + d.field_name"
-                v-for="d in visibleProjectMetadataDescriptors"
-              >
-                <!-- Fall back to the merged column descriptor when the
-                     production has no own copy yet: first edit creates it. -->
-                <metadata-input
-                  :entity="entry"
-                  :descriptor="
-                    getProjectDescriptorForField(entry, d.field_name) || d
-                  "
-                  :indexes="{ i: 0, j: 0, k: 0 }"
-                  @metadata-changed="onProjectMetadataInCell"
+            </tr>
+            <template :key="entry.id" v-for="entry in section.productions">
+              <tr class="datatable-row">
+                <th class="name datatable-row-header" scope="row">
+                  <production-name-cell
+                    :with-avatar="true"
+                    :entry="entry"
+                    :last-production-screen="lastProductionScreen"
+                  />
+                </th>
+                <td class="code" :data-label="$t('productions.fields.code')">
+                  {{ entry.code }}
+                </td>
+                <td class="type" :data-label="$t('productions.fields.type')">
+                  {{
+                    $t(`productions.type.${entry.production_type || 'short'}`)
+                  }}
+                </td>
+                <td class="style" :data-label="$t('productions.fields.style')">
+                  {{
+                    $t(
+                      `productions.style.${
+                        getProductionStyleLabel(entry.production_style) ||
+                        '2d3d'
+                      }`
+                    )
+                  }}
+                </td>
+                <td class="fps" :data-label="$t('productions.fields.fps')">
+                  {{ entry.fps }}
+                </td>
+                <td class="ratio" :data-label="$t('productions.fields.ratio')">
+                  {{ entry.ratio }}
+                </td>
+                <td
+                  class="resolution"
+                  :data-label="$t('productions.fields.resolution')"
+                >
+                  {{ entry.resolution }}
+                </td>
+                <td
+                  class="metadata-descriptor"
+                  :key="entry.id + '-pm-' + d.field_name"
+                  v-for="d in visibleProjectMetadataDescriptors"
+                >
+                  <!-- Fall back to the merged column descriptor when the
+                       production has no own copy yet: first edit creates it. -->
+                  <metadata-input
+                    :entity="entry"
+                    :descriptor="
+                      getProjectDescriptorForField(entry, d.field_name) || d
+                    "
+                    :indexes="{ i: 0, j: 0, k: 0 }"
+                    @metadata-changed="onProjectMetadataInCell"
+                  />
+                </td>
+                <row-actions-cell
+                  @edit-clicked="$emit('edit-clicked', entry)"
+                  :hide-delete="true"
                 />
-              </td>
-              <row-actions-cell
-                @edit-clicked="$emit('edit-clicked', entry)"
-                :hide-delete="true"
-              />
-            </tr>
-            <tr
-              class="datatable-row"
-              v-if="Object.keys(productionStats).length > 0"
-            >
-              <td
-                :colspan="7 + visibleProjectMetadataDescriptors.length"
-                class="datatable-row-stats"
+              </tr>
+              <tr
+                class="datatable-row stats-row"
+                v-if="Object.keys(productionStats).length > 0"
               >
-                <production-stats :stats="productionStats[entry.id] || {}" />
-              </td>
-              <td class="actions"></td>
-            </tr>
+                <td
+                  :colspan="7 + visibleProjectMetadataDescriptors.length"
+                  class="datatable-row-stats"
+                >
+                  <production-stats :stats="productionStats[entry.id] || {}" />
+                </td>
+                <td class="actions"></td>
+              </tr>
+            </template>
           </template>
         </tbody>
-        <tbody v-if="closedProductions.length > 0">
+        <tbody class="datatable-body" v-if="closedProductions.length > 0">
           <tr class="datatable-type-header">
             <th
               scope="rowgroup"
               :colspan="8 + visibleProjectMetadataDescriptors.length"
             >
-              <span class="datatable-row-header">
+              <span
+                class="datatable-row-header section-toggle"
+                role="button"
+                tabindex="0"
+                @click="toggleClosedSection"
+                @keydown.enter.prevent="toggleClosedSection"
+                @keydown.space.prevent="toggleClosedSection"
+              >
+                <chevron-down-icon
+                  class="section-chevron"
+                  :size="14"
+                  v-if="isClosedSectionDisplayed"
+                />
+                <chevron-right-icon class="section-chevron" :size="14" v-else />
                 {{ $t('productions.status.closed') }}
                 ({{ closedProductions.length }})
               </span>
@@ -173,7 +194,7 @@
           <tr
             class="datatable-row"
             :key="entry.id"
-            v-for="entry in closedProductions"
+            v-for="entry in displayedClosedProductions"
           >
             <th class="name datatable-row-header" scope="row">
               <production-name-cell
@@ -183,13 +204,13 @@
                 :is-link="false"
               />
             </th>
-            <td class="code">
+            <td class="code" :data-label="$t('productions.fields.code')">
               {{ entry.code }}
             </td>
-            <td class="type">
+            <td class="type" :data-label="$t('productions.fields.type')">
               {{ $t(`productions.type.${entry.production_type || 'short'}`) }}
             </td>
-            <td class="style">
+            <td class="style" :data-label="$t('productions.fields.style')">
               {{
                 $t(
                   `productions.style.${
@@ -198,13 +219,16 @@
                 )
               }}
             </td>
-            <td class="fps">
+            <td class="fps" :data-label="$t('productions.fields.fps')">
               {{ entry.fps }}
             </td>
-            <td class="ratio">
+            <td class="ratio" :data-label="$t('productions.fields.ratio')">
               {{ entry.ratio }}
             </td>
-            <td class="resolution">
+            <td
+              class="resolution"
+              :data-label="$t('productions.fields.resolution')"
+            >
               {{ entry.resolution }}
             </td>
             <td
@@ -233,14 +257,16 @@
     <table-info :is-loading="isLoading" :is-error="isError"> </table-info>
 
     <p class="has-text-centered nb-productions">
-      {{ entries.length }}
-      {{ $t('productions.number', { count: entries.length }) }}
+      {{ displayedCount }}
+      {{ $t('productions.number', { count: displayedCount }) }}
     </p>
   </div>
 </template>
 
 <script setup>
+import { ChevronDownIcon, ChevronRightIcon } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useStore } from 'vuex'
 
 import { PRODUCTION_STYLE_OPTIONS } from '@/lib/productions'
@@ -260,7 +286,9 @@ const props = defineProps({
   isError: { type: Boolean, default: false },
   isLoading: { type: Boolean, default: false },
   metadataDisplayHeaders: { type: Object, default: () => ({}) },
-  productionStats: { type: Object, default: () => ({}) }
+  groupBy: { type: String, default: '' },
+  productionStats: { type: Object, default: () => ({}) },
+  search: { type: String, default: '' }
 })
 
 const emit = defineEmits([
@@ -273,10 +301,12 @@ const emit = defineEmits([
   'update:metadata-display-headers'
 ])
 
+const { t } = useI18n()
 const store = useStore()
 
 // State
 
+const closedSectionExpanded = ref(false)
 const columnSelectorDisplayed = ref(false)
 const headerMetadataMenu = ref(null)
 const lastMetadataHeaderMenuColumn = ref(null)
@@ -291,10 +321,66 @@ const lastProductionScreen = computed(() => store.getters.lastProductionScreen)
 const mergedProjectMetadataDescriptors = computed(
   () => store.getters.mergedProjectMetadataDescriptors
 )
-const openProductions = computed(() => store.getters.openProductions)
+const searchQuery = computed(() => props.search.trim().toLowerCase())
+
+const matchSearch = production =>
+  !searchQuery.value ||
+  `${production.name} ${production.code || ''}`
+    .toLowerCase()
+    .includes(searchQuery.value)
+
+const openProductions = computed(() =>
+  store.getters.openProductions.filter(matchSearch)
+)
 
 const closedProductions = computed(() =>
-  props.entries.filter(p => p.project_status_name === 'Closed')
+  props.entries.filter(
+    p => p.project_status_name === 'Closed' && matchSearch(p)
+  )
+)
+
+const groupLabel = production => {
+  if (props.groupBy === 'production_type') {
+    return t(`productions.type.${production.production_type || 'short'}`)
+  }
+  if (props.groupBy === 'production_style') {
+    const style = getProductionStyleLabel(production.production_style)
+    return t(`productions.style.${style || '2d3d'}`)
+  }
+  return production.data?.[props.groupBy] || t('main.none')
+}
+
+const openSections = computed(() => {
+  if (!props.groupBy) {
+    return [
+      {
+        label: t('productions.status.open'),
+        productions: openProductions.value
+      }
+    ]
+  }
+  const groups = new Map()
+  openProductions.value.forEach(production => {
+    const label = groupLabel(production)
+    if (!groups.has(label)) groups.set(label, [])
+    groups.get(label).push(production)
+  })
+  return [...groups]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([label, productions]) => ({ label, productions }))
+})
+
+// A match hidden inside the collapsed section would look like no match at all.
+const isClosedSectionDisplayed = computed(
+  () => closedSectionExpanded.value || searchQuery.value.length > 0
+)
+
+const displayedClosedProductions = computed(() =>
+  isClosedSectionDisplayed.value ? closedProductions.value : []
+)
+
+const displayedCount = computed(
+  () => openProductions.value.length + displayedClosedProductions.value.length
 )
 
 const visibleProjectMetadataDescriptors = computed(() =>
@@ -366,6 +452,10 @@ const onAllProjectsMetadataReorder = ordered =>
     fieldOrder: (ordered || []).map(d => d.field_name)
   })
 
+const toggleClosedSection = () => {
+  closedSectionExpanded.value = !closedSectionExpanded.value
+}
+
 const toggleColumnSelector = () => {
   columnSelectorDisplayed.value = !columnSelectorDisplayed.value
 }
@@ -418,5 +508,65 @@ const onProjectMetadataInCell = ({ entry, descriptor, value }) => {
   min-width: 110px;
   padding: 10px;
   text-align: right;
+}
+
+.section-toggle {
+  align-items: center;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 0.3em;
+}
+
+@media screen and (max-width: 768px) {
+  :deep(.datatable-wrapper) {
+    background: transparent;
+    border: 0;
+    overflow-x: visible;
+  }
+
+  .datatable-type-header th {
+    display: block;
+    padding: 0.5em 0;
+  }
+
+  .datatable.datatable--cards {
+    // two fields per line: six stacked one-word fields make a tall card
+    .datatable-row {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+
+    // the name is a th, out of the shared td rules
+    .datatable-row th.name {
+      background: transparent !important;
+      border: 0;
+      display: block;
+      font-size: 1.05em;
+      font-weight: 600;
+      min-width: 0;
+      padding: 0.25em 0 0.5em;
+      position: static;
+      width: 100%;
+
+      &::after {
+        display: none;
+      }
+    }
+
+    .datatable-body td[data-label] {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 0.2em;
+      justify-content: flex-start;
+      text-align: left;
+      width: 50%;
+    }
+  }
+
+  // Mobile is read-only: no stats row (its loading button lives in the
+  // page header, hidden on mobile).
+  .stats-row {
+    display: none;
+  }
 }
 </style>

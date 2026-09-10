@@ -229,4 +229,14 @@ export default {
     border-bottom-right-radius: 0;
   }
 }
+
+@media screen and (max-width: 768px) {
+  .selected-production-line {
+    min-width: auto;
+
+    :deep(.avatar-name) {
+      display: none;
+    }
+  }
+}
 </style>

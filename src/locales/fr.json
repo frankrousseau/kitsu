@@ -66,7 +66,11 @@
       "edit_label": "Changer le label de l'asset",
       "empty": "Casting vide",
       "label": "Label",
+      "occurrences": "Occurrences",
       "picture_mode": "Passer en mode image",
+      "remove_from_casting": "Retirer du casting",
+      "view_as_cards": "Voir en cartes",
+      "view_as_list": "Voir en liste",
       "text_mode": "Passer en mode texte",
       "title": "Casting",
       "options": {
@@ -416,6 +420,7 @@
       "date": "Date",
       "dark_theme": "Thème sombre",
       "days_spent": "jour passé | jours passés",
+      "days_expected": "jour attendu | jours attendus",
       "days_estimated": "jour estimé | jours estimés",
       "delete": "Supprimer",
       "delete_all": "Supprimer tout",
@@ -449,6 +454,8 @@
       "remove": "Enlever",
       "save": "Enregistrer",
       "sort_by": "Trier par",
+      "grouped_by": "Groupé par",
+      "none": "Aucun",
       "sorted_by": "Trié(e)s par",
       "start_date": "Date de début",
       "studio": "Studio",
@@ -580,6 +587,7 @@
       "no_results": "Pas de résultats",
       "link": "Lien",
       "hours_spent": "heure passée | heures passées",
+      "hours_expected": "heure attendue | heures attendues",
       "hours_estimated": "heure estimée | heures estimées",
       "created_by": "Créé par",
       "day": "Jour",
@@ -1003,6 +1011,7 @@
       "update_to_latest_version_help": "Utilise la dernière révision de chaque entité, en conservant son type de tâche actuel.",
       "update_versions_title": "Mettre à jour les versions sélectionnées",
       "created": "Playlist « {name} » créée.",
+      "view_as_playlist": "Voir en playlist",
       "view_created": "Voir la playlist"
     },
     "productions": {
@@ -1166,7 +1175,8 @@
         "shots": "Plans",
         "sequences": "Séquences"
       },
-      "load_stats": "Charger les statistiques"
+      "hide_stats": "Cacher les statistiques",
+      "show_stats": "Montrer les statistiques"
     },
     "profile": {
       "change_avatar": "Changer d'avatar",
@@ -1738,6 +1748,11 @@
       "retake_filter_with_retakes": "Avec retakes"
     },
     "timesheets": {
+      "chart": "Graphique du temps",
+      "empty": "Aucun temps saisi sur cette période avec les filtres actuels.",
+      "expected": "attendu",
+      "in_salary": "en salaire",
+      "with_time_logged": "Avec du temps saisi",
       "detail_level": "Niveau de détail",
       "done_tasks": "Tâches terminées",
       "export_timesheet": "Exporter la feuille de temps",

@@ -66,7 +66,11 @@
       "edit_label": "更改資產的標籤",
       "empty": "角色分配為空",
       "label": "標籤",
+      "occurrences": "出現次數",
       "picture_mode": "切換到圖片模式",
+      "remove_from_casting": "從選角中移除",
+      "view_as_cards": "卡片檢視",
+      "view_as_list": "列表檢視",
       "text_mode": "切換到文字模式",
       "title": "分解",
       "options": {
@@ -416,6 +420,7 @@
       "date": "日期",
       "dark_theme": "深色主題",
       "days_spent": "花費天數 | 花費天數",
+      "days_expected": "預期天數 | 預期天數",
       "days_estimated": "預計天數 | 預計天數",
       "delete": "刪除",
       "delete_all": "全部刪除",
@@ -447,6 +452,8 @@
       "remove": "移除",
       "save": "儲存",
       "sort_by": "排序方式",
+      "grouped_by": "分組方式",
+      "none": "無",
       "sorted_by": "排序",
       "start_date": "開始日期",
       "studio": "工作室",
@@ -577,6 +584,7 @@
       "no_results": "沒有結果",
       "link": "連結",
       "hours_spent": "花費的小時 | 花費的小時",
+      "hours_expected": "預期小時數 | 預期小時數",
       "hours_estimated": "小時估計 | 小時估計",
       "created_by": "創建者",
       "day": "日",
@@ -1003,6 +1011,7 @@
       "update_to_latest_version_help": "為每個實體設定最新修訂，並保留其目前的任務類型。",
       "update_versions_title": "更新選取的版本",
       "created": "已建立播放清單「{name}」。",
+      "view_as_playlist": "以播放清單檢視",
       "view_created": "查看播放清單"
     },
     "productions": {
@@ -1166,7 +1175,8 @@
         "shots": "鏡頭",
         "sequences": "序列"
       },
-      "load_stats": "載入統計"
+      "hide_stats": "隱藏統計",
+      "show_stats": "顯示統計資料"
     },
     "profile": {
       "change_avatar": "更換頭像",
@@ -1738,6 +1748,11 @@
       "retake_filter_with_retakes": "有重拍"
     },
     "timesheets": {
+      "chart": "時間圖表",
+      "empty": "目前篩選條件下此期間沒有記錄的時間。",
+      "expected": "預期",
+      "in_salary": "按薪資",
+      "with_time_logged": "有記錄時間",
       "detail_level": "細節層次",
       "done_tasks": "已完成任務",
       "export_timesheet": "導出時間表",

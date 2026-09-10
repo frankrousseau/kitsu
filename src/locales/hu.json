@@ -66,7 +66,11 @@
       "edit_label": "Asset címkéjének megváltoztatása",
       "empty": "Üres szereplista",
       "label": "Címke",
+      "occurrences": "Előfordulások",
       "picture_mode": "Váltás kép módra",
+      "remove_from_casting": "Eltávolítás a castingból",
+      "view_as_cards": "Kártyás nézet",
+      "view_as_list": "Listás nézet",
       "text_mode": "Váltás szöveges módra",
       "title": "Breakdown",
       "options": {
@@ -416,6 +420,7 @@
       "date": "Dátum",
       "dark_theme": "Sötét téma",
       "days_spent": "eltöltött nap | eltöltött nap",
+      "days_expected": "elvárt nap | elvárt nap",
       "days_estimated": "becsült nap | becsült nap",
       "delete": "Törlés",
       "delete_all": "Összes törlése",
@@ -447,6 +452,8 @@
       "remove": "Eltávolítás",
       "save": "Mentés",
       "sort_by": "Rendezés",
+      "grouped_by": "Csoportosítás",
+      "none": "Nincs",
       "sorted_by": "Rendezve",
       "start_date": "Kezdő dátum",
       "studio": "Stúdió",
@@ -576,6 +583,7 @@
       "hours": "óra | óra",
       "hours_estimated": "becsült óra | becsült óra",
       "hours_spent": "eltöltött óra | eltöltött óra",
+      "hours_expected": "elvárt óra | elvárt óra",
       "import": "Importálás",
       "is_shared": "Megosztva az egész csapattal",
       "label": {
@@ -1003,6 +1011,7 @@
       "update_versions_title": "Kiválasztott verziók frissítése",
       "volume_level": "Hangerő: {level}%",
       "created": "A(z) „{name}” lejátszási lista létrehozva.",
+      "view_as_playlist": "Megtekintés lejátszási listaként",
       "view_created": "Lejátszási lista megtekintése"
     },
     "productions": {
@@ -1149,7 +1158,8 @@
         "sequences": "Szekvenciák",
         "shots": "Shot-ok"
       },
-      "load_stats": "Statisztikák betöltése",
+      "hide_stats": "Statisztika elrejtése",
+      "show_stats": "Statisztika mutatása",
       "style": {
         "2d": "2D animáció",
         "2d3d": "2D/3D animáció",
@@ -1738,6 +1748,11 @@
       "validated": "Érvényesítve"
     },
     "timesheets": {
+      "chart": "Idődiagram",
+      "empty": "Nincs rögzített idő erre az időszakra a jelenlegi szűrőkkel.",
+      "expected": "elvárt",
+      "in_salary": "bérben",
+      "with_time_logged": "Rögzített idővel",
       "detail_level": "Részletesség szintje",
       "done_tasks": "Kész feladatok",
       "export_timesheet": "Időtábla exportálása",

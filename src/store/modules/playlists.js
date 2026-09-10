@@ -293,6 +293,15 @@ const actions = {
     return playlistsApi.loadTempPlaylist(production, taskIds, sort)
   },
 
+  loadTempPlaylistFromEntities({ rootGetters }, { entityIds, sort }) {
+    const production = rootGetters.currentProduction
+    return playlistsApi.loadTempPlaylistFromEntities(
+      production,
+      entityIds,
+      sort
+    )
+  },
+
   getRunningPreviewFiles(_, { limit, lastPreviewFileId = null }) {
     return playlistsApi.getRunningPreviewFiles(limit, lastPreviewFileId)
   },

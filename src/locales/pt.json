@@ -66,7 +66,11 @@
       "edit_label": "Alterar o rótulo do asset",
       "empty": "Elenco vazio",
       "label": "Rótulo",
+      "occurrences": "Ocorrências",
       "picture_mode": "Mudar para o modo de imagem",
+      "remove_from_casting": "Remover do casting",
+      "view_as_cards": "Ver como cartões",
+      "view_as_list": "Ver como lista",
       "text_mode": "Mudar para o modo de texto",
       "title": "Breakdown",
       "options": {
@@ -416,6 +420,7 @@
       "date": "Data",
       "dark_theme": "Tema Escuro",
       "days_spent": "dia gasto | dias gastos",
+      "days_expected": "dia previsto | dias previstos",
       "days_estimated": "dia estimado | dias estimados",
       "delete": "Deletar",
       "delete_all": "Deletar tudo",
@@ -447,6 +452,8 @@
       "remove": "Remover",
       "save": "Salvar",
       "sort_by": "Ordenar por",
+      "grouped_by": "Agrupado por",
+      "none": "Nenhum",
       "sorted_by": "Ordenado por",
       "start_date": "Data de início",
       "studio": "Estúdio",
@@ -577,6 +584,7 @@
       "no_results": "Nenhum resultado",
       "link": "Link",
       "hours_spent": "hora gasta | horas gastas",
+      "hours_expected": "hora prevista | horas previstas",
       "hours_estimated": "hora estimada | horas estimadas",
       "created_by": "Criado por",
       "day": "Dia",
@@ -1003,6 +1011,7 @@
       "update_to_latest_version_help": "Defina a revisão mais recente para cada entidade, mantendo seu tipo de tarefa atual.",
       "update_versions_title": "Atualizar versões selecionadas",
       "created": "Playlist “{name}” criada.",
+      "view_as_playlist": "Ver como playlist",
       "view_created": "Ver playlist"
     },
     "productions": {
@@ -1166,7 +1175,8 @@
         "shots": "Shots",
         "sequences": "Sequências"
       },
-      "load_stats": "Carregar estatísticas"
+      "hide_stats": "Esconder estatísticas",
+      "show_stats": "Mostrar estatísticas"
     },
     "profile": {
       "change_avatar": "Alterar avatar",
@@ -1738,6 +1748,11 @@
       "retake_filter_with_retakes": "Com retakes"
     },
     "timesheets": {
+      "chart": "Gráfico de tempo",
+      "empty": "Nenhum tempo registrado para este período com os filtros atuais.",
+      "expected": "previsto",
+      "in_salary": "em salário",
+      "with_time_logged": "Com tempo registrado",
       "detail_level": "Nível de detalhe",
       "done_tasks": "Tarefas concluídas",
       "export_timesheet": "Exportar quadro de horários",

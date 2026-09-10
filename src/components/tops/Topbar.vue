@@ -77,12 +77,16 @@
           class="nav-item"
           v-else-if="lastProduction && $route.path !== '/open-productions'"
         >
-          <router-link :to="lastProductionRoute" class="flexrow">
+          <router-link
+            :to="lastProductionRoute"
+            :title="$t('main.go_productions')"
+            class="flexrow mr0"
+          >
             <chevron-left-icon />
-            <span class="go-productions-label">
-              {{ $t('main.go_productions') }}
-            </span>
           </router-link>
+        </div>
+        <div class="nav-item page-title pl0 ml0" v-if="pageTitle">
+          {{ pageTitle }}
         </div>
       </div>
 
@@ -119,8 +123,7 @@
           {{ $t('timesheets.timelog_title') }}
         </router-link>
         <global-search-field
-          class="flexrow-item mr0"
-          :class="{ 'hide-in-production': isProductionContext }"
+          class="flexrow-item mr0 global-search"
           v-if="mainConfig.indexer_configured && !isCurrentUserClient"
         />
         <div class="nav-item">
@@ -498,6 +501,12 @@ export default {
         this.$route.params.production_id !== undefined ||
         this.$route.path.indexOf('my-tasks') === 0
       )
+    },
+
+    pageTitle() {
+      if (this.isProductionContext) return ''
+      const titleKey = this.$route.meta?.title
+      return titleKey ? this.$t(titleKey) : ''
     },
 
     isEpisodeContext() {
@@ -1235,6 +1244,13 @@ export default {
   overflow: hidden;
 }
 
+.page-title {
+  color: var(--text);
+  font-size: 1.4em;
+  font-weight: 800;
+  margin-top: -2px;
+}
+
 .version {
   color: $grey;
 }
@@ -1275,7 +1291,7 @@ export default {
     padding-left: 0;
   }
 
-  .hide-in-production {
+  .global-search {
     display: none;
   }
 

@@ -2,7 +2,7 @@
   <div class="people-timesheet-info">
     <div class="close">
       <router-link class="close-button" :to="closeRoute">
-        <x-icon />
+        <x-icon :size="16" />
       </router-link>
     </div>
 
@@ -11,24 +11,40 @@
       <page-title class="flexrow-item" :text="person.full_name" />
     </div>
 
-    <div class="info-date" v-if="isYearInfo">
-      {{ year }}
+    <div class="info-date">
+      <template v-if="level === 'year'">{{ year }}</template>
+      <template v-else-if="level === 'month'">
+        {{ monthString }} {{ year }}
+      </template>
+      <template v-else-if="level === 'week'">
+        {{ $t('main.week') }} {{ week }}
+      </template>
+      <template v-else>{{ day }} {{ monthString }} {{ year }}</template>
+    </div>
+    <div class="info-range" v-if="level === 'week'">
+      {{ weekDays }} {{ year }}
     </div>
 
-    <div class="info-date" v-if="isMonthInfo">{{ monthString }} {{ year }}</div>
-
-    <div class="info-date" v-else-if="isWeekInfo">
-      {{ $t('main.week') }}
-      {{ week }}, {{ startDay }} - {{ endDay }} {{ weekMonth }} {{ year }}
-    </div>
-
-    <div class="info-day-off" v-if="!isDayInfo">
-      {{ dayOffCount }}
-      {{ $t('days_off.nb_days_off', { count: dayOffCount }) }}
-    </div>
-
-    <div class="info-date" v-else-if="isDayInfo">
-      {{ day }} {{ monthString }} {{ year }}
+    <div class="info-stats">
+      <div class="info-stat" :title="expectedTitle" v-if="!isLoadingError">
+        <span class="info-stat-value" :class="{ skeleton: isLoading }">
+          <template v-if="!isLoading">
+            <span :class="{ warning: total > expected }">{{
+              format(total)
+            }}</span>
+            <span class="info-stat-expected">/ {{ format(expected) }}</span>
+          </template>
+        </span>
+        <span class="info-stat-label">{{
+          $t(totalKey, { count: total })
+        }}</span>
+      </div>
+      <div class="info-stat" v-if="level !== 'day'">
+        <span class="info-stat-value">{{ dayOffCount }}</span>
+        <span class="info-stat-label">
+          {{ $t('days_off.nb_days_off', { count: dayOffCount }) }}
+        </span>
+      </div>
     </div>
 
     <time-spent-task-list
@@ -37,175 +53,142 @@
       :is-loading="isLoading"
       :is-error="isLoadingError"
       :unit="unit"
+      :daily-rate="dailyRate"
     />
   </div>
 </template>
 
-<script>
+<script setup>
+// Imports
 import { XIcon } from 'lucide-vue-next'
-import moment from 'moment-timezone'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
+import { useStore } from 'vuex'
 
-import { monthToString } from '@/lib/time'
+import { getBusinessDays, monthToString } from '@/lib/time'
+import {
+  convertHours,
+  formatTimesheetValue,
+  getTimesheetPeriod
+} from '@/lib/timesheet'
 
+import TimeSpentTaskList from '@/components/lists/TimeSpentTaskList.vue'
 import PageTitle from '@/components/widgets/PageTitle.vue'
 import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
-import TimeSpentTaskList from '@/components/lists/TimeSpentTaskList.vue'
 
-export default {
-  name: 'people-timesheet-info',
+// Composables
+const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
+const store = useStore()
 
-  components: {
-    PageTitle,
-    PeopleAvatar,
-    TimeSpentTaskList,
-    XIcon
-  },
+// Props
+const props = defineProps({
+  person: { type: Object, default: () => ({}) },
+  year: { type: Number, default: 0 },
+  month: { type: Number, default: 0 },
+  week: { type: Number, default: 0 },
+  day: { type: Number, default: 0 },
+  isLoading: { type: Boolean, default: false },
+  isLoadingError: { type: Boolean, default: false },
+  tasks: { type: Array, default: () => [] },
+  dayOffs: { type: Array, default: () => [] },
+  unit: { type: String, default: 'hour' },
+  dailyRate: { type: Number, default: 0 }
+})
 
-  props: {
-    person: {
-      type: Object,
-      default: () => {}
-    },
-    year: {
-      type: Number,
-      default: 0
-    },
-    month: {
-      type: Number,
-      default: 0
-    },
-    week: {
-      type: Number,
-      default: 0
-    },
-    day: {
-      type: Number,
-      default: 0
-    },
-    isLoading: {
-      type: Boolean,
-      default: false
-    },
-    isLoadingError: {
-      type: Boolean,
-      default: false
-    },
-    tasks: {
-      type: Array,
-      default: () => []
-    },
-    dayOffCount: {
-      type: Number,
-      default: 0
-    },
-    unit: {
-      type: String,
-      default: 'hour'
-    }
-  },
+// Computed
+// --------------------------------------------------------------------------
+const organisation = computed(() => store.getters.organisation)
+const use12HourClock = computed(() => store.getters.use12HourClock)
 
-  mounted() {
-    window.addEventListener('keydown', this.onKeyDown)
-  },
+// the panel only shows on the `timesheets-<level>-person` routes
+const level = computed(() => route.name.split('-')[1])
 
-  beforeUnmount() {
-    window.removeEventListener('keydown', this.onKeyDown)
-  },
+const convert = hours =>
+  convertHours(hours, props.unit, organisation.value, props.dailyRate)
 
-  computed: {
-    // Monday of the displayed ISO week, as aggregated by the backend.
-    weekStartDate() {
-      return moment(this.year + '-' + this.week, 'YYYY-W')
-    },
+const format = value =>
+  formatTimesheetValue(value, props.unit, use12HourClock.value)
 
-    startDay() {
-      return this.weekStartDate.date()
-    },
+const total = computed(() =>
+  convert(props.tasks.reduce((sum, task) => sum + task.duration, 0) / 60)
+)
 
-    endDay() {
-      return this.weekStartDate.clone().add(6, 'days').date()
-    },
+const totalKey = computed(
+  () =>
+    ({
+      hour: 'main.hours_spent',
+      day: 'main.days_spent',
+      salary: 'timesheets.in_salary'
+    })[props.unit]
+)
 
-    weekMonth() {
-      return this.weekStartDate.format('MMM')
-    },
+const monthString = computed(() => monthToString(props.month))
 
-    monthString() {
-      return monthToString(this.month)
-    },
+const period = computed(() => getTimesheetPeriod(level.value, props))
 
-    isYearInfo() {
-      return !this.isMonthInfo && !this.isWeekInfo && !this.isDayInfo
-    },
+const weekDays = computed(() => {
+  const { start, end } = period.value
+  return `${start.date()} - ${end.date()} ${start.format('MMM')}`
+})
 
-    isMonthInfo() {
-      return this.$route.path.indexOf('month') > 0
-    },
+const businessDays = computed(() =>
+  getBusinessDays(period.value.start, period.value.end)
+)
 
-    isWeekInfo() {
-      return this.$route.path.indexOf('week') > 0
-    },
+const workingDays = computed(() =>
+  getBusinessDays(period.value.start, period.value.end, props.dayOffs)
+)
 
-    isDayInfo() {
-      return this.$route.path.indexOf('day') > 0
-    },
+const dayOffCount = computed(() => businessDays.value - workingDays.value)
 
-    closeRoute() {
-      const query = {
-        productionId: this.$route.query.productionId,
-        studioId: this.$route.query.studioId
-      }
-      if (this.isYearInfo) {
-        return {
-          name: 'timesheets-year',
-          params: {
-            year: this.year
-          },
-          query
-        }
-      } else if (this.isMonthInfo) {
-        return {
-          name: 'timesheets-month',
-          params: {
-            year: this.year,
-            month: this.month
-          },
-          query
-        }
-      } else if (this.isWeekInfo) {
-        return {
-          name: 'timesheets-week',
-          params: {
-            year: this.year,
-            week: this.week
-          },
-          query
-        }
-      } else if (this.isDayInfo) {
-        return {
-          name: 'timesheets-day',
-          params: {
-            year: this.year,
-            month: this.month,
-            day: this.day
-          },
-          query
-        }
-      } else {
-        return {
-          name: 'timesheets',
-          query
-        }
-      }
-    }
-  },
+// what a full-time person logs over the working days of the period, in
+// the selected unit
+const expected = computed(() =>
+  convert(workingDays.value * organisation.value.hours_by_day)
+)
 
-  methods: {
-    onKeyDown(event) {
-      if (event.key === 'Escape') this.$router.push(this.closeRoute)
-    }
+const expectedTitle = computed(() => {
+  const key = {
+    hour: 'main.hours_expected',
+    day: 'main.days_expected',
+    salary: 'timesheets.expected'
+  }[props.unit]
+  return `${format(expected.value)} ${t(key, { count: expected.value })}`
+})
+
+const closeRoute = computed(() => {
+  const { year, month, week, day } = props
+  const params = {
+    year: { year },
+    month: { year, month },
+    week: { year, week },
+    day: { year, month, day }
+  }[level.value]
+  return {
+    name: `timesheets-${level.value}`,
+    params,
+    query: route.query
   }
+})
+
+// Functions
+// --------------------------------------------------------------------------
+const onKeyDown = event => {
+  if (event.key === 'Escape') router.push(closeRoute.value)
 }
+
+// Lifecycle
+// --------------------------------------------------------------------------
+onMounted(() => {
+  window.addEventListener('keydown', onKeyDown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeyDown)
+})
 </script>
 
 <style lang="scss" scoped>
@@ -214,7 +197,24 @@ export default {
 }
 
 .people-timesheet-info {
+  background: var(--background-panel);
+  border-radius: 12px;
+  color: var(--text);
+  min-height: 100%;
   padding: 1.5em 1.5em 1em;
+  position: relative;
+
+  // keep the name clear of the floating close button: it overhangs the
+  // padding by about 1em
+  > .flexrow {
+    margin-right: 1em;
+  }
+
+  // the page title is sized for a full-width header: at 2rem uppercase
+  // a two-word name already wraps in the 400px column
+  :deep(.title) {
+    font-size: 1.5rem;
+  }
 }
 
 .info-date {
@@ -223,7 +223,75 @@ export default {
   text-transform: capitalize;
 }
 
+.info-range {
+  color: var(--text-alt);
+  margin-top: 0.25em;
+}
+
+.info-stats {
+  display: flex;
+  gap: 0.75em;
+  margin: 1em 0 2.5em;
+}
+
+// figure above its label, on the page surface so the tiles stand out
+// of the panel in both themes
+.info-stat {
+  background: var(--background);
+  border-radius: 8px;
+  flex: 1;
+  padding: 0.75em 1em;
+}
+
+.info-stat-value {
+  display: block;
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.2;
+
+  // holds the line while the figures load, so the tile does not jump
+  &.skeleton {
+    background: rgba(var(--skeleton-rgb), 0.3);
+    border-radius: 4px;
+    height: 1.2em;
+    width: 3em;
+  }
+
+  .warning {
+    color: $red;
+  }
+}
+
+.info-stat-expected {
+  color: var(--text-alt);
+  font-size: 0.7em;
+  font-weight: 400;
+  // the template whitespace between the two spans is condensed away
+  margin-left: 0.3em;
+}
+
+.info-stat-label {
+  display: block;
+  font-size: 0.8em;
+  letter-spacing: 0.5px;
+  margin-top: 0.25em;
+  text-transform: uppercase;
+}
+
+// out of the flow: a full line for one icon was too much
 .close {
-  text-align: right;
+  position: absolute;
+  right: 0.75em;
+  top: 0.75em;
+}
+
+.close-button {
+  height: 26px;
+  padding-top: 5px;
+  width: 26px;
+
+  &:hover {
+    background: rgba(var(--skeleton-rgb), 0.25);
+  }
 }
 </style>

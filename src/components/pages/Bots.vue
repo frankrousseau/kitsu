@@ -1,18 +1,6 @@
 <template>
   <div class="bots page fixed-page">
-    <div class="flexrow page-header">
-      <page-title class="flexrow-item filler" :text="$t('bots.title')" />
-      <button-simple
-        class="flexrow-item mr0"
-        :text="$t('bots.new_bot')"
-        :is-responsive="true"
-        icon="plus"
-        @click="onNewClicked"
-        v-if="isCurrentUserAdmin"
-      />
-    </div>
-
-    <div class="flexrow search-options">
+    <div class="flexrow search-options mt1">
       <search-field
         ref="searchFieldRef"
         class="search flexrow-item"
@@ -34,6 +22,15 @@
           v-model="role"
         />
       </div>
+      <span class="filler"></span>
+      <button-simple
+        class="flexrow-item mr0 new-button"
+        :text="$t('bots.new_bot')"
+        :is-responsive="true"
+        icon="plus"
+        @click="onNewClicked"
+        v-if="isCurrentUserAdmin"
+      />
     </div>
 
     <route-tabs class="mb0 mt1" :active-tab="activeTab" :tabs="tabs" />
@@ -52,7 +49,7 @@
     <div class="has-text-centered strong" v-else>
       <p>{{ $t('bots.no_bot') }}</p>
       <button-simple
-        class="mt1"
+        class="mt1 new-button"
         :text="$t('bots.new_bot')"
         :is-responsive="true"
         @click="onNewClicked"
@@ -122,7 +119,6 @@ import EditAvatarModal from '@/components/modals/EditAvatarModal.vue'
 import EditPersonModal from '@/components/modals/EditPersonModal.vue'
 import HardDeleteModal from '@/components/modals/HardDeleteModal.vue'
 import NewTokenModal from '@/components/modals/NewTokenModal.vue'
-import PageTitle from '@/components/widgets/PageTitle.vue'
 import PeopleList from '@/components/lists/PeopleList.vue'
 import RouteTabs from '@/components/widgets/RouteTabs.vue'
 import SearchField from '@/components/widgets/SearchField.vue'
@@ -439,7 +435,8 @@ useHead({ title: computed(() => `${t('bots.title')} - Kitsu`) })
     order: 0;
   }
 
-  .search-options :deep(.label) {
+  .search-options :deep(.label),
+  .new-button {
     display: none;
   }
 }

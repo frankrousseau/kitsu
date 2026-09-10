@@ -13,22 +13,23 @@
   </XyzTransition>
 </template>
 
-<script>
-import Topbar from '@/components/tops/Topbar.vue'
+<script setup>
+import { getCurrentInstance, onMounted } from 'vue'
+
 import Sidebar from '@/components/sides/Sidebar.vue'
+import Topbar from '@/components/tops/Topbar.vue'
 
-export default {
-  name: 'main-wrapper',
+// Composables
+// --------------------------------------------------------------------------
 
-  components: {
-    Topbar,
-    Sidebar
-  },
+const socket = getCurrentInstance().appContext.config.globalProperties.$socket
 
-  mounted() {
-    this.$socket.connect()
-  }
-}
+// Lifecycle
+// --------------------------------------------------------------------------
+
+onMounted(() => {
+  socket.connect()
+})
 </script>
 
 <style>

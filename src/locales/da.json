@@ -66,7 +66,11 @@
       "edit_label": "Rediger assetets label",
       "empty": "Tom casting",
       "label": "Label",
+      "occurrences": "Forekomster",
       "picture_mode": "Skift til billedtilstand",
+      "remove_from_casting": "Fjern fra casting",
+      "view_as_cards": "Vis som kort",
+      "view_as_list": "Vis som liste",
       "text_mode": "Skift til teksttilstand",
       "title": "Breakdown",
       "options": {
@@ -416,6 +420,7 @@
       "date": "Dato",
       "dark_theme": "Mørkt Tema",
       "days_spent": "dag brugt | dage brugt",
+      "days_expected": "forventet dag | forventede dage",
       "days_estimated": "dag estimeret | dage estimeret",
       "delete": "Slet",
       "delete_all": "Slet alle",
@@ -447,6 +452,8 @@
       "remove": "Fjern",
       "save": "Gem",
       "sort_by": "Sorter efter",
+      "grouped_by": "Grupperet efter",
+      "none": "Ingen",
       "sorted_by": "Sorteret efter",
       "start_date": "Startdato",
       "studio": "Studio",
@@ -577,6 +584,7 @@
       "no_results": "Ingen resultater",
       "link": "Link",
       "hours_spent": "time brugt | timer brugt",
+      "hours_expected": "forventet time | forventede timer",
       "hours_estimated": "time estimeret | timer estimeret",
       "created_by": "Oprettet af",
       "day": "Dag",
@@ -1003,6 +1011,7 @@
       "update_to_latest_version_help": "Angiv den seneste revision for hver enhed, idet dens aktuelle opgavetype bevares.",
       "update_versions_title": "Opdater valgte versioner",
       "created": "Playlisten “{name}” blev oprettet.",
+      "view_as_playlist": "Vis som playliste",
       "view_created": "Vis playlist"
     },
     "productions": {
@@ -1166,7 +1175,8 @@
         "shots": "Shots",
         "sequences": "Sequences"
       },
-      "load_stats": "Indlæs statistikker"
+      "hide_stats": "Skjul statistikker",
+      "show_stats": "Vis statistikker"
     },
     "profile": {
       "change_avatar": "Skift avatar",
@@ -1738,6 +1748,11 @@
       "retake_filter_with_retakes": "Med retakes"
     },
     "timesheets": {
+      "chart": "Tidsdiagram",
+      "empty": "Ingen tid registreret for denne periode med de aktuelle filtre.",
+      "expected": "forventet",
+      "in_salary": "i løn",
+      "with_time_logged": "Med registreret tid",
       "detail_level": "Detaljeniveau",
       "done_tasks": "Færdige opgaver",
       "export_timesheet": "Eksporter Tidsregistrering",

@@ -66,7 +66,11 @@
       "edit_label": "어셋 레이블 변경",
       "empty": "출연진 없음",
       "label": "라벨",
+      "occurrences": "등장 횟수",
       "picture_mode": "사진 모드로 전환",
+      "remove_from_casting": "캐스팅에서 제거",
+      "view_as_cards": "카드로 보기",
+      "view_as_list": "목록으로 보기",
       "text_mode": "텍스트 모드로 전환",
       "title": "브레이크다운",
       "options": {
@@ -416,6 +420,7 @@
       "date": "날짜",
       "dark_theme": "다크 테마",
       "days_spent": "소요 일수 | 소요 일수",
+      "days_expected": "예상 일수 | 예상 일수",
       "days_estimated": "추정 일수 | 추정 일수",
       "delete": "삭제",
       "delete_all": "모두 삭제",
@@ -447,6 +452,8 @@
       "remove": "삭제",
       "save": "저장",
       "sort_by": "정렬 기준:",
+      "grouped_by": "그룹화 기준",
+      "none": "없음",
       "sorted_by": "정렬된 기준:",
       "start_date": "시작일",
       "studio": "스튜디오",
@@ -577,6 +584,7 @@
       "no_results": "결과 없음",
       "link": "링크",
       "hours_spent": "소요 시간 | 소요 시간",
+      "hours_expected": "예상 시간 | 예상 시간",
       "hours_estimated": "예상 시간 | 예상 시간",
       "created_by": "만든 사람",
       "day": "일",
@@ -1003,6 +1011,7 @@
       "update_to_latest_version_help": "각 엔티티의 현재 작업 유형을 유지하면서 최신 수정본으로 설정합니다.",
       "update_versions_title": "선택한 버전 업데이트",
       "created": "재생 목록 “{name}”이(가) 생성되었습니다.",
+      "view_as_playlist": "플레이리스트로 보기",
       "view_created": "재생 목록 보기"
     },
     "productions": {
@@ -1166,7 +1175,8 @@
         "shots": "샷",
         "sequences": "시퀀스"
       },
-      "load_stats": "로드 통계"
+      "hide_stats": "통계 숨기기",
+      "show_stats": "통계 표시"
     },
     "profile": {
       "change_avatar": "아바타 변경",
@@ -1738,6 +1748,11 @@
       "retake_filter_with_retakes": "재촬영 있음"
     },
     "timesheets": {
+      "chart": "시간 차트",
+      "empty": "현재 필터로는 이 기간에 기록된 시간이 없습니다.",
+      "expected": "예상",
+      "in_salary": "급여 기준",
+      "with_time_logged": "기록된 시간 있음",
       "detail_level": "세부 사항 레벨",
       "done_tasks": "완료한 작업",
       "export_timesheet": "시간표 내보내기",

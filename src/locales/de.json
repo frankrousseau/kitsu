@@ -66,7 +66,11 @@
       "edit_label": "Etikett bearbeiten",
       "empty": "Leeres Casting",
       "label": "Etikett",
+      "occurrences": "Vorkommen",
       "picture_mode": "Zum Bildmodus wechseln",
+      "remove_from_casting": "Aus dem Casting entfernen",
+      "view_as_cards": "Als Karten anzeigen",
+      "view_as_list": "Als Liste anzeigen",
       "text_mode": "Zum Textmodus wechseln",
       "title": "Aufschlüsselung",
       "options": {
@@ -416,6 +420,7 @@
       "date": "Datum",
       "dark_theme": "Dunkles Design",
       "days_spent": "Tag verbracht | Tage verbracht",
+      "days_expected": "erwarteter Tag | erwartete Tage",
       "days_estimated": "Tag geschätzt | Tage geschätzt",
       "delete": "Löschen",
       "delete_all": "Alle löschen",
@@ -447,6 +452,8 @@
       "remove": "Entfernen",
       "save": "Speichern",
       "sort_by": "Sortieren nach",
+      "grouped_by": "Gruppiert nach",
+      "none": "Keine",
       "sorted_by": "Sortiert nach",
       "start_date": "Startdatum",
       "studio": "Studio",
@@ -577,6 +584,7 @@
       "no_results": "Keine Ergebnisse",
       "link": "Link",
       "hours_spent": "verbrachte Stunde | verbrachte Stunden",
+      "hours_expected": "erwartete Stunde | erwartete Stunden",
       "hours_estimated": "Stunde geschätzt | Stunden geschätzt",
       "created_by": "Erstellt von",
       "day": "Tag",
@@ -1003,6 +1011,7 @@
       "update_to_latest_version_help": "Setzt die neueste Revision für jede Entität und behält ihren aktuellen Aufgabentyp bei.",
       "update_versions_title": "Ausgewählte Versionen aktualisieren",
       "created": "Wiedergabeliste „{name}“ erstellt.",
+      "view_as_playlist": "Als Wiedergabeliste ansehen",
       "view_created": "Wiedergabeliste anzeigen"
     },
     "productions": {
@@ -1166,7 +1175,8 @@
         "shots": "Shots",
         "sequences": "Sequenzen"
       },
-      "load_stats": "Statistiken laden"
+      "hide_stats": "Statistiken ausblenden",
+      "show_stats": "Statistiken anzeigen"
     },
     "profile": {
       "change_avatar": "Avatar ändern",
@@ -1738,6 +1748,11 @@
       "retake_filter_with_retakes": "Mit Retakes"
     },
     "timesheets": {
+      "chart": "Zeitdiagramm",
+      "empty": "Keine Zeit für diesen Zeitraum mit den aktuellen Filtern erfasst.",
+      "expected": "erwartet",
+      "in_salary": "als Gehalt",
+      "with_time_logged": "Mit erfasster Zeit",
       "detail_level": "Detaillierungsgrad",
       "done_tasks": "Erledigte Aufgaben",
       "export_timesheet": "Zeiterfassung exportieren",

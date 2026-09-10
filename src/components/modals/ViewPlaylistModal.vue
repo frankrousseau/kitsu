@@ -73,7 +73,12 @@ const store = useStore()
 const props = defineProps({
   active: { type: Boolean, default: false },
   sort: { type: Boolean, default: false },
-  taskIds: { type: Array, default: null }
+  taskIds: { type: Array, default: null },
+  // one entry per entity instead of one per task
+  entityIds: { type: Array, default: null },
+  // the entities' type when it is not the one of the current page, as for
+  // the assets cast in a shot
+  entityType: { type: String, default: null }
 })
 
 const emit = defineEmits(['cancel'])
@@ -121,6 +126,7 @@ const successText = computed(() =>
 )
 
 const currentEntityType = computed(() => {
+  if (props.entityType) return props.entityType
   if (route.path.includes('asset')) return 'asset'
   if (route.path.includes('shot')) return 'shot'
   if (route.path.includes('sequence')) return 'sequence'
@@ -346,11 +352,16 @@ watch(
       createdPlaylist.value = null
       modals.value.edit = false
       isLoading.value = true
-      store
-        .dispatch('loadTempPlaylist', {
-          taskIds: currentTaskIds.value,
-          sort: props.sort
-        })
+      const load = props.entityIds
+        ? store.dispatch('loadTempPlaylistFromEntities', {
+            entityIds: props.entityIds,
+            sort: props.sort
+          })
+        : store.dispatch('loadTempPlaylist', {
+            taskIds: currentTaskIds.value,
+            sort: props.sort
+          })
+      load
         .then(entities => {
           currentPlaylist.value.for_entity = currentEntityType.value
           setupEntities(entities)

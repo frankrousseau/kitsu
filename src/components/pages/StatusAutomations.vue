@@ -1,14 +1,14 @@
 <template>
   <div class="status-automations page fixed-page">
     <list-page-header
-      :title="$t('status_automations.title')"
+      class="mt2 mb2"
+      :active-tab="activeTab"
+      :tabs="tabs"
       :new-entry-label="$t('status_automations.new_status_automation')"
       :is-exportable="isActiveTab"
       @export-clicked="onExportClicked"
       @new-clicked="onNewClicked"
     />
-
-    <route-tabs class="mt2" :active-tab="activeTab" :tabs="tabs" />
 
     <status-automation-list
       class="status-automation-list"
@@ -54,7 +54,6 @@ import stringHelpers from '@/lib/string'
 import DeleteModal from '@/components/modals/DeleteModal.vue'
 import EditStatusAutomationModal from '@/components/modals/EditStatusAutomationModal.vue'
 import ListPageHeader from '@/components/widgets/ListPageHeader.vue'
-import RouteTabs from '@/components/widgets/RouteTabs.vue'
 import StatusAutomationList from '@/components/lists/StatusAutomationList.vue'
 
 const { t } = useI18n()

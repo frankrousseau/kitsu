@@ -1,10 +1,10 @@
 <template>
   <div class="columns fixed-page shot xyz-in" xyz="fade">
-    <div class="column main-column">
+    <div class="page column main-column">
       <div class="page-header flexrow">
         <router-link
-          class="flexrow-item has-text-centered back-link"
-          :to="getShotsRoute"
+          class="flexrow-item has-text-centered back-link ml1"
+          :to="shotsPath"
         >
           <corner-left-up-icon />
         </router-link>
@@ -38,42 +38,35 @@
         </router-link>
       </div>
 
-      <div class="entity-data block">
+      <div class="shot-data block">
         <route-section-tabs
           class="section-tabs"
           :active-tab="currentSection"
           :route="$route"
-          :tabs="entityTabs"
+          :tabs="shotTabs"
         />
 
         <div class="flexrow mt1">
-          <span v-show="currentSection === 'casting'">
-            {{ nbAssets }} {{ $t('assets.number', { count: nbAssets }) }}
-          </span>
-          <span
-            class="tag tag-standby"
-            v-show="
-              currentSection === 'casting' &&
-              currentShot &&
-              currentShot.is_casting_standby
-            "
-          >
-            {{ $t('breakdown.fields.standby') }}
-          </span>
+          <template v-if="currentSection === 'casting'">
+            <span
+              class="tag tag-standby"
+              v-if="currentShot?.is_casting_standby"
+            >
+              {{ $t('breakdown.fields.standby') }}
+            </span>
+          </template>
           <div class="filler"></div>
-          <span
-            class="flexrow-item mt05"
-            v-show="currentSection === 'schedule'"
-          >
-            {{ $t('schedule.zoom_level') }}:
-          </span>
-          <combobox-number
-            class="zoom-level flexrow-item"
-            :options="zoomOptions"
-            is-simple
-            v-model="zoomLevel"
-            v-show="currentSection === 'schedule'"
-          />
+          <template v-if="currentSection === 'schedule'">
+            <span class="flexrow-item mt05">
+              {{ $t('schedule.zoom_level') }}:
+            </span>
+            <combobox-number
+              class="zoom-level flexrow-item"
+              is-simple
+              :options="zoomOptions"
+              v-model="zoomLevel"
+            />
+          </template>
         </div>
 
         <div class="flexcolumn infos" v-show="currentSection === 'infos'">
@@ -83,6 +76,7 @@
             :entries="currentTasks"
             :is-loading="!currentShot"
             :is-error="false"
+            :selected-task-id="currentTask?.id"
             @task-selected="onTaskSelected"
           />
           <div class="flexrow">
@@ -97,6 +91,7 @@
               />
             </div>
           </div>
+
           <div class="table-body metadata-infos">
             <table class="datatable no-header" v-if="currentShot">
               <tbody class="datatable-body">
@@ -106,90 +101,43 @@
                   </td>
                   <description-cell :entry="currentShot" :full="true" />
                 </tr>
-
                 <tr class="datatable-row">
                   <td class="field-label">
                     {{ $t('shots.fields.nb_frames') }}
                   </td>
-                  <td>
-                    {{ currentShot ? currentShot.nb_frames : '' }}
-                  </td>
+                  <td>{{ currentShot.nb_frames }}</td>
                 </tr>
-
                 <tr
                   class="datatable-row"
-                  v-if="
-                    currentShot &&
-                    currentShot.data &&
-                    currentShot.data.frame_in != null
-                  "
+                  v-if="currentShot.data?.frame_in != null"
                 >
                   <td class="field-label">
                     {{ $t('shots.fields.frame_in') }}
                   </td>
-                  <td>
-                    {{ currentShot ? currentShot.data.frame_in : '' }}
-                  </td>
+                  <td>{{ currentShot.data.frame_in }}</td>
                 </tr>
-
-                <tr
-                  class="datatable-row"
-                  v-if="
-                    currentShot &&
-                    currentShot.data &&
-                    currentShot.data.frame_out
-                  "
-                >
+                <tr class="datatable-row" v-if="currentShot.data?.frame_out">
                   <td class="field-label">
                     {{ $t('shots.fields.frame_out') }}
                   </td>
-                  <td>
-                    {{ currentShot ? currentShot.data.frame_out : '' }}
-                  </td>
+                  <td>{{ currentShot.data.frame_out }}</td>
                 </tr>
-
-                <tr
-                  class="datatable-row"
-                  v-if="currentShot && currentShot.data && currentShot.data.fps"
-                >
+                <tr class="datatable-row" v-if="currentShot.data?.fps">
                   <td class="field-label">{{ $t('shots.fields.fps') }}</td>
-                  <td>
-                    {{ currentShot ? currentShot.data.fps : '' }}
-                  </td>
+                  <td>{{ currentShot.data.fps }}</td>
                 </tr>
-
-                <tr
-                  class="datatable-row"
-                  v-if="
-                    currentShot &&
-                    currentShot.data &&
-                    currentShot.data.resolution
-                  "
-                >
+                <tr class="datatable-row" v-if="currentShot.data?.resolution">
                   <td class="field-label">
                     {{ $t('shots.fields.resolution') }}
                   </td>
-                  <td>
-                    {{ currentShot ? currentShot.data.resolution : '' }}
-                  </td>
+                  <td>{{ currentShot.data.resolution }}</td>
                 </tr>
-
-                <tr
-                  class="datatable-row"
-                  v-if="
-                    currentShot &&
-                    currentShot.data &&
-                    currentShot.data.max_retakes
-                  "
-                >
+                <tr class="datatable-row" v-if="currentShot.data?.max_retakes">
                   <td class="field-label">
                     {{ $t('shots.fields.max_retakes') }}
                   </td>
-                  <td>
-                    {{ currentShot ? currentShot.data.max_retakes : '' }}
-                  </td>
+                  <td>{{ currentShot.data.max_retakes }}</td>
                 </tr>
-
                 <tr
                   :key="descriptor.id"
                   class="datatable-row"
@@ -200,7 +148,6 @@
                     <metadata-value
                       :descriptor="descriptor"
                       :entity="currentShot"
-                      v-if="currentShot"
                     />
                   </td>
                 </tr>
@@ -211,76 +158,139 @@
 
         <entity-chat
           :entity="currentShot"
-          :name="currentShot ? currentShot.full_name : ''"
+          :name="currentShot?.full_name"
           v-if="currentSection === 'chat'"
         />
 
         <div class="shot-casting" v-show="currentSection === 'casting'">
-          <div v-if="currentShot">
-            <div
-              v-if="
-                currentShot &&
-                currentShot.castingAssetsByType &&
-                currentShot.castingAssetsByType[0].length > 0
-              "
-            >
+          <template v-if="currentShot">
+            <div v-if="currentShot.castingAssetsByType?.[0]?.length > 0">
+              <div class="casting-title flexrow">
+                <page-subtitle
+                  class="flexrow-item"
+                  :text="`${nbAssets} ${$t('assets.number', { count: nbAssets })}`"
+                />
+                <div class="filler"></div>
+                <button-simple
+                  class="flexrow-item"
+                  icon="grid"
+                  :active="castingView === 'cards'"
+                  :title="$t('breakdown.view_as_cards')"
+                  @click="castingView = 'cards'"
+                />
+                <button-simple
+                  class="flexrow-item"
+                  icon="list"
+                  :active="castingView === 'list'"
+                  :title="$t('breakdown.view_as_list')"
+                  @click="castingView = 'list'"
+                />
+                <button-simple
+                  class="flexrow-item"
+                  icon="film"
+                  :title="$t('playlists.view_as_playlist')"
+                  @click="viewPlaylist(castAssets)"
+                />
+              </div>
               <div
-                class="type-assets"
-                :key="
-                  typeAssets.length > 0 ? typeAssets[0].asset_type_name : ''
-                "
+                class="casting-group"
+                :key="typeAssets[0]?.asset_type_name"
                 v-for="typeAssets in currentShot.castingAssetsByType"
               >
-                <div class="asset-type">
-                  {{
-                    typeAssets.length > 0 ? typeAssets[0].asset_type_name : ''
-                  }}
-                  ({{ typeAssets.length }})
+                <div class="casting-group-header flexrow">
+                  <span class="flexrow-item group-name">
+                    {{ typeAssets[0]?.asset_type_name }}
+                  </span>
+                  <span class="flexrow-item tag">{{ typeAssets.length }}</span>
+                  <div class="filler"></div>
+                  <button-simple
+                    class="flexrow-item"
+                    icon="film"
+                    :title="$t('playlists.view_as_playlist')"
+                    @click="viewPlaylist(typeAssets)"
+                  />
                 </div>
-                <div class="asset-list">
+                <div class="casting-grid" v-if="castingView === 'cards'">
                   <router-link
-                    class="asset-link"
-                    :key="asset.id"
-                    :to="buildAssetRoute(asset)"
+                    class="casting-card"
+                    :class="{ shared: asset.shared }"
+                    :key="asset.asset_id"
+                    :to="assetPath(asset)"
                     v-for="asset in typeAssets"
                   >
-                    <entity-thumbnail
-                      class="entity-thumbnail"
-                      :class="{ shared: asset.shared }"
-                      :entity="asset"
-                      :square="true"
-                      :empty-width="103"
-                      :empty-height="103"
-                      :with-link="false"
-                    />
-                    <div class="break-word">
-                      {{ asset.asset_name }}
-                      <template v-if="asset.nb_occurences > 1">
-                        ({{ asset.nb_occurences }})
-                      </template>
-                    </div>
-                    <div
-                      class="ready-for flexrow"
-                      v-if="!asset.shared && asset.ready_for"
-                    >
-                      <task-type-name
-                        class="flexrow-item"
-                        :task-type="taskTypeMap.get(asset.ready_for)"
-                        :current-production-id="currentProduction.id"
-                        :title="
-                          'Ready for: ' +
-                          (taskTypeMap.get(asset.ready_for)?.name || '')
-                        "
+                    <div class="card-preview">
+                      <entity-preview
+                        cover
+                        is-rounded-top-border
+                        :entity="asset"
+                        :empty-width="200"
+                        :empty-height="112"
+                        :show-movie="false"
                       />
+                      <button-simple
+                        class="remove-button"
+                        icon="remove"
+                        :title="$t('breakdown.remove_from_casting')"
+                        @click.prevent.stop="
+                          uncastAsset(currentShot.id, asset.asset_id)
+                        "
+                        v-if="isCurrentUserManager"
+                      />
+                      <span
+                        class="nb-occurences"
+                        v-if="asset.nb_occurences > 1"
+                      >
+                        {{ asset.nb_occurences }}
+                      </span>
+                    </div>
+                    <div class="card-description">
+                      <div class="card-name flexrow">
+                        <span class="flexrow-item filler break-word">
+                          {{ asset.asset_name }}
+                        </span>
+                        <span
+                          class="asset-label flexrow-item"
+                          :label="asset.label"
+                        >
+                          {{ asset.label || $t('breakdown.options.animate') }}
+                        </span>
+                      </div>
+                      <div
+                        class="ready-for flexrow"
+                        v-if="!asset.shared && asset.ready_for"
+                      >
+                        <span class="flexrow-item filler">
+                          {{ $t('assets.fields.ready_for') }}
+                        </span>
+                        <task-type-name
+                          class="flexrow-item"
+                          :task-type="taskTypeMap.get(asset.ready_for)"
+                          :current-production-id="currentProduction.id"
+                          :title="
+                            'Ready for: ' +
+                            (taskTypeMap.get(asset.ready_for)?.name || '')
+                          "
+                        />
+                      </div>
                     </div>
                   </router-link>
                 </div>
+                <casting-list
+                  entity-type="asset"
+                  :entries="typeAssets"
+                  :entity-path="assetPath"
+                  :can-remove="isCurrentUserManager"
+                  @remove="asset => uncastAsset(currentShot.id, asset.asset_id)"
+                  v-else
+                />
               </div>
             </div>
-            <div class="mt1" v-else>
-              {{ $t('shots.no_casting') }}
-            </div>
-          </div>
+            <empty-section
+              :icon="BoxIcon"
+              :text="$t('shots.no_casting')"
+              v-else
+            />
+          </template>
           <table-info
             :is-loading="casting.isLoading"
             :is-error="casting.isError"
@@ -295,7 +305,7 @@
         >
           <div class="wrapper">
             <schedule
-              ref="schedule-widget"
+              ref="scheduleWidget"
               :start-date="tasksStartDate"
               :end-date="tasksEndDate"
               :hierarchy="scheduleItems"
@@ -309,6 +319,11 @@
             />
           </div>
         </div>
+        <empty-section
+          :icon="CalendarIcon"
+          :text="$t('main.empty_schedule')"
+          v-else-if="currentSection === 'schedule'"
+        />
 
         <entity-preview-files
           :entity="currentShot"
@@ -322,14 +337,31 @@
       </div>
     </div>
 
-    <div class="column side-column" v-show="currentSection === 'infos'">
+    <div
+      class="drawer-backdrop"
+      :class="{ 'is-open': isTaskDrawerOpen }"
+      @click="closeTask"
+      v-show="currentSection === 'infos'"
+    ></div>
+    <div
+      class="column side-column"
+      :class="{ 'is-open': isTaskDrawerOpen }"
+      v-show="currentSection === 'infos'"
+    >
       <task-info :task="currentTask" entity-type="Shot" with-actions>
         <entity-news class="news-column" :entity="currentShot" />
       </task-info>
     </div>
 
+    <view-playlist-modal
+      active
+      entity-type="asset"
+      :entity-ids="playlistEntityIds"
+      @cancel="playlistEntityIds = null"
+      v-if="playlistEntityIds"
+    />
+
     <edit-shot-modal
-      ref="edit-shot-modal"
       :active="modals.edit"
       :is-loading="loading.edit"
       :is-error="errors.edit"
@@ -340,314 +372,271 @@
   </div>
 </template>
 
-<script>
-import { mapGetters, mapActions } from 'vuex'
+<script setup>
+// Imports
+// --------------------------------------------------------------------------
+import { useHead } from '@unhead/vue'
 import {
+  BoxIcon,
+  CalendarIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CornerLeftUpIcon
 } from 'lucide-vue-next'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
+import { useStore } from 'vuex'
 
+import { useCastingView } from '@/composables/castingView'
+import { useEntity } from '@/composables/entity'
+import { episodifyRoute } from '@/lib/path'
 import shotStore from '@/store/modules/shots'
 
-import { episodifyRoute } from '@/lib/path'
-import { entityMixin } from '@/components/mixins/entity'
-import { formatListMixin } from '@/components/mixins/format'
-
-import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
-import ComboboxNumber from '@/components/widgets/ComboboxNumber.vue'
 import DescriptionCell from '@/components/cells/DescriptionCell.vue'
+import CastingList from '@/components/lists/CastingList.vue'
+import EntityTaskList from '@/components/lists/EntityTaskList.vue'
 import EditShotModal from '@/components/modals/EditShotModal.vue'
+import ViewPlaylistModal from '@/components/modals/ViewPlaylistModal.vue'
 import EntityChat from '@/components/pages/entities/EntityChat.vue'
 import EntityNews from '@/components/pages/entities/EntityNews.vue'
 import EntityPreviewFiles from '@/components/pages/entities/EntityPreviewFiles.vue'
-import EntityTaskList from '@/components/lists/EntityTaskList.vue'
 import EntityTimeLogs from '@/components/pages/entities/EntityTimeLogs.vue'
+import TaskInfo from '@/components/sides/TaskInfo.vue'
+import ButtonSimple from '@/components/widgets/ButtonSimple.vue'
+import ComboboxNumber from '@/components/widgets/ComboboxNumber.vue'
+import EmptySection from '@/components/widgets/EmptySection.vue'
+import EntityPreview from '@/components/widgets/EntityPreview.vue'
 import EntityThumbnail from '@/components/widgets/EntityThumbnail.vue'
 import MetadataValue from '@/components/widgets/MetadataValue.vue'
 import PageSubtitle from '@/components/widgets/PageSubtitle.vue'
 import RouteSectionTabs from '@/components/widgets/RouteSectionTabs.vue'
 import Schedule from '@/components/widgets/Schedule.vue'
 import TableInfo from '@/components/widgets/TableInfo.vue'
-import TaskInfo from '@/components/sides/TaskInfo.vue'
 import TaskTypeName from '@/components/widgets/TaskTypeName.vue'
 
-export default {
-  name: 'shot',
+defineOptions({ name: 'shot' })
 
-  mixins: [entityMixin, formatListMixin],
+// Composables
+// --------------------------------------------------------------------------
+const { t } = useI18n()
+const route = useRoute()
+const store = useStore()
 
-  components: {
-    ButtonSimple,
-    ComboboxNumber,
-    ChevronLeftIcon,
-    ChevronRightIcon,
-    CornerLeftUpIcon,
-    DescriptionCell,
-    EditShotModal,
-    EntityChat,
-    EntityNews,
-    EntityPreviewFiles,
-    EntityTaskList,
-    EntityTimeLogs,
-    EntityThumbnail,
-    MetadataValue,
-    PageSubtitle,
-    RouteSectionTabs,
-    Schedule,
-    TableInfo,
-    TaskInfo,
-    TaskTypeName
-  },
+// State
+// --------------------------------------------------------------------------
+const castingView = useCastingView()
+const currentShot = ref(null)
+const playlistEntityIds = ref(null)
+const scheduleWidget = ref(null)
+const casting = reactive({ isLoading: false, isError: false })
+const errors = reactive({ edit: false })
+const loading = reactive({ edit: false })
+const modals = reactive({ edit: false })
 
-  data() {
-    return {
-      type: 'shot',
-      currentShot: null,
-      currentTask: null,
-      casting: {
-        isLoading: false,
-        isError: false
-      },
-      errors: {
-        edit: false
-      },
-      loading: {
-        edit: false
-      },
-      modals: {
-        edit: false
-      }
+// Computed
+// --------------------------------------------------------------------------
+const currentEpisode = computed(() => store.getters.currentEpisode)
+const currentProduction = computed(() => store.getters.currentProduction)
+const isCurrentUserManager = computed(
+  () => store.getters.isCurrentUserProductionManager
+)
+const isTVShow = computed(() => store.getters.isTVShow)
+const shotMetadataDescriptors = computed(
+  () => store.getters.shotMetadataDescriptors
+)
+const shotSearchText = computed(() => store.getters.shotSearchText)
+const taskTypeMap = computed(() => store.getters.taskTypeMap)
+
+const entityList = computed(() => shotStore.cache.shots)
+
+const title = computed(() => {
+  if (!currentShot.value) return t('main.loading')
+  const { episode_name, sequence_name, name } = currentShot.value
+  const path = `${sequence_name} / ${name}`
+  return episode_name ? `${episode_name} / ${path}` : path
+})
+
+const castAssets = computed(() =>
+  (currentShot.value?.castingAssetsByType || []).flat()
+)
+const nbAssets = computed(() => castAssets.value.length)
+
+const shotsPath = computed(() => {
+  const path = {
+    name: 'shots',
+    params: { production_id: currentProduction.value.id },
+    query: { search: shotSearchText.value }
+  }
+  if (currentEpisode.value) {
+    path.name = 'episode-shots'
+    path.params.episode_id = currentEpisode.value.id
+  }
+  return path
+})
+
+const shotTabs = computed(() => [
+  { label: t('main.label.info'), name: 'infos' },
+  { label: t('main.label.chat'), name: 'chat' },
+  { label: t('main.label.casting'), name: 'casting' },
+  { label: t('main.label.schedule'), name: 'schedule' },
+  { label: t('main.label.preview_files'), name: 'preview-files' },
+  { label: t('main.label.timelog'), name: 'time-logs' }
+])
+
+const isTaskDrawerOpen = computed(() => Boolean(currentTask.value))
+
+// Functions
+// --------------------------------------------------------------------------
+const getCurrentShot = async () => {
+  const shotId = route.params.shot_id
+  if (!shotId) return null
+  let shot = shotStore.cache.shotMap.get(shotId) || null
+  if (!shot) {
+    await store.dispatch('loadShot', shotId)
+    shot = shotStore.cache.shotMap.get(shotId) || null
+  }
+  return shot
+}
+
+const uncastAsset = async (entityId, assetId) => {
+  await store.dispatch('uncastAsset', { entityId, assetId })
+  await loadCastingData()
+}
+
+const loadCastingData = async () => {
+  casting.isLoading = true
+  casting.isError = false
+  try {
+    await store.dispatch('loadShotCasting', currentShot.value)
+  } catch (err) {
+    casting.isError = true
+    console.error(err)
+  }
+  casting.isLoading = false
+}
+
+const scrollScheduleToStart = () => {
+  scheduleWidget.value?.scrollToDate(scheduleItems.value[0].startDate)
+}
+
+const resetData = async () => {
+  casting.isLoading = true
+  await nextTick()
+  currentShot.value = await getCurrentShot()
+  await loadCastingData()
+}
+
+const init = async () => {
+  try {
+    currentShot.value = await getCurrentShot()
+    currentSection.value = route.query.section || 'infos'
+    if (currentShot.value) {
+      loadCastingData()
+    } else {
+      resetData()
     }
-  },
-
-  mounted() {
-    this.clearSelectedTasks()
-    this.init()
-  },
-
-  computed: {
-    ...mapGetters([
-      'currentEpisode',
-      'currentProduction',
-      'getTaskTypePriority',
-      'isTVShow',
-      'route',
-      'shotMap',
-      'shotMetadataDescriptors',
-      'shotSearchText',
-      'shotsPath',
-      'taskMap',
-      'taskTypeMap'
-    ]),
-    ...mapGetters({
-      isCurrentUserManager: 'isCurrentUserProductionManager'
-    }),
-
-    title() {
-      if (this.currentShot) {
-        if (this.currentShot.episode_name) {
-          return (
-            `${this.currentShot.episode_name} / ` +
-            `${this.currentShot.sequence_name} / ` +
-            `${this.currentShot.name}`
-          )
-        } else {
-          return `${this.currentShot.sequence_name} / ${this.currentShot.name}`
-        }
-      } else {
-        return this.$t('main.loading')
-      }
-    },
-
-    shotThumbnailPath() {
-      const previewId = this.currentShot.preview_file_id
-      return `/api/pictures/originals/preview-files/${previewId}.png`
-    },
-
-    isPreview() {
-      return (
-        this.currentShot &&
-        this.currentShot.preview_file_id &&
-        this.currentShot.preview_file_id.length > 0
-      )
-    },
-
-    getShotsRoute() {
-      const route = {
-        name: 'shots',
-        params: {
-          production_id: this.currentProduction.id
-        },
-        query: {
-          search: this.shotSearchText
-        }
-      }
-      if (this.currentEpisode) {
-        route.name = 'episode-shots'
-        route.params.episode_id = this.currentEpisode.id
-      }
-      return route
-    },
-
-    nbAssets() {
-      let nbAssets = 0
-      if (
-        this.currentShot &&
-        this.currentSection === 'casting' &&
-        this.currentShot.castingAssetsByType
-      ) {
-        this.currentShot.castingAssetsByType.forEach(group => {
-          nbAssets += group.length
-        })
-      }
-      return nbAssets
-    }
-  },
-
-  methods: {
-    ...mapActions([
-      'clearSelectedTasks',
-      'editShot',
-      'loadShot',
-      'loadShotCasting'
-    ]),
-
-    changeTab(tab) {
-      this.selectedTab = tab
-    },
-
-    getCurrentShot() {
-      return new Promise((resolve, reject) => {
-        const shotId = this.route.params.shot_id
-        const shot = shotStore.cache.shotMap.get(shotId) || null
-        if (!shot) {
-          return this.loadShot(shotId).then(resolve)
-        } else {
-          return resolve(shot)
-        }
-      })
-    },
-
-    onEditClicked() {
-      this.modals.edit = true
-    },
-
-    confirmEditShot(form) {
-      form.id = this.currentShot.id
-      form.data.resolution = form.resolution
-      form.data.max_retakes = form.max_retakes
-      form.data.frame_in = form.frameIn
-      form.data.frame_out = form.frameOut
-      form.data.fps = form.fps
-      this.loading.edit = true
-      this.errors.edit = false
-      this.editShot(form)
-        .then(() => {
-          this.loading.edit = false
-          this.modals.edit = false
-        })
-        .catch(err => {
-          console.error(err)
-          this.loading.edit = false
-          this.errors.edit = true
-        })
-    },
-
-    buildAssetRoute(asset) {
-      let episodeId = asset.episode_id
-      if (this.isTVShow && !episodeId) episodeId = 'main'
-      const route = {
-        name: 'asset',
-        params: {
-          production_id: this.currentProduction.id,
-          asset_id: asset.asset_id
-        }
-      }
-      return episodifyRoute(route, episodeId)
-    },
-
-    resetData() {
-      this.casting.isLoading = true
-
-      // Next tick is needed to wait for the episode change.
-      this.$nextTick(() => {
-        this.getCurrentShot()
-          .then(shot => {
-            this.currentShot = shot
-            return this.loadShotCasting(this.currentShot)
-          })
-          .then(() => {
-            this.casting.isLoading = false
-          })
-          .catch(err => {
-            this.casting.isError = true
-            this.casting.isLoading = false
-            console.error(err)
-          })
-      })
-    },
-
-    init() {
-      this.getCurrentShot()
-        .then(shot => {
-          this.currentShot = shot
-          this.currentSection = this.route.query.section || 'infos'
-          this.casting.isLoading = true
-          this.casting.isError = false
-          if (this.currentShot) {
-            this.loadShotCasting(this.currentShot)
-              .then(() => {
-                this.casting.isLoading = false
-                setTimeout(this.initSchedule, 100)
-              })
-              .catch(err => {
-                this.casting.isLoading = false
-                this.casting.isError = true
-                console.error(err)
-              })
-          } else {
-            this.resetData()
-            setTimeout(this.initSchedule, 100)
-          }
-        })
-        .catch(console.error)
-    },
-
-    initSchedule() {
-      this.$refs['schedule-widget']?.scrollToDate(
-        this.scheduleItems[0].startDate
-      )
-    }
-  },
-
-  watch: {
-    $route() {
-      const shotId = this.route.params.shot_id
-      if (this.currentAsset && this.currentShot.id !== shotId) {
-        this.init()
-      }
-      this.currentSection = this.route.query.section || 'infos'
-    }
-  },
-
-  head() {
-    return {
-      title: `${this.title} - Kitsu`
-    }
+    setTimeout(scrollScheduleToStart, 100)
+  } catch (err) {
+    console.error(err)
   }
 }
+
+const assetPath = asset => {
+  const episodeId = asset.episode_id || (isTVShow.value ? 'main' : null)
+  return episodifyRoute(
+    {
+      name: 'asset',
+      params: {
+        production_id: currentProduction.value.id,
+        asset_id: asset.asset_id
+      },
+      query: { section: 'casting' }
+    },
+    episodeId
+  )
+}
+
+// the modal edits the shot data fields as flat form fields
+const confirmEditShot = async form => {
+  const data = {
+    ...form,
+    id: currentShot.value.id,
+    data: {
+      ...form.data,
+      resolution: form.resolution,
+      max_retakes: form.max_retakes,
+      frame_in: form.frameIn,
+      frame_out: form.frameOut,
+      fps: form.fps
+    }
+  }
+  loading.edit = true
+  errors.edit = false
+  try {
+    await store.dispatch('editShot', data)
+    modals.edit = false
+  } catch (err) {
+    console.error(err)
+    errors.edit = true
+  }
+  loading.edit = false
+}
+
+const closeTask = () => {
+  if (currentTask.value) onTaskSelected(currentTask.value)
+}
+
+const viewPlaylist = assets => {
+  playlistEntityIds.value = assets.map(asset => asset.asset_id)
+}
+
+const {
+  currentSection,
+  currentTask,
+  zoomLevel,
+  zoomOptions,
+  scheduleItems,
+  previousEntityPath,
+  nextEntityPath,
+  currentTasks,
+  tasksStartDate,
+  tasksEndDate,
+  onTaskSelected,
+  saveTaskScheduleItem
+} = useEntity({ type: 'shot', currentEntity: currentShot, entityList, init })
+
+// Watchers
+// --------------------------------------------------------------------------
+watch(currentSection, () => {
+  if (currentSection.value === 'schedule' && scheduleItems.value.length > 0) {
+    scrollScheduleToStart()
+  }
+})
+
+watch(zoomLevel, scrollScheduleToStart)
+
+// Lifecycle
+// --------------------------------------------------------------------------
+onMounted(() => {
+  store.dispatch('clearSelectedTasks')
+  init()
+})
+
+// Head
+// --------------------------------------------------------------------------
+useHead({ title: computed(() => `${title.value} - Kitsu`) })
 </script>
 
 <style lang="scss" scoped>
-.dark .page {
-  background: $dark-grey-light;
-  height: 100%;
-  padding-bottom: 1em;
-}
+.dark {
+  .table-body {
+    border: 1px solid var(--border);
+  }
 
-.dark .wrapper {
-  background: $dark-grey-2;
+  .wrapper {
+    background: var(--background);
+  }
 }
 
 .main-column {
@@ -665,15 +654,17 @@ h2.subtitle {
 }
 
 .page-header {
+  align-items: center;
   margin-top: calc(50px + 2em);
   margin-bottom: 0.8em;
-  margin-left: 2em;
+  margin-left: 1em;
   margin-right: 1em;
 
   .entity-title {
     font-weight: 500;
   }
 }
+
 .shot-data {
   display: flex;
   flex: 1;
@@ -687,61 +678,143 @@ h2.subtitle {
   overflow-y: auto;
 }
 
-.asset-link .thumbnail-picture {
-  margin-bottom: 0.5em;
+.casting-title {
+  margin-top: 1em;
+  margin-bottom: 1em;
 }
 
-.asset-type {
-  text-transform: uppercase;
-  font-size: 1.2em;
-  color: var(--text);
-  margin-top: 2em;
-  margin-bottom: 0.4em;
+.casting-group {
+  margin-bottom: 2em;
 }
 
-.asset-list {
-  color: var(--text);
-  display: flex;
-  flex-wrap: wrap;
+.casting-group-header {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1em;
+  padding-bottom: 0.3em;
+
+  .group-name {
+    color: var(--text);
+    font-size: 1.3em;
+    font-weight: 500;
+  }
+
+  .tag {
+    background: var(--background-tag);
+    color: var(--text);
+  }
 }
 
-.asset-link {
-  color: inherit;
-  margin-left: 0.5em;
-  margin-right: 0.5em;
+.casting-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 200px);
+  gap: 20px;
+}
+
+.casting-card {
+  background: var(--background);
+  border-radius: 1em;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  color: var(--text-strong);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  font-size: 0.8em;
+  position: relative;
 
-  .entity-thumbnail.shared {
+  .dark & {
+    background: var(--background-alt);
+  }
+
+  &.shared {
     box-shadow: 0 0 3px 2px var(--shared-color);
   }
 
   .ready-for .no-link {
     cursor: inherit;
   }
-}
 
-.asset-link div {
-  max-width: 100px;
-}
+  &:hover {
+    background: var(--background-hover);
+  }
 
-.asset-link span {
-  word-wrap: break-word;
+  .card-preview {
+    position: relative;
+  }
+
+  .nb-occurences {
+    background: rgba(160, 160, 180, 0.8);
+    border-radius: 2px;
+    bottom: 4px;
+    color: white;
+    font-size: 0.8em;
+    padding: 2px 4px;
+    position: absolute;
+    right: 4px;
+  }
+
+  .card-description {
+    padding: 0.5em 1em;
+  }
+
+  .card-name {
+    font-weight: bold;
+  }
+
+  .asset-label {
+    background: $dark-green;
+    border-radius: 4px;
+    color: $white;
+    font-size: 0.7em;
+    font-weight: 500;
+    padding: 2px 6px;
+
+    &[label='fixed'] {
+      background: $orange-carrot;
+    }
+  }
+
+  .ready-for {
+    color: var(--text-alt);
+    font-size: 0.9em;
+    font-weight: normal;
+    margin-top: 0.4em;
+  }
+
+  .remove-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: $white;
+    opacity: 0;
+    transition:
+      opacity 0.15s,
+      background 0.15s;
+
+    :deep(.icon) {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      background: $red;
+      color: $white;
+    }
+  }
+
+  &:hover .remove-button,
+  .remove-button:focus-visible {
+    opacity: 1;
+  }
 }
 
 .field-label {
   font-weight: bold;
   width: 140px;
-}
-
-.page-header {
-  align-items: center;
-}
-
-.data-list {
-  max-width: 100%;
 }
 
 .back-link {
@@ -761,18 +834,9 @@ h2.subtitle {
 }
 
 .schedule {
-  overflow: hidden;
   position: relative;
   height: 100%;
-
-  .timelien-wrapper,
-  .timeline {
-    height: 100%;
-  }
-
-  .schedule-title {
-    margin-bottom: 5px;
-  }
+  overflow: hidden;
 
   .wrapper {
     height: 100%;
@@ -780,26 +844,72 @@ h2.subtitle {
   }
 }
 
-.section-combo {
-  width: 150px;
-
-  .option-line {
-    width: 150px;
-  }
+.entity-thumbnail {
+  margin-bottom: 0;
+  border-radius: 10px;
 }
 
 @media screen and (max-width: 768px) {
-  .task-column {
-    margin-bottom: 1em;
+  .shot {
+    overflow: visible;
+  }
+
+  .main-column {
+    flex: 1;
+    margin: 0;
+    max-width: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    width: 100%;
   }
 
   .column:first-child {
     margin-right: 0;
   }
 
+  .page-header {
+    margin: calc(60px + 1em) 0.5em 0.5em;
+  }
+
   .entity-title {
     font-size: 1.3em;
     line-height: 1.5em;
+  }
+
+  .shot-data {
+    margin: 0 0.5em;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .infos,
+  .shot-casting,
+  .schedule {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .infos .button {
+    display: none;
+  }
+
+  .task-list {
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .schedule {
+    height: 60vh;
+    overflow-x: auto;
+
+    .wrapper {
+      min-width: 520px;
+    }
+  }
+
+  .news-column {
+    max-height: none;
   }
 }
 
@@ -820,10 +930,6 @@ h2.subtitle {
   margin-bottom: 0;
 }
 
-.news-column {
-  max-height: 85%;
-}
-
 .infos {
   height: 100%;
   margin-top: 1em;
@@ -838,16 +944,56 @@ h2.subtitle {
   }
 }
 
-.entity-data {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  margin: 0 1em 0 1em;
-  max-height: 100%;
-  overflow: hidden;
-}
-
 .news-column {
   max-height: 85%;
+}
+
+.drawer-backdrop {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .shot {
+    animation-fill-mode: none;
+  }
+
+  .side-column {
+    background: var(--background);
+    bottom: 0;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    margin-top: 0 !important;
+    max-width: min(100vw, 420px) !important;
+    min-width: 0 !important;
+    overflow-y: auto;
+    position: fixed;
+    right: 0;
+    top: 60px;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    width: min(100vw, 420px) !important;
+    z-index: 250;
+
+    &.is-open {
+      transform: translateX(0);
+    }
+  }
+
+  .drawer-backdrop {
+    background: rgba(0, 0, 0, 0.4);
+    display: block;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    position: fixed;
+    transition: opacity 0.25s ease;
+    z-index: 249;
+
+    &.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
 }
 </style>

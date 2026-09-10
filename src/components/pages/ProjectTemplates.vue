@@ -1,17 +1,19 @@
 <template>
   <div class="project-templates page fixed-page">
-    <list-page-header
-      :title="$t('project_templates.title')"
-      :new-entry-label="$t('project_templates.new_project_template')"
-      :is-exportable="true"
-      @export-clicked="onExportClicked"
-      @new-clicked="onNewClicked"
-    />
-
-    <p class="info" v-if="projectTemplates.length > 0">
-      <info-icon class="info-icon" />
-      {{ $t('project_templates.click_name_to_edit') }}
-    </p>
+    <div class="flexrow mt1">
+      <span class="flexrow-item info" v-if="projectTemplates.length > 0">
+        <info-icon class="info-icon" />
+        {{ $t('project_templates.click_name_to_edit') }}
+      </span>
+      <span class="filler"></span>
+      <list-page-header
+        class="mt1 flexrow-item"
+        :new-entry-label="$t('project_templates.new_project_template')"
+        :is-exportable="true"
+        @export-clicked="onExportClicked"
+        @new-clicked="onNewClicked"
+      />
+    </div>
 
     <project-template-list
       class="project-template-list"

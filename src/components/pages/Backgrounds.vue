@@ -1,13 +1,13 @@
 <template>
   <div class="backgrounds page fixed-page">
     <list-page-header
-      :title="$t('backgrounds.library_title')"
+      class="mt2 mb1"
+      :active-tab="activeTab"
+      :tabs="tabs"
       :new-entry-label="$t('backgrounds.new_background')"
       :is-exportable="false"
       @new-clicked="onNewClicked"
     />
-
-    <route-tabs class="mt2" :active-tab="activeTab" :tabs="tabs" />
 
     <background-list
       class="background-list"
@@ -50,7 +50,6 @@ import BackgroundList from '@/components/lists/BackgroundList.vue'
 import DeleteModal from '@/components/modals/DeleteModal.vue'
 import EditBackgroundModal from '@/components/modals/EditBackgroundModal.vue'
 import ListPageHeader from '@/components/widgets/ListPageHeader.vue'
-import RouteTabs from '@/components/widgets/RouteTabs.vue'
 
 const { t } = useI18n()
 const route = useRoute()

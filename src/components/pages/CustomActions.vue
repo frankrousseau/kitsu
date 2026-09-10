@@ -1,7 +1,7 @@
 <template>
   <div class="custom-actions page fixed-page">
     <list-page-header
-      :title="$t('custom_actions.title')"
+      class="mt2 mb1"
       :new-entry-label="$t('custom_actions.new_custom_action')"
       @export-clicked="onExportClicked"
       @new-clicked="onNewClicked"

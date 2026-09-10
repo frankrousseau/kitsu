@@ -38,4 +38,20 @@ describe('Breakdown store', () => {
       ])
     })
   })
+
+  describe('uncastAsset', () => {
+    test('removes the asset from the entity with a zero count', async () => {
+      const castAsset = vi.spyOn(breakdownApi, 'castAsset').mockResolvedValue({})
+
+      await breakdownStore.actions.uncastAsset(
+        { rootGetters },
+        { entityId: 's1', assetId: 'a1' }
+      )
+
+      expect(castAsset).toHaveBeenCalledWith('p1', 'a1', {
+        entity_ids: ['s1'],
+        nb_occurences: 0
+      })
+    })
+  })
 })

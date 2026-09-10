@@ -10,33 +10,32 @@
   </div>
 </template>
 
-<script>
-import { mapGetters } from 'vuex'
+<script setup>
+import { onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
 import auth from '@/lib/auth'
 
-export default {
-  name: 'server-down',
-  computed: {
-    ...mapGetters(['isAuthenticated', 'user'])
-  },
-  mounted() {
-    auth
-      .isServerLoggedIn()
-      .then(() => {
-        const target = this.$store.state.route.query.redirect || '/'
-        this.$router.push(target)
-      })
-      .catch(() => {
-        // Server still down: stay on this page.
-      })
+// Composables
+// --------------------------------------------------------------------------
+
+const route = useRoute()
+const router = useRouter()
+
+// Lifecycle
+// --------------------------------------------------------------------------
+
+onMounted(async () => {
+  try {
+    await auth.isServerLoggedIn()
+    router.push(route.query.redirect || '/')
+  } catch {
+    // Server still down: stay on this page.
   }
-}
+})
 </script>
 
 <style lang="scss" scoped>
-.page {
-}
-
 .illustration {
   max-width: 1000px;
   margin: auto;

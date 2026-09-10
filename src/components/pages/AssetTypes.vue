@@ -1,14 +1,14 @@
 <template>
   <div class="asset-types page fixed-page">
     <list-page-header
-      :title="$t('asset_types.library_title')"
+      class="mt2 mb1"
+      :active-tab="activeTab"
+      :tabs="tabs"
       :new-entry-label="$t('asset_types.new_asset_type')"
       :is-exportable="isActiveTab"
       @export-clicked="onExportClicked"
       @new-clicked="onNewClicked"
     />
-
-    <route-tabs class="mt2" :active-tab="activeTab" :tabs="tabs" />
 
     <asset-type-list
       class="asset-type-list"
@@ -54,7 +54,6 @@ import AssetTypeList from '@/components/lists/AssetTypeList.vue'
 import DeleteModal from '@/components/modals/DeleteModal.vue'
 import EditAssetTypeModal from '@/components/modals/EditAssetTypeModal.vue'
 import ListPageHeader from '@/components/widgets/ListPageHeader.vue'
-import RouteTabs from '@/components/widgets/RouteTabs.vue'
 
 const { t } = useI18n()
 const route = useRoute()

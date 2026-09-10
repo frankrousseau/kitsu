@@ -11,12 +11,6 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'not-found'
-}
-</script>
-
 <style lang="scss" scoped>
 .illustration {
   max-width: 1000px;

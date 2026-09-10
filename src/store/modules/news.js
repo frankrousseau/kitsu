@@ -7,14 +7,12 @@ import {
   ADD_PREVIOUS_NEWS,
   ADD_FIRST_NEWS,
   NEWS_ADD_PREVIEW,
-  NEWS_SET_STATS,
   NEWS_SET_TOTAL,
   RESET_ALL
 } from '@/store/mutation-types'
 
 const initialState = {
   newsList: [],
-  newsStats: {},
   newsTotal: 0
 }
 
@@ -25,7 +23,6 @@ const state = {
 const getters = {
   newsList: state => state.newsList,
   newsTotal: state => state.newsTotal,
-  newsStats: state => state.newsStats,
 
   newsListByDay: state => timezone => {
     if (state.newsList.length === 0) return []
@@ -64,7 +61,6 @@ const actions = {
     const newsList = await newsApi.getLastNews(params)
     commit(ADD_PREVIOUS_NEWS, newsList.data)
     commit(NEWS_SET_TOTAL, newsList.total)
-    commit(NEWS_SET_STATS, newsList.stats)
   },
 
   async loadMoreNews({ commit }, params) {
@@ -94,6 +90,7 @@ const mutations = {
       Object.assign(existingNews, news)
     } else {
       state.newsList.unshift(news)
+      state.newsTotal += 1
     }
   },
 
@@ -108,10 +105,6 @@ const mutations = {
 
   [NEWS_SET_TOTAL](state, count) {
     state.newsTotal = count
-  },
-
-  [NEWS_SET_STATS](state, stats) {
-    state.newsStats = stats
   },
 
   [RESET_ALL](state) {
