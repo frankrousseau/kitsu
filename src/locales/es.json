@@ -66,8 +66,11 @@
       "edit_label": "Cambiar la etiqueta del recurso",
       "empty": "Casting vacío",
       "label": "Etiqueta",
+      "occurrences": "Ocurrencias",
       "picture_mode": "Cambiar a modo de imagen",
       "remove_from_casting": "Quitar del casting",
+      "view_as_cards": "Ver como tarjetas",
+      "view_as_list": "Ver como lista",
       "text_mode": "Cambiar a modo de texto",
       "title": "Desglose",
       "options": {

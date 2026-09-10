@@ -66,8 +66,11 @@
       "edit_label": "تغییر برچسب منبع",
       "empty": "کستینگ خالی",
       "label": "برچسب",
+      "occurrences": "تعداد تکرار",
       "picture_mode": "به حالت تصویر بروید",
       "remove_from_casting": "حذف از کستینگ",
+      "view_as_cards": "نمایش به صورت کارت",
+      "view_as_list": "نمایش به صورت فهرست",
       "text_mode": "تغییر به حالت متن",
       "title": "بریک‌داون",
       "options": {

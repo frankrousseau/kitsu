@@ -154,6 +154,20 @@
                 <div class="filler"></div>
                 <button-simple
                   class="flexrow-item"
+                  icon="grid"
+                  :active="castingView === 'cards'"
+                  :title="$t('breakdown.view_as_cards')"
+                  @click="castingView = 'cards'"
+                />
+                <button-simple
+                  class="flexrow-item"
+                  icon="list"
+                  :active="castingView === 'list'"
+                  :title="$t('breakdown.view_as_list')"
+                  @click="castingView = 'list'"
+                />
+                <button-simple
+                  class="flexrow-item"
                   icon="film"
                   :title="$t('playlists.view_as_playlist')"
                   @click="viewPlaylist(castInShots, 'shot')"
@@ -185,7 +199,7 @@
                       @click="viewPlaylist(sequenceShots, 'shot')"
                     />
                   </div>
-                  <div class="casting-grid">
+                  <div class="casting-grid" v-if="castingView === 'cards'">
                     <router-link
                       class="casting-card"
                       :key="shot.shot_id"
@@ -232,6 +246,14 @@
                       </div>
                     </router-link>
                   </div>
+                  <casting-list
+                    entity-type="shot"
+                    :entries="sequenceShots"
+                    :entity-path="shotPath"
+                    :can-remove="isCurrentUserManager"
+                    @remove="shot => uncastAsset(shot.shot_id, currentAsset.id)"
+                    v-else
+                  />
                 </div>
               </template>
             </div>
@@ -257,6 +279,20 @@
               <div class="filler"></div>
               <button-simple
                 class="flexrow-item"
+                icon="grid"
+                :active="castingView === 'cards'"
+                :title="$t('breakdown.view_as_cards')"
+                @click="castingView = 'cards'"
+              />
+              <button-simple
+                class="flexrow-item"
+                icon="list"
+                :active="castingView === 'list'"
+                :title="$t('breakdown.view_as_list')"
+                @click="castingView = 'list'"
+              />
+              <button-simple
+                class="flexrow-item"
                 icon="film"
                 :title="$t('playlists.view_as_playlist')"
                 @click="viewPlaylist(linkedAssets, 'asset')"
@@ -280,18 +316,11 @@
                   @click="viewPlaylist(typeAssets, 'asset')"
                 />
               </div>
-              <div class="casting-grid">
+              <div class="casting-grid" v-if="castingView === 'cards'">
                 <router-link
                   class="casting-card"
                   :key="asset.asset_id"
-                  :to="{
-                    name: 'asset',
-                    params: {
-                      production_id: currentProduction.id,
-                      asset_id: asset.asset_id
-                    },
-                    query: { section: 'casting' }
-                  }"
+                  :to="assetPath(asset)"
                   v-for="asset in typeAssets"
                 >
                   <div class="card-preview">
@@ -331,6 +360,14 @@
                   </div>
                 </router-link>
               </div>
+              <casting-list
+                entity-type="asset"
+                :entries="typeAssets"
+                :entity-path="assetPath"
+                :can-remove="isCurrentUserManager"
+                @remove="asset => uncastAsset(currentAsset.id, asset.asset_id)"
+                v-else
+              />
             </div>
           </div>
         </div>
@@ -480,12 +517,14 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 
+import { useCastingView } from '@/composables/castingView'
 import { useEntity } from '@/composables/entity'
 import { sortByName } from '@/lib/sorting'
 import assetStore from '@/store/modules/assets'
 
 /* eslint-disable no-unused-vars */
 import DescriptionCell from '@/components/cells/DescriptionCell.vue'
+import CastingList from '@/components/lists/CastingList.vue'
 import EntityTaskList from '@/components/lists/EntityTaskList.vue'
 import EditAssetModal from '@/components/modals/EditAssetModal.vue'
 import ViewPlaylistModal from '@/components/modals/ViewPlaylistModal.vue'
@@ -518,6 +557,7 @@ const store = useStore()
 
 // State
 // --------------------------------------------------------------------------
+const castingView = useCastingView()
 const currentAsset = ref(null)
 const currentConcept = ref(null)
 const currentConceptStatus = ref(null)
@@ -680,6 +720,15 @@ const init = async () => {
     console.error(err)
   }
 }
+
+const assetPath = asset => ({
+  name: 'asset',
+  params: {
+    production_id: currentProduction.value.id,
+    asset_id: asset.asset_id
+  },
+  query: { section: 'casting' }
+})
 
 const shotPath = shot => ({
   name: shot.episode_id ? 'episode-shot' : 'shot',

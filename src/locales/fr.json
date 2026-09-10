@@ -66,8 +66,11 @@
       "edit_label": "Changer le label de l'asset",
       "empty": "Casting vide",
       "label": "Label",
+      "occurrences": "Occurrences",
       "picture_mode": "Passer en mode image",
       "remove_from_casting": "Retirer du casting",
+      "view_as_cards": "Voir en cartes",
+      "view_as_list": "Voir en liste",
       "text_mode": "Passer en mode texte",
       "title": "Casting",
       "options": {

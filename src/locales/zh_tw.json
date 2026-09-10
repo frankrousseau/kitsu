@@ -66,8 +66,11 @@
       "edit_label": "更改資產的標籤",
       "empty": "角色分配為空",
       "label": "標籤",
+      "occurrences": "出現次數",
       "picture_mode": "切換到圖片模式",
       "remove_from_casting": "從選角中移除",
+      "view_as_cards": "卡片檢視",
+      "view_as_list": "列表檢視",
       "text_mode": "切換到文字模式",
       "title": "分解",
       "options": {

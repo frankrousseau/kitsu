@@ -66,8 +66,11 @@
       "edit_label": "Asset címkéjének megváltoztatása",
       "empty": "Üres szereplista",
       "label": "Címke",
+      "occurrences": "Előfordulások",
       "picture_mode": "Váltás kép módra",
       "remove_from_casting": "Eltávolítás a castingból",
+      "view_as_cards": "Kártyás nézet",
+      "view_as_list": "Listás nézet",
       "text_mode": "Váltás szöveges módra",
       "title": "Breakdown",
       "options": {

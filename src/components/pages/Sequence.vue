@@ -141,6 +141,20 @@
                 <div class="filler"></div>
                 <button-simple
                   class="flexrow-item"
+                  icon="grid"
+                  :active="castingView === 'cards'"
+                  :title="$t('breakdown.view_as_cards')"
+                  @click="castingView = 'cards'"
+                />
+                <button-simple
+                  class="flexrow-item"
+                  icon="list"
+                  :active="castingView === 'list'"
+                  :title="$t('breakdown.view_as_list')"
+                  @click="castingView = 'list'"
+                />
+                <button-simple
+                  class="flexrow-item"
                   icon="film"
                   :title="$t('playlists.view_as_playlist')"
                   @click="viewPlaylist(castAssets)"
@@ -164,7 +178,7 @@
                     @click="viewPlaylist(typeAssets)"
                   />
                 </div>
-                <div class="casting-grid">
+                <div class="casting-grid" v-if="castingView === 'cards'">
                   <router-link
                     class="casting-card"
                     :class="{ shared: asset.shared }"
@@ -217,6 +231,12 @@
                     </div>
                   </router-link>
                 </div>
+                <casting-list
+                  entity-type="asset"
+                  :entries="typeAssets"
+                  :entity-path="assetPath"
+                  v-else
+                />
               </div>
             </div>
             <empty-section
@@ -322,11 +342,13 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 
+import { useCastingView } from '@/composables/castingView'
 import { useEntity } from '@/composables/entity'
 import { episodifyRoute, getEntitiesPath } from '@/lib/path'
 import sequenceStore from '@/store/modules/sequences'
 
 import DescriptionCell from '@/components/cells/DescriptionCell.vue'
+import CastingList from '@/components/lists/CastingList.vue'
 import EntityTaskList from '@/components/lists/EntityTaskList.vue'
 import EditSequenceModal from '@/components/modals/EditSequenceModal.vue'
 import ViewPlaylistModal from '@/components/modals/ViewPlaylistModal.vue'
@@ -357,6 +379,7 @@ const store = useStore()
 
 // State
 // --------------------------------------------------------------------------
+const castingView = useCastingView()
 const currentSequence = ref(null)
 const playlistEntityIds = ref(null)
 const scheduleWidget = ref(null)

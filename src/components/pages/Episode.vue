@@ -145,6 +145,20 @@
                 <div class="filler"></div>
                 <button-simple
                   class="flexrow-item"
+                  icon="grid"
+                  :active="castingView === 'cards'"
+                  :title="$t('breakdown.view_as_cards')"
+                  @click="castingView = 'cards'"
+                />
+                <button-simple
+                  class="flexrow-item"
+                  icon="list"
+                  :active="castingView === 'list'"
+                  :title="$t('breakdown.view_as_list')"
+                  @click="castingView = 'list'"
+                />
+                <button-simple
+                  class="flexrow-item"
                   icon="film"
                   :title="$t('playlists.view_as_playlist')"
                   @click="viewPlaylist(castAssets)"
@@ -168,7 +182,7 @@
                     @click="viewPlaylist(typeAssets)"
                   />
                 </div>
-                <div class="casting-grid">
+                <div class="casting-grid" v-if="castingView === 'cards'">
                   <router-link
                     class="casting-card"
                     :key="asset.asset_id"
@@ -229,6 +243,16 @@
                     </div>
                   </router-link>
                 </div>
+                <casting-list
+                  entity-type="asset"
+                  :entries="typeAssets"
+                  :entity-path="assetPath"
+                  :can-remove="isCurrentUserManager"
+                  @remove="
+                    asset => uncastAsset(currentEpisode.id, asset.asset_id)
+                  "
+                  v-else
+                />
               </div>
             </div>
             <empty-section
@@ -334,11 +358,13 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 
+import { useCastingView } from '@/composables/castingView'
 import { useEntity } from '@/composables/entity'
 import { episodifyRoute } from '@/lib/path'
 import episodeStore from '@/store/modules/episodes'
 
 import DescriptionCell from '@/components/cells/DescriptionCell.vue'
+import CastingList from '@/components/lists/CastingList.vue'
 import EntityTaskList from '@/components/lists/EntityTaskList.vue'
 import EditEpisodeModal from '@/components/modals/EditEpisodeModal.vue'
 import ViewPlaylistModal from '@/components/modals/ViewPlaylistModal.vue'
@@ -369,6 +395,7 @@ const store = useStore()
 
 // State
 // --------------------------------------------------------------------------
+const castingView = useCastingView()
 // the displayed episode, distinct from the store's currentEpisode filter
 const currentEpisode = ref(null)
 const playlistEntityIds = ref(null)

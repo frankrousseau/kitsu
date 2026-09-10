@@ -66,8 +66,11 @@
       "edit_label": "アセットのラベルを変更",
       "empty": "キャスティングなし",
       "label": "ラベル",
+      "occurrences": "出現回数",
       "picture_mode": "ピクチャーモードに切り替え",
       "remove_from_casting": "キャスティングから削除",
+      "view_as_cards": "カード表示",
+      "view_as_list": "リスト表示",
       "text_mode": "テキストモードに切り替え",
       "title": "ブレイクダウン",
       "options": {

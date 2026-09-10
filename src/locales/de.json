@@ -66,8 +66,11 @@
       "edit_label": "Etikett bearbeiten",
       "empty": "Leeres Casting",
       "label": "Etikett",
+      "occurrences": "Vorkommen",
       "picture_mode": "Zum Bildmodus wechseln",
       "remove_from_casting": "Aus dem Casting entfernen",
+      "view_as_cards": "Als Karten anzeigen",
+      "view_as_list": "Als Liste anzeigen",
       "text_mode": "Zum Textmodus wechseln",
       "title": "Aufschlüsselung",
       "options": {

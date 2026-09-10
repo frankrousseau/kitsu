@@ -121,12 +121,15 @@ export default {
     episode_casting: 'Episode casting',
     hide_library: 'Hide Library',
     label: 'Label',
+    occurrences: 'Occurrences',
     picture_mode: 'Switch to picture mode',
     remove_from_casting: 'Remove from casting',
     save_error: 'Error while saving casting',
     show_library: 'Display Library',
     text_mode: 'Switch to text mode',
     title: 'Breakdown',
+    view_as_cards: 'View as cards',
+    view_as_list: 'View as list',
     options: {
       fixed: 'fixed',
       animate: 'animate'

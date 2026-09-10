@@ -66,8 +66,11 @@
       "edit_label": "Cambia l'etichetta dell'asset",
       "empty": "Casting vuoto",
       "label": "Etichetta",
+      "occurrences": "Occorrenze",
       "picture_mode": "Passa alla modalità immagini",
       "remove_from_casting": "Rimuovi dal casting",
+      "view_as_cards": "Visualizza come schede",
+      "view_as_list": "Visualizza come elenco",
       "text_mode": "Passa alla modalità testo",
       "title": "Breakdown",
       "options": {
