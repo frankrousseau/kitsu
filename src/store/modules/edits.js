@@ -727,7 +727,8 @@ const mutations = {
     state.displayedEdits = []
     state.displayedEditsCount = 0
     state.displayedEditsLength = 0
-    state.displayedEstimation = 0
+    state.displayedEditsTimeSpent = 0
+    state.displayedEditsEstimation = 0
     state.editSearchQueries = []
 
     state.selectedEdits = new Map()

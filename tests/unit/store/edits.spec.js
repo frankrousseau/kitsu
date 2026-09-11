@@ -294,6 +294,21 @@ describe('Edits store, LOAD_EDITS_ERROR', () => {
   })
 })
 
+describe('Edits store, LOAD_EDITS_START', () => {
+  // The list footer reads the totals: they belong to the dataset the
+  // mutation empties, not to the one being loaded.
+  test('forgets the totals of the emptied list', () => {
+    const state = {
+      displayedEditsTimeSpent: 12,
+      displayedEditsEstimation: 8,
+      selectedEdits: new Map()
+    }
+    editsStore.mutations.LOAD_EDITS_START(state, { loadingKey: 'p1/ep-a' })
+    expect(state.displayedEditsTimeSpent).toBe(0)
+    expect(state.displayedEditsEstimation).toBe(0)
+  })
+})
+
 describe('Edits store, CLEAR_EDITS', () => {
   // A production switch discards the response of a load in flight without
   // any mutation: the flag and the scope of that load must not survive the
