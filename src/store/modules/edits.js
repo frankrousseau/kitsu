@@ -63,6 +63,7 @@ import {
   LOCK_EDIT,
   UNLOCK_EDIT,
   RESET_ALL,
+  CLEAR_EDITS,
   CLEAR_SELECTED_EDITS,
   SET_EDIT_SELECTION,
   CHANGE_EDIT_SORT,
@@ -736,6 +737,31 @@ const mutations = {
     state.isEditsLoading = false
     state.isEditsLoadingError = true
     state.editsLoadingKey = null
+  },
+
+  // A production switch discards the response of a load in flight without
+  // any mutation: forget that load with the dataset, or the next loadEdits
+  // waits on it forever.
+  [CLEAR_EDITS](state) {
+    cache.edits = []
+    cache.result = []
+    cache.editIndex = {}
+    cache.editMap.clear()
+    cache.editsLoadingPromise = null
+    state.editValidationColumns = []
+
+    state.isEditsLoading = false
+    state.isEditsLoadingError = false
+    state.editsLoadingKey = null
+
+    state.displayedEdits = []
+    state.displayedEditsCount = 0
+    state.displayedEditsLength = 0
+    state.displayedEditsTimeSpent = 0
+    state.displayedEditsEstimation = 0
+    state.editSearchQueries = []
+
+    state.selectedEdits = new Map()
   },
 
   [LOAD_EDITS_END](

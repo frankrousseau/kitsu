@@ -12,6 +12,7 @@ import {
   ADD_METADATA_DESCRIPTOR_END,
   ADD_PRODUCTION,
   CLEAR_ASSETS,
+  CLEAR_EDITS,
   CLEAR_SHOTS,
   LOAD_OPEN_PRODUCTIONS_END,
   LOAD_OPEN_PRODUCTIONS_ERROR,
@@ -573,17 +574,19 @@ describe('Productions store', () => {
     test('setProduction', () => {
       let mockCommit = vi.fn()
       store.actions.setProduction({ commit: mockCommit }, 'production-id')
-      expect(mockCommit).toBeCalledTimes(3)
+      expect(mockCommit).toBeCalledTimes(4)
       expect(mockCommit).toHaveBeenNthCalledWith(1, SET_CURRENT_PRODUCTION, 'production-id')
       expect(mockCommit).toHaveBeenNthCalledWith(2, CLEAR_ASSETS)
       expect(mockCommit).toHaveBeenNthCalledWith(3, CLEAR_SHOTS)
+      expect(mockCommit).toHaveBeenNthCalledWith(4, CLEAR_EDITS)
 
       mockCommit = vi.fn()
       store.actions.setProduction({ commit: mockCommit }, null)
-      expect(mockCommit).toBeCalledTimes(3)
+      expect(mockCommit).toBeCalledTimes(4)
       expect(mockCommit).toHaveBeenNthCalledWith(1, SET_CURRENT_PRODUCTION, null)
       expect(mockCommit).toHaveBeenNthCalledWith(2, CLEAR_ASSETS)
       expect(mockCommit).toHaveBeenNthCalledWith(3, CLEAR_SHOTS)
+      expect(mockCommit).toHaveBeenNthCalledWith(4, CLEAR_EDITS)
     })
 
     test('storeProductionPicture', () => {

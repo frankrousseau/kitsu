@@ -50,6 +50,7 @@ import {
   DELETE_METADATA_DESCRIPTOR_END,
   CLEAR_SHOTS,
   CLEAR_ASSETS,
+  CLEAR_EDITS,
   SAVE_LAST_PRODUCTION_ROUTE,
   RESET_ALL
 } from '@/store/mutation-types'
@@ -524,6 +525,7 @@ const actions = {
     commit(SET_CURRENT_PRODUCTION, productionId)
     commit(CLEAR_ASSETS)
     commit(CLEAR_SHOTS)
+    commit(CLEAR_EDITS)
   },
 
   storeProductionPicture({ commit }, formData) {

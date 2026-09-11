@@ -293,3 +293,41 @@ describe('Edits store, LOAD_EDITS_ERROR', () => {
     expect(state.editsLoadingKey).toBeNull()
   })
 })
+
+describe('Edits store, CLEAR_EDITS', () => {
+  // A production switch discards the response of a load in flight without
+  // any mutation: the flag and the scope of that load must not survive the
+  // switch, or the next loadEdits waits on it forever.
+  test('forgets a load in flight with its dataset', () => {
+    const state = {
+      isEditsLoading: true,
+      isEditsLoadingError: false,
+      editsLoadingKey: 'p1/ep-a',
+      editValidationColumns: ['col'],
+      displayedEdits: [{ id: 'e1' }],
+      displayedEditsCount: 1,
+      displayedEditsLength: 1,
+      editSearchQueries: ['query'],
+      selectedEdits: new Map([['e1', true]])
+    }
+    editsStore.mutations.CLEAR_EDITS(state)
+    expect(state.isEditsLoading).toBe(false)
+    expect(state.editsLoadingKey).toBeNull()
+    expect(state.displayedEdits).toEqual([])
+    expect(state.displayedEditsLength).toBe(0)
+    expect(state.selectedEdits.size).toBe(0)
+  })
+
+  // The list footer reads the totals: they must go with the dataset, or the
+  // ones of the production left stay under an empty list.
+  test('forgets the totals of the emptied list', () => {
+    const state = {
+      displayedEditsTimeSpent: 12,
+      displayedEditsEstimation: 8,
+      selectedEdits: new Map()
+    }
+    editsStore.mutations.CLEAR_EDITS(state)
+    expect(state.displayedEditsTimeSpent).toBe(0)
+    expect(state.displayedEditsEstimation).toBe(0)
+  })
+})
