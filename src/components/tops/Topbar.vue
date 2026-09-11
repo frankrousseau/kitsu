@@ -892,16 +892,19 @@ export default {
                     )
                   : this.runningEpisodeId())
             }
-            this.$router.push({
+            // Replace: this corrects the landing URL, it is no navigation of
+            // the user's. A push would keep the rejected URL in the history
+            // and Back would land on it, to be corrected again.
+            this.$router.replace({
               params: {
                 production_id: routeProductionId,
                 episode_id: this.currentEpisodeId
               },
               query
             })
-            // The push is confirmed asynchronously: pass the episode just
-            // resolved, or the route still names the one being left and the
-            // coercion navigates a second time, over this very push.
+            // The navigation is confirmed asynchronously: pass the episode
+            // just resolved, or the route still names the one being left and
+            // the coercion navigates a second time, over this very one.
             this.updateCombosFromRoute(this.currentEpisodeId)
           })
           .catch(console.error)
@@ -1046,14 +1049,15 @@ export default {
       this.currentProductionId = productionId
       this.currentProjectSection = section
       this.currentPluginId = pluginId
-      // A pseudo-episode the section does not offer is coerced to the first
-      // episode like before.
+      // A pseudo-episode the section does not offer opens the running
+      // episode, the same fallback as a direct link: Back from a corrected
+      // link must not land on a third episode.
       if (
         ['all', 'main'].includes(episodeId) &&
         !this.keepsPseudoEpisode(section, episodeId, pluginId) &&
         this.episodes.length > 0
       ) {
-        episodeId = this.episodes[0].id
+        episodeId = this.runningEpisodeId()
         this.currentEpisodeId = episodeId
         // Replace: the URL just rejected must not stay in the history, or
         // the back button lands on it and is coerced here again.
