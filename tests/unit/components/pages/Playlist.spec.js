@@ -324,6 +324,20 @@ describe('Playlist page, reloadAll', () => {
     expect(context.loading.playlists).toBe(false)
   })
 
+  // A filter reloads from the first page: asking for the page reached before
+  // returns nothing when fewer playlists match.
+  it.each(['currentSort', 'taskTypeId'])(
+    'reloads the list from the first page when %s changes',
+    async watcher => {
+      const context = buildContext({ page: 3 })
+
+      Playlist.watch[watcher].call(context)
+      await flush()
+
+      expect(context.page).toBe(1)
+    }
+  )
+
   it('releases the lock when the run fails', async () => {
     const context = buildContext({
       loadPlaylistsData: vi.fn(() => Promise.reject(new Error('down')))

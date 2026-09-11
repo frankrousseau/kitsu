@@ -1826,10 +1826,13 @@ export default {
       })
     },
 
-    // The sort and the task type filter only need the list again.
+    // The sort and the task type filter only need the list again, from its
+    // first page: the page reached before holds nothing once fewer
+    // playlists match.
     reloadPlaylistList() {
       return this.runReload(() => {
         this.servedScope = this.reloadScope()
+        this.page = 1
         return this.loadPlaylistsData(true)
       })
     }
@@ -1884,7 +1887,6 @@ export default {
 
     currentSort() {
       localStorage.setItem('playlist-sort', this.currentSort)
-      this.page = 1
       this.reloadPlaylistList()
     },
 
