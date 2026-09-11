@@ -827,7 +827,7 @@ export default {
       const routeProductionId = this.$route.params.production_id
       const routeEpisodeId = this.$route.params.episode_id
       if (this.isProductionChanged(routeProductionId)) {
-        this.configureProduction(routeProductionId, routeEpisodeId)
+        this.configureProduction(routeProductionId)
       } else if (this.isEpisodeChanged(routeEpisodeId)) {
         this.configureEpisode(routeEpisodeId)
       } else {
@@ -835,7 +835,7 @@ export default {
       }
     },
 
-    configureProduction(routeProductionId, routeEpisodeId = undefined) {
+    configureProduction(routeProductionId) {
       // Initial app load (e.g. F5 / direct link) has no previous production:
       // honor the URL episode. Production switch defaults to 'all' for assets.
       const isInitialLoad = !this.hasConfiguredProduction
@@ -847,6 +847,10 @@ export default {
       if (this.isTVShow && this.currentProjectSection !== 'person') {
         this.loadEpisodes()
           .then(episodes => {
+            // The fetch may outlive a navigation: resolve from the route at
+            // response time, and give up if the production moved.
+            if (this.$route.params.production_id !== routeProductionId) return
+            const routeEpisodeId = this.$route.params.episode_id
             const query = this.$route.query
             this.currentProjectSection = this.getCurrentSectionFromRoute()
             if (this.currentProjectSection === 'assets') {
@@ -908,8 +912,12 @@ export default {
 
     configureEpisode(routeEpisodeId) {
       if (this.episodes.length < 2) {
+        // The fetch may outlive a production switch: its response must not
+        // resolve the route against the list of the production left.
+        const routeProductionId = this.$route.params.production_id
         this.loadEpisodes()
-          .then(episodes => {
+          .then(() => {
+            if (this.$route.params.production_id !== routeProductionId) return
             this.setEpisodeFromRoute()
             this.updateCombosFromRoute()
           })

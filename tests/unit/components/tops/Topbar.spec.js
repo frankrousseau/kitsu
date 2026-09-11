@@ -425,7 +425,7 @@ describe('Topbar.vue', () => {
       const routerSpy = vi
         .spyOn(shotsWrapper.vm.$router, 'push')
         .mockResolvedValue({})
-      await shotsWrapper.vm.configureProduction('production-1', 'all')
+      await shotsWrapper.vm.configureProduction('production-1')
       await flushPromises()
       expect(shotsWrapper.vm.currentEpisodeId).toBe('all')
       expect(routerSpy).toHaveBeenCalledWith({
@@ -444,7 +444,7 @@ describe('Topbar.vue', () => {
       const routerSpy = vi
         .spyOn(shotsWrapper.vm.$router, 'push')
         .mockResolvedValue({})
-      await shotsWrapper.vm.configureProduction('production-1', 'ghost')
+      await shotsWrapper.vm.configureProduction('production-1')
       await flushPromises()
       expect(routerSpy).toHaveBeenCalledWith({
         params: { production_id: 'production-1', episode_id: 'all' },
@@ -464,7 +464,7 @@ describe('Topbar.vue', () => {
       const routerSpy = vi
         .spyOn(shotsWrapper.vm.$router, 'push')
         .mockResolvedValue({})
-      await shotsWrapper.vm.configureProduction('production-1', 'ghost')
+      await shotsWrapper.vm.configureProduction('production-1')
       await flushPromises()
       expect(routerSpy).toHaveBeenCalledWith({
         params: { production_id: 'production-1', episode_id: 'episode-1' },
@@ -477,7 +477,7 @@ describe('Topbar.vue', () => {
       const shotsWrapper = mountForShots('main', [
         { id: 'episode-1', status: 'running' }
       ])
-      await shotsWrapper.vm.configureProduction('production-1', 'main')
+      await shotsWrapper.vm.configureProduction('production-1')
       await flushPromises()
       expect(shotsWrapper.vm.currentEpisodeId).toBe('episode-1')
       shotsWrapper.unmount()
@@ -498,7 +498,8 @@ describe('Topbar.vue', () => {
       {
         episodes = defaultEpisodes(),
         currentEpisode = null,
-        productionStyle = undefined
+        productionStyle = undefined,
+        holdEpisodes = false
       } = {}
     ) => {
       const production = {
@@ -516,6 +517,14 @@ describe('Topbar.vue', () => {
         productionMap: () => new Map([[production.id, production]])
       })
       actions.loadEpisodes.mockResolvedValue(episodes)
+      let releaseEpisodes = () => {}
+      if (holdEpisodes) {
+        actions.loadEpisodes.mockReturnValueOnce(
+          new Promise(resolve => {
+            releaseEpisodes = () => resolve(episodes)
+          })
+        )
+      }
       const router = makeRouter([
         {
           path: `/productions/:production_id/episodes/:episode_id/${section}`,
@@ -524,19 +533,19 @@ describe('Topbar.vue', () => {
         }
       ])
       const replaceSpy = vi.spyOn(router, 'replace').mockResolvedValue({})
+      // The component reads this object, not the router's route: tests move
+      // it to simulate a navigation during a fetch.
+      const route = {
+        path: `/productions/production-1/episodes/${episodeId}/${section}`,
+        name: `episode-${section}`,
+        params: { production_id: 'production-1', episode_id: episodeId },
+        query: { search: 'hero' },
+        fullPath: '/'
+      }
       const wrapper = shallowMount(Topbar, {
         global: {
           plugins: [sectionStore, router],
-          mocks: {
-            $t: key => key,
-            $route: {
-              path: `/productions/production-1/episodes/${episodeId}/${section}`,
-              name: `episode-${section}`,
-              params: { production_id: 'production-1', episode_id: episodeId },
-              query: { search: 'hero' },
-              fullPath: '/'
-            }
-          },
+          mocks: { $t: key => key, $route: route },
           stubs: {
             TopbarProductionList: true,
             TopbarSectionList: true,
@@ -548,8 +557,55 @@ describe('Topbar.vue', () => {
           }
         }
       })
-      return { wrapper, actions, replaceSpy, episodes }
+      return {
+        wrapper,
+        actions,
+        replaceSpy,
+        route,
+        episodes,
+        releaseEpisodes: () => releaseEpisodes()
+      }
     }
+
+    // A production with fewer than two episodes refetches the list on every
+    // episode change: that fetch may outlive a production switch too.
+    describe('episode refetch outliving a production switch', () => {
+      const singleEpisode = () => [{ id: 'episode-1', status: 'running' }]
+
+      it('resolves the route episode once the refetch is in', async () => {
+        const { wrapper, actions, releaseEpisodes } = mountFor(
+          'sequences',
+          'episode-1',
+          { episodes: singleEpisode(), holdEpisodes: true }
+        )
+        expect(actions.setCurrentEpisode).not.toHaveBeenCalled()
+
+        releaseEpisodes()
+        await flushPromises()
+
+        expect(actions.setCurrentEpisode).toHaveBeenCalledWith(
+          expect.anything(),
+          'episode-1'
+        )
+        wrapper.unmount()
+      })
+
+      it('gives up when the production changed during the refetch', async () => {
+        const { wrapper, actions, replaceSpy, route, releaseEpisodes } =
+          mountFor('sequences', 'episode-1', {
+            episodes: singleEpisode(),
+            holdEpisodes: true
+          })
+
+        route.params.production_id = 'production-2'
+        releaseEpisodes()
+        await flushPromises()
+
+        expect(actions.setCurrentEpisode).not.toHaveBeenCalled()
+        expect(replaceSpy).not.toHaveBeenCalled()
+        wrapper.unmount()
+      })
+    })
 
     // A direct link keeps a pseudo-episode wherever the selector offers it.
     describe('pseudo-episodes on a direct link', () => {
@@ -563,7 +619,7 @@ describe('Topbar.vue', () => {
         const pushSpy = vi
           .spyOn(wrapper.vm.$router, 'push')
           .mockResolvedValue({})
-        await wrapper.vm.configureProduction('production-1', episodeId)
+        await wrapper.vm.configureProduction('production-1')
         await flushPromises()
         wrapper.unmount()
         expect(pushSpy).toHaveBeenCalledTimes(1)
@@ -724,12 +780,37 @@ describe('Topbar.vue', () => {
     it('resolves an unknown episode to the running one on a direct link where the section has no all', async () => {
       const { wrapper } = mountFor('sequences', 'ghost')
       const pushSpy = vi.spyOn(wrapper.vm.$router, 'push').mockResolvedValue({})
-      await wrapper.vm.configureProduction('production-1', 'ghost')
+      await wrapper.vm.configureProduction('production-1')
       await flushPromises()
       expect(pushSpy).toHaveBeenCalledWith({
         params: { production_id: 'production-1', episode_id: 'episode-2' },
         query: { search: 'hero' }
       })
+      wrapper.unmount()
+    })
+
+    // The episodes fetch may outlive a navigation: the route at response
+    // time decides, and a production change since gives up the push.
+    it('resolves the episode from the route at response time', async () => {
+      const { wrapper, route } = mountFor('sequences', 'ghost')
+      const pushSpy = vi.spyOn(wrapper.vm.$router, 'push').mockResolvedValue({})
+      wrapper.vm.configureProduction('production-1')
+      route.params.episode_id = 'episode-1'
+      await flushPromises()
+      expect(pushSpy).toHaveBeenCalledWith({
+        params: { production_id: 'production-1', episode_id: 'episode-1' },
+        query: { search: 'hero' }
+      })
+      wrapper.unmount()
+    })
+
+    it('gives up when the production changed during the episodes fetch', async () => {
+      const { wrapper, route } = mountFor('sequences', 'ghost')
+      const pushSpy = vi.spyOn(wrapper.vm.$router, 'push').mockResolvedValue({})
+      wrapper.vm.configureProduction('production-1')
+      route.params.production_id = 'production-2'
+      await flushPromises()
+      expect(pushSpy).not.toHaveBeenCalled()
       wrapper.unmount()
     })
 
