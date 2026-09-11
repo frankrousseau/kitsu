@@ -755,14 +755,15 @@ const mutations = {
 
     state.episodeSelectionGrid = buildSelectionGrid()
 
-    cache.episodes = state.displayedEpisodes
-    cache.episodes.push(episode)
-    cache.episodes = sortByName(cache.episodes)
-    state.episodes = cache.episodes
-    state.displayedEpisodes = cache.episodes
-
-    helpers.setListStats(state, cache.episodes)
+    // Each list copied from itself, like ADD_EPISODE: the displayed list is
+    // a search result, and taking it for the whole dataset dropped every
+    // episode the search filtered out, the topbar selector included.
     cache.episodeMap.set(episode.id, episode)
+    state.episodes = sortByName([...state.episodes, episode])
+    cache.episodes = sortByName([...cache.episodes, episode])
+    state.displayedEpisodes = sortByName([...state.displayedEpisodes, episode])
+
+    helpers.setListStats(state, state.displayedEpisodes)
     state.episodeFilledColumns = getFilledColumns(state.displayedEpisodes)
     cache.episodeIndex = buildEpisodeIndex(cache.episodes)
   },

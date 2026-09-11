@@ -220,6 +220,46 @@ describe('Episodes store', () => {
   })
 
   describe('NEW_EPISODE_END', () => {
+    // The displayed list is a search result: taking it for the whole
+    // dataset dropped every episode the search filtered out, and the topbar
+    // validates the route episode against that list.
+    test('keeps the episodes a search filtered out', () => {
+      const state = { episodes: [], displayedEpisodes: [], episodeSorting: [] }
+      episodesStore.mutations.LOAD_EPISODES_END(state, {
+        episodes: [
+          { id: 'episode-1', name: 'E01', status: 'running' },
+          { id: 'episode-2', name: 'E02', status: 'running' }
+        ],
+        routeEpisodeId: 'episode-1'
+      })
+      episodesStore.mutations.SET_EPISODE_SEARCH(state, {
+        episodeSearch: 'E02',
+        production: { id: 'production-1' },
+        persons: [],
+        taskMap: new Map(),
+        taskStatusMap: new Map(),
+        taskTypeMap: new Map()
+      })
+      expect(state.displayedEpisodes.map(({ id }) => id)).toEqual(['episode-2'])
+
+      episodesStore.mutations.NEW_EPISODE_END(state, {
+        id: 'episode-3',
+        name: 'E03',
+        project_id: 'production-1'
+      })
+
+      expect(state.episodes.map(({ id }) => id)).toEqual([
+        'episode-1',
+        'episode-2',
+        'episode-3'
+      ])
+      expect(episodesStore.cache.episodes.map(({ id }) => id)).toEqual([
+        'episode-1',
+        'episode-2',
+        'episode-3'
+      ])
+    })
+
     // The episode created locally carries no totals either: the footer of
     // the Episodes page vanished right after a creation.
     test('keeps the totals of the list when the new episode carries none', () => {
