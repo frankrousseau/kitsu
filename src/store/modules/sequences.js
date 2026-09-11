@@ -396,6 +396,10 @@ const actions = {
     const episode =
       isTVShow && currentEpisode?.id !== 'all' ? currentEpisode : null
     const episodeMap = rootGetters.episodeMap
+    // Recorded with a marker: the pages that need the tasks refetch, while
+    // the live insertion still knows which episode this dataset holds.
+    const scope = isTVShow ? (currentEpisode?.id ?? '') : ''
+    const loadingKey = `${production.id}/${scope}#partial`
     return shotsApi.getSequences(production, episode).then(sequences => {
       if (production.id !== rootGetters.currentProduction?.id) {
         return sequences
@@ -404,7 +408,8 @@ const actions = {
         sequences,
         episodeMap,
         production,
-        userFilters
+        userFilters,
+        loadingKey
       })
       return sequences
     })
@@ -920,7 +925,7 @@ const mutations = {
 
   [LOAD_SEQUENCES_END](
     state,
-    { sequences, episodeMap, production, userFilters }
+    { sequences, episodeMap, production, userFilters, loadingKey }
   ) {
     cache.sequenceMap.clear()
     if (
@@ -941,6 +946,8 @@ const mutations = {
     state.sequenceIndex = buildSequenceIndex(cache.sequences)
     state.displayedSequences = cache.sequences
     state.displayedSequencesLength = cache.sequences.length
+    // This task-less dataset replaces the one the recorded scope describes.
+    state.sequencesLoadingKey = loadingKey ?? null
   },
 
   [SET_SEQUENCE_STATS](state, { sequenceStats, taskTypeMap, production }) {

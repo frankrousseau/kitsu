@@ -178,6 +178,61 @@ describe('Sequences store, all-episodes pseudo-episode', () => {
       sequencesStore.mutations.CLEAR_SHOTS(state)
       expect(state.sequencesLoadingKey).toBeNull()
     })
+
+    // The schedule loads the sequences without tasks through loadSequences:
+    // that dataset replaces the one the key describes. Its scope is recorded
+    // with a marker: the pages that need the tasks refetch, the live
+    // insertion still knows which episode the dataset holds.
+    test('records the task-less load under its own marked scope', async () => {
+      vi.spyOn(shotsApi, 'getSequences').mockResolvedValue([])
+      const commit = vi.fn()
+      await sequencesStore.actions.loadSequences({
+        commit,
+        state: {},
+        rootGetters: { ...rootGetters, currentEpisode: { id: 'ep-a' } }
+      })
+      const payload = commit.mock.calls.find(
+        call => call[0] === 'LOAD_SEQUENCES_END'
+      )[1]
+      expect(payload.loadingKey).toEqual('p-all/ep-a#partial')
+    })
+
+    test('records the whole production for the task-less load in All mode', async () => {
+      vi.spyOn(shotsApi, 'getSequences').mockResolvedValue([])
+      const commit = vi.fn()
+      await sequencesStore.actions.loadSequences({
+        commit,
+        state: {},
+        rootGetters
+      })
+      const payload = commit.mock.calls.find(
+        call => call[0] === 'LOAD_SEQUENCES_END'
+      )[1]
+      expect(payload.loadingKey).toEqual('p-all/all#partial')
+    })
+
+    test('replaces the scope of the with-tasks dataset by the task-less one', () => {
+      const state = {}
+      sequencesStore.mutations.SET_SEQUENCES_WITH_TASKS(state, {
+        episodeMap: new Map(),
+        userFilters: {},
+        personMap: new Map(),
+        production,
+        sequences: [],
+        taskMap: new Map(),
+        taskTypeMap: new Map(),
+        taskStatusMap: new Map(),
+        loadingKey: 'p-all/ep-a'
+      })
+      sequencesStore.mutations.LOAD_SEQUENCES_END(state, {
+        sequences: [],
+        episodeMap: new Map(),
+        production,
+        userFilters: {},
+        loadingKey: 'p-all/all#partial'
+      })
+      expect(state.sequencesLoadingKey).toEqual('p-all/all#partial')
+    })
   })
 
   describe('sequenceOptions', () => {
@@ -351,6 +406,16 @@ describe('Sequences store, loadSequence live insertion', () => {
       { id: 's-scope-6', parent_id: 'ep-b', project_id: 'p-other' }
     )
     expect(types).not.toContain('ADD_SEQUENCE')
+  })
+
+  // The task-less load records its scope with a marker.
+  test('adds a sequence of the episode loaded without tasks', async () => {
+    const types = await committedTypes(
+      { sequenceId: 's-scope-5', onlyInScope: true },
+      'p-live/ep-a#partial',
+      { id: 's-scope-5', parent_id: 'ep-a' }
+    )
+    expect(types).toContain('ADD_SEQUENCE')
   })
 
   test('still adds an out-of-scope sequence loaded by id', async () => {
