@@ -172,6 +172,7 @@ const cache = {
 const initialState = {
   currentEpisode: null,
   episodes: [],
+  isEpisodeListLoaded: false,
 
   displayedEpisodes: [],
   displayedEpisodesLength: 0,
@@ -372,13 +373,16 @@ const actions = {
     }
   },
 
-  loadEpisode({ commit, state }, episodeId) {
+  loadEpisode({ commit, state, rootGetters }, episodeId) {
     const episode = cache.episodeMap.get(episodeId)
     if (episode?.lock) return
 
     return shotsApi
       .getEpisode(episodeId)
       .then(episode => {
+        // The fetch may outlive a production switch: an episode of the
+        // production left behind would stay in the list of the new one.
+        if (episode.project_id !== rootGetters.currentProduction?.id) return
         if (cache.episodeMap.get(episode.id)) {
           commit(UPDATE_EPISODE, episode)
         } else {
@@ -577,10 +581,14 @@ const mutations = {
 
   [CLEAR_EPISODES](state) {
     state.episodes = []
+    state.isEpisodeListLoaded = false
     state.currentEpisode = null
     cache.episodes = []
     cache.result = []
     cache.episodeIndex = {}
+    // clear(), never a new Map(): the episodeMap getter has no reactive
+    // dependency, so Vuex memoizes the reference captured at its first read.
+    cache.episodeMap.clear()
   },
 
   [SET_CURRENT_EPISODE](state, episodeId) {
@@ -798,8 +806,17 @@ const mutations = {
   },
 
   [LOAD_EPISODES_END](state, { episodes, routeEpisodeId }) {
-    if (state.episodes.length > 0) return
+    // The topbar refetches the list of a small production on every episode
+    // change: a second response must not rebuild a list already loaded. An
+    // empty list is rebuilt so the route episode is resolved again.
+    if (state.isEpisodeListLoaded && state.episodes.length > 0) return
     if (!episodes) episodes = []
+    // An episode:new received while the list was in flight filled the list
+    // first, and the response may not hold that episode yet.
+    const responseIds = new Set(episodes.map(({ id }) => id))
+    const liveEpisodes = state.episodes.filter(({ id }) => !responseIds.has(id))
+    episodes = episodes.concat(liveEpisodes)
+    state.isEpisodeListLoaded = true
     cache.episodeMap.clear()
     episodes.forEach(episode => {
       if (!EPISODE_STATUS.includes(episode.status)) {

@@ -70,6 +70,107 @@ describe('Episodes store', () => {
     })
   })
 
+  describe('LOAD_EPISODES_END with a list already filled', () => {
+    const response = () => [
+      { id: 'episode-1', name: 'E01', status: 'running' },
+      { id: 'episode-2', name: 'E02', status: 'running' }
+    ]
+
+    // The topbar refetches the list of a small production on every episode
+    // change: the second response must not rebuild the list.
+    test('ignores a second response once the list is loaded', () => {
+      const state = { episodes: [] }
+      episodesStore.mutations.LOAD_EPISODES_END(state, {
+        episodes: response(),
+        routeEpisodeId: 'episode-1'
+      })
+      episodesStore.mutations.LOAD_EPISODES_END(state, {
+        episodes: response().slice(0, 1),
+        routeEpisodeId: 'episode-2'
+      })
+      expect(state.episodes.map(({ id }) => id)).toEqual([
+        'episode-1',
+        'episode-2'
+      ])
+      expect(state.currentEpisode.id).toBe('episode-1')
+    })
+
+    // An episode:new received while the list is in flight fills the list
+    // first: the response is still the list, and the live episode may be
+    // missing from it.
+    test('merges an episode created while the list was in flight', () => {
+      const state = { episodes: [], displayedEpisodes: [] }
+      episodesStore.mutations.ADD_EPISODE(state, {
+        id: 'episode-3',
+        name: 'E03',
+        status: 'running'
+      })
+      episodesStore.mutations.LOAD_EPISODES_END(state, {
+        episodes: response(),
+        routeEpisodeId: 'episode-1'
+      })
+      expect(state.episodes.map(({ id }) => id)).toEqual([
+        'episode-1',
+        'episode-2',
+        'episode-3'
+      ])
+      expect(state.currentEpisode.id).toBe('episode-1')
+    })
+
+    test('builds the list again after a clear', () => {
+      const state = { episodes: [] }
+      episodesStore.mutations.LOAD_EPISODES_END(state, {
+        episodes: response(),
+        routeEpisodeId: 'episode-1'
+      })
+      episodesStore.mutations.CLEAR_EPISODES(state)
+      episodesStore.mutations.LOAD_EPISODES_END(state, {
+        episodes: response().slice(0, 1),
+        routeEpisodeId: 'episode-1'
+      })
+      expect(state.episodes.map(({ id }) => id)).toEqual(['episode-1'])
+    })
+  })
+
+  describe('loadEpisode', () => {
+    // The fetch of an episode created live may outlive a production switch:
+    // the list of the production displayed now must not adopt it.
+    test('drops an episode of the production left behind', async () => {
+      const commit = vi.fn()
+      shotsApi.getEpisode = vi.fn(() =>
+        Promise.resolve({ id: 'episode-9', project_id: 'production-1' })
+      )
+      await episodesStore.actions.loadEpisode(
+        {
+          commit,
+          state: {},
+          rootGetters: { currentProduction: { id: 'production-2' } }
+        },
+        'episode-9'
+      )
+      expect(commit).not.toHaveBeenCalled()
+    })
+
+    test('adds an episode of the displayed production', async () => {
+      const commit = vi.fn()
+      shotsApi.getEpisode = vi.fn(() =>
+        Promise.resolve({ id: 'episode-9', project_id: 'production-1' })
+      )
+      await episodesStore.actions.loadEpisode(
+        {
+          commit,
+          state: {},
+          rootGetters: { currentProduction: { id: 'production-1' } }
+        },
+        'episode-9'
+      )
+      expect(commit).toHaveBeenCalledWith(
+        'ADD_EPISODE',
+        expect.objectContaining({ id: 'episode-9' })
+      )
+    })
+  })
+
   describe('ADD_EPISODE', () => {
     // The Episodes page loads its rows with tasks into cache.episodes while
     // state.episodes keeps the plain list the topbar loaded: a live episode
