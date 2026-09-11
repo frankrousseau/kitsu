@@ -235,6 +235,38 @@ describe('Episodes store', () => {
       expect(state.episodes.map(({ id }) => id)).toEqual(['episode-1'])
     })
 
+    // The list footer and the keyboard navigation read the counter, and the
+    // search result must stay the search result.
+    test('counts the episodes left after a deletion', () => {
+      const state = { episodes: [], displayedEpisodes: [] }
+      episodesStore.mutations.LOAD_EPISODES_END(state, {
+        episodes: [
+          { id: 'episode-1', name: 'E01', status: 'running' },
+          { id: 'episode-2', name: 'E02', status: 'running' }
+        ],
+        routeEpisodeId: 'episode-1'
+      })
+      episodesStore.mutations.REMOVE_EPISODE(state, { id: 'episode-2' })
+      expect(state.displayedEpisodesLength).toBe(1)
+    })
+
+    test('keeps the search result to the episodes it held', () => {
+      const state = { episodes: [], displayedEpisodes: [] }
+      episodesStore.mutations.LOAD_EPISODES_END(state, {
+        episodes: [
+          { id: 'episode-1', name: 'E01', status: 'running' },
+          { id: 'episode-2', name: 'E02', status: 'running' },
+          { id: 'episode-3', name: 'E03', status: 'running' }
+        ],
+        routeEpisodeId: 'episode-1'
+      })
+      episodesStore.cache.result = [{ id: 'episode-2', name: 'E02' }]
+      episodesStore.mutations.REMOVE_EPISODE(state, { id: 'episode-3' })
+      expect(episodesStore.cache.result.map(({ id }) => id)).toEqual([
+        'episode-2'
+      ])
+    })
+
     test('keeps an episode added live', () => {
       const state = { episodes: [], displayedEpisodes: [] }
       episodesStore.mutations.LOAD_EPISODES_END(state, {

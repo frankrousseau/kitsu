@@ -723,13 +723,16 @@ const mutations = {
   [REMOVE_EPISODE](state, episodeToDelete) {
     cache.episodeMap.delete(episodeToDelete.id)
     cache.episodes = removeModelFromList(cache.episodes, episodeToDelete)
-    cache.result = removeModelFromList(cache.episodes, episodeToDelete)
+    // From the search result, not from the list it was just removed from:
+    // recomputing it from cache.episodes would widen it to every episode.
+    cache.result = removeModelFromList(cache.result, episodeToDelete)
     cache.episodeIndex = buildEpisodeIndex(cache.episodes)
     state.episodes = removeModelFromList(state.episodes, episodeToDelete)
     state.displayedEpisodes = removeModelFromList(
       state.displayedEpisodes,
       episodeToDelete
     )
+    helpers.setListStats(state, state.displayedEpisodes)
   },
 
   [SET_EPISODE_SEARCH](state, payload) {
