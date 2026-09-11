@@ -127,8 +127,9 @@ const helpers = {
     episodes
       .filter(e => !e.canceled)
       .forEach(episode => {
-        timeSpent += episode.timeSpent
-        estimation += episode.estimation
+        // An episode added or created live carries no totals yet.
+        timeSpent += episode.timeSpent || 0
+        estimation += episode.estimation || 0
       })
     Object.assign(state, {
       displayedEpisodesCount: episodes.length,

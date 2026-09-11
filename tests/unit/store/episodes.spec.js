@@ -219,6 +219,33 @@ describe('Episodes store', () => {
     })
   })
 
+  describe('NEW_EPISODE_END', () => {
+    // The episode created locally carries no totals either: the footer of
+    // the Episodes page vanished right after a creation.
+    test('keeps the totals of the list when the new episode carries none', () => {
+      const state = { episodes: [], displayedEpisodes: [] }
+      episodesStore.mutations.LOAD_EPISODES_END(state, {
+        episodes: [
+          {
+            id: 'episode-1',
+            name: 'E01',
+            status: 'running',
+            timeSpent: 60,
+            estimation: 90
+          }
+        ],
+        routeEpisodeId: 'episode-1'
+      })
+      episodesStore.mutations.NEW_EPISODE_END(state, {
+        id: 'episode-2',
+        name: 'E02',
+        project_id: 'production-1'
+      })
+      expect(state.displayedEpisodesTimeSpent).toBe(60)
+      expect(state.displayedEpisodesEstimation).toBe(90)
+    })
+  })
+
   describe('REMOVE_EPISODE', () => {
     // The topbar validates route episodes against the episodes getter: a
     // deleted episode must leave that list too, not only the map.
@@ -248,6 +275,39 @@ describe('Episodes store', () => {
       })
       episodesStore.mutations.REMOVE_EPISODE(state, { id: 'episode-2' })
       expect(state.displayedEpisodesLength).toBe(1)
+    })
+
+    // A live-added episode carries no totals: summing it made both totals
+    // NaN, and the footer, guarded on a positive total, disappeared.
+    test('sums the totals over the episodes carrying one', () => {
+      const state = { episodes: [], displayedEpisodes: [] }
+      episodesStore.mutations.LOAD_EPISODES_END(state, {
+        episodes: [
+          {
+            id: 'episode-1',
+            name: 'E01',
+            status: 'running',
+            timeSpent: 60,
+            estimation: 90
+          },
+          {
+            id: 'episode-2',
+            name: 'E02',
+            status: 'running',
+            timeSpent: 30,
+            estimation: 45
+          }
+        ],
+        routeEpisodeId: 'episode-1'
+      })
+      episodesStore.mutations.ADD_EPISODE(state, {
+        id: 'episode-3',
+        name: 'E03',
+        status: 'running'
+      })
+      episodesStore.mutations.REMOVE_EPISODE(state, { id: 'episode-2' })
+      expect(state.displayedEpisodesTimeSpent).toBe(60)
+      expect(state.displayedEpisodesEstimation).toBe(90)
     })
 
     test('keeps the search result to the episodes it held', () => {
