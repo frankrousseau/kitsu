@@ -1752,6 +1752,7 @@
       "empty": "현재 필터로는 이 기간에 기록된 시간이 없습니다.",
       "expected": "예상",
       "in_salary": "급여 기준",
+      "salary": "급여",
       "with_time_logged": "기록된 시간 있음",
       "detail_level": "세부 사항 레벨",
       "done_tasks": "완료한 작업",

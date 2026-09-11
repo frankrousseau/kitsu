@@ -1752,6 +1752,7 @@
       "empty": "現在のフィルターでは、この期間に記録された時間はありません。",
       "expected": "予定",
       "in_salary": "給与換算",
+      "salary": "給与",
       "with_time_logged": "記録あり",
       "detail_level": "詳細レベル",
       "done_tasks": "完了したタスク",

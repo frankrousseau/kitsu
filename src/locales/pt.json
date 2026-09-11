@@ -1752,6 +1752,7 @@
       "empty": "Nenhum tempo registrado para este período com os filtros atuais.",
       "expected": "previsto",
       "in_salary": "em salário",
+      "salary": "Salário",
       "with_time_logged": "Com tempo registrado",
       "detail_level": "Nível de detalhe",
       "done_tasks": "Tarefas concluídas",

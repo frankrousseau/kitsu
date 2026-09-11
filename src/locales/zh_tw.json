@@ -1520,7 +1520,7 @@
         "step": "步進",
         "time_spent": "時間",
         "person": "修改者",
-        "max_retakes": "Max Rtks",
+        "max_retakes": "最多重做次數",
         "resolution": "解析度",
         "placeholder": "SH01",
         "nb_drawings": "繪圖"
@@ -1752,6 +1752,7 @@
       "empty": "目前篩選條件下此期間沒有記錄的時間。",
       "expected": "預期",
       "in_salary": "按薪資",
+      "salary": "薪資",
       "with_time_logged": "有記錄時間",
       "detail_level": "細節層次",
       "done_tasks": "已完成任務",

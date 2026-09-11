@@ -1520,7 +1520,7 @@
         "step": "گام",
         "time_spent": "زمان",
         "person": "اصلاح کننده",
-        "max_retakes": "Max Rtks",
+        "max_retakes": "حداکثر بازبینی",
         "resolution": "دقت",
         "placeholder": "SH01",
         "nb_drawings": "طراحی ها"
@@ -1752,6 +1752,7 @@
       "empty": "برای این دوره با فیلترهای فعلی زمانی ثبت نشده است.",
       "expected": "مورد انتظار",
       "in_salary": "به صورت حقوق",
+      "salary": "حقوق",
       "with_time_logged": "با زمان ثبت‌شده",
       "detail_level": "سطح جزئیات",
       "done_tasks": "وظایف انجام شده",

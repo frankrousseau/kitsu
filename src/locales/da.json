@@ -1752,6 +1752,7 @@
       "empty": "Ingen tid registreret for denne periode med de aktuelle filtre.",
       "expected": "forventet",
       "in_salary": "i løn",
+      "salary": "Løn",
       "with_time_logged": "Med registreret tid",
       "detail_level": "Detaljeniveau",
       "done_tasks": "Færdige opgaver",
