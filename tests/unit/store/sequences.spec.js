@@ -427,6 +427,36 @@ describe('Sequences store, loadSequence live insertion', () => {
   })
 })
 
+describe('Sequences store, ADD_SEQUENCE', () => {
+  // The list load leaves the cached list and the displayed one as the same
+  // array: pushing into each in place inserted the sequence twice.
+  test('inserts a live sequence once', () => {
+    const state = { displayedSequences: [] }
+    sequencesStore.mutations.LOAD_SEQUENCES_END(state, {
+      sequences: [
+        { id: 'sq-1', name: 'SQ01', parent_id: 'ep-a' },
+        { id: 'sq-2', name: 'SQ02', parent_id: 'ep-a' }
+      ],
+      episodeMap: new Map(),
+      production: { id: 'p-add' },
+      userFilters: {},
+      loadingKey: 'p-add/ep-a'
+    })
+
+    sequencesStore.mutations.ADD_SEQUENCE(state, {
+      sequence: { id: 'sq-3', name: 'SQ03', parent_id: 'ep-a' },
+      episodeMap: new Map()
+    })
+
+    expect(state.displayedSequences.map(({ id }) => id)).toEqual([
+      'sq-1',
+      'sq-2',
+      'sq-3'
+    ])
+    expect(state.displayedSequencesLength).toBe(3)
+  })
+})
+
 describe('Sequences store, live insertion during a list load', () => {
   const rootGetters = {
     currentProduction: { id: 'p-live' },

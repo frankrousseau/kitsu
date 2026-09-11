@@ -1106,15 +1106,18 @@ const mutations = {
   },
 
   [ADD_SEQUENCE](state, { sequence, episodeMap }) {
-    cache.sequences.push(sequence)
-    const sortedSequences = sortSequences(cache.sequences)
-    cache.sequenceMap.set(sequence.id, sequence)
+    // Each list copied from itself: a list load leaves them as the same
+    // array, and pushing into each in place inserted the sequence twice.
+    // The episode is resolved first, the sort reads its name.
     helpers.setEpisodeInfo(sequence, episodeMap)
-    cache.sequences = sortedSequences
-    state.displayedSequences.push(sequence)
-    state.displayedSequences = sortSequences(state.displayedSequences)
-    state.sequenceIndex = buildSequenceIndex(sortedSequences)
-    state.displayedSequencesLength = sortedSequences.length
+    cache.sequenceMap.set(sequence.id, sequence)
+    cache.sequences = sortSequences([...cache.sequences, sequence])
+    state.displayedSequences = sortSequences([
+      ...state.displayedSequences,
+      sequence
+    ])
+    state.sequenceIndex = buildSequenceIndex(cache.sequences)
+    state.displayedSequencesLength = state.displayedSequences.length
   },
 
   [UPDATE_SEQUENCE](state, sequence) {
