@@ -193,6 +193,9 @@ const helpers = {
 }
 
 const cache = {
+  // Settled or not, the last list load: the single-sequence load waits for
+  // it before deciding, the response replaces the whole dataset.
+  sequencesLoadingPromise: null,
   sequences: [],
   result: [],
   sequenceIndex: {},
@@ -400,19 +403,23 @@ const actions = {
     // the live insertion still knows which episode this dataset holds.
     const scope = isTVShow ? (currentEpisode?.id ?? '') : ''
     const loadingKey = `${production.id}/${scope}#partial`
-    return shotsApi.getSequences(production, episode).then(sequences => {
-      if (production.id !== rootGetters.currentProduction?.id) {
+    const loadingPromise = shotsApi
+      .getSequences(production, episode)
+      .then(sequences => {
+        if (production.id !== rootGetters.currentProduction?.id) {
+          return sequences
+        }
+        commit(LOAD_SEQUENCES_END, {
+          sequences,
+          episodeMap,
+          production,
+          userFilters,
+          loadingKey
+        })
         return sequences
-      }
-      commit(LOAD_SEQUENCES_END, {
-        sequences,
-        episodeMap,
-        production,
-        userFilters,
-        loadingKey
       })
-      return sequences
-    })
+    cache.sequencesLoadingPromise = loadingPromise.catch(() => [])
+    return loadingPromise
   },
 
   loadSequencesWithTasks({ commit, state, rootGetters }) {
@@ -459,7 +466,7 @@ const actions = {
     // decide whether their cache is stale. 'all' is a pseudo-episode: it must
     // be recorded as itself even though the request is not filtered by it.
     const loadingKey = `${production.id}/${isTVShow ? (episode?.id ?? '') : ''}`
-    return shotsApi
+    const loadingPromise = shotsApi
       .getSequencesWithTasks(production, isAllEpisodes ? null : episode)
       .then(sequences => {
         if (production.id !== rootGetters.currentProduction?.id) {
@@ -486,6 +493,8 @@ const actions = {
         }
         return sequences
       })
+    cache.sequencesLoadingPromise = loadingPromise.catch(() => [])
+    return loadingPromise
   },
 
   clearSequences({ commit }) {
@@ -547,10 +556,22 @@ const actions = {
     const episodeMap = rootGetters.episodeMap
     return shotsApi
       .getSequence(sequenceId)
-      .then(sequence => {
+      .then(async sequence => {
+        // Displayed already: refresh the row now. Waiting for a list load
+        // would apply this payload after a younger response and undo it.
         if (cache.sequenceMap.get(sequence.id)) {
           commit(UPDATE_SEQUENCE, sequence)
-        } else if (
+          return sequence
+        }
+        // A list load in flight replaces the whole dataset and the recorded
+        // scope still describes the previous one: decide once it settled.
+        if (cache.sequencesLoadingPromise) {
+          await cache.sequencesLoadingPromise
+          // Its response was built after this fetch: the row it holds is
+          // the fresher one, and the sequence it dropped stays dropped.
+          if (cache.sequenceMap.get(sequence.id)) return sequence
+        }
+        if (
           !onlyInScope ||
           isEpisodeInLoadedScope(
             state.sequencesLoadingKey,

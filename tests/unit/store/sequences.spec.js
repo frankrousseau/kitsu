@@ -426,3 +426,106 @@ describe('Sequences store, loadSequence live insertion', () => {
     expect(types).toContain('ADD_SEQUENCE')
   })
 })
+
+describe('Sequences store, live insertion during a list load', () => {
+  const rootGetters = {
+    currentProduction: { id: 'p-live' },
+    currentEpisode: { id: 'ep-b' },
+    episodeMap: new Map(),
+    isTVShow: true
+  }
+
+  afterEach(() => {
+    sequencesStore.cache.sequencesLoadingPromise = null
+    sequencesStore.cache.sequenceMap.delete('s-flight-3')
+    vi.restoreAllMocks()
+  })
+
+  // The list load replaces the whole dataset: inserting before its response
+  // lands drops the sequence, and the scope it would be checked against
+  // still describes the previous dataset.
+  test('waits for the list in flight before inserting', async () => {
+    vi.spyOn(shotsApi, 'getSequence').mockResolvedValue({
+      id: 's-flight-1',
+      parent_id: 'ep-b',
+      project_id: 'p-live'
+    })
+    let endList
+    const state = { sequencesLoadingKey: 'p-live/ep-a' }
+    sequencesStore.cache.sequencesLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.sequencesLoadingKey = 'p-live/ep-b'
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = sequencesStore.actions.loadSequence(
+      { commit, state, rootGetters },
+      { sequenceId: 's-flight-1', onlyInScope: true }
+    )
+    await Promise.resolve()
+    expect(commit).not.toHaveBeenCalled()
+
+    endList()
+    await loading
+    expect(commit.mock.calls.map(([type]) => type)).toContain('ADD_SEQUENCE')
+  })
+
+  // The list response is younger than this fetch: it rebuilt the row from
+  // fresher data, and the payload parked behind it must not land on top.
+  test('keeps the row the list load rebuilt', async () => {
+    vi.spyOn(shotsApi, 'getSequence').mockResolvedValue({
+      id: 's-flight-3',
+      parent_id: 'ep-b',
+      project_id: 'p-live',
+      name: 'from-socket'
+    })
+    let endList
+    const state = { sequencesLoadingKey: 'p-live/ep-a' }
+    sequencesStore.cache.sequencesLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.sequencesLoadingKey = 'p-live/ep-b'
+        sequencesStore.cache.sequenceMap.set('s-flight-3', {
+          id: 's-flight-3',
+          name: 'from-list'
+        })
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = sequencesStore.actions.loadSequence(
+      { commit, state, rootGetters },
+      { sequenceId: 's-flight-3', onlyInScope: true }
+    )
+    await Promise.resolve()
+    endList()
+    await loading
+
+    expect(commit.mock.calls).toEqual([])
+    expect(sequencesStore.cache.sequenceMap.get('s-flight-3').name).toBe(
+      'from-list'
+    )
+  })
+
+  test('records the list load in flight', async () => {
+    vi.spyOn(shotsApi, 'getSequencesWithTasks').mockResolvedValue([])
+    const loading = sequencesStore.actions.loadSequencesWithTasks({
+      commit: vi.fn(),
+      state: {},
+      rootGetters: {
+        ...rootGetters,
+        episodes: [{ id: 'ep-b' }],
+        personMap: new Map(),
+        route: { params: {} },
+        userFilters: {},
+        taskMap: new Map(),
+        taskStatusMap: new Map(),
+        taskTypeMap: new Map()
+      }
+    })
+    expect(sequencesStore.cache.sequencesLoadingPromise).not.toBeNull()
+    await loading
+  })
+})
