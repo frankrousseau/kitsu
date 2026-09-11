@@ -547,10 +547,23 @@ const actions = {
 
     return assetsApi
       .getAsset(assetId)
-      .then(asset => {
+      .then(async asset => {
+        // Displayed already: refresh the row now. Waiting for a list load
+        // would apply this payload after a younger response and undo it.
         if (cache.assetMap.get(asset.id)) {
           commit(UPDATE_ASSET, asset)
-        } else if (
+          return
+        }
+        // A list load in flight replaces the whole dataset: inserting now
+        // would be thrown away by its response, and no second event
+        // announces this asset again. Decide once that load settled.
+        if (state.isAssetsLoading) {
+          await (cache.assetsLoadingPromise || Promise.resolve())
+          // Its response was built after this fetch: the row it holds is
+          // the fresher one, and the asset it dropped stays dropped.
+          if (cache.assetMap.get(asset.id)) return
+        }
+        if (
           !onlyInScope ||
           isEpisodeInLoadedScope(
             state.assetsLoadingKey,

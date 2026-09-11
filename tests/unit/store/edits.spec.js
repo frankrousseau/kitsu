@@ -346,3 +346,148 @@ describe('Edits store, CLEAR_EDITS', () => {
     expect(state.displayedEditsEstimation).toBe(0)
   })
 })
+
+describe('Edits store, live insertion during a list load', () => {
+  afterEach(() => {
+    editsStore.cache.editsLoadingPromise = null
+    editsStore.cache.editMap.delete('e-flight-3')
+    vi.restoreAllMocks()
+  })
+
+  // The list load replaces the whole dataset: inserting before its response
+  // lands drops the edit, and no second event announces it again.
+  test('waits for the list in flight before inserting', async () => {
+    editsApi.getEdit = vi.fn(() =>
+      Promise.resolve({
+        id: 'e-flight-1',
+        parent_id: 'ep-a',
+        project_id: 'p-live',
+        tasks: []
+      })
+    )
+    let endList
+    const state = { isEditsLoading: true, editsLoadingKey: 'p-live/ep-a' }
+    editsStore.cache.editsLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.isEditsLoading = false
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = editsStore.actions.loadEdit(
+      {
+        commit,
+        state,
+        rootGetters: {
+          currentProduction: { id: 'p-live' },
+          currentEpisode: { id: 'ep-a' },
+          isTVShow: true,
+          personMap: new Map(),
+          taskMap: new Map(),
+          taskTypeMap: new Map()
+        }
+      },
+      { editId: 'e-flight-1', onlyInScope: true }
+    )
+    await Promise.resolve()
+    expect(commit.mock.calls.map(([type]) => type)).not.toContain('ADD_EDIT')
+
+    endList()
+    await loading
+    expect(commit.mock.calls.map(([type]) => type)).toContain('ADD_EDIT')
+  })
+
+  // The list response is younger than this fetch: it rebuilt the row from
+  // fresher data, and the payload parked behind it must not land on top.
+  test('keeps the row the list load rebuilt', async () => {
+    editsApi.getEdit = vi.fn(() =>
+      Promise.resolve({
+        id: 'e-flight-3',
+        parent_id: 'ep-a',
+        project_id: 'p-live',
+        name: 'from-socket',
+        tasks: []
+      })
+    )
+    let endList
+    const state = { isEditsLoading: true, editsLoadingKey: 'p-live/ep-a' }
+    editsStore.cache.editsLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.isEditsLoading = false
+        editsStore.cache.editMap.set('e-flight-3', {
+          id: 'e-flight-3',
+          name: 'from-list'
+        })
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = editsStore.actions.loadEdit(
+      {
+        commit,
+        state,
+        rootGetters: {
+          currentProduction: { id: 'p-live' },
+          currentEpisode: { id: 'ep-a' },
+          isTVShow: true,
+          personMap: new Map(),
+          taskMap: new Map(),
+          taskTypeMap: new Map()
+        }
+      },
+      { editId: 'e-flight-3', onlyInScope: true }
+    )
+    await Promise.resolve()
+    endList()
+    await loading
+
+    expect(commit.mock.calls).toEqual([])
+    expect(editsStore.cache.editMap.get('e-flight-3').name).toBe('from-list')
+  })
+
+  // An update of an edit the page displayed must not recreate it under the
+  // list of the episode switched to meanwhile: the handlers pass onlyInScope.
+  test('drops an updated edit once the list in flight replaced its episode', async () => {
+    editsApi.getEdit = vi.fn(() =>
+      Promise.resolve({
+        id: 'e-flight-2',
+        parent_id: 'ep-a',
+        project_id: 'p-live',
+        tasks: []
+      })
+    )
+    let endList
+    const state = { isEditsLoading: true, editsLoadingKey: 'p-live/ep-a' }
+    editsStore.cache.editsLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.isEditsLoading = false
+        state.editsLoadingKey = 'p-live/ep-b'
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = editsStore.actions.loadEdit(
+      {
+        commit,
+        state,
+        rootGetters: {
+          currentProduction: { id: 'p-live' },
+          currentEpisode: { id: 'ep-b' },
+          isTVShow: true,
+          personMap: new Map(),
+          taskMap: new Map(),
+          taskTypeMap: new Map()
+        }
+      },
+      { editId: 'e-flight-2', onlyInScope: true }
+    )
+    await Promise.resolve()
+    endList()
+    await loading
+
+    expect(commit.mock.calls.map(([type]) => type)).not.toContain('ADD_EDIT')
+  })
+})

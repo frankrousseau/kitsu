@@ -785,3 +785,139 @@ describe('Assets store, LOAD_ASSETS_ERROR', () => {
     expect(await types()).not.toContain('LOAD_ASSETS_ERROR')
   })
 })
+
+describe('Assets store, live insertion during a list load', () => {
+  afterEach(() => {
+    assetsStore.cache.assetsLoadingPromise = null
+    assetsStore.cache.assetMap.delete('a-flight-3')
+    vi.restoreAllMocks()
+  })
+
+  // The list load replaces the whole dataset: inserting before its response
+  // lands drops the asset, and no second event announces it again.
+  test('waits for the list in flight before inserting', async () => {
+    vi.spyOn(assetsApi, 'getAsset').mockResolvedValue({
+      id: 'a-flight-1',
+      episode_id: 'ep-a',
+      project_id: 'p1',
+      tasks: []
+    })
+    let endList
+    const state = { isAssetsLoading: true, assetsLoadingKey: 'p1/ep-a' }
+    assetsStore.cache.assetsLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.isAssetsLoading = false
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = assetsStore.actions.loadAsset(
+      {
+        commit,
+        state,
+        rootGetters: {
+          ...baseRootGetters(),
+          isTVShow: true,
+          currentEpisode: { id: 'ep-a' },
+          people: [],
+          taskStatusMap: new Map()
+        }
+      },
+      { assetId: 'a-flight-1', onlyInScope: true }
+    )
+    await Promise.resolve()
+    expect(commit.mock.calls.map(([type]) => type)).not.toContain('ADD_ASSET')
+
+    endList()
+    await loading
+    expect(commit.mock.calls.map(([type]) => type)).toContain('ADD_ASSET')
+  })
+
+  // The list response is younger than this fetch: it rebuilt the row from
+  // fresher data, and the payload parked behind it must not land on top.
+  test('keeps the row the list load rebuilt', async () => {
+    vi.spyOn(assetsApi, 'getAsset').mockResolvedValue({
+      id: 'a-flight-3',
+      episode_id: 'ep-a',
+      project_id: 'p1',
+      name: 'from-socket',
+      tasks: []
+    })
+    let endList
+    const state = { isAssetsLoading: true, assetsLoadingKey: 'p1/ep-a' }
+    assetsStore.cache.assetsLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.isAssetsLoading = false
+        assetsStore.cache.assetMap.set('a-flight-3', {
+          id: 'a-flight-3',
+          name: 'from-list'
+        })
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = assetsStore.actions.loadAsset(
+      {
+        commit,
+        state,
+        rootGetters: {
+          ...baseRootGetters(),
+          isTVShow: true,
+          currentEpisode: { id: 'ep-a' },
+          people: [],
+          taskStatusMap: new Map()
+        }
+      },
+      { assetId: 'a-flight-3', onlyInScope: true }
+    )
+    await Promise.resolve()
+    endList()
+    await loading
+
+    expect(commit.mock.calls).toEqual([])
+    expect(assetsStore.cache.assetMap.get('a-flight-3').name).toBe('from-list')
+  })
+
+  // An update of an asset the page displayed must not recreate it under the
+  // list of the episode switched to meanwhile: the handlers pass onlyInScope.
+  test('drops an updated asset once the list in flight replaced its episode', async () => {
+    vi.spyOn(assetsApi, 'getAsset').mockResolvedValue({
+      id: 'a-flight-2',
+      episode_id: 'ep-a',
+      project_id: 'p1',
+      tasks: []
+    })
+    let endList
+    const state = { isAssetsLoading: true, assetsLoadingKey: 'p1/ep-a' }
+    assetsStore.cache.assetsLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.isAssetsLoading = false
+        state.assetsLoadingKey = 'p1/ep-b'
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = assetsStore.actions.loadAsset(
+      {
+        commit,
+        state,
+        rootGetters: {
+          ...baseRootGetters(),
+          isTVShow: true,
+          currentEpisode: { id: 'ep-b' },
+          people: [],
+          taskStatusMap: new Map()
+        }
+      },
+      { assetId: 'a-flight-2', onlyInScope: true }
+    )
+    await Promise.resolve()
+    endList()
+    await loading
+
+    expect(commit.mock.calls.map(([type]) => type)).not.toContain('ADD_ASSET')
+  })
+})

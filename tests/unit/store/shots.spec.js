@@ -484,3 +484,118 @@ describe('Shots store, loadShot live insertion', () => {
     expect(types).toContain('ADD_SHOT')
   })
 })
+
+describe('Shots store, live insertion during a list load', () => {
+  const rootGetters = {
+    currentProduction: { id: 'p-live' },
+    currentEpisode: { id: 'ep-a' },
+    isTVShow: true,
+    personMap: new Map(),
+    people: [],
+    taskMap: new Map(),
+    taskStatusMap: new Map(),
+    taskTypeMap: new Map()
+  }
+
+  afterEach(() => {
+    shotsStore.cache.shotsLoadingPromise = null
+    shotsStore.cache.shotMap.delete('sh-flight-3')
+    vi.restoreAllMocks()
+  })
+
+  // The list load replaces the whole dataset: inserting before its response
+  // lands drops the shot, and no second event ever announces it again.
+  test('waits for the list in flight before inserting', async () => {
+    vi.spyOn(shotsApi, 'getShot').mockResolvedValue({
+      id: 'sh-flight-1',
+      episode_id: 'ep-a',
+      project_id: 'p-live',
+      tasks: []
+    })
+    let endList
+    const state = { isShotsLoading: true, shotsLoadingKey: 'p-live/ep-a' }
+    shotsStore.cache.shotsLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.isShotsLoading = false
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = shotsStore.actions.loadShot(
+      { commit, state, rootGetters },
+      { shotId: 'sh-flight-1', onlyInScope: true }
+    )
+    await Promise.resolve()
+    expect(commit.mock.calls.map(([type]) => type)).not.toContain('ADD_SHOT')
+
+    endList()
+    await loading
+    expect(commit.mock.calls.map(([type]) => type)).toContain('ADD_SHOT')
+  })
+
+  // The list response is younger than this fetch: it rebuilt the row from
+  // fresher data, and the payload parked behind it must not land on top.
+  test('keeps the row the list load rebuilt', async () => {
+    vi.spyOn(shotsApi, 'getShot').mockResolvedValue({
+      id: 'sh-flight-3',
+      episode_id: 'ep-a',
+      project_id: 'p-live',
+      nb_frames: 10,
+      tasks: []
+    })
+    let endList
+    const state = { isShotsLoading: true, shotsLoadingKey: 'p-live/ep-a' }
+    shotsStore.cache.shotsLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.isShotsLoading = false
+        shotsStore.cache.shotMap.set('sh-flight-3', {
+          id: 'sh-flight-3',
+          nb_frames: 20
+        })
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = shotsStore.actions.loadShot(
+      { commit, state, rootGetters },
+      { shotId: 'sh-flight-3', onlyInScope: true }
+    )
+    await Promise.resolve()
+    endList()
+    await loading
+
+    expect(commit.mock.calls).toEqual([])
+    expect(shotsStore.cache.shotMap.get('sh-flight-3').nb_frames).toBe(20)
+  })
+
+  test('drops the shot when the list in flight was another episode', async () => {
+    vi.spyOn(shotsApi, 'getShot').mockResolvedValue({
+      id: 'sh-flight-2',
+      episode_id: 'ep-a',
+      project_id: 'p-live',
+      tasks: []
+    })
+    let endList
+    const state = { isShotsLoading: true, shotsLoadingKey: 'p-live/ep-a' }
+    shotsStore.cache.shotsLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.isShotsLoading = false
+        state.shotsLoadingKey = 'p-live/ep-b'
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = shotsStore.actions.loadShot(
+      { commit, state, rootGetters },
+      { shotId: 'sh-flight-2', onlyInScope: true }
+    )
+    await Promise.resolve()
+    endList()
+    await loading
+
+    expect(commit.mock.calls.map(([type]) => type)).not.toContain('ADD_SHOT')
+  })
+})

@@ -203,7 +203,10 @@ const socketEvents = {
   'sequence:update': eventData => {
     const sequence = sequenceMap.get(eventData.sequence_id)
     if (sequence && !sequence.lock) {
-      store.dispatch('loadSequence', eventData.sequence_id)
+      store.dispatch('loadSequence', {
+        sequenceId: eventData.sequence_id,
+        onlyInScope: true
+      })
     }
   },
 
@@ -228,7 +231,10 @@ const socketEvents = {
   'edit:update': eventData => {
     const edit = editMap.get(eventData.edit_id)
     if (edit && !edit.lock) {
-      store.dispatch('loadEdit', eventData.edit_id)
+      store.dispatch('loadEdit', {
+        editId: eventData.edit_id,
+        onlyInScope: true
+      })
     }
   },
 
@@ -275,6 +281,9 @@ const socketEvents = {
     }
   },
 
+  // The *:update handlers stay in scope too: an entity gone from the map by
+  // the time its fetch lands belongs to a dataset replaced meanwhile, and an
+  // update must not recreate it under the list displayed now.
   'shot:update': eventData => {
     const shot = shotMap.get(eventData.shot_id)
     if (
@@ -282,7 +291,10 @@ const socketEvents = {
       !shot.lock &&
       currentProduction.value?.id === eventData.project_id
     ) {
-      store.dispatch('loadShot', eventData.shot_id)
+      store.dispatch('loadShot', {
+        shotId: eventData.shot_id,
+        onlyInScope: true
+      })
     }
   },
 
@@ -309,7 +321,10 @@ const socketEvents = {
   'asset:update': eventData => {
     const asset = assetMap.get(eventData.asset_id)
     if (asset && !asset.lock) {
-      store.dispatch('loadAsset', eventData.asset_id)
+      store.dispatch('loadAsset', {
+        assetId: eventData.asset_id,
+        onlyInScope: true
+      })
     }
   },
 

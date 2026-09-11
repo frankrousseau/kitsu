@@ -415,10 +415,23 @@ const actions = {
     const taskTypeMap = rootGetters.taskTypeMap
     return editsApi
       .getEdit(editId)
-      .then(edit => {
+      .then(async edit => {
+        // Displayed already: refresh the row now. Waiting for a list load
+        // would apply this payload after a younger response and undo it.
         if (cache.editMap.get(edit.id)) {
           commit(UPDATE_EDIT, edit)
-        } else if (
+          return
+        }
+        // A list load in flight replaces the whole dataset: inserting now
+        // would be thrown away by its response, and no second event
+        // announces this edit again. Decide once that load settled.
+        if (state.isEditsLoading) {
+          await (cache.editsLoadingPromise || Promise.resolve())
+          // Its response was built after this fetch: the row it holds is
+          // the fresher one, and the edit it dropped stays dropped.
+          if (cache.editMap.get(edit.id)) return
+        }
+        if (
           !onlyInScope ||
           isEpisodeInLoadedScope(
             state.editsLoadingKey,
