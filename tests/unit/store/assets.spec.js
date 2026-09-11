@@ -709,6 +709,26 @@ describe('Assets store, partial loads', () => {
     await loading
   })
 
+  // Breakdown and Concepts load every asset with the shared assets of the
+  // whole instance, the Assets page under all only the ones the production
+  // uses: two datasets, two scopes.
+  test('a production-wide load records its own scope', async () => {
+    vi.spyOn(assetsApi, 'getSharedAssets').mockResolvedValue([])
+    const { state, loading } = startLoad({ all: true })
+    expect(state.assetsLoadingKey).toBe('p1/all#shared')
+    await loading
+  })
+
+  test('a partial production-wide load stays partial', async () => {
+    const { state, loading } = startLoad({
+      all: true,
+      withTasks: false,
+      withShared: false
+    })
+    expect(state.assetsLoadingKey).toBe('p1/all#partial')
+    await loading
+  })
+
   test('a load without tasks or shared assets records a partial scope', async () => {
     const { state, loading } = startLoad({ withTasks: false, withShared: false })
     expect(state.assetsLoadingKey).not.toBe('p1/')

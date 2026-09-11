@@ -440,11 +440,15 @@ const actions = {
     // other episodes, and 'all' / 'main' are pseudo-episodes), so the store
     // records it for the pages that decide whether their cache is stale.
     // A load without tasks or shared assets (schedule) cannot stand in for
-    // the dataset the list pages display: mark its scope so their check
-    // refetches instead of adopting it.
-    const partial = withTasks && withShared ? '' : '#partial'
+    // the dataset the list pages display, nor can the production-wide one
+    // (breakdown, concepts), which fetches the shared assets of the whole
+    // instance where the Assets page under all fetches the ones the
+    // production uses: mark those scopes so the pages refetch instead of
+    // adopting them.
+    const isPartial = !withTasks || !withShared
+    const marker = isPartial ? '#partial' : all ? '#shared' : ''
     const scope = all ? 'all' : (episode?.id ?? '')
-    const loadingKey = `${production.id}/${scope}${partial}`
+    const loadingKey = `${production.id}/${scope}${marker}`
 
     if (state.isAssetsLoading) {
       if (state.assetsLoadingKey === loadingKey) {
