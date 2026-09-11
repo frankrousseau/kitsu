@@ -1752,6 +1752,7 @@
       "empty": "Nincs rögzített idő erre az időszakra a jelenlegi szűrőkkel.",
       "expected": "elvárt",
       "in_salary": "bérben",
+      "salary": "Fizetés",
       "with_time_logged": "Rögzített idővel",
       "detail_level": "Részletesség szintje",
       "done_tasks": "Kész feladatok",
@@ -2034,7 +2035,7 @@
       "delete_text": "Biztosan törölni akarod {name}-t az adatbázisból?",
       "edit_background": "Háttér szerkesztése",
       "fields": {
-        "file": "HDRi File",
+        "file": "HDRi fájl",
         "is_default": "Alapértelmezett",
         "name": "Név"
       },

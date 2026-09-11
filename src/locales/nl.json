@@ -190,7 +190,7 @@
     },
     "entities": {
       "build_filter": {
-        "asset_type": "Asset type",
+        "asset_type": "Assettype",
         "all_types": "Alle assettypes",
         "assignation": "Toewijzing",
         "assignation_exists_for": "Toewijzing bestaat voor",
@@ -950,7 +950,7 @@
         "select_background": "Selecteer een achtergrond",
         "toggle_environment_skybox": "Achtergrond skybox tonen/verbergen",
         "toggle_wireframe": "Draadframe rendering inschakelen/uitschakelen",
-        "open_link": "Open link",
+        "open_link": "Link openen",
         "annotation_huge": "Enorm",
         "annotation_shape": "Vorm",
         "annotation_shape_arrow": "Pijl",
@@ -1088,8 +1088,8 @@
       },
       "type": {
         "short": "Short",
-        "featurefilm": "Feature Film",
-        "tvshow": "TV Show",
+        "featurefilm": "Speelfilm",
+        "tvshow": "Tv-serie",
         "assets": "Alleen assets",
         "shots": "Alleen shots"
       },
@@ -1268,7 +1268,7 @@
     "settings": {
       "change_logo": "Wijzig logo",
       "integrations": "Integraties",
-      "logo": "Studio logo",
+      "logo": "Studiologo",
       "no_logo": "Er is geen logo ingesteld.",
       "set_logo": "Studio logo instellen",
       "title": "Instellingen",
@@ -1483,7 +1483,7 @@
       "bulk_generate": "Genereren",
       "bulk_invalid_start": "De startnaam moet eindigen op een cijfer.",
       "bulk_tab": "Bulk",
-      "casting": "Shot casting",
+      "casting": "Shotcasting",
       "delete_text": "Weet je zeker dat je {name} uit de database wilt verwijderen?",
       "delete_error": "Er is een fout opgetreden bij het verwijderen van deze opname. Waarschijnlijk zijn er gegevens aan gekoppeld. Weet je zeker dat er geen taak aan deze opname is gekoppeld?",
       "edit_success": "Opname {name} succesvol bewerkt.",
@@ -1616,7 +1616,7 @@
       "validation": "Validatie",
       "with_comment": "Met een opmerking...",
       "fields": {
-        "asset_type": "Asset type",
+        "asset_type": "Assettype",
         "assignees": "Toegewezen personen",
         "count": "Aantal",
         "due_date": "Opleveringsdatum",
@@ -1701,7 +1701,7 @@
       "estimation_over": "Duur boven schatting",
       "estimation_approval_late": "Einddatum is laat (feedback)",
       "estimation_done_late": "Einddatum is laat (klaar)",
-      "late": "Late status",
+      "late": "Status „te laat”",
       "nb_selected_tasks": "{nbSelectedTasks} taak geselecteerd | {nbSelectedTasks} taken geselecteerd",
       "set_thumbnails_from_tasks": "Stel de laatste preview van de geselecteerde taak in als thumbnail | Stel de laatste previews van de geselecteerde taken in als thumbnails",
       "to_myself": "Voor mezelf",
@@ -1752,6 +1752,7 @@
       "empty": "Geen tijd geregistreerd voor deze periode met de huidige filters.",
       "expected": "verwacht",
       "in_salary": "in salaris",
+      "salary": "Salaris",
       "with_time_logged": "Met geregistreerde tijd",
       "detail_level": "Detailniveau",
       "done_tasks": "Voltooide taken",
@@ -2082,7 +2083,7 @@
     },
     "budget": {
       "add_entry": "Een item toevoegen",
-      "analytics": "Budget Analytics",
+      "analytics": "Budgetanalyse",
       "cash_evolution": "Kostenontwikkeling",
       "cash_repartition": "Kostenverdeling",
       "cost": "Kosten",

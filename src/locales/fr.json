@@ -1752,6 +1752,7 @@
       "empty": "Aucun temps saisi sur cette période avec les filtres actuels.",
       "expected": "attendu",
       "in_salary": "en salaire",
+      "salary": "Salaire",
       "with_time_logged": "Avec du temps saisi",
       "detail_level": "Niveau de détail",
       "done_tasks": "Tâches terminées",

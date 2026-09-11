@@ -2190,6 +2190,7 @@
       "empty": "Brak zarejestrowanego czasu w tym okresie przy bieżących filtrach.",
       "expected": "oczekiwane",
       "in_salary": "w wynagrodzeniu",
+      "salary": "Wynagrodzenie",
       "with_time_logged": "Z zarejestrowanym czasem",
       "confirm_day_off": "Oznaczenie tego dnia jako dnia wolnego usunie cały czas zarejestrowany w tym dniu. Czy na pewno chcesz kontynuować?",
       "confirm_day_offs": "Oznaczenie tych dni jako dni wolnych usunie cały czas zarejestrowany w tych dniach. Czy na pewno chcesz kontynuować?",

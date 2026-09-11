@@ -1752,6 +1752,7 @@
       "empty": "当前筛选条件下该时段没有记录的时间。",
       "expected": "预期",
       "in_salary": "按薪资",
+      "salary": "工资",
       "with_time_logged": "有记录时间",
       "detail_level": "细节层次",
       "done_tasks": "已完成任务",
