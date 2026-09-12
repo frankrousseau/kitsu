@@ -715,7 +715,7 @@ describe('Assets store, partial loads', () => {
   test('a production-wide load records its own scope', async () => {
     vi.spyOn(assetsApi, 'getSharedAssets').mockResolvedValue([])
     const { state, loading } = startLoad({ all: true })
-    expect(state.assetsLoadingKey).toBe('p1/all#shared')
+    expect(state.assetsLoadingKey).toBe('p1/all#partial')
     await loading
   })
 
