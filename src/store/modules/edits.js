@@ -372,9 +372,11 @@ const actions = {
     const loadingPromise = editsApi
       .getEdits(production, episode)
       .then(edits => {
-        // Ignore a response for a production the user already switched away
-        // from; committing would overwrite the current production's edits.
-        if (production.id !== rootGetters.currentProduction?.id) {
+        // Ignore a response for a scope the user already left: a production
+        // switch (CLEAR_EDITS forgets the key) or a newer load of another
+        // episode (LOAD_EDITS_START records its own). Committing would put
+        // the old scope's edits under the newer key.
+        if (state.editsLoadingKey !== loadingKey) {
           return edits
         }
         commit(LOAD_EDITS_END, {
@@ -389,9 +391,9 @@ const actions = {
       })
       .catch(err => {
         console.error('an error occurred while loading edits', err)
-        // Same guard as the success path: a rejection for a production the
-        // user already left would forget the scope of the load running now.
-        if (production.id === rootGetters.currentProduction?.id) {
+        // Same guard as the success path: a rejection for a scope the user
+        // already left would forget the scope of the load running now.
+        if (state.editsLoadingKey === loadingKey) {
           commit(LOAD_EDITS_ERROR)
         }
         return []
@@ -754,25 +756,9 @@ const mutations = {
   // any mutation: forget that load with the dataset, or the next loadEdits
   // waits on it forever.
   [CLEAR_EDITS](state) {
-    cache.edits = []
-    cache.result = []
-    cache.editIndex = {}
-    cache.editMap.clear()
-    cache.editsLoadingPromise = null
-    state.editValidationColumns = []
-
+    mutations[LOAD_EDITS_START](state)
     state.isEditsLoading = false
-    state.isEditsLoadingError = false
-    state.editsLoadingKey = null
-
-    state.displayedEdits = []
-    state.displayedEditsCount = 0
-    state.displayedEditsLength = 0
-    state.displayedEditsTimeSpent = 0
-    state.displayedEditsEstimation = 0
-    state.editSearchQueries = []
-
-    state.selectedEdits = new Map()
+    cache.editsLoadingPromise = null
   },
 
   [LOAD_EDITS_END](

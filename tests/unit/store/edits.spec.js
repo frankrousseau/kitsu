@@ -93,6 +93,41 @@ describe('Edits store', () => {
       expect(loadB).not.toBe(loadA)
       expect(commit.mock.calls.map(c => c[0])).not.toContain('LOAD_EDITS_START')
     })
+
+    // A production switch forgets the load in flight, and a load started
+    // after it records its own scope: the late response must not land
+    // under that newer key.
+    test('drops a response whose scope a newer load replaced', async () => {
+      let endA
+      editsApi.getEdits = vi.fn(
+        () =>
+          new Promise(resolve => {
+            endA = resolve
+          })
+      )
+      const commit = vi.fn()
+      const state = { isEditsLoading: false }
+      const loadA = editsStore.actions.loadEdits({
+        commit,
+        dispatch: vi.fn(),
+        state,
+        rootGetters: {
+          currentProduction: { id: 'p-switch' },
+          currentEpisode: { id: 'ep-a' },
+          episodes: [{ id: 'ep-a' }],
+          userFilters: {},
+          taskTypeMap: new Map(),
+          taskMap: new Map(),
+          personMap: new Map(),
+          isTVShow: true
+        }
+      })
+      state.editsLoadingKey = 'p-switch/all'
+      endA([{ id: 'e-a' }])
+      await loadA
+
+      expect(commit.mock.calls.map(c => c[0])).not.toContain('LOAD_EDITS_END')
+    })
   })
 
   describe('queued scopes', () => {
