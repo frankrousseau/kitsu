@@ -502,9 +502,9 @@ describe('Sequences store, live insertion during a list load', () => {
     expect(commit.mock.calls.map(([type]) => type)).toContain('ADD_SEQUENCE')
   })
 
-  // The list response is younger than this fetch: it rebuilt the row from
-  // fresher data, and the payload parked behind it must not land on top.
-  test('keeps the row the list load rebuilt', async () => {
+  // The fetch waits for the list response: issued after it, the payload is
+  // the younger one and refreshes the row the list rebuilt.
+  test('fetches once the list load settled and refreshes the row', async () => {
     vi.spyOn(shotsApi, 'getSequence').mockResolvedValue({
       id: 's-flight-3',
       parent_id: 'ep-b',
@@ -530,13 +530,14 @@ describe('Sequences store, live insertion during a list load', () => {
       { sequenceId: 's-flight-3', onlyInScope: true }
     )
     await Promise.resolve()
+    expect(shotsApi.getSequence).not.toHaveBeenCalled()
     endList()
     await loading
 
-    expect(commit.mock.calls).toEqual([])
-    expect(sequencesStore.cache.sequenceMap.get('s-flight-3').name).toBe(
-      'from-list'
-    )
+    expect(shotsApi.getSequence).toHaveBeenCalledWith('s-flight-3')
+    expect(commit.mock.calls).toEqual([
+      ['UPDATE_SEQUENCE', expect.objectContaining({ name: 'from-socket' })]
+    ])
   })
 
   test('records the list load in flight', async () => {

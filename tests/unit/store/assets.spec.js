@@ -834,9 +834,9 @@ describe('Assets store, live insertion during a list load', () => {
     expect(commit.mock.calls.map(([type]) => type)).toContain('ADD_ASSET')
   })
 
-  // The list response is younger than this fetch: it rebuilt the row from
-  // fresher data, and the payload parked behind it must not land on top.
-  test('keeps the row the list load rebuilt', async () => {
+  // The fetch waits for the list response: issued after it, the payload is
+  // the younger one and refreshes the row the list rebuilt.
+  test('fetches once the list load settled and refreshes the row', async () => {
     vi.spyOn(assetsApi, 'getAsset').mockResolvedValue({
       id: 'a-flight-3',
       episode_id: 'ep-a',
@@ -873,11 +873,14 @@ describe('Assets store, live insertion during a list load', () => {
       { assetId: 'a-flight-3', onlyInScope: true }
     )
     await Promise.resolve()
+    expect(assetsApi.getAsset).not.toHaveBeenCalled()
     endList()
     await loading
 
-    expect(commit.mock.calls).toEqual([])
-    expect(assetsStore.cache.assetMap.get('a-flight-3').name).toBe('from-list')
+    expect(assetsApi.getAsset).toHaveBeenCalledWith('a-flight-3')
+    expect(commit.mock.calls).toEqual([
+      ['UPDATE_ASSET', expect.objectContaining({ name: 'from-socket' })]
+    ])
   })
 
   // An update of an asset the page displayed must not recreate it under the

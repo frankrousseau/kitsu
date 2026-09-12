@@ -398,9 +398,9 @@ describe('Edits store, live insertion during a list load', () => {
     expect(commit.mock.calls.map(([type]) => type)).toContain('ADD_EDIT')
   })
 
-  // The list response is younger than this fetch: it rebuilt the row from
-  // fresher data, and the payload parked behind it must not land on top.
-  test('keeps the row the list load rebuilt', async () => {
+  // The fetch waits for the list response: issued after it, the payload is
+  // the younger one and refreshes the row the list rebuilt.
+  test('fetches once the list load settled and refreshes the row', async () => {
     editsApi.getEdit = vi.fn(() =>
       Promise.resolve({
         id: 'e-flight-3',
@@ -440,11 +440,14 @@ describe('Edits store, live insertion during a list load', () => {
       { editId: 'e-flight-3', onlyInScope: true }
     )
     await Promise.resolve()
+    expect(editsApi.getEdit).not.toHaveBeenCalled()
     endList()
     await loading
 
-    expect(commit.mock.calls).toEqual([])
-    expect(editsStore.cache.editMap.get('e-flight-3').name).toBe('from-list')
+    expect(editsApi.getEdit).toHaveBeenCalledWith('e-flight-3')
+    expect(commit.mock.calls).toEqual([
+      ['UPDATE_EDIT', expect.objectContaining({ name: 'from-socket' })]
+    ])
   })
 
   // An update of an edit the page displayed must not recreate it under the

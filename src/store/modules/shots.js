@@ -525,23 +525,20 @@ const actions = {
     const persons = rootGetters.people
     const taskStatusMap = rootGetters.taskStatusMap
 
-    return shotsApi
-      .getShot(shotId)
-      .then(async shot => {
-        // Displayed already: refresh the row now. Waiting for a list load
-        // would apply this payload after a younger response and undo it.
+    // A list load in flight replaces the whole dataset: fetch once it has
+    // settled, so the payload is younger than its response and a shot
+    // deleted meanwhile is not re-inserted (the fetch fails instead). A
+    // displayed shot is refreshed now: waiting would apply this payload
+    // after a younger response and undo it.
+    const listSettled =
+      (!shot && state.isShotsLoading && cache.shotsLoadingPromise) ||
+      Promise.resolve()
+    return listSettled
+      .then(() => shotsApi.getShot(shotId))
+      .then(shot => {
         if (cache.shotMap.get(shot.id)) {
           commit(UPDATE_SHOT, shot)
           return
-        }
-        // A list load in flight replaces the whole dataset: inserting now
-        // would be thrown away by its response, and no second event
-        // announces this shot again. Decide once that load settled.
-        if (state.isShotsLoading) {
-          await (cache.shotsLoadingPromise || Promise.resolve())
-          // Its response was built after this fetch: the row it holds is
-          // the fresher one, and the shot it dropped stays dropped.
-          if (cache.shotMap.get(shot.id)) return
         }
         if (
           !onlyInScope ||

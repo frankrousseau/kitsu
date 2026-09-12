@@ -534,9 +534,9 @@ describe('Shots store, live insertion during a list load', () => {
     expect(commit.mock.calls.map(([type]) => type)).toContain('ADD_SHOT')
   })
 
-  // The list response is younger than this fetch: it rebuilt the row from
-  // fresher data, and the payload parked behind it must not land on top.
-  test('keeps the row the list load rebuilt', async () => {
+  // The fetch waits for the list response: issued after it, the payload is
+  // the younger one and refreshes the row the list rebuilt.
+  test('fetches once the list load settled and refreshes the row', async () => {
     vi.spyOn(shotsApi, 'getShot').mockResolvedValue({
       id: 'sh-flight-3',
       episode_id: 'ep-a',
@@ -563,11 +563,14 @@ describe('Shots store, live insertion during a list load', () => {
       { shotId: 'sh-flight-3', onlyInScope: true }
     )
     await Promise.resolve()
+    expect(shotsApi.getShot).not.toHaveBeenCalled()
     endList()
     await loading
 
-    expect(commit.mock.calls).toEqual([])
-    expect(shotsStore.cache.shotMap.get('sh-flight-3').nb_frames).toBe(20)
+    expect(shotsApi.getShot).toHaveBeenCalledWith('sh-flight-3')
+    expect(commit.mock.calls).toEqual([
+      ['UPDATE_SHOT', expect.objectContaining({ nb_frames: 10 })]
+    ])
   })
 
   test('drops the shot when the list in flight was another episode', async () => {

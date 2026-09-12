@@ -554,22 +554,20 @@ const actions = {
     if (sequence?.lock) return
 
     const episodeMap = rootGetters.episodeMap
-    return shotsApi
-      .getSequence(sequenceId)
-      .then(async sequence => {
-        // Displayed already: refresh the row now. Waiting for a list load
-        // would apply this payload after a younger response and undo it.
+    // A list load in flight replaces the whole dataset: fetch once it has
+    // settled, so the payload is younger than its response and a sequence
+    // deleted meanwhile is not re-inserted (the fetch fails instead). A
+    // displayed sequence is refreshed now: waiting would apply this payload
+    // after a younger response and undo it. The list actions never raise
+    // isSequencesLoading: the promise, settled or not, is the only signal.
+    const listSettled =
+      (!sequence && cache.sequencesLoadingPromise) || Promise.resolve()
+    return listSettled
+      .then(() => shotsApi.getSequence(sequenceId))
+      .then(sequence => {
         if (cache.sequenceMap.get(sequence.id)) {
           commit(UPDATE_SEQUENCE, sequence)
           return sequence
-        }
-        // A list load in flight replaces the whole dataset and the recorded
-        // scope still describes the previous one: decide once it settled.
-        if (cache.sequencesLoadingPromise) {
-          await cache.sequencesLoadingPromise
-          // Its response was built after this fetch: the row it holds is
-          // the fresher one, and the sequence it dropped stays dropped.
-          if (cache.sequenceMap.get(sequence.id)) return sequence
         }
         if (
           !onlyInScope ||

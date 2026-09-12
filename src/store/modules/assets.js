@@ -545,23 +545,20 @@ const actions = {
     const taskStatusMap = rootGetters.taskStatusMap
     const persons = rootGetters.people
 
-    return assetsApi
-      .getAsset(assetId)
-      .then(async asset => {
-        // Displayed already: refresh the row now. Waiting for a list load
-        // would apply this payload after a younger response and undo it.
+    // A list load in flight replaces the whole dataset: fetch once it has
+    // settled, so the payload is younger than its response and an asset
+    // deleted meanwhile is not re-inserted (the fetch fails instead). A
+    // displayed asset is refreshed now: waiting would apply this payload
+    // after a younger response and undo it.
+    const listSettled =
+      (!asset && state.isAssetsLoading && cache.assetsLoadingPromise) ||
+      Promise.resolve()
+    return listSettled
+      .then(() => assetsApi.getAsset(assetId))
+      .then(asset => {
         if (cache.assetMap.get(asset.id)) {
           commit(UPDATE_ASSET, asset)
           return
-        }
-        // A list load in flight replaces the whole dataset: inserting now
-        // would be thrown away by its response, and no second event
-        // announces this asset again. Decide once that load settled.
-        if (state.isAssetsLoading) {
-          await (cache.assetsLoadingPromise || Promise.resolve())
-          // Its response was built after this fetch: the row it holds is
-          // the fresher one, and the asset it dropped stays dropped.
-          if (cache.assetMap.get(asset.id)) return
         }
         if (
           !onlyInScope ||
