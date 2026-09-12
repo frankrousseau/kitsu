@@ -400,6 +400,7 @@ export default {
       'isCurrentUserSupervisor',
       'isCurrentUserVendor',
       'isDarkTheme',
+      'isEpisodeListLoaded',
       'isSupportChat',
       'isUserMenuHidden',
       'isTVShow',
@@ -914,7 +915,7 @@ export default {
     },
 
     configureEpisode(routeEpisodeId) {
-      if (this.episodes.length < 2) {
+      if (!this.isEpisodeListLoaded) {
         // The fetch may outlive a production switch: its response must not
         // resolve the route against the list of the production left.
         const routeProductionId = this.$route.params.production_id
@@ -977,6 +978,17 @@ export default {
     // must not reach the store: SET_CURRENT_EPISODE cannot resolve the id,
     // the combobox goes blank and a mounted page keeps the list it had.
     redirectToKnownEpisode() {
+      // The detail page of an episode the production lost has no stand-in:
+      // another episode's casting under the same URL shape would mislead.
+      if (this.$route.name === 'episode') {
+        this.$router
+          .replace({
+            name: 'episodes',
+            params: { production_id: this.$route.params.production_id }
+          })
+          .catch(console.error)
+        return
+      }
       const episodeId = this.fallbackEpisodeId(
         this.getCurrentSectionFromRoute(),
         this.$route.params.plugin_id
