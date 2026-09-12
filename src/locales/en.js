@@ -1265,7 +1265,7 @@ export default {
     delete_error: 'An error occurred while deleting this playlist.',
     download_csv: 'Download .csv',
     download_zip: 'Download .zip',
-    edit_error: 'An error occurred while saving this playlist.',
+    edit_error: 'An error occurred while saving this playlist. Are you sure there is no playlist with a similar name?',
     edit_title: 'Edit playlist',
     failed: 'Failed',
     filter_task_type: 'Filtered by task type',
