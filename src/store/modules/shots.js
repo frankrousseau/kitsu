@@ -12,6 +12,7 @@ import tasksStore from '@/store/modules/tasks'
 import taskStatusStore from '@/store/modules/taskstatus'
 import taskTypesStore from '@/store/modules/tasktypes'
 
+import { isEpisodeInLoadedScope } from '@/lib/episodes'
 import { PAGE_SIZE } from '@/lib/pagination'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import {
@@ -496,18 +497,24 @@ const actions = {
         }
       })
       .catch(err => {
-        commit(LOAD_SHOTS_ERROR)
+        // Same guard as the success path: a rejection for a production the
+        // user already left would forget the scope of the load running now.
+        if (production.id === rootGetters.currentProduction?.id) {
+          commit(LOAD_SHOTS_ERROR)
+        }
         console.error(err)
       })
     cache.shotsLoadingPromise = loadingPromise
     return loadingPromise
   },
 
-  /*
-   * Function useds mainly to reload shot data after an update or creation
-   * event. If the shot was updated a few times ago, it is not reloaded.
-   */
-  loadShot({ commit, state, rootGetters }, shotId) {
+  // Reloads a shot after a remote change, unless it is locked by a recent
+  // local update. A socket event passes { shotId, onlyInScope: true } so a
+  // shot created in another episode stays out of the loaded dataset. A load
+  // by id (detail page) always adds.
+  loadShot({ commit, state, rootGetters }, payload) {
+    const { shotId, onlyInScope = false } =
+      typeof payload === 'string' ? { shotId: payload } : payload
     const shot = cache.shotMap.get(shotId)
     if (shot?.lock) return
 
@@ -520,10 +527,30 @@ const actions = {
 
     return shotsApi
       .getShot(shotId)
-      .then(shot => {
+      .then(async shot => {
+        // Displayed already: refresh the row now. Waiting for a list load
+        // would apply this payload after a younger response and undo it.
         if (cache.shotMap.get(shot.id)) {
           commit(UPDATE_SHOT, shot)
-        } else {
+          return
+        }
+        // A list load in flight replaces the whole dataset: inserting now
+        // would be thrown away by its response, and no second event
+        // announces this shot again. Decide once that load settled.
+        if (state.isShotsLoading) {
+          await (cache.shotsLoadingPromise || Promise.resolve())
+          // Its response was built after this fetch: the row it holds is
+          // the fresher one, and the shot it dropped stays dropped.
+          if (cache.shotMap.get(shot.id)) return
+        }
+        if (
+          !onlyInScope ||
+          isEpisodeInLoadedScope(
+            state.shotsLoadingKey,
+            shot.episode_id,
+            shot.project_id
+          )
+        ) {
           shot.tasks.forEach(task => {
             commit(NEW_TASK_END, { task })
           })
@@ -927,6 +954,7 @@ const mutations = {
   [LOAD_SHOTS_ERROR](state) {
     state.isShotsLoading = false
     state.isShotsLoadingError = true
+    state.shotsLoadingKey = null
   },
 
   [LOAD_SHOTS_END](
@@ -1042,6 +1070,7 @@ const mutations = {
 
   [END_SHOTS_LOADING](state) {
     state.isShotsLoading = false
+    state.shotsLoadingKey = null
   },
 
   [SAVE_SHOT_SEARCH_END](state, { searchQuery }) {

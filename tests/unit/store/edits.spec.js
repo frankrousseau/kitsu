@@ -217,3 +217,277 @@ describe('Edits store', () => {
     })
   })
 })
+
+describe('Edits store, loadEdit live insertion', () => {
+  const rootGetters = {
+    currentProduction: { id: 'p-live' },
+    currentEpisode: { id: 'ep-a' },
+    isTVShow: true,
+    personMap: new Map(),
+    taskMap: new Map(),
+    taskTypeMap: new Map()
+  }
+
+  const committedTypes = async (payload, editsLoadingKey, edit) => {
+    editsApi.getEdit = vi.fn(() => Promise.resolve({ tasks: [], ...edit }))
+    const commit = vi.fn()
+    await editsStore.actions.loadEdit(
+      { commit, state: { editsLoadingKey }, rootGetters },
+      payload
+    )
+    return commit.mock.calls.map(([type]) => type)
+  }
+
+  test('skips an edit of another episode when asked to stay in scope', async () => {
+    const types = await committedTypes(
+      { editId: 'e-scope-1', onlyInScope: true },
+      'p-live/ep-a',
+      { id: 'e-scope-1', parent_id: 'ep-b' }
+    )
+    expect(types).not.toContain('ADD_EDIT')
+  })
+
+  test('adds an edit of the loaded episode', async () => {
+    const types = await committedTypes(
+      { editId: 'e-scope-2', onlyInScope: true },
+      'p-live/ep-a',
+      { id: 'e-scope-2', parent_id: 'ep-a' }
+    )
+    expect(types).toContain('ADD_EDIT')
+  })
+
+  test('adds any edit to a production-wide dataset', async () => {
+    const types = await committedTypes(
+      { editId: 'e-scope-3', onlyInScope: true },
+      'p-live/all',
+      { id: 'e-scope-3', parent_id: 'ep-b' }
+    )
+    expect(types).toContain('ADD_EDIT')
+  })
+
+  test('skips an edit of another production', async () => {
+    const types = await committedTypes(
+      { editId: 'e-scope-5', onlyInScope: true },
+      'p-live/all',
+      { id: 'e-scope-5', parent_id: 'ep-b', project_id: 'p-other' }
+    )
+    expect(types).not.toContain('ADD_EDIT')
+  })
+
+  test('still adds an out-of-scope edit loaded by id', async () => {
+    const types = await committedTypes('e-scope-4', 'p-live/ep-a', {
+      id: 'e-scope-4',
+      parent_id: 'ep-b'
+    })
+    expect(types).toContain('ADD_EDIT')
+  })
+})
+
+describe('Edits store, LOAD_EDITS_ERROR', () => {
+  // The pages decide from the recorded scope whether a reload is needed: a
+  // failed load must not leave its scope behind an empty dataset, or they
+  // never retry.
+  test('forgets the scope of the failed load', () => {
+    const state = { editsLoadingKey: 'p1/ep-a' }
+    editsStore.mutations.LOAD_EDITS_ERROR(state)
+    expect(state.editsLoadingKey).toBeNull()
+  })
+})
+
+describe('Edits store, LOAD_EDITS_START', () => {
+  // The list footer reads the totals: they belong to the dataset the
+  // mutation empties, not to the one being loaded.
+  test('forgets the totals of the emptied list', () => {
+    const state = {
+      displayedEditsTimeSpent: 12,
+      displayedEditsEstimation: 8,
+      selectedEdits: new Map()
+    }
+    editsStore.mutations.LOAD_EDITS_START(state, { loadingKey: 'p1/ep-a' })
+    expect(state.displayedEditsTimeSpent).toBe(0)
+    expect(state.displayedEditsEstimation).toBe(0)
+  })
+})
+
+describe('Edits store, CLEAR_EDITS', () => {
+  // A production switch discards the response of a load in flight without
+  // any mutation: the flag and the scope of that load must not survive the
+  // switch, or the next loadEdits waits on it forever.
+  test('forgets a load in flight with its dataset', () => {
+    const state = {
+      isEditsLoading: true,
+      isEditsLoadingError: false,
+      editsLoadingKey: 'p1/ep-a',
+      editValidationColumns: ['col'],
+      displayedEdits: [{ id: 'e1' }],
+      displayedEditsCount: 1,
+      displayedEditsLength: 1,
+      editSearchQueries: ['query'],
+      selectedEdits: new Map([['e1', true]])
+    }
+    editsStore.mutations.CLEAR_EDITS(state)
+    expect(state.isEditsLoading).toBe(false)
+    expect(state.editsLoadingKey).toBeNull()
+    expect(state.displayedEdits).toEqual([])
+    expect(state.displayedEditsLength).toBe(0)
+    expect(state.selectedEdits.size).toBe(0)
+  })
+
+  // The list footer reads the totals: they must go with the dataset, or the
+  // ones of the production left stay under an empty list.
+  test('forgets the totals of the emptied list', () => {
+    const state = {
+      displayedEditsTimeSpent: 12,
+      displayedEditsEstimation: 8,
+      selectedEdits: new Map()
+    }
+    editsStore.mutations.CLEAR_EDITS(state)
+    expect(state.displayedEditsTimeSpent).toBe(0)
+    expect(state.displayedEditsEstimation).toBe(0)
+  })
+})
+
+describe('Edits store, live insertion during a list load', () => {
+  afterEach(() => {
+    editsStore.cache.editsLoadingPromise = null
+    editsStore.cache.editMap.delete('e-flight-3')
+    vi.restoreAllMocks()
+  })
+
+  // The list load replaces the whole dataset: inserting before its response
+  // lands drops the edit, and no second event announces it again.
+  test('waits for the list in flight before inserting', async () => {
+    editsApi.getEdit = vi.fn(() =>
+      Promise.resolve({
+        id: 'e-flight-1',
+        parent_id: 'ep-a',
+        project_id: 'p-live',
+        tasks: []
+      })
+    )
+    let endList
+    const state = { isEditsLoading: true, editsLoadingKey: 'p-live/ep-a' }
+    editsStore.cache.editsLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.isEditsLoading = false
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = editsStore.actions.loadEdit(
+      {
+        commit,
+        state,
+        rootGetters: {
+          currentProduction: { id: 'p-live' },
+          currentEpisode: { id: 'ep-a' },
+          isTVShow: true,
+          personMap: new Map(),
+          taskMap: new Map(),
+          taskTypeMap: new Map()
+        }
+      },
+      { editId: 'e-flight-1', onlyInScope: true }
+    )
+    await Promise.resolve()
+    expect(commit.mock.calls.map(([type]) => type)).not.toContain('ADD_EDIT')
+
+    endList()
+    await loading
+    expect(commit.mock.calls.map(([type]) => type)).toContain('ADD_EDIT')
+  })
+
+  // The list response is younger than this fetch: it rebuilt the row from
+  // fresher data, and the payload parked behind it must not land on top.
+  test('keeps the row the list load rebuilt', async () => {
+    editsApi.getEdit = vi.fn(() =>
+      Promise.resolve({
+        id: 'e-flight-3',
+        parent_id: 'ep-a',
+        project_id: 'p-live',
+        name: 'from-socket',
+        tasks: []
+      })
+    )
+    let endList
+    const state = { isEditsLoading: true, editsLoadingKey: 'p-live/ep-a' }
+    editsStore.cache.editsLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.isEditsLoading = false
+        editsStore.cache.editMap.set('e-flight-3', {
+          id: 'e-flight-3',
+          name: 'from-list'
+        })
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = editsStore.actions.loadEdit(
+      {
+        commit,
+        state,
+        rootGetters: {
+          currentProduction: { id: 'p-live' },
+          currentEpisode: { id: 'ep-a' },
+          isTVShow: true,
+          personMap: new Map(),
+          taskMap: new Map(),
+          taskTypeMap: new Map()
+        }
+      },
+      { editId: 'e-flight-3', onlyInScope: true }
+    )
+    await Promise.resolve()
+    endList()
+    await loading
+
+    expect(commit.mock.calls).toEqual([])
+    expect(editsStore.cache.editMap.get('e-flight-3').name).toBe('from-list')
+  })
+
+  // An update of an edit the page displayed must not recreate it under the
+  // list of the episode switched to meanwhile: the handlers pass onlyInScope.
+  test('drops an updated edit once the list in flight replaced its episode', async () => {
+    editsApi.getEdit = vi.fn(() =>
+      Promise.resolve({
+        id: 'e-flight-2',
+        parent_id: 'ep-a',
+        project_id: 'p-live',
+        tasks: []
+      })
+    )
+    let endList
+    const state = { isEditsLoading: true, editsLoadingKey: 'p-live/ep-a' }
+    editsStore.cache.editsLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.isEditsLoading = false
+        state.editsLoadingKey = 'p-live/ep-b'
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = editsStore.actions.loadEdit(
+      {
+        commit,
+        state,
+        rootGetters: {
+          currentProduction: { id: 'p-live' },
+          currentEpisode: { id: 'ep-b' },
+          isTVShow: true,
+          personMap: new Map(),
+          taskMap: new Map(),
+          taskTypeMap: new Map()
+        }
+      },
+      { editId: 'e-flight-2', onlyInScope: true }
+    )
+    await Promise.resolve()
+    endList()
+    await loading
+
+    expect(commit.mock.calls.map(([type]) => type)).not.toContain('ADD_EDIT')
+  })
+})

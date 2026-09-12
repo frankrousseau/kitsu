@@ -12,6 +12,7 @@ import tasksStore from '@/store/modules/tasks'
 import taskStatusStore from '@/store/modules/taskstatus'
 import taskTypesStore from '@/store/modules/tasktypes'
 
+import { isEpisodeInLoadedScope } from '@/lib/episodes'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import { minutesToDays } from '@/lib/time'
 import { PAGE_SIZE } from '@/lib/pagination'
@@ -438,7 +439,16 @@ const actions = {
     // from another (an episode load legitimately holds assets cast in from
     // other episodes, and 'all' / 'main' are pseudo-episodes), so the store
     // records it for the pages that decide whether their cache is stale.
-    const loadingKey = `${production.id}/${all ? 'all' : (episode?.id ?? '')}`
+    // A load without tasks or shared assets (schedule) cannot stand in for
+    // the dataset the list pages display, nor can the production-wide one
+    // (breakdown, concepts), which fetches the shared assets of the whole
+    // instance where the Assets page under all fetches the ones the
+    // production uses: mark those scopes so the pages refetch instead of
+    // adopting them.
+    const isPartial = !withTasks || !withShared
+    const marker = isPartial ? '#partial' : all ? '#shared' : ''
+    const scope = all ? 'all' : (episode?.id ?? '')
+    const loadingKey = `${production.id}/${scope}${marker}`
 
     if (state.isAssetsLoading) {
       if (state.assetsLoadingKey === loadingKey) {
@@ -502,7 +512,11 @@ const actions = {
       })
       .catch(err => {
         console.error('an error occurred while loading assets', err)
-        commit(LOAD_ASSETS_ERROR)
+        // Same guard as the success path: a rejection for a production the
+        // user already left would forget the scope of the load running now.
+        if (production.id === rootGetters.currentProduction?.id) {
+          commit(LOAD_ASSETS_ERROR)
+        }
         return []
       })
     cache.assetsLoadingPromise = loadingPromise
@@ -513,11 +527,14 @@ const actions = {
     return assetsApi.getAsset(assetId)
   },
 
-  /*
-   * Function used mainly to reload asset information when a remote change
-   * occurs.
-   */
-  loadAsset({ commit, state, rootGetters }, assetId) {
+  // Reloads an asset after a remote change. A socket event passes
+  // { assetId, onlyInScope: true }: a freshly created asset is cast nowhere
+  // yet, so its episode alone says whether the loaded dataset should hold
+  // it. The single-asset payload carries `episode_id` (empty for the main
+  // pack) and no `source_id`. A load by id (detail page) always adds.
+  loadAsset({ commit, state, rootGetters }, payload) {
+    const { assetId, onlyInScope = false } =
+      typeof payload === 'string' ? { assetId: payload } : payload
     const asset = cache.assetMap.get(assetId)
     if (asset?.lock) return
 
@@ -530,10 +547,30 @@ const actions = {
 
     return assetsApi
       .getAsset(assetId)
-      .then(asset => {
+      .then(async asset => {
+        // Displayed already: refresh the row now. Waiting for a list load
+        // would apply this payload after a younger response and undo it.
         if (cache.assetMap.get(asset.id)) {
           commit(UPDATE_ASSET, asset)
-        } else {
+          return
+        }
+        // A list load in flight replaces the whole dataset: inserting now
+        // would be thrown away by its response, and no second event
+        // announces this asset again. Decide once that load settled.
+        if (state.isAssetsLoading) {
+          await (cache.assetsLoadingPromise || Promise.resolve())
+          // Its response was built after this fetch: the row it holds is
+          // the fresher one, and the asset it dropped stays dropped.
+          if (cache.assetMap.get(asset.id)) return
+        }
+        if (
+          !onlyInScope ||
+          isEpisodeInLoadedScope(
+            state.assetsLoadingKey,
+            asset.episode_id || asset.source_id || null,
+            asset.project_id
+          )
+        ) {
           asset.tasks.forEach(task => {
             commit(NEW_TASK_END, { task })
           })
@@ -981,6 +1018,7 @@ const mutations = {
   [LOAD_ASSETS_ERROR](state) {
     state.isAssetsLoading = false
     state.isAssetsLoadingError = true
+    state.assetsLoadingKey = null
   },
 
   [LOAD_ASSETS_END](
@@ -1101,7 +1139,7 @@ const mutations = {
     asset.tasks = sortTasks(asset.tasks, taskTypeMap)
     asset.validations = new Map()
     asset.production_id = asset.project_id
-    asset.episode_id = asset.source_id
+    asset.episode_id = asset.source_id || asset.episode_id || null
     helpers.populateAndRegisterAsset(
       new Map(),
       taskMap,

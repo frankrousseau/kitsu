@@ -102,6 +102,15 @@ export const sortProductions = productions => {
   })
 }
 
+// A task populated before its entity carried a name (a freshly created
+// sequence, a raw task from the creation API) has neither entity name.
+const getEntityName = task => task.full_entity_name || task.entity_name || ''
+
+const compareByEntityName = (a, b) =>
+  getEntityName(a).localeCompare(getEntityName(b), undefined, {
+    numeric: true
+  })
+
 export const sortTaskNames = (tasks, taskTypeMap) => {
   return tasks.sort(
     firstBy((a, b) => {
@@ -114,18 +123,10 @@ export const sortTaskNames = (tasks, taskTypeMap) => {
           numeric: true
         }
       )
-    }).thenBy((a, b) => {
-      if (a.full_entity_name) {
-        return a.full_entity_name.localeCompare(b.full_entity_name, undefined, {
-          numeric: true
-        })
-      }
-      return a.entity_name.localeCompare(b.entity_name, undefined, {
-        numeric: true
-      })
-    })
+    }).thenBy(compareByEntityName)
   )
 }
+
 export const sortTasks = (tasks, taskTypeMap) => {
   return tasks.sort(
     firstBy('priority', -1)
@@ -148,18 +149,7 @@ export const sortTasks = (tasks, taskTypeMap) => {
           }
         )
       })
-      .thenBy((a, b) => {
-        if (a.full_entity_name) {
-          return a.full_entity_name.localeCompare(
-            b.full_entity_name,
-            undefined,
-            { numeric: true }
-          )
-        }
-        return a.entity_name.localeCompare(b.entity_name, undefined, {
-          numeric: true
-        })
-      })
+      .thenBy(compareByEntityName)
   )
 }
 

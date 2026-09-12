@@ -206,7 +206,6 @@ export default {
       'concepts',
       'currentProduction',
       'isDarkTheme',
-      'isTVShow',
       'personMap',
       'selectedConcepts',
       'taskStatusMap'
@@ -316,8 +315,7 @@ export default {
       'clearSelectedTasks',
       'loadAssets',
       'loadConcepts',
-      'newConcepts',
-      'setCurrentEpisode'
+      'newConcepts'
     ]),
 
     setConceptSearch: searchQuery => Promise.resolve(),
@@ -357,9 +355,6 @@ export default {
     async refreshConcepts() {
       this.loading.loadingConcepts = true
       try {
-        if (this.isTVShow) {
-          this.setCurrentEpisode('all') // mandatory to load all assets of a TV show
-        }
         await this.loadAssets({ all: true })
         await this.loadConcepts()
       } catch (err) {

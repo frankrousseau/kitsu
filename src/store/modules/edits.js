@@ -10,6 +10,7 @@ import tasksStore from '@/store/modules/tasks'
 import taskTypesStore from '@/store/modules/tasktypes'
 import taskStatusStore from '@/store/modules/taskstatus'
 
+import { isEpisodeInLoadedScope } from '@/lib/episodes'
 import { PAGE_SIZE } from '@/lib/pagination'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import {
@@ -62,6 +63,7 @@ import {
   LOCK_EDIT,
   UNLOCK_EDIT,
   RESET_ALL,
+  CLEAR_EDITS,
   CLEAR_SELECTED_EDITS,
   SET_EDIT_SELECTION,
   CHANGE_EDIT_SORT,
@@ -387,18 +389,23 @@ const actions = {
       })
       .catch(err => {
         console.error('an error occurred while loading edits', err)
-        commit(LOAD_EDITS_ERROR)
+        // Same guard as the success path: a rejection for a production the
+        // user already left would forget the scope of the load running now.
+        if (production.id === rootGetters.currentProduction?.id) {
+          commit(LOAD_EDITS_ERROR)
+        }
         return []
       })
     cache.editsLoadingPromise = loadingPromise
     return loadingPromise
   },
 
-  /*
-   * Function useds mainly to reload edit data after an update or creation
-   * event. If the edit was updated a few times ago, it is not reloaded.
-   */
-  loadEdit({ commit, state, rootGetters }, editId) {
+  // Reloads an edit after a remote change, unless it is locked by a recent
+  // local update. A socket event passes { editId, onlyInScope: true } so an
+  // edit created in another episode stays out of the loaded dataset.
+  loadEdit({ commit, state, rootGetters }, payload) {
+    const { editId, onlyInScope = false } =
+      typeof payload === 'string' ? { editId: payload } : payload
     const edit = cache.editMap.get(editId)
     if (edit?.lock) return
 
@@ -408,10 +415,30 @@ const actions = {
     const taskTypeMap = rootGetters.taskTypeMap
     return editsApi
       .getEdit(editId)
-      .then(edit => {
+      .then(async edit => {
+        // Displayed already: refresh the row now. Waiting for a list load
+        // would apply this payload after a younger response and undo it.
         if (cache.editMap.get(edit.id)) {
           commit(UPDATE_EDIT, edit)
-        } else {
+          return
+        }
+        // A list load in flight replaces the whole dataset: inserting now
+        // would be thrown away by its response, and no second event
+        // announces this edit again. Decide once that load settled.
+        if (state.isEditsLoading) {
+          await (cache.editsLoadingPromise || Promise.resolve())
+          // Its response was built after this fetch: the row it holds is
+          // the fresher one, and the edit it dropped stays dropped.
+          if (cache.editMap.get(edit.id)) return
+        }
+        if (
+          !onlyInScope ||
+          isEpisodeInLoadedScope(
+            state.editsLoadingKey,
+            edit.parent_id,
+            edit.project_id
+          )
+        ) {
           commit(ADD_EDIT, {
             edit,
             taskTypeMap,
@@ -713,7 +740,8 @@ const mutations = {
     state.displayedEdits = []
     state.displayedEditsCount = 0
     state.displayedEditsLength = 0
-    state.displayedEstimation = 0
+    state.displayedEditsTimeSpent = 0
+    state.displayedEditsEstimation = 0
     state.editSearchQueries = []
 
     state.selectedEdits = new Map()
@@ -722,6 +750,32 @@ const mutations = {
   [LOAD_EDITS_ERROR](state) {
     state.isEditsLoading = false
     state.isEditsLoadingError = true
+    state.editsLoadingKey = null
+  },
+
+  // A production switch discards the response of a load in flight without
+  // any mutation: forget that load with the dataset, or the next loadEdits
+  // waits on it forever.
+  [CLEAR_EDITS](state) {
+    cache.edits = []
+    cache.result = []
+    cache.editIndex = {}
+    cache.editMap.clear()
+    cache.editsLoadingPromise = null
+    state.editValidationColumns = []
+
+    state.isEditsLoading = false
+    state.isEditsLoadingError = false
+    state.editsLoadingKey = null
+
+    state.displayedEdits = []
+    state.displayedEditsCount = 0
+    state.displayedEditsLength = 0
+    state.displayedEditsTimeSpent = 0
+    state.displayedEditsEstimation = 0
+    state.editSearchQueries = []
+
+    state.selectedEdits = new Map()
   },
 
   [LOAD_EDITS_END](

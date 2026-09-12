@@ -2,6 +2,7 @@ import peopleApi from '@/store/api/people'
 import shotsApi from '@/store/api/shots'
 import shotStore from '@/store/modules/shots'
 
+import { isEpisodeInLoadedScope } from '@/lib/episodes'
 import { getTaskTypePriorityOfProd } from '@/lib/productions'
 import { buildSequenceIndex, indexSearch } from '@/lib/indexing'
 import {
@@ -38,7 +39,6 @@ import {
   REMOVE_SEQUENCE,
   REMOVE_SEQUENCE_SEARCH,
   REMOVE_SELECTED_TASK,
-  RESET_PRODUCTION_PATH,
   SAVE_SEQUENCE_SEARCH_END,
   REMOVE_SEQUENCE_SEARCH_END,
   SET_CURRENT_EPISODE,
@@ -107,6 +107,27 @@ const helpers = {
     return result
   },
 
+  getSequenceName(sequence) {
+    if (sequence.episode_name) {
+      return `${sequence.episode_name} / ${sequence.name}`
+    }
+    return sequence.name
+  },
+
+  // Sequences reach the cache from several loads (with tasks, plain list,
+  // single fetch, creation); resolve the episode the same way for all so
+  // the derived names never depend on which one ran.
+  setEpisodeInfo(sequence, episodeMap) {
+    const episode = episodeMap?.get(sequence.parent_id || sequence.episode_id)
+    if (episode) {
+      Object.assign(sequence, {
+        episode_id: episode.id,
+        episode_name: episode.name
+      })
+    }
+    sequence.full_name = helpers.getSequenceName(sequence)
+  },
+
   populateTask(production, task, sequence, taskTypeMap, taskStatusMap) {
     task.name = getTaskTypePriorityOfProd(
       taskTypeMap.get(task.task_type_id),
@@ -119,7 +140,7 @@ const helpers = {
     Object.assign(task, {
       project_id: sequence.production_id,
       sequence_id: sequence.id,
-      entity_name: sequence.full_name,
+      entity_name: helpers.getSequenceName(sequence),
       entity_type_name: 'Sequence',
       entity: {
         id: sequence.id,
@@ -172,6 +193,9 @@ const helpers = {
 }
 
 const cache = {
+  // Settled or not, the last list load: the single-sequence load waits for
+  // it before deciding, the response replaces the whole dataset.
+  sequencesLoadingPromise: null,
   sequences: [],
   result: [],
   sequenceIndex: {},
@@ -255,10 +279,8 @@ const getters = {
 }
 
 const actions = {
-  setCurrentSequence({ commit, rootGetters }, sequenceId) {
+  setCurrentSequence({ commit }, sequenceId) {
     commit(SET_CURRENT_SEQUENCE, sequenceId)
-    const productionId = rootGetters.currentProduction.id
-    commit(RESET_PRODUCTION_PATH, { productionId, sequenceId })
   },
 
   changeSequenceSort({ commit, rootGetters }, sortInfo) {
@@ -377,18 +399,27 @@ const actions = {
     const episode =
       isTVShow && currentEpisode?.id !== 'all' ? currentEpisode : null
     const episodeMap = rootGetters.episodeMap
-    return shotsApi.getSequences(production, episode).then(sequences => {
-      if (production.id !== rootGetters.currentProduction?.id) {
+    // Recorded with a marker: the pages that need the tasks refetch, while
+    // the live insertion still knows which episode this dataset holds.
+    const scope = isTVShow ? (currentEpisode?.id ?? '') : ''
+    const loadingKey = `${production.id}/${scope}#partial`
+    const loadingPromise = shotsApi
+      .getSequences(production, episode)
+      .then(sequences => {
+        if (production.id !== rootGetters.currentProduction?.id) {
+          return sequences
+        }
+        commit(LOAD_SEQUENCES_END, {
+          sequences,
+          episodeMap,
+          production,
+          userFilters,
+          loadingKey
+        })
         return sequences
-      }
-      commit(LOAD_SEQUENCES_END, {
-        sequences,
-        episodeMap,
-        production,
-        userFilters
       })
-      return sequences
-    })
+    cache.sequencesLoadingPromise = loadingPromise.catch(() => [])
+    return loadingPromise
   },
 
   loadSequencesWithTasks({ commit, state, rootGetters }) {
@@ -435,7 +466,7 @@ const actions = {
     // decide whether their cache is stale. 'all' is a pseudo-episode: it must
     // be recorded as itself even though the request is not filtered by it.
     const loadingKey = `${production.id}/${isTVShow ? (episode?.id ?? '') : ''}`
-    return shotsApi
+    const loadingPromise = shotsApi
       .getSequencesWithTasks(production, isAllEpisodes ? null : episode)
       .then(sequences => {
         if (production.id !== rootGetters.currentProduction?.id) {
@@ -462,6 +493,8 @@ const actions = {
         }
         return sequences
       })
+    cache.sequencesLoadingPromise = loadingPromise.catch(() => [])
+    return loadingPromise
   },
 
   clearSequences({ commit }) {
@@ -511,17 +544,41 @@ const actions = {
     })
   },
 
-  loadSequence({ commit, state, rootGetters }, sequenceId) {
+  // A socket event passes { sequenceId, onlyInScope: true } so a sequence
+  // created in another episode stays out of the loaded dataset. A load by id
+  // (detail page) always adds.
+  loadSequence({ commit, state, rootGetters }, payload) {
+    const { sequenceId, onlyInScope = false } =
+      typeof payload === 'string' ? { sequenceId: payload } : payload
     const sequence = cache.sequenceMap.get(sequenceId)
     if (sequence?.lock) return
 
     const episodeMap = rootGetters.episodeMap
     return shotsApi
       .getSequence(sequenceId)
-      .then(sequence => {
+      .then(async sequence => {
+        // Displayed already: refresh the row now. Waiting for a list load
+        // would apply this payload after a younger response and undo it.
         if (cache.sequenceMap.get(sequence.id)) {
           commit(UPDATE_SEQUENCE, sequence)
-        } else {
+          return sequence
+        }
+        // A list load in flight replaces the whole dataset and the recorded
+        // scope still describes the previous one: decide once it settled.
+        if (cache.sequencesLoadingPromise) {
+          await cache.sequencesLoadingPromise
+          // Its response was built after this fetch: the row it holds is
+          // the fresher one, and the sequence it dropped stays dropped.
+          if (cache.sequenceMap.get(sequence.id)) return sequence
+        }
+        if (
+          !onlyInScope ||
+          isEpisodeInLoadedScope(
+            state.sequencesLoadingKey,
+            sequence.parent_id,
+            sequence.project_id
+          )
+        ) {
           commit(ADD_SEQUENCE, { sequence, episodeMap })
         }
         return sequence
@@ -631,6 +688,7 @@ const mutations = {
     cache.sequences = []
     state.currentSequence = null
     state.displayedSequences = []
+    state.sequencesLoadingKey = null
     cache.sequenceMap.clear()
     state.selectedSequences = new Map()
   },
@@ -689,14 +747,9 @@ const mutations = {
       const validations = new Map()
       let timeSpent = 0
       let estimation = 0
-      const episode = episodeMap.get(sequence.episode_id)
       sequence.project_name = production.name
       sequence.production_id = production.id
-      if (episode) {
-        sequence.full_name = `${episode.name} / ${sequence.name}`
-      } else {
-        sequence.full_name = sequence.name
-      }
+      helpers.setEpisodeInfo(sequence, episodeMap)
       sequence.tasks.forEach(task => {
         helpers.populateTask(
           production,
@@ -826,12 +879,13 @@ const mutations = {
     )
   },
 
-  [NEW_SEQUENCE_END](state, { sequence }) {
+  [NEW_SEQUENCE_END](state, { sequence, episodeMap }) {
     sequence.production_id = sequence.project_id
     sequence.preview_file_id = ''
     sequence.tasks = []
     sequence.validations = new Map()
     sequence.data = {}
+    helpers.setEpisodeInfo(sequence, episodeMap)
 
     state.sequenceSelectionGrid = buildSelectionGrid()
 
@@ -892,7 +946,7 @@ const mutations = {
 
   [LOAD_SEQUENCES_END](
     state,
-    { sequences, episodeMap, production, userFilters }
+    { sequences, episodeMap, production, userFilters, loadingKey }
   ) {
     cache.sequenceMap.clear()
     if (
@@ -907,20 +961,14 @@ const mutations = {
     if (!sequences) sequences = []
     sequences.forEach(sequence => {
       cache.sequenceMap.set(sequence.id, sequence)
-      if (sequence.parent_id) {
-        const episode = episodeMap.get(sequence.parent_id)
-        if (episode) {
-          Object.assign(sequence, {
-            episode_id: episode.id,
-            episode_name: episode.name
-          })
-        }
-      }
+      helpers.setEpisodeInfo(sequence, episodeMap)
     })
     cache.sequences = sortByName(sequences)
     state.sequenceIndex = buildSequenceIndex(cache.sequences)
     state.displayedSequences = cache.sequences
     state.displayedSequencesLength = cache.sequences.length
+    // This task-less dataset replaces the one the recorded scope describes.
+    state.sequencesLoadingKey = loadingKey ?? null
   },
 
   [SET_SEQUENCE_STATS](state, { sequenceStats, taskTypeMap, production }) {
@@ -1058,23 +1106,18 @@ const mutations = {
   },
 
   [ADD_SEQUENCE](state, { sequence, episodeMap }) {
-    cache.sequences.push(sequence)
-    const sortedSequences = sortSequences(cache.sequences)
+    // Each list copied from itself: a list load leaves them as the same
+    // array, and pushing into each in place inserted the sequence twice.
+    // The episode is resolved first, the sort reads its name.
+    helpers.setEpisodeInfo(sequence, episodeMap)
     cache.sequenceMap.set(sequence.id, sequence)
-    if (sequence.parent_id) {
-      const episode = episodeMap.get(sequence.parent_id)
-      if (episode) {
-        Object.assign(sequence, {
-          episode_id: episode.id,
-          episode_name: episode.name
-        })
-      }
-    }
-    cache.sequences = sortedSequences
-    state.displayedSequences.push(sequence)
-    state.displayedSequences = sortSequences(state.displayedSequences)
-    state.sequenceIndex = buildSequenceIndex(sortedSequences)
-    state.displayedSequencesLength = sortedSequences.length
+    cache.sequences = sortSequences([...cache.sequences, sequence])
+    state.displayedSequences = sortSequences([
+      ...state.displayedSequences,
+      sequence
+    ])
+    state.sequenceIndex = buildSequenceIndex(cache.sequences)
+    state.displayedSequencesLength = state.displayedSequences.length
   },
 
   [UPDATE_SEQUENCE](state, sequence) {

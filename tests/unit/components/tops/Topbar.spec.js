@@ -423,9 +423,9 @@ describe('Topbar.vue', () => {
         { id: 'episode-1', status: 'running' }
       ])
       const routerSpy = vi
-        .spyOn(shotsWrapper.vm.$router, 'push')
+        .spyOn(shotsWrapper.vm.$router, 'replace')
         .mockResolvedValue({})
-      await shotsWrapper.vm.configureProduction('production-1', 'all')
+      await shotsWrapper.vm.configureProduction('production-1')
       await flushPromises()
       expect(shotsWrapper.vm.currentEpisodeId).toBe('all')
       expect(routerSpy).toHaveBeenCalledWith({
@@ -435,14 +435,404 @@ describe('Topbar.vue', () => {
       shotsWrapper.unmount()
     })
 
+    // A ghost id on a direct link resolves like an in-session one: 'all'
+    // wherever the section offers it, and the query survives.
+    it('resolves an unknown episode to all on a direct link', async () => {
+      const shotsWrapper = mountForShots('ghost', [
+        { id: 'episode-1', status: 'running' }
+      ])
+      const routerSpy = vi
+        .spyOn(shotsWrapper.vm.$router, 'replace')
+        .mockResolvedValue({})
+      await shotsWrapper.vm.configureProduction('production-1')
+      await flushPromises()
+      expect(routerSpy).toHaveBeenCalledWith({
+        params: { production_id: 'production-1', episode_id: 'all' },
+        query: {}
+      })
+      shotsWrapper.unmount()
+    })
+
+    // A production switch carries the previous production's episode in the
+    // URL: that is no stale link, the new production opens on its running
+    // episode as before.
+    it('opens the running episode after a production switch', async () => {
+      const shotsWrapper = mountForShots('ghost', [
+        { id: 'episode-1', status: 'running' }
+      ])
+      shotsWrapper.vm.hasConfiguredProduction = true
+      const routerSpy = vi
+        .spyOn(shotsWrapper.vm.$router, 'replace')
+        .mockResolvedValue({})
+      await shotsWrapper.vm.configureProduction('production-1')
+      await flushPromises()
+      expect(routerSpy).toHaveBeenCalledWith({
+        params: { production_id: 'production-1', episode_id: 'episode-1' },
+        query: {}
+      })
+      shotsWrapper.unmount()
+    })
+
     it('still resolves the main pack to the running episode on a direct link', async () => {
       const shotsWrapper = mountForShots('main', [
         { id: 'episode-1', status: 'running' }
       ])
-      await shotsWrapper.vm.configureProduction('production-1', 'main')
+      await shotsWrapper.vm.configureProduction('production-1')
       await flushPromises()
       expect(shotsWrapper.vm.currentEpisodeId).toBe('episode-1')
       shotsWrapper.unmount()
+    })
+  })
+
+  describe('route episode validation', () => {
+    // A stale link (deleted episode, URL copied from another production)
+    // used to reach the store as is: SET_CURRENT_EPISODE could not resolve
+    // the id, the combobox went blank and a mounted page kept its list.
+    const defaultEpisodes = () => [
+      { id: 'episode-1', status: 'complete' },
+      { id: 'episode-2', status: 'running' }
+    ]
+    const mountFor = (
+      section,
+      episodeId,
+      {
+        episodes = defaultEpisodes(),
+        currentEpisode = null,
+        productionStyle = undefined,
+        holdEpisodes = false
+      } = {}
+    ) => {
+      const production = {
+        id: 'production-1',
+        production_type: 'tvshow',
+        production_style: productionStyle
+      }
+      const { store: sectionStore, actions } = makeStore({
+        currentEpisode: () => currentEpisode,
+        currentProduction: () => production,
+        // The same array every time: tests prune it to simulate a deletion.
+        episodes: () => episodes,
+        isTVShow: () => true,
+        productionEditTaskTypes: () => [],
+        productionMap: () => new Map([[production.id, production]])
+      })
+      actions.loadEpisodes.mockResolvedValue(episodes)
+      let releaseEpisodes = () => {}
+      if (holdEpisodes) {
+        actions.loadEpisodes.mockReturnValueOnce(
+          new Promise(resolve => {
+            releaseEpisodes = () => resolve(episodes)
+          })
+        )
+      }
+      const router = makeRouter([
+        {
+          path: `/productions/:production_id/episodes/:episode_id/${section}`,
+          name: `episode-${section}`,
+          component: { template: '<div />' }
+        }
+      ])
+      const replaceSpy = vi.spyOn(router, 'replace').mockResolvedValue({})
+      // The component reads this object, not the router's route: tests move
+      // it to simulate a navigation during a fetch.
+      const route = {
+        path: `/productions/production-1/episodes/${episodeId}/${section}`,
+        name: `episode-${section}`,
+        params: { production_id: 'production-1', episode_id: episodeId },
+        query: { search: 'hero' },
+        fullPath: '/'
+      }
+      const wrapper = shallowMount(Topbar, {
+        global: {
+          plugins: [sectionStore, router],
+          mocks: { $t: key => key, $route: route },
+          stubs: {
+            TopbarProductionList: true,
+            TopbarSectionList: true,
+            TopbarEpisodeList: true,
+            GlobalSearchField: true,
+            NotificationBell: true,
+            PeopleAvatar: true,
+            ShortcutModal: true
+          }
+        }
+      })
+      return {
+        wrapper,
+        actions,
+        replaceSpy,
+        route,
+        episodes,
+        releaseEpisodes: () => releaseEpisodes()
+      }
+    }
+
+    // A production with fewer than two episodes refetches the list on every
+    // episode change: that fetch may outlive a production switch too.
+    describe('episode refetch outliving a production switch', () => {
+      const singleEpisode = () => [{ id: 'episode-1', status: 'running' }]
+
+      it('resolves the route episode once the refetch is in', async () => {
+        const { wrapper, actions, releaseEpisodes } = mountFor(
+          'sequences',
+          'episode-1',
+          { episodes: singleEpisode(), holdEpisodes: true }
+        )
+        expect(actions.setCurrentEpisode).not.toHaveBeenCalled()
+
+        releaseEpisodes()
+        await flushPromises()
+
+        expect(actions.setCurrentEpisode).toHaveBeenCalledWith(
+          expect.anything(),
+          'episode-1'
+        )
+        wrapper.unmount()
+      })
+
+      it('gives up when the production changed during the refetch', async () => {
+        const { wrapper, actions, replaceSpy, route, releaseEpisodes } =
+          mountFor('sequences', 'episode-1', {
+            episodes: singleEpisode(),
+            holdEpisodes: true
+          })
+
+        route.params.production_id = 'production-2'
+        releaseEpisodes()
+        await flushPromises()
+
+        expect(actions.setCurrentEpisode).not.toHaveBeenCalled()
+        expect(replaceSpy).not.toHaveBeenCalled()
+        wrapper.unmount()
+      })
+    })
+
+    // A direct link keeps a pseudo-episode wherever the selector offers it.
+    describe('pseudo-episodes on a direct link', () => {
+      // The last navigation is the one the user lands on: a coercion made on
+      // the route of before the push would silently move the episode again.
+      const pushedEpisodeId = async (section, episodeId, options) => {
+        const { wrapper, replaceSpy } = mountFor(section, episodeId, options)
+        // The mount itself may coerce through replace: only the resolution
+        // is under test here.
+        replaceSpy.mockClear()
+        const pushSpy = vi
+          .spyOn(wrapper.vm.$router, 'push')
+          .mockResolvedValue({})
+        await wrapper.vm.configureProduction('production-1')
+        await flushPromises()
+        wrapper.unmount()
+        expect(replaceSpy).toHaveBeenCalledTimes(1)
+        expect(pushSpy).not.toHaveBeenCalled()
+        return replaceSpy.mock.calls.at(-1)[0].params.episode_id
+      }
+
+      it.each([
+        ['edits', 'all'],
+        ['breakdown', 'all'],
+        ['breakdown', 'main'],
+        ['asset-types', 'main'],
+        ['shots', 'all']
+      ])('keeps %s on %s', async (section, episodeId) => {
+        expect(await pushedEpisodeId(section, episodeId)).toBe(episodeId)
+      })
+
+      it.each([
+        ['edits', 'main'],
+        ['shots', 'main'],
+        ['sequences', 'all']
+      ])(
+        'opens the running episode where %s has no %s',
+        async (section, episodeId) => {
+          expect(await pushedEpisodeId(section, episodeId)).toBe('episode-2')
+        }
+      )
+
+      // A video-game production has no main pack, whatever the section.
+      it('opens the running episode of a video-game production on main', async () => {
+        const episodeId = await pushedEpisodeId('breakdown', 'main', {
+          productionStyle: 'video-game'
+        })
+        expect(episodeId).toBe('episode-2')
+      })
+
+      it('opens the assets of a video-game production under all on main', async () => {
+        const episodeId = await pushedEpisodeId('assets', 'main', {
+          productionStyle: 'video-game'
+        })
+        expect(episodeId).toBe('all')
+      })
+    })
+
+    // The section names of the topbar differ from the route names for the
+    // asset types page: the coerced route must use the router's name.
+    it('coerces the asset types page through its route name', () => {
+      const { wrapper, replaceSpy } = mountFor('asset-types', 'main', {
+        productionStyle: 'video-game'
+      })
+      replaceSpy.mockClear()
+      wrapper.vm.updateCombosFromRoute()
+      expect(replaceSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'episode-production-asset-types' })
+      )
+      wrapper.unmount()
+    })
+
+    // A plugin page is named after its plugin in the topbar sections and
+    // after the plugin route in the router: coercing it under the plugin
+    // id builds a route name the router does not know, and throws.
+    it('coerces a plugin page through its route name', () => {
+      const { wrapper, replaceSpy, route } = mountFor('production-plugin', 'main', {
+        productionStyle: 'video-game'
+      })
+      route.params.plugin_id = 'plugin-1'
+      replaceSpy.mockClear()
+      wrapper.vm.updateCombosFromRoute()
+      expect(replaceSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'episode-production-plugin',
+          params: expect.objectContaining({ plugin_id: 'plugin-1' })
+        })
+      )
+      wrapper.unmount()
+    })
+
+    // The coerced URL must not stay in the history: the back button would
+    // land on it and be coerced again, trapping the user on the page.
+    it('coerces the main pack to the running episode where the section has no main pack', () => {
+      const { wrapper, replaceSpy } = mountFor('edits', 'main')
+      const pushSpy = vi.spyOn(wrapper.vm.$router, 'push').mockResolvedValue({})
+      wrapper.vm.updateCombosFromRoute()
+      expect(wrapper.vm.currentEpisodeId).toBe('episode-2')
+      expect(replaceSpy).toHaveBeenCalled()
+      expect(pushSpy).not.toHaveBeenCalled()
+      wrapper.unmount()
+    })
+
+    // A live deletion of the displayed episode leaves the route, the store
+    // and the selector on an id the production no longer has.
+    describe('displayed episode deleted live', () => {
+      // The watcher runs on the instance, whose $route is the router's one,
+      // not the mock: the router must hold the route.
+      const mountOnRoute = async currentEpisode => {
+        const mounted = mountFor('shots', 'episode-1', { currentEpisode })
+        await mounted.wrapper.vm.$router.push({
+          path: '/productions/production-1/episodes/episode-1/shots',
+          query: { search: 'hero' }
+        })
+        return mounted
+      }
+
+      it('redirects once the episode leaves the list', async () => {
+        const { wrapper, replaceSpy, episodes } = await mountOnRoute({
+          id: 'episode-1'
+        })
+        expect(replaceSpy).not.toHaveBeenCalled()
+
+        episodes.splice(0, 1)
+        wrapper.vm.$options.watch.episodes.call(wrapper.vm)
+
+        expect(replaceSpy).toHaveBeenCalledWith({
+          name: 'episode-shots',
+          params: { production_id: 'production-1', episode_id: 'all' },
+          query: { search: 'hero' }
+        })
+        wrapper.unmount()
+      })
+
+      // The list also changes on a production switch, while the route still
+      // carries the episode of the production left: the store resolves
+      // another episode then, and configureProduction moves the route.
+      it('leaves a list change alone while the store resolved another episode', async () => {
+        const { wrapper, replaceSpy, episodes } = await mountOnRoute({
+          id: 'episode-2'
+        })
+
+        episodes.splice(0, 1)
+        wrapper.vm.$options.watch.episodes.call(wrapper.vm)
+
+        expect(replaceSpy).not.toHaveBeenCalled()
+        wrapper.unmount()
+      })
+    })
+
+    it('commits a route episode the production knows', () => {
+      const { wrapper, actions, replaceSpy } = mountFor('shots', 'episode-1')
+      expect(actions.setCurrentEpisode).toHaveBeenCalledWith(
+        expect.anything(),
+        'episode-1'
+      )
+      expect(replaceSpy).not.toHaveBeenCalled()
+      wrapper.unmount()
+    })
+
+    it('redirects to the all pseudo-episode where the section offers it', () => {
+      const { wrapper, actions, replaceSpy } = mountFor('shots', 'ghost')
+      expect(actions.setCurrentEpisode).not.toHaveBeenCalled()
+      expect(replaceSpy).toHaveBeenCalledWith({
+        name: 'episode-shots',
+        params: { production_id: 'production-1', episode_id: 'all' },
+        query: { search: 'hero' }
+      })
+      wrapper.unmount()
+    })
+
+    it('resolves an unknown episode to the running one on a direct link where the section has no all', async () => {
+      const { wrapper, replaceSpy } = mountFor('sequences', 'ghost')
+      replaceSpy.mockClear()
+      await wrapper.vm.configureProduction('production-1')
+      await flushPromises()
+      expect(replaceSpy).toHaveBeenCalledWith({
+        params: { production_id: 'production-1', episode_id: 'episode-2' },
+        query: { search: 'hero' }
+      })
+      wrapper.unmount()
+    })
+
+    // The episodes fetch may outlive a navigation: the route at response
+    // time decides, and a production change since gives up the push.
+    it('resolves the episode from the route at response time', async () => {
+      const { wrapper, route, replaceSpy } = mountFor('sequences', 'ghost')
+      replaceSpy.mockClear()
+      wrapper.vm.configureProduction('production-1')
+      route.params.episode_id = 'episode-1'
+      await flushPromises()
+      expect(replaceSpy).toHaveBeenCalledWith({
+        params: { production_id: 'production-1', episode_id: 'episode-1' },
+        query: { search: 'hero' }
+      })
+      wrapper.unmount()
+    })
+
+    it('gives up when the production changed during the episodes fetch', async () => {
+      const { wrapper, route, replaceSpy } = mountFor('sequences', 'ghost')
+      replaceSpy.mockClear()
+      wrapper.vm.configureProduction('production-1')
+      route.params.production_id = 'production-2'
+      await flushPromises()
+      expect(replaceSpy).not.toHaveBeenCalled()
+      wrapper.unmount()
+    })
+
+    it('redirects to the running episode where the section has no all', () => {
+      const { wrapper, replaceSpy } = mountFor('sequences', 'ghost')
+      expect(replaceSpy).toHaveBeenCalledWith({
+        name: 'episode-sequences',
+        params: { production_id: 'production-1', episode_id: 'episode-2' },
+        query: { search: 'hero' }
+      })
+      wrapper.unmount()
+    })
+
+    it('redirects the assets page to the all pseudo-episode', () => {
+      const { wrapper, actions, replaceSpy } = mountFor('assets', 'ghost')
+      expect(actions.setCurrentEpisode).not.toHaveBeenCalled()
+      expect(replaceSpy).toHaveBeenCalledWith({
+        name: 'episode-assets',
+        params: { production_id: 'production-1', episode_id: 'all' },
+        query: { search: 'hero' }
+      })
+      wrapper.unmount()
     })
   })
 

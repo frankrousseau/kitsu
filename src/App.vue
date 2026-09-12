@@ -26,6 +26,7 @@ import { useStore } from 'vuex'
 
 import auth from '@/lib/auth'
 import crisp from '@/lib/crisp'
+import { isNewShotInLoadedScope } from '@/lib/episodes'
 import i18n from '@/lib/i18n'
 import localPreferences from '@/lib/preferences'
 import sentry from '@/lib/sentry'
@@ -62,7 +63,6 @@ const shotMap = shotsStore.cache.shotMap
 // --------------------------------------------------------------------------
 
 const assetTypeMap = computed(() => store.getters.assetTypeMap)
-const currentEpisode = computed(() => store.getters.currentEpisode)
 const currentProduction = computed(() => store.getters.currentProduction)
 const departmentMap = computed(() => store.getters.departmentMap)
 const isCurrentUserAdmin = computed(() => store.getters.isCurrentUserAdmin)
@@ -71,11 +71,11 @@ const isDataLoading = computed(() => store.getters.isDataLoading)
 const isSavingCommentPreview = computed(
   () => store.getters.isSavingCommentPreview
 )
-const isTVShow = computed(() => store.getters.isTVShow)
 const mainConfig = computed(() => store.getters.mainConfig)
 const personMap = computed(() => store.getters.personMap)
 const previewFileIdToShow = computed(() => store.getters.previewFileIdToShow)
 const productionMap = computed(() => store.getters.productionMap)
+const shotsLoadingKey = computed(() => store.getters.shotsLoadingKey)
 const taskComments = computed(() => store.getters.taskComments)
 const taskMap = computed(() => store.getters.taskMap)
 const taskStatusMap = computed(() => store.getters.taskStatusMap)
@@ -193,14 +193,20 @@ const socketEvents = {
       !sequenceMap.get(eventData.sequence_id) &&
       currentProduction.value?.id === eventData.project_id
     ) {
-      store.dispatch('loadSequence', eventData.sequence_id)
+      store.dispatch('loadSequence', {
+        sequenceId: eventData.sequence_id,
+        onlyInScope: true
+      })
     }
   },
 
   'sequence:update': eventData => {
     const sequence = sequenceMap.get(eventData.sequence_id)
     if (sequence && !sequence.lock) {
-      store.dispatch('loadSequence', eventData.sequence_id)
+      store.dispatch('loadSequence', {
+        sequenceId: eventData.sequence_id,
+        onlyInScope: true
+      })
     }
   },
 
@@ -215,14 +221,20 @@ const socketEvents = {
       !editMap.get(eventData.edit_id) &&
       currentProduction.value?.id === eventData.project_id
     ) {
-      store.dispatch('loadEdit', eventData.edit_id)
+      store.dispatch('loadEdit', {
+        editId: eventData.edit_id,
+        onlyInScope: true
+      })
     }
   },
 
   'edit:update': eventData => {
     const edit = editMap.get(eventData.edit_id)
     if (edit && !edit.lock) {
-      store.dispatch('loadEdit', eventData.edit_id)
+      store.dispatch('loadEdit', {
+        editId: eventData.edit_id,
+        onlyInScope: true
+      })
     }
   },
 
@@ -258,14 +270,20 @@ const socketEvents = {
     if (
       !shotMap.get(eventData.shot_id) &&
       currentProduction.value?.id === eventData.project_id &&
-      (!isTVShow.value || currentEpisode.value?.id === eventData.episode_id)
+      isNewShotInLoadedScope(shotsLoadingKey.value, eventData.episode_id)
     ) {
       setTimeout(() => {
-        store.dispatch('loadShot', eventData.shot_id)
+        store.dispatch('loadShot', {
+          shotId: eventData.shot_id,
+          onlyInScope: true
+        })
       }, 1000)
     }
   },
 
+  // The *:update handlers stay in scope too: an entity gone from the map by
+  // the time its fetch lands belongs to a dataset replaced meanwhile, and an
+  // update must not recreate it under the list displayed now.
   'shot:update': eventData => {
     const shot = shotMap.get(eventData.shot_id)
     if (
@@ -273,7 +291,10 @@ const socketEvents = {
       !shot.lock &&
       currentProduction.value?.id === eventData.project_id
     ) {
-      store.dispatch('loadShot', eventData.shot_id)
+      store.dispatch('loadShot', {
+        shotId: eventData.shot_id,
+        onlyInScope: true
+      })
     }
   },
 
@@ -289,7 +310,10 @@ const socketEvents = {
       currentProduction.value?.id === eventData.project_id
     ) {
       setTimeout(() => {
-        store.dispatch('loadAsset', eventData.asset_id)
+        store.dispatch('loadAsset', {
+          assetId: eventData.asset_id,
+          onlyInScope: true
+        })
       }, 1000)
     }
   },
@@ -297,7 +321,10 @@ const socketEvents = {
   'asset:update': eventData => {
     const asset = assetMap.get(eventData.asset_id)
     if (asset && !asset.lock) {
-      store.dispatch('loadAsset', eventData.asset_id)
+      store.dispatch('loadAsset', {
+        assetId: eventData.asset_id,
+        onlyInScope: true
+      })
     }
   },
 

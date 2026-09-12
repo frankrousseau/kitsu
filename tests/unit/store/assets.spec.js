@@ -528,3 +528,396 @@ describe('Assets store', () => {
     })
   })
 })
+
+describe('Assets store, loadAsset live insertion', () => {
+  // A socket event announces an asset created elsewhere: a fresh asset is
+  // cast nowhere yet, so its episode alone says whether the loaded dataset
+  // should hold it. The single-asset payload carries `episode_id` as a
+  // string, empty for the main pack, and no `source_id`. The scope comes from
+  // the key the store recorded, not from the topbar: Breakdown loads every
+  // asset under a real episode.
+  const rootGetters = () => ({
+    ...baseRootGetters(),
+    isTVShow: true,
+    currentEpisode: { id: 'ep-a' },
+    people: [],
+    taskStatusMap: new Map()
+  })
+
+  const committedTypes = async (payload, assetsLoadingKey, asset) => {
+    vi.spyOn(assetsApi, 'getAsset').mockResolvedValue({ tasks: [], ...asset })
+    const commit = vi.fn()
+    await assetsStore.actions.loadAsset(
+      { commit, state: { assetsLoadingKey }, rootGetters: rootGetters() },
+      payload
+    )
+    return commit.mock.calls.map(([type]) => type)
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  test('skips an asset of another episode when asked to stay in scope', async () => {
+    const types = await committedTypes(
+      { assetId: 'a-scope-1', onlyInScope: true },
+      'p1/ep-a',
+      { id: 'a-scope-1', episode_id: 'ep-b' }
+    )
+    expect(types).not.toContain('ADD_ASSET')
+  })
+
+  test('adds an asset of the loaded episode', async () => {
+    const types = await committedTypes(
+      { assetId: 'a-scope-2', onlyInScope: true },
+      'p1/ep-a',
+      { id: 'a-scope-2', episode_id: 'ep-a' }
+    )
+    expect(types).toContain('ADD_ASSET')
+  })
+
+  test('adds only the assets without episode on the main pack', async () => {
+    const inPack = await committedTypes(
+      { assetId: 'a-scope-3', onlyInScope: true },
+      'p1/main',
+      { id: 'a-scope-3', episode_id: '' }
+    )
+    const inEpisode = await committedTypes(
+      { assetId: 'a-scope-4', onlyInScope: true },
+      'p1/main',
+      { id: 'a-scope-4', episode_id: 'ep-a' }
+    )
+    expect(inPack).toContain('ADD_ASSET')
+    expect(inEpisode).not.toContain('ADD_ASSET')
+  })
+
+  test('adds any asset to a production-wide dataset, whatever the topbar shows', async () => {
+    const full = await committedTypes(
+      { assetId: 'a-scope-5', onlyInScope: true },
+      'p1/all',
+      { id: 'a-scope-5', episode_id: 'ep-b' }
+    )
+    const partial = await committedTypes(
+      { assetId: 'a-scope-6', onlyInScope: true },
+      'p1/all#partial',
+      { id: 'a-scope-6', episode_id: 'ep-b' }
+    )
+    expect(full).toContain('ADD_ASSET')
+    expect(partial).toContain('ADD_ASSET')
+  })
+
+  // A production switch during the second the handler waits leaves the store
+  // on another production: the payload says which one the asset belongs to.
+  test('skips an asset of another production', async () => {
+    const types = await committedTypes(
+      { assetId: 'a-scope-9', onlyInScope: true },
+      'p1/all',
+      { id: 'a-scope-9', episode_id: 'ep-b', project_id: 'p2' }
+    )
+    expect(types).not.toContain('ADD_ASSET')
+  })
+
+  test('still adds an out-of-scope asset loaded by id', async () => {
+    // The detail page reads the map after the load: a deep link to a main
+    // pack asset cast in the displayed episode must keep working.
+    const types = await committedTypes('a-scope-7', 'p1/ep-a', {
+      id: 'a-scope-7',
+      episode_id: ''
+    })
+    expect(types).toContain('ADD_ASSET')
+  })
+
+  test('reads the episode from source_id when a payload carries it', async () => {
+    const types = await committedTypes(
+      { assetId: 'a-scope-8', onlyInScope: true },
+      'p1/ep-a',
+      { id: 'a-scope-8', source_id: 'ep-a' }
+    )
+    expect(types).toContain('ADD_ASSET')
+  })
+})
+
+describe('Assets store, ADD_ASSET', () => {
+  // The episode column and the scope checks read asset.episode_id. The
+  // single-asset payload of a TV show carries it as a string, empty for the
+  // main pack, and carries no source_id: the list payloads are the ones that
+  // carry source_id.
+  const addAsset = payload => {
+    const state = { assetSearchText: '', assetSelectionGrid: {} }
+    // The mutation completes the asset in place, so it is the object the
+    // store keeps: assert on it, not on the fixture.
+    const asset = {
+      tasks: [],
+      project_id: 'p1',
+      asset_type_name: 'Character',
+      description: '',
+      data: {},
+      ...payload
+    }
+    assetsStore.mutations.ADD_ASSET(state, {
+      taskStatusMap: new Map(),
+      taskTypeMap: new Map(),
+      taskMap: new Map(),
+      persons: [],
+      personMap: new Map(),
+      production: { id: 'p1', name: 'Prod', descriptors: [] },
+      asset
+    })
+    return asset
+  }
+
+  test('keeps the episode of a single-asset payload', () => {
+    const asset = addAsset({ id: 'a-add-1', name: 'A1', episode_id: 'ep-a' })
+    expect(asset.episode_id).toEqual('ep-a')
+  })
+
+  test('resolves the main pack to no episode', () => {
+    const asset = addAsset({ id: 'a-add-2', name: 'A2', episode_id: '' })
+    expect(asset.episode_id).toBeNull()
+  })
+
+  test('falls back to the source_id the list payloads carry', () => {
+    const asset = addAsset({ id: 'a-add-3', name: 'A3', source_id: 'ep-b' })
+    expect(asset.episode_id).toEqual('ep-b')
+  })
+})
+
+describe('Assets store, partial loads', () => {
+  // The schedule loads the assets without tasks nor shared assets: that
+  // dataset cannot stand in for the one the list pages display, so its scope
+  // must not match theirs.
+  const startLoad = options => {
+    vi.spyOn(assetsApi, 'getAssets').mockResolvedValue([])
+    vi.spyOn(assetsApi, 'getUsedSharedAssets').mockResolvedValue([])
+    const state = { isAssetsLoading: false, isAssetsLoadingError: false }
+    const rootGetters = baseRootGetters()
+    const ctx = { commit: realCommit(state), dispatch: vi.fn(), state, rootGetters }
+    const loading = assetsStore.actions.loadAssets(ctx, options)
+    // Switch away so the response short-circuits before LOAD_ASSETS_END.
+    rootGetters.currentProduction = { id: 'p2' }
+    return { state, loading }
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    assetsStore.cache.assetsLoadingPromise = null
+  })
+
+  test('a full load records the plain scope', async () => {
+    const { state, loading } = startLoad({})
+    expect(state.assetsLoadingKey).toBe('p1/')
+    await loading
+  })
+
+  // Breakdown and Concepts load every asset with the shared assets of the
+  // whole instance, the Assets page under all only the ones the production
+  // uses: two datasets, two scopes.
+  test('a production-wide load records its own scope', async () => {
+    vi.spyOn(assetsApi, 'getSharedAssets').mockResolvedValue([])
+    const { state, loading } = startLoad({ all: true })
+    expect(state.assetsLoadingKey).toBe('p1/all#shared')
+    await loading
+  })
+
+  test('a partial production-wide load stays partial', async () => {
+    const { state, loading } = startLoad({
+      all: true,
+      withTasks: false,
+      withShared: false
+    })
+    expect(state.assetsLoadingKey).toBe('p1/all#partial')
+    await loading
+  })
+
+  test('a load without tasks or shared assets records a partial scope', async () => {
+    const { state, loading } = startLoad({ withTasks: false, withShared: false })
+    expect(state.assetsLoadingKey).not.toBe('p1/')
+    expect(state.assetsLoadingKey.startsWith('p1/')).toBe(true)
+    await loading
+  })
+})
+
+describe('Assets store, LOAD_ASSETS_ERROR', () => {
+  // The pages decide from the recorded scope whether a reload is needed: a
+  // failed load must not leave its scope behind an empty dataset, or they
+  // never retry.
+  test('forgets the scope of the failed load', () => {
+    const state = { assetsLoadingKey: 'p1/ep-a' }
+    assetsStore.mutations.LOAD_ASSETS_ERROR(state)
+    expect(state.assetsLoadingKey).toBeNull()
+  })
+
+  // A production switch starts a new load before the previous one fails:
+  // that rejection must not forget the scope of the load running now.
+  const failingLoad = () => {
+    const rootGetters = { ...baseRootGetters(), currentProduction: { id: 'p1' } }
+    let rejectLoad
+    vi.spyOn(assetsApi, 'getAssets').mockReturnValue(
+      new Promise((resolve, reject) => {
+        rejectLoad = reject
+      })
+    )
+    const commit = vi.fn()
+    const loading = assetsStore.actions.loadAssets({
+      commit,
+      dispatch: vi.fn(),
+      state: { isAssetsLoading: false },
+      rootGetters
+    })
+    return {
+      rootGetters,
+      types: async () => {
+        rejectLoad(new Error('down'))
+        await loading
+        return commit.mock.calls.map(([type]) => type)
+      }
+    }
+  }
+
+  test('forgets the scope when the displayed load fails', async () => {
+    const { types } = failingLoad()
+    expect(await types()).toContain('LOAD_ASSETS_ERROR')
+  })
+
+  test('keeps the scope when the failure comes from the production left', async () => {
+    const { rootGetters, types } = failingLoad()
+    rootGetters.currentProduction = { id: 'p2' }
+    expect(await types()).not.toContain('LOAD_ASSETS_ERROR')
+  })
+})
+
+describe('Assets store, live insertion during a list load', () => {
+  afterEach(() => {
+    assetsStore.cache.assetsLoadingPromise = null
+    assetsStore.cache.assetMap.delete('a-flight-3')
+    vi.restoreAllMocks()
+  })
+
+  // The list load replaces the whole dataset: inserting before its response
+  // lands drops the asset, and no second event announces it again.
+  test('waits for the list in flight before inserting', async () => {
+    vi.spyOn(assetsApi, 'getAsset').mockResolvedValue({
+      id: 'a-flight-1',
+      episode_id: 'ep-a',
+      project_id: 'p1',
+      tasks: []
+    })
+    let endList
+    const state = { isAssetsLoading: true, assetsLoadingKey: 'p1/ep-a' }
+    assetsStore.cache.assetsLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.isAssetsLoading = false
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = assetsStore.actions.loadAsset(
+      {
+        commit,
+        state,
+        rootGetters: {
+          ...baseRootGetters(),
+          isTVShow: true,
+          currentEpisode: { id: 'ep-a' },
+          people: [],
+          taskStatusMap: new Map()
+        }
+      },
+      { assetId: 'a-flight-1', onlyInScope: true }
+    )
+    await Promise.resolve()
+    expect(commit.mock.calls.map(([type]) => type)).not.toContain('ADD_ASSET')
+
+    endList()
+    await loading
+    expect(commit.mock.calls.map(([type]) => type)).toContain('ADD_ASSET')
+  })
+
+  // The list response is younger than this fetch: it rebuilt the row from
+  // fresher data, and the payload parked behind it must not land on top.
+  test('keeps the row the list load rebuilt', async () => {
+    vi.spyOn(assetsApi, 'getAsset').mockResolvedValue({
+      id: 'a-flight-3',
+      episode_id: 'ep-a',
+      project_id: 'p1',
+      name: 'from-socket',
+      tasks: []
+    })
+    let endList
+    const state = { isAssetsLoading: true, assetsLoadingKey: 'p1/ep-a' }
+    assetsStore.cache.assetsLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.isAssetsLoading = false
+        assetsStore.cache.assetMap.set('a-flight-3', {
+          id: 'a-flight-3',
+          name: 'from-list'
+        })
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = assetsStore.actions.loadAsset(
+      {
+        commit,
+        state,
+        rootGetters: {
+          ...baseRootGetters(),
+          isTVShow: true,
+          currentEpisode: { id: 'ep-a' },
+          people: [],
+          taskStatusMap: new Map()
+        }
+      },
+      { assetId: 'a-flight-3', onlyInScope: true }
+    )
+    await Promise.resolve()
+    endList()
+    await loading
+
+    expect(commit.mock.calls).toEqual([])
+    expect(assetsStore.cache.assetMap.get('a-flight-3').name).toBe('from-list')
+  })
+
+  // An update of an asset the page displayed must not recreate it under the
+  // list of the episode switched to meanwhile: the handlers pass onlyInScope.
+  test('drops an updated asset once the list in flight replaced its episode', async () => {
+    vi.spyOn(assetsApi, 'getAsset').mockResolvedValue({
+      id: 'a-flight-2',
+      episode_id: 'ep-a',
+      project_id: 'p1',
+      tasks: []
+    })
+    let endList
+    const state = { isAssetsLoading: true, assetsLoadingKey: 'p1/ep-a' }
+    assetsStore.cache.assetsLoadingPromise = new Promise(resolve => {
+      endList = () => {
+        state.isAssetsLoading = false
+        state.assetsLoadingKey = 'p1/ep-b'
+        resolve([])
+      }
+    })
+    const commit = vi.fn()
+
+    const loading = assetsStore.actions.loadAsset(
+      {
+        commit,
+        state,
+        rootGetters: {
+          ...baseRootGetters(),
+          isTVShow: true,
+          currentEpisode: { id: 'ep-b' },
+          people: [],
+          taskStatusMap: new Map()
+        }
+      },
+      { assetId: 'a-flight-2', onlyInScope: true }
+    )
+    await Promise.resolve()
+    endList()
+    await loading
+
+    expect(commit.mock.calls.map(([type]) => type)).not.toContain('ADD_ASSET')
+  })
+})
