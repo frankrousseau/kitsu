@@ -4825,6 +4825,9 @@ onMounted(() => {
       container.value.onmousemove = onMouseMove
     }
     window.addEventListener('beforeunload', onWindowsClosed)
+    // The temporary playlist mounts while it loads: size the player right
+    // away so the modal does not grow once the entities arrive.
+    resetHeight()
     resetCanvas()
     setPlayerSpeed(1)
     onFrameUpdate(0)
@@ -5282,6 +5285,9 @@ const playerProxy = {
 }
 
 .loading-wrapper {
+  align-items: center;
+  display: flex;
+  justify-content: center;
   width: 100%;
 }
 
