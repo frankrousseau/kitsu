@@ -20,6 +20,7 @@ vi.mock('moment', async () => {
 import i18n from '@/lib/i18n'
 
 import Comment from '@/components/widgets/Comment.vue'
+import ValidationTag from '@/components/widgets/ValidationTag.vue'
 import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
 import PeopleName from '@/components/widgets/PeopleName.vue'
 
@@ -27,7 +28,10 @@ import './setup'
 
 const router = createRouter({
   history: createWebHistory(),
-  routes: [{ path: '/tasks/:id', name: 'task', component: { template: '' } }]
+  routes: [
+    { path: '/tasks/:id', name: 'task', component: { template: '' } },
+    { path: '/concepts', name: 'concepts', component: { template: '' } }
+  ]
 })
 
 const makeComment = (overrides = {}) => ({
@@ -127,6 +131,21 @@ describe('Comment', () => {
   beforeAll(async () => {
     await router.push('/tasks/task-1')
     await router.isReady()
+  })
+
+  // Concept statuses are their own thing for the users: the comments show
+  // them with the tinted chip of the concept cards.
+  describe('status tag', () => {
+    afterEach(() => router.push('/tasks/task-1'))
+
+    test('is tinted on a concept, plain elsewhere', async () => {
+      const plain = mountComment().findComponent(ValidationTag)
+      expect(plain.props('tinted')).toBe(false)
+
+      await router.push('/concepts')
+      const tinted = mountComment().findComponent(ValidationTag)
+      expect(tinted.props('tinted')).toBe(true)
+    })
   })
 
   describe('attachments', () => {

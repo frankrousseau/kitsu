@@ -146,4 +146,22 @@ describe('ComboboxStatus', () => {
     await trigger.trigger('keydown', { key: 'Escape' })
     expect(wrapper.find('.select-input').exists()).toBe(false)
   })
+
+  // Concept statuses are shown as tinted chips everywhere on the concepts
+  // page: the combobox follows when asked to.
+  it('paints the statuses as tinted chips when tinted', async () => {
+    const w = shallowMount(ComboboxStatus, {
+      props: { taskStatusList, modelValue: 'status-2', tinted: true },
+      global: { plugins: [i18n, store] }
+    })
+
+    const selected = w.find('.tag')
+    expect(selected.classes()).toContain('tinted')
+    expect(selected.attributes('style')).toContain('--status-color: #22D160')
+    expect(selected.attributes('style')).toContain('rgba(34, 209, 96, 0.15)')
+
+    await w.find('[role="combobox"]').trigger('click')
+    const options = w.findAll('.status-line .tag')
+    expect(options.every(tag => tag.classes().includes('tinted'))).toBe(true)
+  })
 })

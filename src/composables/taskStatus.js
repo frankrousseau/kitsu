@@ -29,5 +29,16 @@ export const useTaskStatusStyle = () => {
     }
   }
 
-  return { backgroundColor, color, isDarkTheme }
+  // Chip washed with the status color, with the color itself exposed for
+  // the rail drawn by the component: the concepts page representation.
+  const tintedStyle = taskStatus => {
+    const statusColor = taskStatus?.color || backgroundColor(taskStatus)
+    return {
+      background: `${statusColor}26`,
+      color: 'var(--text-strong)',
+      '--status-color': statusColor
+    }
+  }
+
+  return { backgroundColor, color, isDarkTheme, tintedStyle }
 }

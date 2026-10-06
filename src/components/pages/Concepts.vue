@@ -7,6 +7,7 @@
             <combobox-status
               :label="$t('main.status')"
               :task-status-list="taskStatusList"
+              tinted
               v-model="filters.taskStatusId"
             />
             <span class="field">

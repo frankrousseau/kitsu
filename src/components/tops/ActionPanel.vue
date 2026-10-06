@@ -390,6 +390,7 @@
               <combobox-status
                 :with-margin="false"
                 :task-status-list="availableTaskStatuses"
+                :tinted="isCurrentViewConcept"
                 v-model="taskStatusId"
               />
             </div>

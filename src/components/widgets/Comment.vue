@@ -17,6 +17,7 @@
             :task="{ task_status_id: comment.task_status.id }"
             :is-static="true"
             :thin="!isChange"
+            :tinted="isConcept"
           />
           <people-avatar
             class="flexrow-item"
@@ -485,6 +486,7 @@
           :task="{ task_status_id: comment.task_status.id }"
           :is-static="true"
           :thin="!isChange"
+          :tinted="isConcept"
         />
         <people-avatar
           class="flexrow-item"

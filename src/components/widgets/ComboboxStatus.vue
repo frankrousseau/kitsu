@@ -24,10 +24,8 @@
         <div class="selected-status-line flexrow-item">
           <span
             class="tag"
-            :style="{
-              background: backgroundColor(currentStatus),
-              color: color(currentStatus)
-            }"
+            :class="{ tinted }"
+            :style="tagStyle(currentStatus)"
             :title="currentStatus.name"
             v-if="currentStatus"
           >
@@ -37,7 +35,7 @@
         <chevron-down-icon
           class="down-icon flexrow-item"
           :class="{
-            white: colorOnly
+            white: colorOnly && !tinted
           }"
         />
       </div>
@@ -61,10 +59,8 @@
         >
           <span
             class="tag"
-            :style="{
-              background: backgroundColor(status),
-              color: color(status)
-            }"
+            :class="{ tinted }"
+            :style="tagStyle(status)"
             :title="status.name"
           >
             {{ status.short_name }}
@@ -93,7 +89,7 @@ import ComboboxMask from '@/components/widgets/ComboboxMask.vue'
 
 const { t } = useI18n()
 const store = useStore()
-const { backgroundColor, color } = useTaskStatusStyle()
+const { backgroundColor, color, tintedStyle } = useTaskStatusStyle()
 
 // Props / Emits
 // --------------------------------------------------------------------------
@@ -105,6 +101,11 @@ const props = defineProps({
   label: {
     default: '',
     type: String
+  },
+  // concept statuses: washed chips instead of solid tags
+  tinted: {
+    default: false,
+    type: Boolean
   },
   taskStatusList: {
     default: () => [],
@@ -155,6 +156,13 @@ const { activeIndex, onKeydown, optionId } = useComboboxKeyboard({
   listRef
 })
 
+// Functions
+// --------------------------------------------------------------------------
+const tagStyle = status =>
+  props.tinted
+    ? tintedStyle(status)
+    : { background: backgroundColor(status), color: color(status) }
+
 // Computed
 // --------------------------------------------------------------------------
 const productionMap = computed(() => store.getters.productionMap)
@@ -183,10 +191,7 @@ const currentStatus = computed(() => {
 })
 
 const comboStyles = computed(() => ({
-  background: props.colorOnly
-    ? backgroundColor(currentStatus.value)
-    : undefined,
-  color: props.colorOnly ? color(currentStatus.value) : 'inherit',
+  ...(props.colorOnly ? tagStyle(currentStatus.value) : { color: 'inherit' }),
   'border-top-left-radius': props.colorOnly ? '20px' : '10px',
   'border-top-right-radius': props.colorOnly ? '0px' : '10px',
   'border-bottom-left-radius': showStatusList.value
@@ -207,6 +212,26 @@ const comboStyles = computed(() => ({
   .select-input,
   .status-line {
     background: $dark-grey-light;
+  }
+}
+
+// same chip as the tinted ValidationTag
+.tag.tinted {
+  border-radius: 6px;
+  font-weight: 600;
+  padding-left: 12px;
+  position: relative;
+
+  // inset rounded rail: a border-left would square the left corners
+  &::before {
+    background: var(--status-color);
+    border-radius: 2px;
+    bottom: 4px;
+    content: '';
+    left: 4px;
+    position: absolute;
+    top: 4px;
+    width: 3px;
   }
 }
 

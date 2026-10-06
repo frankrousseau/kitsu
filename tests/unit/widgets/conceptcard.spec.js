@@ -10,6 +10,7 @@ import assetsStore from '@/store/modules/assets'
 
 import ConceptCard from '@/components/widgets/ConceptCard.vue'
 import EntityPreview from '@/components/widgets/EntityPreview.vue'
+import ValidationTag from '@/components/widgets/ValidationTag.vue'
 
 const asset = (id, name) => [id, { id, name, episode_id: null }]
 
@@ -54,11 +55,14 @@ describe('ConceptCard', () => {
     expect(mountCard().classes()).not.toContain('selected')
   })
 
-  test('tints the status chip with the status color', () => {
-    const chip = mountCard().find('.status-chip')
+  test('shows the status as a tinted chip', () => {
+    const chip = mountCard().findComponent(ValidationTag)
 
-    expect(chip.text()).toBe('todo')
-    expect(chip.attributes('style')).toContain('--status-color: #999')
+    expect(chip.props('tinted')).toBe(true)
+    expect(chip.props('task')).toEqual({
+      id: 'task-1',
+      task_status_id: 'status-todo'
+    })
   })
 
   test('shows three links at most and counts the others', () => {

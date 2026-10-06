@@ -330,6 +330,7 @@
             :color-only="true"
             :task-status-list="taskStatus"
             :production-id="task.project_id"
+            :tinted="isConcept"
             v-model="task_status_id"
             v-if="!isStatusLocked"
           />

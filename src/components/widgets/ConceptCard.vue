@@ -30,15 +30,13 @@
         </li>
       </ul>
       <div class="status" v-if="hasTask">
-        <span
+        <validation-tag
           class="status-chip"
-          :style="{
-            background: `${taskStatus.color}26`,
-            '--status-color': taskStatus.color
-          }"
-        >
-          {{ taskStatus.short_name }}
-        </span>
+          is-static
+          :is-priority="false"
+          :task="concept.tasks[0]"
+          tinted
+        />
         <people-avatar
           :font-size="12"
           :is-link="false"
@@ -61,6 +59,7 @@ import assetsStore from '@/store/modules/assets'
 
 import EntityPreview from '@/components/widgets/EntityPreview.vue'
 import PeopleAvatar from '@/components/widgets/PeopleAvatar.vue'
+import ValidationTag from '@/components/widgets/ValidationTag.vue'
 
 const store = useStore()
 
@@ -91,7 +90,6 @@ const MAX_LINKS = 3
 const currentProduction = computed(() => store.getters.currentProduction)
 const isTVShow = computed(() => store.getters.isTVShow)
 const personMap = computed(() => store.getters.personMap)
-const taskStatusMap = computed(() => store.getters.taskStatusMap)
 
 // Only drives the video viewer: pictures fill the card width through CSS.
 const previewSize = computed(() =>
@@ -114,10 +112,6 @@ const hiddenLinkNames = computed(() =>
 )
 
 const hasTask = computed(() => props.concept.tasks?.length)
-
-const taskStatus = computed(() =>
-  taskStatusMap.value.get(props.concept.tasks[0].task_status_id)
-)
 
 // Functions
 // --------------------------------------------------------------------------
@@ -255,29 +249,6 @@ const entityPath = (entity, section) => {
   display: flex;
   height: 24px;
   justify-content: space-between;
-}
-
-.status-chip {
-  border-radius: 6px;
-  color: var(--text-strong);
-  font-size: 0.8em;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  padding: 3px 8px 3px 12px;
-  position: relative;
-  text-transform: uppercase;
-
-  // inset rounded rail: a border-left would square the left corners
-  &::before {
-    background: var(--status-color);
-    border-radius: 2px;
-    bottom: 4px;
-    content: '';
-    left: 4px;
-    position: absolute;
-    top: 4px;
-    width: 3px;
-  }
 }
 
 .compact {

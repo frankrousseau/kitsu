@@ -3,6 +3,7 @@
     <template v-if="!minimized">
       <router-link
         class="tag dynamic"
+        :class="{ tinted }"
         :to="taskPath"
         :style="tagStyle"
         :title="taskStatus.name"
@@ -13,6 +14,7 @@
 
       <span
         class="tag"
+        :class="{ tinted }"
         :style="tagStyle"
         :title="taskStatus.name"
         role="button"
@@ -65,7 +67,8 @@ const store = useStore()
 const {
   backgroundColor: statusBgColor,
   color: statusColor,
-  isDarkTheme
+  isDarkTheme,
+  tintedStyle
 } = useTaskStatusStyle()
 
 const props = defineProps({
@@ -90,6 +93,11 @@ const props = defineProps({
     type: Boolean
   },
   thin: {
+    default: false,
+    type: Boolean
+  },
+  // chip with the status color as a wash and a rail, used for concepts
+  tinted: {
     default: false,
     type: Boolean
   }
@@ -136,6 +144,12 @@ const priority = computed(() => {
 const tagStyle = computed(() => {
   const isStaticVal = !props.isStatic && !isCurrentUserClient.value
   const isTodo = taskStatus.value.name === 'Todo'
+  if (props.tinted) {
+    return {
+      ...tintedStyle(taskStatus.value),
+      cursor: isStaticVal ? 'pointer' : cursor.value
+    }
+  }
   if (props.thin && !isTodo) {
     if (isDarkTheme.value) {
       return {
@@ -209,6 +223,27 @@ const formatPriority = computed(() => {
   letter-spacing: 1px;
   margin-right: 0.1em;
   text-transform: uppercase;
+}
+
+.tag.tinted {
+  border: 0;
+  border-radius: 6px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding-left: 12px;
+  position: relative;
+
+  // inset rounded rail: a border-left would square the left corners
+  &::before {
+    background: var(--status-color);
+    border-radius: 2px;
+    bottom: 4px;
+    content: '';
+    left: 4px;
+    position: absolute;
+    top: 4px;
+    width: 3px;
+  }
 }
 
 .tag.dynamic:hover {
