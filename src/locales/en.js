@@ -328,6 +328,7 @@ export default {
 
   concepts: {
     actions: {
+      add_link: 'Add link',
       empty: 'No links',
       remove_link: 'Remove link',
       title: 'Links to Concepts'

@@ -126,6 +126,9 @@ describe('ActionPanel, concept links', () => {
     expect(
       wrapper.find('.action-bar .tag').attributes('title')
     ).toBe('concepts.actions.remove_link')
+    expect(wrapper.find('.concept-links .tag').attributes('title')).toBe(
+      'concepts.actions.add_link'
+    )
   })
 
   test('links an asset to every selected concept missing it', async () => {

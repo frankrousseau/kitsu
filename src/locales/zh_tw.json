@@ -2025,6 +2025,7 @@
     },
     "concepts": {
       "actions": {
+        "add_link": "新增連結",
         "empty": "無連結",
         "remove_link": "移除連結",
         "title": "概念連結"

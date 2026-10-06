@@ -2025,6 +2025,7 @@
     },
     "concepts": {
       "actions": {
+        "add_link": "リンクを追加",
         "empty": "リンクなし",
         "remove_link": "リンクを削除",
         "title": "コンセプトへのリンク"

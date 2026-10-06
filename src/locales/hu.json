@@ -1874,6 +1874,7 @@
     },
     "concepts": {
       "actions": {
+        "add_link": "Hivatkozás hozzáadása",
         "empty": "Nincs hivatkozás",
         "remove_link": "Hivatkozás eltávolítása",
         "title": "Hivatkozások a koncepciókhoz"

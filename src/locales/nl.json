@@ -2025,6 +2025,7 @@
     },
     "concepts": {
       "actions": {
+        "add_link": "Koppeling toevoegen",
         "empty": "Geen links",
         "remove_link": "Koppeling verwijderen",
         "title": "Koppelingen naar concepten"

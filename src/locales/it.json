@@ -2025,6 +2025,7 @@
     },
     "concepts": {
       "actions": {
+        "add_link": "Aggiungi collegamento",
         "empty": "Nessun link",
         "remove_link": "Rimuovi il collegamento",
         "title": "Link ai concept"

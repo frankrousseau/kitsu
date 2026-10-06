@@ -2025,6 +2025,7 @@
     },
     "concepts": {
       "actions": {
+        "add_link": "افزودن پیوند",
         "empty": "بدون لینک",
         "remove_link": "حذف پیوند",
         "title": "لینک به کانسپت ها"

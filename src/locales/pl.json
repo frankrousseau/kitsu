@@ -317,6 +317,7 @@
     },
     "concepts": {
       "actions": {
+        "add_link": "Dodaj powiązanie",
         "empty": "Brak powiązań",
         "remove_link": "Usuń powiązanie",
         "title": "Powiązania z konceptami"

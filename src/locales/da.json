@@ -2025,6 +2025,7 @@
     },
     "concepts": {
       "actions": {
+        "add_link": "Tilføj link",
         "empty": "Ingen links",
         "remove_link": "Fjern link",
         "title": "Links til Koncepter"

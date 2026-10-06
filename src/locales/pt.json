@@ -2025,6 +2025,7 @@
     },
     "concepts": {
       "actions": {
+        "add_link": "Adicionar vínculo",
         "empty": "Sem links",
         "remove_link": "Remover o vínculo",
         "title": "Links para conceitos"

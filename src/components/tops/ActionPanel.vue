@@ -903,6 +903,7 @@
                   :key="link.id"
                   role="button"
                   tabindex="0"
+                  :title="$t('concepts.actions.add_link')"
                   @click="onSelectLink(link)"
                   @keydown.enter.prevent="onSelectLink(link)"
                   @keydown.space.prevent="onSelectLink(link)"
@@ -1807,24 +1808,28 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
+// same chips as the links on the concept cards
 .tags {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 6px;
   margin-left: 0;
-  min-height: 21px;
-  font-weight: 500;
-  letter-spacing: 1px;
+  min-height: 24px;
 
   .tag {
+    background: var(--background-tag);
+    border-radius: 6px;
+    color: var(--text);
     cursor: pointer;
-    display: inline-flex;
-    gap: 1em;
-    border: 1px solid $light-green;
-    transition: transform 0.1s linear;
+    font-size: 0.85em;
+    height: 24px;
+    line-height: 24px;
+    margin: 0;
+    padding: 0 8px;
+    transition: background 150ms ease-out;
 
     &:hover {
-      transform: scale(1.1);
+      background: var(--background-selectable);
     }
   }
 }
@@ -1852,19 +1857,13 @@ onBeforeUnmount(() => {
     overflow-y: auto;
   }
 
-  .link-type {
-    .subtitle {
-      text-transform: uppercase;
-      color: $grey;
-      border-bottom: 1px solid $light-grey;
-      font-size: 1.2em;
-      margin-top: 1em;
-      margin-bottom: 1em;
-    }
-
-    .tag {
-      border-color: $light-grey;
-    }
+  .link-type .subtitle {
+    text-transform: uppercase;
+    color: $grey;
+    border-bottom: 1px solid $light-grey;
+    font-size: 1.2em;
+    margin-top: 1em;
+    margin-bottom: 1em;
   }
 }
 

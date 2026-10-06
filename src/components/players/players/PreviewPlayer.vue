@@ -2863,38 +2863,32 @@ defineExpose({
   display: flex;
 }
 
+// same chips as the links on the concept cards
 .tags {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 6px;
   padding: 1rem;
   margin-left: 0;
-  font-weight: 500;
-  letter-spacing: 1px;
 
   .tag {
-    transition: transform 0.1s linear;
+    background: var(--background-tag);
+    border-radius: 6px;
+    font-size: 0.85em;
+    height: 24px;
+    line-height: 24px;
+    margin: 0;
+    padding: 0 8px;
+    transition: background 150ms ease-out;
 
     a {
-      display: inline-flex;
-      gap: 1em;
-      line-height: normal;
-    }
-
-    .action {
-      border-radius: 50%;
-      display: none;
-      height: 14px;
-      width: 14px;
-      line-height: 8px;
+      color: var(--text);
+      display: block;
+      line-height: inherit;
     }
 
     &:hover {
-      transform: scale(1.1);
-
-      .action {
-        display: inline-block;
-      }
+      background: var(--background-selectable);
     }
   }
 }
